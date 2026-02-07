@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [copilot_core-v0.2.2] - 2026-02-08
+### Changed
+- Default port changed from 8099 to 8909 (ingress + exposed port).
+
 ## [copilot_core-v0.2.1] - 2026-02-08
 ### Fixed
 - Startup crash in v0.2.0: DevLogs module accessed `current_app` at import time ("Working outside of application context").

@@ -8,7 +8,7 @@ from copilot_core.app import create_app
 def main() -> None:
     app = create_app()
     host = "0.0.0.0"
-    port = int(os.environ.get("PORT", "8099"))
+    port = int(os.environ.get("PORT", "8909"))
     serve(app, host=host, port=port)
 
 

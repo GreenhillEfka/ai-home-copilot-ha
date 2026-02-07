@@ -2,23 +2,23 @@
   "name": "AI Home CoPilot Core (MVP)",
   "slug": "copilot_core",
   "description": "MVP Core Service for AI Home CoPilot (health/version endpoints; scaffold for neurons/moods/synapses).",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "url": "https://github.com/GreenhillEfka/Home-Assistant-Copilot",
   "arch": ["amd64", "aarch64"],
   "startup": "services",
   "boot": "auto",
   "init": false,
   "ingress": true,
-  "ingress_port": 8099,
+  "ingress_port": 8909,
   "panel_icon": "mdi:brain",
   "panel_title": "CoPilot",
   "ports": {
-    "8099/tcp": 8099
+    "8909/tcp": 8909
   },
   "ports_description": {
-    "8099/tcp": "CoPilot Core HTTP API"
+    "8909/tcp": "CoPilot Core HTTP API"
   },
-  "webui": "http://[HOST]:[PORT:8099]/",
+  "webui": "http://[HOST]:[PORT:8909]/",
   "options": {
     "log_level": "info",
     "auth_token": "",
