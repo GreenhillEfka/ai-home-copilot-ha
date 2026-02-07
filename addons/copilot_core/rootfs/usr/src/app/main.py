@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 from waitress import serve
 
-APP_VERSION = os.environ.get("COPILOT_VERSION", "0.1.1")
+APP_VERSION = os.environ.get("COPILOT_VERSION", "0.1.2")
 
 DEV_LOG_PATH = "/data/dev_logs.jsonl"
 DEV_LOG_MAX_CACHE = 200
@@ -90,7 +90,7 @@ def index():
     return (
         "AI Home CoPilot Core (MVP)\n"
         "Endpoints: /health, /version, /api/v1/echo\n"
-        "Dev: /api/v1/dev/logs (POST/GET)\n"
+        "Dev: /api/v1/dev/logs (POST/GET), /devlogs (UI)\n"
         "Note: This is a scaffold. Neuron/Mood/Synapse engines come next.\n"
     )
 
@@ -143,11 +143,63 @@ def get_dev_logs():
         limit = 50
     limit = max(1, min(limit, DEV_LOG_MAX_CACHE))
 
-    return jsonify({
-        "ok": True,
-        "count": min(limit, len(_DEV_LOG_CACHE)),
-        "items": _DEV_LOG_CACHE[-limit:],
-    })
+    return jsonify(
+        {
+            "ok": True,
+            "count": min(limit, len(_DEV_LOG_CACHE)),
+            "items": _DEV_LOG_CACHE[-limit:],
+        }
+    )
+
+
+@app.get("/devlogs")
+def devlogs_ui():
+    """Minimal HTML view for ingress debugging."""
+    if not _require_token():
+        return jsonify({"error": "unauthorized"}), 401
+
+    try:
+        limit = int(request.args.get("limit", "50"))
+    except Exception:
+        limit = 50
+    limit = max(1, min(limit, DEV_LOG_MAX_CACHE))
+
+    items = _DEV_LOG_CACHE[-limit:]
+
+    def esc(s: str) -> str:
+        return (
+            s.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+        )
+
+    rows = []
+    for it in reversed(items):
+        received = esc(str(it.get("received", "")))
+        payload = it.get("payload")
+        text = ""
+        if isinstance(payload, dict) and isinstance(payload.get("text"), str):
+            text = payload.get("text")
+        else:
+            text = json.dumps(payload, ensure_ascii=False, indent=2)
+        rows.append(
+            f"<details style='margin:10px 0'><summary><code>{received}</code></summary>"
+            f"<pre style='white-space:pre-wrap'>{esc(text)}</pre></details>"
+        )
+
+    html = (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>CoPilot DevLogs</title>"
+        "</head><body style='font-family:system-ui, -apple-system, sans-serif; padding:16px'>"
+        "<h2>CoPilot DevLogs</h2>"
+        f"<p>Showing last {len(items)} (limit={limit}). "
+        "<a href='/api/v1/dev/logs'>JSON</a></p>"
+        + "".join(rows)
+        + "</body></html>"
+    )
+
+    return html
 
 
 if __name__ == "__main__":
