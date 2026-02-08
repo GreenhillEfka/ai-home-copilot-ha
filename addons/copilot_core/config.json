@@ -2,7 +2,7 @@
   "name": "AI Home CoPilot Core (MVP)",
   "slug": "copilot_core",
   "description": "MVP Core Service for AI Home CoPilot (health/version endpoints; scaffold for neurons/moods/synapses).",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "url": "https://github.com/GreenhillEfka/Home-Assistant-Copilot",
   "arch": ["amd64", "aarch64"],
   "startup": "services",
@@ -31,7 +31,11 @@
     "candidates_persist": false,
     "candidates_max": 500,
 
-    "mood_window_seconds": 3600
+    "mood_window_seconds": 3600,
+
+    "brain_graph_persist": true,
+    "brain_graph_nodes_max": 500,
+    "brain_graph_edges_max": 1500
   },
   "schema": {
     "log_level": "list(trace|debug|info|warning|error)",
@@ -45,6 +49,10 @@
     "candidates_persist": "bool",
     "candidates_max": "int",
 
-    "mood_window_seconds": "int"
+    "mood_window_seconds": "int",
+
+    "brain_graph_persist": "bool",
+    "brain_graph_nodes_max": "int",
+    "brain_graph_edges_max": "int"
   }
 }

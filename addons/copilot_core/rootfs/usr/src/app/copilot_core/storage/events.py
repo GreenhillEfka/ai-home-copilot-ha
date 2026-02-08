@@ -209,16 +209,23 @@ class EventStore:
 
         return evt, True
 
-    def extend(self, items: Iterable[dict[str, Any]]) -> int:
+    def extend(self, items: Iterable[dict[str, Any]]) -> tuple[int, list[dict[str, Any]]]:
+        """Append many events.
+
+        Returns: (stored_count, stored_events)
+        """
+
         n = 0
+        stored: list[dict[str, Any]] = []
         for it in items:
             try:
-                _evt, stored = self.append(it)
-                if stored:
+                evt, ok = self.append(it)
+                if ok:
+                    stored.append(evt)
                     n += 1
             except Exception:
                 continue
-        return n
+        return n, stored
 
     def list(self, *, limit: int = 50, since_ts: Optional[str] = None) -> list[dict[str, Any]]:
         items = self._cache
