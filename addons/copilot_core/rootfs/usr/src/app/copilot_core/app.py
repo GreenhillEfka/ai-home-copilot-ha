@@ -32,6 +32,10 @@ class CopilotConfig:
     events_jsonl_path: str = "/data/events.jsonl"
     events_cache_max: int = 500
 
+    # Events: idempotency/deduping
+    events_idempotency_ttl_seconds: int = 20 * 60
+    events_idempotency_lru_max: int = 10_000
+
     # Candidates: minimal persistence; defaults to memory-only.
     candidates_persist: bool = False
     candidates_json_path: str = "/data/candidates.json"
@@ -69,6 +73,9 @@ def _build_config() -> CopilotConfig:
     events_jsonl_path = str(opts.get("events_jsonl_path", os.path.join(data_dir, "events.jsonl")))
     events_cache_max = int(opts.get("events_cache_max", 500))
 
+    events_idempotency_ttl_seconds = int(opts.get("events_idempotency_ttl_seconds", 20 * 60))
+    events_idempotency_lru_max = int(opts.get("events_idempotency_lru_max", 10_000))
+
     candidates_persist = bool(opts.get("candidates_persist", False))
     candidates_json_path = str(opts.get("candidates_json_path", os.path.join(data_dir, "candidates.json")))
     candidates_max = int(opts.get("candidates_max", 500))
@@ -87,6 +94,8 @@ def _build_config() -> CopilotConfig:
         events_persist=events_persist,
         events_jsonl_path=events_jsonl_path,
         events_cache_max=max(1, min(events_cache_max, 10_000)),
+        events_idempotency_ttl_seconds=max(10, min(events_idempotency_ttl_seconds, 24 * 3600)),
+        events_idempotency_lru_max=max(0, min(events_idempotency_lru_max, 200_000)),
         candidates_persist=candidates_persist,
         candidates_json_path=candidates_json_path,
         candidates_max=max(1, min(candidates_max, 10_000)),
@@ -160,6 +169,17 @@ def create_app() -> Flask:
                         "enabled": True,
                         "persist": cfg.events_persist,
                         "cache_max": cfg.events_cache_max,
+                        "idempotency": {
+                            "supported": True,
+                            "ttl_seconds": cfg.events_idempotency_ttl_seconds,
+                            "lru_max": cfg.events_idempotency_lru_max,
+                            "key_sources": [
+                                "Idempotency-Key header",
+                                "idempotency_key payload field",
+                                "event_id payload field",
+                                "id payload field",
+                            ],
+                        },
                     },
                     "candidates": {
                         "enabled": True,
