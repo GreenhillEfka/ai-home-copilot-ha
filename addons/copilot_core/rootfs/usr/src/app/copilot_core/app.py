@@ -1,6 +1,7 @@
 import json
 import os
 from dataclasses import dataclass
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -15,7 +16,10 @@ def _now_iso() -> str:
 
 @dataclass(frozen=True)
 class CopilotConfig:
-    version: str = os.environ.get("COPILOT_VERSION", "0.2.2")
+    version: str = os.environ.get("COPILOT_VERSION", "0.2.3")
+
+    # Logging
+    log_level: str = "info"
 
     # Auth
     auth_token: str = ""
@@ -48,6 +52,7 @@ def _load_options_json(path: str = "/data/options.json") -> dict[str, Any]:
 def _build_config() -> CopilotConfig:
     opts = _load_options_json()
 
+    log_level = str(opts.get("log_level", "info") or "info").strip().lower()
     token = os.environ.get("COPILOT_AUTH_TOKEN", "").strip()
     if not token:
         token = str(opts.get("auth_token", "")).strip()
@@ -65,6 +70,7 @@ def _build_config() -> CopilotConfig:
     mood_window_seconds = int(opts.get("mood_window_seconds", 3600))
 
     return CopilotConfig(
+        log_level=log_level,
         auth_token=token,
         data_dir=data_dir,
         events_persist=events_persist,
@@ -77,8 +83,31 @@ def _build_config() -> CopilotConfig:
     )
 
 
+def _setup_logging(level: str) -> None:
+    # Keep this intentionally simple; HA add-on base already manages log routing.
+    lvl = logging.INFO
+    if level in ("trace", "debug"):
+        lvl = logging.DEBUG
+    elif level == "info":
+        lvl = logging.INFO
+    elif level in ("warn", "warning"):
+        lvl = logging.WARNING
+    elif level == "error":
+        lvl = logging.ERROR
+
+    logging.basicConfig(
+        level=lvl,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+    # Reduce noise unless debugging.
+    logging.getLogger("werkzeug").setLevel(lvl)
+    logging.getLogger("waitress").setLevel(lvl)
+
+
 def create_app() -> Flask:
     cfg = _build_config()
+    _setup_logging(cfg.log_level)
 
     app = Flask(__name__)
 
@@ -98,7 +127,8 @@ def create_app() -> Flask:
 
     @app.get("/health")
     def health():
-        return jsonify({"ok": True, "time": _now_iso()})
+        # Include the port env for easier ops/debugging.
+        return jsonify({"ok": True, "time": _now_iso(), "port": int(os.environ.get("PORT", "8909"))})
 
     @app.get("/version")
     def version():

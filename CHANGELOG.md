@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [copilot_core-v0.2.3] - 2026-02-08
+### Added
+- Startup log line includes the listening port.
+- `/health` includes the effective port (for ops/debug).
+
+### Changed
+- Core respects add-on `log_level` option (basic Python logging setup).
+
 ## [copilot_core-v0.2.2] - 2026-02-08
 ### Changed
 - Default port changed from 8099 to 8909 (ingress + exposed port).
