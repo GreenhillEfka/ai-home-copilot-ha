@@ -5,12 +5,18 @@ from datetime import datetime, timezone
 from flask import Flask, request, jsonify
 from waitress import serve
 
+# Import blueprints
+from copilot_core.api.v1 import log_fixer_tx
+
 APP_VERSION = os.environ.get("COPILOT_VERSION", "0.1.1")
 
 DEV_LOG_PATH = "/data/dev_logs.jsonl"
 DEV_LOG_MAX_CACHE = 200
 
 app = Flask(__name__)
+
+# Register blueprints
+app.register_blueprint(log_fixer_tx.bp)
 
 # In-memory ring buffer of recent dev logs.
 _DEV_LOG_CACHE: list[dict] = []
