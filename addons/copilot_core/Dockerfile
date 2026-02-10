@@ -2,7 +2,7 @@ ARG BUILD_FROM
 FROM $BUILD_FROM
 
 # Minimal Python runtime
-RUN apk add --no-cache python3 py3-pip && \
+RUN apk add --no-cache python3 py3-pip graphviz && \
     pip3 install --no-cache-dir \
         flask==3.0.2 \
         waitress==3.0.0 \
