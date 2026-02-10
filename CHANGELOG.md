@@ -1,5 +1,28 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.1] - 2026-02-10
+
+### Added
+- **Brain Graph Module** (`/api/v1/graph/*`): Complete knowledge representation system
+  - **`/api/v1/graph/state`**: JSON API for bounded graph state with filtering (kind, domain, center/hops, limits)
+  - **`/api/v1/graph/snapshot.svg`**: DOT/SVG visualization with themes (light/dark), layouts (dot/neato/fdp), hard render limits
+  - **`/api/v1/graph/stats`**: Graph statistics + configuration (node/edge counts, limits, decay parameters)
+  - **`/api/v1/graph/prune`**: Manual pruning trigger
+  - **Privacy-first storage**: PII redaction, bounded metadata (2KB max), automatic salience management
+  - **Exponential decay**: 24h half-life for nodes, 12h for edges with effective score calculation
+  - **SQLite backend**: Bounded capacity (500 nodes, 1500 edges), automatic pruning, neighborhood queries
+  - **HA event processing**: Hooks for state_changed and call_service events
+  - **Complete test coverage**: 27 unit tests covering privacy, bounds, decay, pruning, neighborhood queries
+- **Dependencies**: Added `graphviz` package to Dockerfile for SVG rendering
+
+### Technical Details
+- This establishes the central knowledge representation for entity/zone/device relationships
+- Privacy-first design with automatic PII redaction and bounded storage
+- No breaking changes, new endpoints accessible immediately
+- All compile checks and unit tests passing ✓
+
+---
+
 ## [0.4.0] - 2026-02-10
 
 ### 🎉 Major Release: Tag System + Event Pipeline Foundation
