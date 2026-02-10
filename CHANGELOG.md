@@ -1,5 +1,16 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.2] - 2026-02-10
+
+### Added
+- **Event Processing Pipeline** — completes the real-time data flow from HA → EventStore → BrainGraph
+  - `EventProcessor` bridges event ingest with Brain Graph service for automatic knowledge graph updates
+  - State changes create entity + zone nodes with `located_in` relationship edges
+  - Service calls create service nodes with `targets` edges to affected entities (higher salience for intentional actions)
+  - Post-ingest callback hook (non-blocking) enables pluggable downstream consumers
+  - `EventStore.ingest_batch` now returns accepted events for immediate downstream processing
+  - **11 new unit tests** (total: 76 across all Core modules)
+
 ## [0.4.1] - 2026-02-10
 
 ### Added

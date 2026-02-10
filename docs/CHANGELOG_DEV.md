@@ -4,7 +4,19 @@ Kurzliste von Änderungen im Branch `dev`, die noch nicht als Add-on Release get
 
 - Stable Releases: `CHANGELOG.md` (Tags `copilot_core-vX.Y.Z`).
 
-## Candidate: v0.4.1 (Brain Graph Module)
+## Candidate: v0.4.2 (Event Processing Pipeline)
+
+### EventProcessor — EventStore → BrainGraph (2026-02-10)
+- **`EventProcessor`** (`copilot_core/ingest/event_processor.py`): Bridges event ingest with Brain Graph service. Processes ingested events in real-time to build the knowledge graph.
+- **State changes** → create/update entity + zone nodes, link entities to zones via `located_in` edges.
+- **Service calls** → create service nodes, link to target entities via `targets` edges. Higher salience boost (0.8) for intentional actions vs. passive state changes (0.5).
+- **Post-ingest callback** in `events_ingest.py`: Non-blocking hook fires after each accepted batch. Exceptions are logged but never fail the HTTP response.
+- **EventStore.ingest_batch** now returns `accepted_events` for downstream consumers.
+- **Extensible**: `add_processor()` allows plugging additional consumers (Mood Engine, Anomaly Detection, etc.).
+- **11 unit tests** covering entity creation, zone linking, service→entity targeting, batch processing, error isolation, custom processor registration.
+- **Total test count**: 76 unit tests across all Core modules (model: 8, store: 7, service: 10, tag registry, event store: 19, event processor: 11) ✓.
+
+## Released: v0.4.1 (Brain Graph Module)
 
 ### Brain Graph Module (2026-02-10)
 - **`/api/v1/graph/state`**: JSON API for bounded graph state with filtering (kind, domain, center/hops, limits).

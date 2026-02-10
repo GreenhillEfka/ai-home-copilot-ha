@@ -82,7 +82,8 @@ def index():
         "Event Ingest: /api/v1/events (POST/GET), /api/v1/events/stats\n"
         "Brain Graph: /api/v1/graph/state, /snapshot.svg, /stats, /prune\n"
         "Dev: /api/v1/dev/logs (POST/GET)\n"
-        "Note: This is a scaffold. Neuron/Mood/Synapse engines come next.\n"
+        "Pipeline: Events → EventProcessor → BrainGraph (real-time)\n"
+        "Note: Mood/Synapse/Anomaly engines come next.\n"
     )
 
 
