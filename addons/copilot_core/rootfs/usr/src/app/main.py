@@ -61,7 +61,7 @@ def index():
     return (
         "AI Home CoPilot Core (MVP)\n"
         "Endpoints: /health, /version, /api/v1/echo\n"
-        "Tag System: /api/v1/tag-system/tags, /assignments (stub)\n"
+        "Tag System: /api/v1/tag-system/tags, /assignments (store)\n"
         "Dev: /api/v1/dev/logs (POST/GET)\n"
         "Note: This is a scaffold. Neuron/Mood/Synapse engines come next.\n"
     )
