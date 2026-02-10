@@ -9,6 +9,7 @@ from copilot_core.api.security import require_token
 # Import blueprints
 from copilot_core.api.v1 import log_fixer_tx
 from copilot_core.api.v1 import tag_system
+from copilot_core.api.v1 import events_ingest
 
 APP_VERSION = os.environ.get("COPILOT_VERSION", "0.1.1")
 
@@ -20,6 +21,7 @@ app = Flask(__name__)
 # Register blueprints
 app.register_blueprint(log_fixer_tx.bp)
 app.register_blueprint(tag_system.bp)
+app.register_blueprint(events_ingest.bp)
 
 # In-memory ring buffer of recent dev logs.
 _DEV_LOG_CACHE: list[dict] = []
@@ -62,6 +64,7 @@ def index():
         "AI Home CoPilot Core (MVP)\n"
         "Endpoints: /health, /version, /api/v1/echo\n"
         "Tag System: /api/v1/tag-system/tags, /assignments (store)\n"
+        "Event Ingest: /api/v1/events (POST/GET), /api/v1/events/stats\n"
         "Dev: /api/v1/dev/logs (POST/GET)\n"
         "Note: This is a scaffold. Neuron/Mood/Synapse engines come next.\n"
     )
