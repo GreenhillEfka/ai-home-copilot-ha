@@ -4,7 +4,29 @@ Kurzliste von Änderungen im Branch `dev`, die noch nicht als Add-on Release get
 
 - Stable Releases: `CHANGELOG.md` (Tags `copilot_core-vX.Y.Z`).
 
-## Unreleased (dev)
+## Candidate: v0.4.1 (Brain Graph Module)
+
+### Brain Graph Module (2026-02-10)
+- **`/api/v1/graph/state`**: JSON API for bounded graph state with filtering (kind, domain, center/hops, limits).
+- **`/api/v1/graph/snapshot.svg`**: DOT/SVG visualization with themes (light/dark), layouts (dot/neato/fdp), and hard render limits.
+- **`/api/v1/graph/stats`**: Graph statistics + configuration (node/edge counts, limits, decay parameters).
+- **`/api/v1/graph/prune`**: Manual pruning trigger.
+- **`BrainGraphService`** (`copilot_core/brain_graph/service.py`): High-level graph operations with touch_node/touch_edge/link primitives, exponential decay, and HA event processing hooks.
+- **`GraphStore`** (`copilot_core/brain_graph/store.py`): SQLite-backed storage with bounded capacity (default: 500 nodes, 1500 edges), automatic pruning, neighborhood queries, and cascading deletes.
+- **`GraphNode`/`GraphEdge`** (`copilot_core/brain_graph/model.py`): Privacy-first data models with PII redaction, bounded metadata (2KB max), and effective score/weight calculation with decay.
+- **`GraphRenderer`** (`copilot_core/brain_graph/render.py`): DOT/SVG generation with Graphviz integration, theme support, and error fallbacks.
+- **27 unit tests** (model, store, service) covering privacy, bounds, decay, pruning, neighborhood queries, and HA event processing ✓.
+- **Dependencies:** Added `graphviz` package to Dockerfile for SVG rendering.
+- This establishes the central knowledge representation for entity/zone/device relationships with privacy-first design and automatic salience management.
+
+**Breaking Changes:** None  
+**Migration:** No config changes required, new endpoints accessible immediately  
+**Tests:** ✅ All tests passing (compile + 27 brain graph tests)  
+**Security:** PII redaction, bounded storage, no external calls
+
+---
+
+## Previous Release: v0.4.0
 
 ### Brain Graph Module (2026-02-10)
 - **`/api/v1/graph/state`**: JSON API for bounded graph state with filtering (kind, domain, center/hops, limits).
