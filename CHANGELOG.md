@@ -1,5 +1,23 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.5] - 2026-02-10
+
+### Added
+- **N2 Habitus Miner — Complete A→B Pattern Discovery** — Vervollständigung des N2 Core API Milestones:
+  - **Temporal Sequence Mining**: Analyse zeit-geordneter Aktionsfolgen im Brain Graph mit konfigurierbaren Delta-Zeit-Fenstern
+  - **Statistical Evidence**: Berechnung von Support/Confidence/Lift Metriken für jedes A→B Muster nach Association Rule Mining Prinzipien
+  - **Debounce Logic**: Intelligent noise reduction um wiederholte Aktionen als separate Events zu behandeln
+  - **REST API**: `/api/v1/habitus/mine` (POST), `/api/v1/habitus/stats` (GET), `/api/v1/habitus/patterns` (GET)
+  - **Auto-Candidate Creation**: Entdeckte Muster werden automatisch als Candidates erstellt für HA Repairs Integration
+  - **Configurable Thresholds**: Anpassbare min_confidence (0.6), min_support (0.1), min_lift (1.2) für Pattern-Qualität
+
+### Technical Details
+- HabitusMiner: Zeit-Fenster-basierte Sequenz-Analyse (15min Delta, 5min Debounce default)
+- HabitusService: High-level Orchestrierung von Mining → Candidate Creation Pipeline
+- Pattern Evidence: Support = P(A ∩ B), Confidence = P(B|A), Lift = P(B|A)/P(B)
+- API Integration: Vollständige Integration in Core Add-on mit Flask Blueprint
+- **N2 Milestone ✅ Complete**: Events API + Candidate Storage + Habitus Mining = Core API v1
+
 ## [0.4.4] - 2026-02-10
 
 ### Added  
