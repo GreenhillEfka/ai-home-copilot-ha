@@ -6,6 +6,14 @@ Kurzliste von Änderungen im Branch `dev`, die noch nicht als Add-on Release get
 
 ## Unreleased (dev)
 
+### Event Ingest Endpoint (2026-02-10)
+- **`POST /api/v1/events`**: Receives batched event envelopes from HA Events Forwarder. Validates schema, deduplicates (TTL-based), normalizes both current forwarder format and N3-spec envelope format.
+- **`GET /api/v1/events`**: Query stored events with filters (domain, entity_id, zone_id, kind, since, limit).
+- **`GET /api/v1/events/stats`**: Store diagnostics (buffer size, accepted/rejected/deduped totals).
+- **`EventStore`** (`copilot_core/ingest/event_store.py`): Thread-safe bounded ring buffer + JSONL persistence. Privacy-first: validates source allowlist, truncates context IDs to 12 chars.
+- **19 unit tests** (validation, ingest, dedup, query, normalization) all passing ✓.
+- This completes the HA→Core data pipeline: Forwarder (HA) → Ingest (Core) → Store (ring buffer + JSONL).
+
 ### Candidate: v0.4.0-rc.1 (Tag System v0.1 Beta)
 **Status:** Release-ready for approval (all tests passing, code-complete, awaiting explicit go-ahead).
 
