@@ -1,5 +1,41 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.7] - 2026-02-11
+
+### Added
+- **Mood Module v0.1 — Context-Aware Comfort/Frugality/Joy Scoring**:
+  - **MoodService**: Per-zone mood metrics from MediaContext + Habitus signals
+  - **ZoneMoodSnapshot**: comfort (0–1), frugality (0–1), joy (0–1) + metadata
+  - **Mood Updates**: `update_from_media_context()` + `update_from_habitus()`
+  - **Suggestion Context**: `should_suppress_energy_saving()`, `get_suggestion_relevance_multiplier()`
+  - **REST API**: GET `/api/v1/mood`, POST `/update-media`, POST `/update-habitus`, etc.
+  - **Exponential Smoothing**: Mood values smoothed for continuity (α=0.3)
+
+### Use Cases
+- Suppress energy-saving during entertainment (joy > 0.6)
+- Weight comfort automations by comfort priority
+- Suppress energy-saving if user prioritizes comfort (comfort > 0.7, frugality < 0.5)
+- Adjust suggestion confidence by zone mood context
+
+### Technical Details
+- Time-of-day aware comfort baselines (morning/afternoon/evening/night)
+- Media activity detection (music/TV) → joy boost
+- Occupancy level + time-of-day → joy baseline
+- Suggestion relevance multipliers: energy_saving, comfort, entertainment, security
+
+## [0.4.6] - 2026-02-11
+
+### Fixed
+- **API Security Decorator**: New `require_api_key()` decorator in `security.py`
+  - Proper Flask route authentication (not just validation helper)
+  - Consistent imports across all API modules
+  - Returns 401 Unauthorized for invalid tokens
+- **E2E Test Fixes**: All 17 tests passing
+  - `BrainGraphService.get_graph_state()` method name fix
+  - `CandidateStore(storage_path=)` parameter naming
+  - `HabitusMiner` returns Dict (not List)
+  - Graceful Flask API smoke test skipping
+
 ## [0.4.5] - 2026-02-10
 
 ### Added

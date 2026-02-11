@@ -21,6 +21,8 @@ from copilot_core.candidates.api import candidates_bp, init_candidates_api
 from copilot_core.candidates.store import CandidateStore
 from copilot_core.habitus.api import habitus_bp, init_habitus_api
 from copilot_core.habitus.service import HabitusService
+from copilot_core.mood.api import mood_bp, init_mood_api
+from copilot_core.mood.service import MoodService
 
 APP_VERSION = os.environ.get("COPILOT_VERSION", "0.1.1")
 
@@ -45,6 +47,10 @@ init_candidates_api(candidate_store)
 habitus_service = HabitusService(brain_graph_service, candidate_store)
 init_habitus_api(habitus_service)
 
+# Initialize mood service and API
+mood_service = MoodService()
+init_mood_api(mood_service)
+
 # Initialize event processor: EventStore → BrainGraph pipeline
 event_processor = EventProcessor(brain_graph_service=brain_graph_service)
 set_post_ingest_callback(event_processor.process_events)
@@ -57,6 +63,7 @@ app.register_blueprint(brain_graph_bp)
 app.register_blueprint(dev_surface_bp)
 app.register_blueprint(candidates_bp)
 app.register_blueprint(habitus_bp)
+app.register_blueprint(mood_bp)
 
 # In-memory ring buffer of recent dev logs.
 _DEV_LOG_CACHE: list[dict] = []
