@@ -1,7 +1,7 @@
 """REST API endpoints for dev surface observability."""
 from flask import Blueprint, request, jsonify
 
-from copilot_core.api.security import require_token
+from copilot_core.api.security import require_api_key
 from .service import dev_surface
 
 
@@ -9,7 +9,7 @@ dev_surface_bp = Blueprint('dev_surface', __name__, url_prefix='/api/v1/dev')
 
 
 @dev_surface_bp.route('/logs', methods=['GET'])
-@require_token
+@require_api_key
 def get_logs():
     """Get recent log entries with optional filtering."""
     try:
@@ -32,7 +32,7 @@ def get_logs():
 
 
 @dev_surface_bp.route('/errors', methods=['GET'])
-@require_token 
+@require_api_key 
 def get_error_summary():
     """Get error summary and statistics."""
     try:
@@ -51,7 +51,7 @@ def get_error_summary():
 
 
 @dev_surface_bp.route('/health', methods=['GET'])
-@require_token
+@require_api_key
 def get_health():
     """Get system health snapshot."""
     try:
@@ -73,7 +73,7 @@ def get_health():
 
 
 @dev_surface_bp.route('/diagnostics', methods=['GET'])
-@require_token
+@require_api_key
 def export_diagnostics():
     """Export comprehensive diagnostics data."""
     try:
@@ -92,7 +92,7 @@ def export_diagnostics():
 
 
 @dev_surface_bp.route('/clear', methods=['POST'])
-@require_token
+@require_api_key
 def clear_logs():
     """Clear all log entries and reset counters."""
     try:

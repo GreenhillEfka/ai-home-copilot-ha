@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any
+from functools import wraps
+from typing import Any, Callable
 
-from flask import Request
+from flask import Request, jsonify
 
 OPTIONS_PATH = "/data/options.json"
 
@@ -25,8 +26,12 @@ def get_auth_token(options_path: str = OPTIONS_PATH) -> str:
         return ""
 
 
-def require_token(request: Request) -> bool:
-    """Validate the shared token against the incoming request."""
+def validate_token(request: Request) -> bool:
+    """Validate the shared token against the incoming request.
+    
+    Returns True if token is valid or not required.
+    Returns False if token is required but invalid.
+    """
 
     token = get_auth_token()
     if not token:
@@ -43,3 +48,36 @@ def require_token(request: Request) -> bool:
             return True
 
     return False
+
+
+# Legacy aliases for backward compatibility
+def require_token(request: Request) -> bool:
+    """Legacy alias for validate_token."""
+    return validate_token(request)
+
+
+# Decorator for Flask route handlers
+def require_api_key(f: Callable) -> Callable:
+    """Flask decorator to require API authentication.
+    
+    Usage:
+        @app.route('/api/endpoint')
+        @require_api_key
+        def my_endpoint():
+            ...
+    
+    Returns 401 Unauthorized if token is invalid or missing (when required).
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        from flask import request as flask_request
+        
+        if not validate_token(flask_request):
+            return jsonify({
+                "status": "error",
+                "error": "Unauthorized"
+            }), 401
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
