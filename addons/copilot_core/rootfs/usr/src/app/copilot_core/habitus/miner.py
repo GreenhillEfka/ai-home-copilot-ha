@@ -124,14 +124,14 @@ class HabitusMiner:
             edge for edge in all_edges 
             if (edge.edge_type == "affects" and 
                 edge.from_node.startswith("ha.service:") and
-                edge.updated_at >= cutoff_ms)
+                edge.updated_at_ms >= cutoff_ms)
         ]
         
         if not service_edges:
             return []
             
         # Sort by timestamp to create temporal sequences
-        service_edges.sort(key=lambda e: e.updated_at)
+        service_edges.sort(key=lambda e: e.updated_at_ms)
         
         # Group into sessions using debounce logic
         sessions = []
@@ -140,18 +140,18 @@ class HabitusMiner:
         
         for edge in service_edges:
             # If gap is larger than debounce, start new session
-            if edge.updated_at - last_timestamp > self.debounce_ms:
+            if edge.updated_at_ms - last_timestamp > self.debounce_ms:
                 if current_session:
                     sessions.append(current_session)
                 current_session = []
                 
             current_session.append({
-                "timestamp": edge.updated_at,
+                "timestamp": edge.updated_at_ms,
                 "service": edge.from_node.replace("ha.service:", ""),
                 "entity": edge.to_node.replace("ha.entity:", ""),
                 "edge": edge
             })
-            last_timestamp = edge.updated_at
+            last_timestamp = edge.updated_at_ms
             
         # Add final session
         if current_session:

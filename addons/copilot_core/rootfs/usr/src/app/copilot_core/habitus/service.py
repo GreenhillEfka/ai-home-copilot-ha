@@ -173,29 +173,29 @@ class HabitusService:
             # Fallback if parsing fails
             ant_service = ant_entity = antecedent
             cons_service = cons_entity = consequent
-            
-        candidate = Candidate(
+        
+        metadata = {
+            "antecedent": {
+                "service": ant_service,
+                "entity": ant_entity,
+                "full": antecedent
+            },
+            "consequent": {
+                "service": cons_service, 
+                "entity": cons_entity,
+                "full": consequent
+            },
+            "discovered_at": pattern_data["discovered_at"],
+            "discovery_method": "habitus_miner_v1"
+        }
+        
+        candidate_id = self.candidate_store.add_candidate(
             pattern_id=pattern_id,
-            state="pending",
             evidence=pattern_data["evidence"],
-            metadata={
-                "antecedent": {
-                    "service": ant_service,
-                    "entity": ant_entity,
-                    "full": antecedent
-                },
-                "consequent": {
-                    "service": cons_service, 
-                    "entity": cons_entity,
-                    "full": consequent
-                },
-                "discovered_at": pattern_data["discovered_at"],
-                "discovery_method": "habitus_miner_v1"
-            }
+            metadata=metadata
         )
         
-        self.candidate_store.create_candidate(candidate)
-        return candidate
+        return self.candidate_store.get_candidate(candidate_id)
         
     def list_recent_patterns(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recently discovered patterns from candidates."""
