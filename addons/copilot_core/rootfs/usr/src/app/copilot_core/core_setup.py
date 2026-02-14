@@ -21,14 +21,20 @@ from copilot_core.habitus.api import habitus_bp, init_habitus_api
 from copilot_core.habitus.service import HabitusService
 from copilot_core.mood.api import mood_bp, init_mood_api
 from copilot_core.mood.service import MoodService
+from copilot_core.system_health.api import system_health_bp
+from copilot_core.system_health.service import SystemHealthService
 
 
-def init_services():
+def init_services(hass=None):
     """
     Initialize all core services and return them as a dict for testing/dependency injection.
     
+    Args:
+        hass: Home Assistant hass instance (required for SystemHealth)
+    
     Returns:
         dict: Dictionary containing initialized services:
+            - system_health_service: SystemHealthService instance (optional, requires hass)
             - brain_graph_service: BrainGraphService instance
             - graph_renderer: GraphRenderer instance
             - candidate_store: CandidateStore instance
@@ -36,6 +42,11 @@ def init_services():
             - mood_service: MoodService instance
             - event_processor: EventProcessor instance
     """
+    # Initialize system health service (requires hass)
+    system_health_service = None
+    if hass:
+        system_health_service = SystemHealthService(hass)
+
     # Initialize brain graph service
     brain_graph_service = BrainGraphService()
     graph_renderer = GraphRenderer()
@@ -61,6 +72,7 @@ def init_services():
     set_post_ingest_callback(event_processor.process_events)
 
     return {
+        "system_health_service": system_health_service,
         "brain_graph_service": brain_graph_service,
         "graph_renderer": graph_renderer,
         "candidate_store": candidate_store,
@@ -70,12 +82,13 @@ def init_services():
     }
 
 
-def register_blueprints(app: Flask) -> None:
+def register_blueprints(app: Flask, services: dict = None) -> None:
     """
     Register all API blueprints with the Flask app.
     
     Args:
         app: Flask application instance
+        services: Optional services dict from init_services() for global access
     """
     app.register_blueprint(log_fixer_tx.bp)
     app.register_blueprint(tag_system.bp)
@@ -85,3 +98,10 @@ def register_blueprints(app: Flask) -> None:
     app.register_blueprint(candidates_bp)
     app.register_blueprint(habitus_bp)
     app.register_blueprint(mood_bp)
+    app.register_blueprint(system_health_bp)
+    
+    # Set global service instances for API access
+    if services:
+        from copilot_core import set_system_health_service
+        if services.get("system_health_service"):
+            set_system_health_service(services["system_health_service"])

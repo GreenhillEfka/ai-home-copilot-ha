@@ -1,5 +1,36 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.9] - 2026-02-14
+
+### Added
+- **SystemHealth Neuron** — Monitor Zigbee/Z-Wave Mesh, Recorder, and system updates:
+  - **Zigbee Mesh Monitoring (ZHA)**: Coordinator online status, device count, unavailable device detection
+  - **Z-Wave Mesh Monitoring**: Network state, node ready/sleeping count, readiness percentage
+  - **Recorder Database Health**: Database size tracking, recording state monitoring
+  - **Update Availability**: Core, OS, Supervised update detection
+  - **Overall Health Status**: healthy/degraded/unhealthy aggregation across all subsystems
+  - **Suggestion Suppression**: `should_suppress_suggestions()` API for suggestion relevance decisions
+
+### REST API Endpoints
+- `GET /api/v1/system_health` — Full health snapshot (all subsystems)
+- `GET /api/v1/system_health/zigbee` — Zigbee mesh status
+- `GET /api/v1/system_health/zwave` — Z-Wave mesh status
+- `GET /api/v1/system_health/recorder` — Database health
+- `GET /api/v1/system_health/updates` — Available updates
+- `GET /api/v1/system_health/suppress` — Check if suggestions should be suppressed
+
+### Technical Details
+- **Caching**: 5-minute TTL for all health metrics
+- **Lazy Initialization**: Service only active when hass object available
+- **Privacy-First**: No external data transmission, all metrics local
+- **Modular Design**: Follows same pattern as Mood, BrainGraph, Habitus modules
+
+### Use Cases
+- Suppress automation suggestions when Zigbee/Z-Wave mesh is unstable
+- Prioritize suggestions based on system stability
+- Alert users to large databases or pending updates
+- Provide diagnostic data for support/debugging
+
 ## [0.4.8] - 2026-02-14
 
 ### Changed
