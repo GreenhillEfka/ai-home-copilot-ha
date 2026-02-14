@@ -1,5 +1,37 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.11] - 2026-02-14
+
+### Added
+- **Energy Neuron v0.1 — Energy Monitoring and Optimization Module**:
+  - **Energy Consumption Monitoring**: Track daily consumption, production (solar/PV), current power draw, peak power
+  - **Anomaly Detection**: Detect unusual consumption patterns with severity levels (low/medium/high)
+  - **Load Shifting Opportunities**: Identify optimal times for running high-power devices
+  - **Suggestion Explainability**: Explain why energy suggestions are made
+  - **Baseline Learning**: Device-type baselines for washer, dryer, dishwasher, EV charger, heat pump, HVAC
+  - **Suppression Logic**: Auto-suppress suggestions when high-severity anomalies detected
+
+### REST API Endpoints
+- `GET /api/v1/energy` — Full energy snapshot (consumption, production, power, baselines)
+- `GET /api/v1/energy/anomalies` — Detected consumption anomalies
+- `GET /api/v1/energy/shifting` — Load shifting opportunities
+- `GET /api/v1/energy/explain/<suggestion_id>` — Explain why a suggestion was made
+- `GET /api/v1/energy/baselines` — Energy consumption baselines per device type
+- `GET /api/v1/energy/suppress` — Check if suggestions should be suppressed
+- `GET /api/v1/energy/health` — Service health status
+
+### Technical Details
+- **HA Entity Integration**: Reads from sensor.energy_* entities
+- **Caching**: 5-minute TTL for all metrics
+- **Modular Design**: Follows same pattern as Mood, SystemHealth, UniFi modules
+- **Privacy-First**: No external data transmission, local metrics only
+
+### Use Cases
+- "Deine Waschmaschine verbraucht 40% mehr als üblich"
+- "PV-Überschuss jetzt verfügbar → Geschirrspüler starten?"
+- "Peak-Zeit bald vorbei → Klimaanlage runterfahren"
+- Energy savings estimates with cost calculations
+
 ## [0.4.10] - 2026-02-14
 
 ### Added
