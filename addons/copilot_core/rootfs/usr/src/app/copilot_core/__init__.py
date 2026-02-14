@@ -7,13 +7,15 @@ Core services for AI Home CoPilot:
 - Habitus: A→B pattern mining
 - Mood: Context-aware suggestion weighting
 - SystemHealth: Zigbee/Z-Wave/Recorder monitoring
+- UniFi: Network monitoring (WAN, clients, roaming)
 - Dev Surface: Development utilities
 """
 
-__version__ = "0.4.9"
+__version__ = "0.4.10"
 
 # Global service instances (initialized by init_services)
 _system_health_service = None
+_unifi_service = None
 _brain_graph_service = None
 _graph_renderer = None
 _candidate_store = None
@@ -31,3 +33,14 @@ def set_system_health_service(service):
 def get_system_health_service():
     """Get the global SystemHealth service instance."""
     return _system_health_service
+
+
+def set_unifi_service(service):
+    """Set the global UniFi service instance."""
+    global _unifi_service
+    _unifi_service = service
+
+
+def get_unifi_service():
+    """Get the global UniFi service instance."""
+    return _unifi_service

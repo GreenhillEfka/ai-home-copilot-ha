@@ -23,6 +23,8 @@ from copilot_core.mood.api import mood_bp, init_mood_api
 from copilot_core.mood.service import MoodService
 from copilot_core.system_health.api import system_health_bp
 from copilot_core.system_health.service import SystemHealthService
+from copilot_core.unifi.api import unifi_bp, set_unifi_service
+from copilot_core.unifi.service import UniFiService
 
 
 def init_services(hass=None):
@@ -30,11 +32,12 @@ def init_services(hass=None):
     Initialize all core services and return them as a dict for testing/dependency injection.
     
     Args:
-        hass: Home Assistant hass instance (required for SystemHealth)
+        hass: Home Assistant hass instance (required for SystemHealth, UniFi)
     
     Returns:
         dict: Dictionary containing initialized services:
             - system_health_service: SystemHealthService instance (optional, requires hass)
+            - unifi_service: UniFiService instance (optional, requires hass)
             - brain_graph_service: BrainGraphService instance
             - graph_renderer: GraphRenderer instance
             - candidate_store: CandidateStore instance
@@ -46,6 +49,11 @@ def init_services(hass=None):
     system_health_service = None
     if hass:
         system_health_service = SystemHealthService(hass)
+
+    # Initialize UniFi service (requires hass)
+    unifi_service = None
+    if hass:
+        unifi_service = UniFiService(hass)
 
     # Initialize brain graph service
     brain_graph_service = BrainGraphService()
@@ -73,6 +81,7 @@ def init_services(hass=None):
 
     return {
         "system_health_service": system_health_service,
+        "unifi_service": unifi_service,
         "brain_graph_service": brain_graph_service,
         "graph_renderer": graph_renderer,
         "candidate_store": candidate_store,
@@ -99,9 +108,15 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     app.register_blueprint(habitus_bp)
     app.register_blueprint(mood_bp)
     app.register_blueprint(system_health_bp)
+    app.register_blueprint(unifi_bp)
     
     # Set global service instances for API access
     if services:
         from copilot_core import set_system_health_service
         if services.get("system_health_service"):
             set_system_health_service(services["system_health_service"])
+        
+        # Set UniFi service for API access
+        from copilot_core.unifi import set_unifi_service as set_unifi
+        if services.get("unifi_service"):
+            set_unifi(services["unifi_service"])
