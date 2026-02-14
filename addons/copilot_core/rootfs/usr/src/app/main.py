@@ -1,28 +1,17 @@
+"""
+AI Home CoPilot Core - Main Application Entry Point
+
+Minimal entry point that delegates service initialization and blueprint
+registration to modular components (core_setup.py).
+"""
+
 import os
-import json
-from datetime import datetime, timezone
 
 from flask import Flask, request, jsonify
 from waitress import serve
 
 from copilot_core.api.security import require_token
-# Import blueprints
-from copilot_core.api.v1 import log_fixer_tx
-from copilot_core.api.v1 import tag_system
-from copilot_core.api.v1 import events_ingest
-from copilot_core.api.v1.events_ingest import set_post_ingest_callback
-from copilot_core.brain_graph.api import brain_graph_bp, init_brain_graph_api
-from copilot_core.brain_graph.service import BrainGraphService
-from copilot_core.brain_graph.render import GraphRenderer
-from copilot_core.ingest.event_processor import EventProcessor
-from copilot_core.dev_surface.api import dev_surface_bp, init_dev_surface_api
-from copilot_core.dev_surface.service import dev_surface
-from copilot_core.candidates.api import candidates_bp, init_candidates_api
-from copilot_core.candidates.store import CandidateStore
-from copilot_core.habitus.api import habitus_bp, init_habitus_api
-from copilot_core.habitus.service import HabitusService
-from copilot_core.mood.api import mood_bp, init_mood_api
-from copilot_core.mood.service import MoodService
+from copilot_core.core_setup import init_services, register_blueprints
 
 APP_VERSION = os.environ.get("COPILOT_VERSION", "0.1.1")
 
@@ -31,48 +20,23 @@ DEV_LOG_MAX_CACHE = 200
 
 app = Flask(__name__)
 
-# Initialize brain graph service
-brain_graph_service = BrainGraphService()
-graph_renderer = GraphRenderer()
-init_brain_graph_api(brain_graph_service, graph_renderer)
+# Initialize all services (returns dict for potential testing/DI)
+_services = init_services()
 
-# Initialize dev surface
-init_dev_surface_api(brain_graph_service)
-
-# Initialize candidates API and store
-candidate_store = CandidateStore()
-init_candidates_api(candidate_store)
-
-# Initialize habitus service and API
-habitus_service = HabitusService(brain_graph_service, candidate_store)
-init_habitus_api(habitus_service)
-
-# Initialize mood service and API
-mood_service = MoodService()
-init_mood_api(mood_service)
-
-# Initialize event processor: EventStore → BrainGraph pipeline
-event_processor = EventProcessor(brain_graph_service=brain_graph_service)
-set_post_ingest_callback(event_processor.process_events)
-
-# Register blueprints
-app.register_blueprint(log_fixer_tx.bp)
-app.register_blueprint(tag_system.bp)
-app.register_blueprint(events_ingest.bp)
-app.register_blueprint(brain_graph_bp)
-app.register_blueprint(dev_surface_bp)
-app.register_blueprint(candidates_bp)
-app.register_blueprint(habitus_bp)
-app.register_blueprint(mood_bp)
+# Register all API blueprints
+register_blueprints(app)
 
 # In-memory ring buffer of recent dev logs.
 _DEV_LOG_CACHE: list[dict] = []
 
 
 def _now_iso():
+    from datetime import datetime, timezone
     return datetime.now(timezone.utc).isoformat()
 
+
 def _append_dev_log(entry: dict) -> None:
+    import json
     os.makedirs(os.path.dirname(DEV_LOG_PATH), exist_ok=True)
     with open(DEV_LOG_PATH, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -83,9 +47,10 @@ def _append_dev_log(entry: dict) -> None:
 
 
 def _load_dev_log_cache() -> None:
+    import json
     try:
         with open(DEV_LOG_PATH, "r", encoding="utf-8") as fh:
-            lines = fh.readlines()[-DEV_LOG_MAX_CACHE :]
+            lines = fh.readlines()[-DEV_LOG_MAX_CACHE:]
         for line in lines:
             try:
                 _DEV_LOG_CACHE.append(json.loads(line))
@@ -109,9 +74,10 @@ def index():
         "Event Ingest: /api/v1/events (POST/GET), /api/v1/events/stats\n"
         "Brain Graph: /api/v1/graph/state, /snapshot.svg, /stats, /prune, /patterns\n"
         "Candidates: /api/v1/candidates (POST/GET), /{id} (GET/PUT), /stats, /cleanup\n"
+        "Habitus: /api/v1/habitus/mine, /patterns, /stats, /health\n"
+        "Mood: /api/v1/mood, /summary, /{zone_id}, /suppress-energy-saving, /relevance\n"
         "Dev: /api/v1/dev/logs (POST/GET)\n"
-        "Pipeline: Events → EventProcessor → BrainGraph → Candidates (real-time)\n"
-        "Note: Habitus miner A→B patterns coming next.\n"
+        "Pipeline: Events → EventProcessor → BrainGraph → Habitus → Candidates (real-time)\n"
     )
 
 

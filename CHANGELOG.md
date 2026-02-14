@@ -1,5 +1,21 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.8] - 2026-02-14
+
+### Changed
+- **Modular Architecture Refactor**: Extracted service initialization and blueprint registration into separate module
+  - New `copilot_core/core_setup.py`: Contains `init_services()` and `register_blueprints()` functions
+  - New `copilot_core/__init__.py`: Package version marker
+  - `main.py` reduced from 176→93 lines (47% reduction)
+  - Follows same pattern as HA Integration v0.5.4 (services_setup.py extraction)
+  - Enables easier testing and dependency injection
+
+### Benefits
+- Cleaner main.py entry point
+- Services dict returned for testing/DI purposes
+- Blueprints registered in one place
+- Easier to add/remove modules without touching main.py
+
 ## [0.4.7] - 2026-02-11
 
 ### Added
