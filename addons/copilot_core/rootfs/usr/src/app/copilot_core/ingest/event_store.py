@@ -107,33 +107,44 @@ class EventStore:
             pass
 
     def _prune_seen(self) -> None:
-        """Remove expired dedup entries (call under lock)."""
+        """Remove ALL expired dedup entries (call under lock).
+        
+        FIX: Now removes ALL expired entries, not just until first non-expired.
+        This prevents unbounded growth when events arrive with old timestamps.
+        """
         now = time.time()
-        while self._seen:
-            key, expiry = next(iter(self._seen.items()))
-            if expiry <= now:
-                self._seen.pop(key, None)
-            else:
-                break
+        # Remove ALL expired entries (not just until first non-expired)
+        expired_keys = [k for k, expiry in self._seen.items() if expiry <= now]
+        for key in expired_keys:
+            self._seen.pop(key, None)
 
     def _is_duplicate(self, key: str) -> bool:
-        """Check and register dedup key (call under lock)."""
+        """Check and register dedup key (call under lock).
+        
+        FIX: Added periodic full prune to prevent memory leak.
+        """
         if self._dedup_ttl <= 0:
             return False
 
-        self._prune_seen()
+        # FIX: Periodic full prune every 100 calls to prevent memory leak
+        # Use modulo to avoid expensive pruning on every call
+        if self.accepted_total % 100 == 0:
+            self._prune_seen()
 
         now = time.time()
         if key in self._seen and self._seen[key] > now:
             return True
 
         self._seen[key] = now + self._dedup_ttl
-        # Bound dedup map
-        if len(self._seen) > self._max * 2:
-            # Remove oldest half
-            excess = len(self._seen) - self._max
-            for _ in range(excess):
-                self._seen.popitem(last=False)
+        
+        # FIX: More aggressive bound enforcement
+        # Bound dedup map - keep it bounded to 2x max events
+        max_dedup_size = self._max * 2
+        if len(self._seen) > max_dedup_size:
+            # Remove oldest 50% of entries
+            keys_to_remove = list(self._seen.keys())[:max_dedup_size // 2]
+            for key in keys_to_remove:
+                self._seen.pop(key, None)
 
         return False
 

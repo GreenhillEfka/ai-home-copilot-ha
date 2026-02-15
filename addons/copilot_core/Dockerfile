@@ -5,6 +5,7 @@ FROM $BUILD_FROM
 RUN apk add --no-cache python3 py3-pip graphviz && \
     pip3 install --no-cache-dir \
         flask==3.0.2 \
+        flask-compress==1.14 \
         waitress==3.0.0 \
         python-ulid==2.7.0 \
         pyyaml==6.0.1 \

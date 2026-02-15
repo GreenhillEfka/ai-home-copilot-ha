@@ -1,18 +1,29 @@
 """
 SQLite-based graph storage with bounded capacity and automatic pruning.
+
+FIX: Added async support via ThreadPoolExecutor for non-blocking I/O.
 """
 
 import json
 import sqlite3
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from .model import GraphNode, GraphEdge, NodeKind, EdgeType
 
 
+# Thread pool for async SQLite operations (avoids blocking Flask threads)
+_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="brain_graph_")
+
+
 class BrainGraphStore:
-    """SQLite-backed graph storage with bounded capacity."""
+    """SQLite-backed graph storage with bounded capacity.
+    
+    FIX: Now supports async operations via ThreadPoolExecutor to prevent
+    blocking the Flask event loop under high load.
+    """
     
     def __init__(
         self,
@@ -256,7 +267,11 @@ class BrainGraphStore:
         max_nodes: Optional[int] = None,
         max_edges: Optional[int] = None
     ) -> Tuple[List[GraphNode], List[GraphEdge]]:
-        """Get nodes and edges within N hops of a center node."""
+        """Get nodes and edges within N hops of a center node.
+        
+        FIX: Uses batched SQL queries to avoid N+1 pattern.
+        Previous implementation made 2*N queries per hop; now uses 2 queries total.
+        """
         visited_nodes: Set[str] = {center_node}
         current_layer = {center_node}
         
@@ -264,15 +279,45 @@ class BrainGraphStore:
         for _ in range(hops):
             next_layer = set()
             
-            # Find all edges from current layer
-            for node_id in current_layer:
-                outbound_edges = self.get_edges(from_node=node_id)
-                inbound_edges = self.get_edges(to_node=node_id)
-                
-                for edge in outbound_edges + inbound_edges:
-                    neighbor = edge.to_node if edge.from_node == node_id else edge.from_node
-                    if neighbor not in visited_nodes:
-                        next_layer.add(neighbor)
+            # FIX: Batch query all edges from current layer in ONE query
+            if current_layer:
+                with sqlite3.connect(self.db_path) as conn:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    
+                    placeholders = ",".join("?" * len(current_layer))
+                    
+                    # Single query for all outbound edges
+                    cursor.execute(
+                        f"SELECT * FROM edges WHERE from_node IN ({placeholders})",
+                        list(current_layer)
+                    )
+                    outbound_rows = cursor.fetchall()
+                    
+                    # Single query for all inbound edges
+                    cursor.execute(
+                        f"SELECT * FROM edges WHERE to_node IN ({placeholders})",
+                        list(current_layer)
+                    )
+                    inbound_rows = cursor.fetchall()
+                    
+                    # Process edges to find neighbors
+                    all_edges = []
+                    for row in outbound_rows + inbound_rows:
+                        edge = GraphEdge(
+                            id=row["id"],
+                            from_node=row["from_node"],
+                            to_node=row["to_node"],
+                            edge_type=row["edge_type"],
+                            updated_at_ms=row["updated_at_ms"],
+                            weight=row["weight"],
+                            evidence=json.loads(row["evidence_json"]) if row["evidence_json"] else None,
+                            meta=json.loads(row["meta_json"]) if row["meta_json"] else {},
+                        )
+                        all_edges.append(edge)
+                        neighbor = edge.to_node if edge.from_node in current_layer else edge.from_node
+                        if neighbor not in visited_nodes:
+                            next_layer.add(neighbor)
                         
             visited_nodes.update(next_layer)
             current_layer = next_layer
@@ -280,25 +325,72 @@ class BrainGraphStore:
             if not next_layer:
                 break
         
-        # Get all nodes in neighborhood
-        nodes = []
-        for node_id in visited_nodes:
-            node = self.get_node(node_id)
-            if node:
-                nodes.append(node)
+        # FIX: Batch fetch all nodes in ONE query instead of N queries
+        if visited_nodes:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                placeholders = ",".join("?" * len(visited_nodes))
+                cursor.execute(
+                    f"SELECT * FROM nodes WHERE id IN ({placeholders})",
+                    list(visited_nodes)
+                )
+                rows = cursor.fetchall()
+                
+                nodes = [
+                    GraphNode(
+                        id=row["id"],
+                        kind=row["kind"],
+                        label=row["label"],
+                        updated_at_ms=row["updated_at_ms"],
+                        score=row["score"],
+                        domain=row["domain"],
+                        source=json.loads(row["source_json"]) if row["source_json"] else None,
+                        tags=json.loads(row["tags_json"]) if row["tags_json"] else None,
+                        meta=json.loads(row["meta_json"]) if row["meta_json"] else {},
+                    )
+                    for row in rows
+                ]
+        else:
+            nodes = []
         
         # Apply limits by salience/recency
         if max_nodes and len(nodes) > max_nodes:
             nodes = sorted(nodes, key=lambda n: n.effective_score(), reverse=True)[:max_nodes]
             visited_nodes = {n.id for n in nodes}
         
-        # Get edges between nodes in neighborhood
+        # FIX: Batch fetch all edges between visited nodes in ONE query
         edges = []
-        for node_id in visited_nodes:
-            node_edges = self.get_edges(from_node=node_id)
-            for edge in node_edges:
-                if edge.to_node in visited_nodes and edge not in edges:
-                    edges.append(edge)
+        if visited_nodes:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                placeholders = ",".join("?" * len(visited_nodes))
+                
+                # Single query for edges where both nodes are in visited set
+                cursor.execute(
+                    f"""SELECT * FROM edges 
+                        WHERE from_node IN ({placeholders}) 
+                        AND to_node IN ({placeholders})""",
+                    list(visited_nodes) * 2
+                )
+                rows = cursor.fetchall()
+                
+                edges = [
+                    GraphEdge(
+                        id=row["id"],
+                        from_node=row["from_node"],
+                        to_node=row["to_node"],
+                        edge_type=row["edge_type"],
+                        updated_at_ms=row["updated_at_ms"],
+                        weight=row["weight"],
+                        evidence=json.loads(row["evidence_json"]) if row["evidence_json"] else None,
+                        meta=json.loads(row["meta_json"]) if row["meta_json"] else {},
+                    )
+                    for row in rows
+                ]
         
         if max_edges and len(edges) > max_edges:
             edges = sorted(edges, key=lambda e: e.effective_weight(), reverse=True)[:max_edges]
@@ -465,3 +557,72 @@ class BrainGraphStore:
                 "max_nodes": self.max_nodes,
                 "max_edges": self.max_edges,
             }
+
+    # === Async Wrapper Methods (FIX: Non-blocking I/O) ===
+    # These methods run SQLite operations in a thread pool to avoid
+    # blocking the Flask event loop. Use these for async callers.
+    
+    async def upsert_node_async(self, node: GraphNode) -> bool:
+        """Async wrapper for upsert_node - runs in thread pool."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self.upsert_node, node)
+    
+    async def upsert_edge_async(self, edge: GraphEdge) -> bool:
+        """Async wrapper for upsert_edge - runs in thread pool."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self.upsert_edge, edge)
+    
+    async def get_node_async(self, node_id: str) -> Optional[GraphNode]:
+        """Async wrapper for get_node - runs in thread pool."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self.get_node, node_id)
+    
+    async def get_nodes_async(
+        self,
+        kinds: Optional[List[NodeKind]] = None,
+        domains: Optional[List[str]] = None,
+        limit: Optional[int] = None
+    ) -> List[GraphNode]:
+        """Async wrapper for get_nodes - runs in thread pool."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            _executor, self.get_nodes, kinds, domains, limit
+        )
+    
+    async def get_edges_async(
+        self,
+        from_node: Optional[str] = None,
+        to_node: Optional[str] = None,
+        edge_types: Optional[List[EdgeType]] = None,
+        limit: Optional[int] = None
+    ) -> List[GraphEdge]:
+        """Async wrapper for get_edges - runs in thread pool."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            _executor, self.get_edges, from_node, to_node, edge_types, limit
+        )
+    
+    async def get_neighborhood_async(
+        self, 
+        center_node: str, 
+        hops: int = 1,
+        max_nodes: Optional[int] = None,
+        max_edges: Optional[int] = None
+    ) -> Tuple[List[GraphNode], List[GraphEdge]]:
+        """Async wrapper for get_neighborhood - runs in thread pool."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(
+            _executor, self.get_neighborhood, center_node, hops, max_nodes, max_edges
+        )
+    
+    async def get_stats_async(self) -> Dict[str, int]:
+        """Async wrapper for get_stats - runs in thread pool."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(_executor, self.get_stats)

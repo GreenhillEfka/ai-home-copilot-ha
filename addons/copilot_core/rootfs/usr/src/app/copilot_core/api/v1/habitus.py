@@ -58,6 +58,12 @@ def get_status():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@bp.route("/health", methods=["GET"])
+def get_health():
+    """Health check alias for /status (HA Integration compatibility)."""
+    return get_status()
+
+
 @bp.route("/rules", methods=["GET"])
 def get_rules():
     """Get discovered A→B rules with optional filtering."""

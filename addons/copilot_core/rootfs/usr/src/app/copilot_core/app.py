@@ -141,6 +141,12 @@ def create_app() -> Flask:
     # Register API modules
     app.register_blueprint(api_v1)
 
+    # Initialize Tags API v2 (FIX: Flask Blueprint rewrite)
+    from copilot_core.tags.api import init_tags_api
+    from copilot_core.tags import TagRegistry
+    tags_registry = TagRegistry()
+    init_tags_api(tags_registry)
+
     @app.get("/")
     def index():
         return (

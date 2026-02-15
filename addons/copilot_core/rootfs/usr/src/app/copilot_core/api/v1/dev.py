@@ -255,3 +255,43 @@ def get_dev_logs():
     limit = max(1, min(limit, DEV_LOG_MAX_CACHE_DEFAULT))
 
     return jsonify({"ok": True, "count": min(limit, len(_DEV_LOG_CACHE)), "items": _DEV_LOG_CACHE[-limit:]})
+
+
+@bp.get("/capabilities")
+def get_capabilities():
+    """Core capabilities endpoint for HA Integration health checks.
+
+    Returns available Core features and API version.
+    """
+    cfg = current_app.config.get("COPILOT_CFG")
+    ver = getattr(cfg, "version", "?")
+
+    return jsonify({
+        "ok": True,
+        "version": ver,
+        "capabilities": [
+            "events",
+            "candidates",
+            "neurons",
+            "mood",
+            "graph",
+            "habitus",
+            "weather",
+            "unifi",
+            "energy",
+            "vector",
+            "tags",
+            "voice_context",
+            "user_preferences",
+            "knowledge_graph",
+            "collective_intelligence",
+        ],
+        "api_version": "v1",
+        "features": {
+            "brain_graph": True,
+            "habitus_mining": True,
+            "neural_pipeline": True,
+            "multi_user_learning": True,
+            "federated_learning": True,
+        }
+    })

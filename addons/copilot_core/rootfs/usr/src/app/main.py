@@ -8,6 +8,7 @@ registration to modular components (core_setup.py).
 import os
 
 from flask import Flask, request, jsonify
+from flask_compress import Compress
 from waitress import serve
 
 from copilot_core.api.security import require_token
@@ -19,6 +20,12 @@ DEV_LOG_PATH = "/data/dev_logs.jsonl"
 DEV_LOG_MAX_CACHE = 200
 
 app = Flask(__name__)
+
+# Initialize compression for API responses
+Compress(app)
+app.config['COMPRESS_MIMETYPES'] = ['application/json', 'text/html']
+app.config['COMPRESS_LEVEL'] = 6  # Balance between compression ratio and CPU
+app.config['COMPRESS_MIN_SIZE'] = 500  # Only compress responses > 500 bytes
 
 # Initialize all services (returns dict for potential testing/DI)
 _services = init_services()

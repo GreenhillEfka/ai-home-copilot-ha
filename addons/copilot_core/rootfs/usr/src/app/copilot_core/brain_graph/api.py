@@ -1,14 +1,17 @@
 """
-Brain Graph API endpoints.
+Brain Graph API endpoints with performance optimization.
 """
 
 import time
+import hashlib
+import json
 from flask import Blueprint, request, jsonify, Response
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from .service import BrainGraphService
 from .render import GraphRenderer
 from ..api.security import require_api_key
+from ..performance import brain_graph_cache, api_response_cache, QueryCache
 
 # Create blueprint
 brain_graph_bp = Blueprint('brain_graph', __name__, url_prefix='/api/v1/graph')
@@ -16,6 +19,14 @@ brain_graph_bp = Blueprint('brain_graph', __name__, url_prefix='/api/v1/graph')
 # Global service instance (will be initialized in main.py)
 _brain_graph_service: BrainGraphService = None
 _graph_renderer: GraphRenderer = None
+
+
+def _compute_cache_key(prefix: str, **params) -> str:
+    """Compute a deterministic cache key from parameters."""
+    # Sort keys for consistent hashing
+    sorted_params = json.dumps(params, sort_keys=True, default=str)
+    content = f"{prefix}:{sorted_params}"
+    return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 def init_brain_graph_api(service: BrainGraphService, renderer: GraphRenderer = None):
     """Initialize the brain graph API with service instances."""
@@ -36,11 +47,17 @@ def get_graph_state() -> Response:
     - hops: number of hops for neighborhood (default 1)
     - limitNodes: max nodes to return
     - limitEdges: max edges to return
+    - nocache: set to 1 to bypass cache
+    
+    Caching: Results are cached for 30 seconds (TTL).
     """
     if not _brain_graph_service:
         return jsonify({"error": "Brain graph service not initialized"}), 503
     
     try:
+        # Check cache bypass flag
+        nocache = request.args.get('nocache', '0') == '1'
+        
         # Parse query parameters
         kinds = request.args.getlist('kind')
         domains = request.args.getlist('domain')
@@ -48,6 +65,24 @@ def get_graph_state() -> Response:
         hops = int(request.args.get('hops', 1))
         limit_nodes = _parse_int_param('limitNodes', default=None, max_value=500)
         limit_edges = _parse_int_param('limitEdges', default=None, max_value=1500)
+        
+        # Compute cache key
+        cache_key = _compute_cache_key(
+            "graph_state",
+            kinds=kinds,
+            domains=domains,
+            center=center,
+            hops=hops,
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges
+        )
+        
+        # Try cache first (unless nocache)
+        if not nocache:
+            cached_result = brain_graph_cache.get(cache_key)
+            if cached_result is not None:
+                cached_result["_cached"] = True
+                return jsonify(cached_result)
         
         # Validate parameters
         if hops < 1 or hops > 3:
@@ -67,6 +102,10 @@ def get_graph_state() -> Response:
             limit_nodes=limit_nodes,
             limit_edges=limit_edges
         )
+        
+        # Cache the result (30 second TTL for graph state)
+        brain_graph_cache.set(cache_key, state, ttl=30.0)
+        state["_cached"] = False
         
         return jsonify(state)
         
@@ -154,17 +193,154 @@ def get_graph_snapshot() -> Response:
 @brain_graph_bp.route('/stats', methods=['GET'])
 @require_api_key 
 def get_graph_stats() -> Response:
-    """Get brain graph statistics."""
+    """
+    Get brain graph statistics.
+    
+    Returns:
+    - Graph statistics (node/edge counts)
+    - Cache statistics (hits, misses, hit rate)
+    - Performance metrics
+    """
     if not _brain_graph_service:
         return jsonify({"error": "Brain graph service not initialized"}), 503
     
     try:
+        # Get graph stats
         stats = _brain_graph_service.get_stats()
-        return jsonify(stats)
+        
+        # Add cache stats
+        cache_stats = brain_graph_cache.get_stats()
+        
+        return jsonify({
+            "version": 1,
+            "ok": True,
+            **stats,
+            "cache": {
+                "enabled": brain_graph_cache.enabled,
+                "size": cache_stats["size"],
+                "max_size": cache_stats["max_size"],
+                "hits": cache_stats["hits"],
+                "misses": cache_stats["misses"],
+                "hit_rate": round(cache_stats["hit_rate"], 3),
+                "evictions": cache_stats["evictions"],
+            }
+        })
     except Exception as e:
         # Security: Don't leak internal error details
         import logging
         logging.getLogger(__name__).error(f"Graph stats error: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@brain_graph_bp.route('/cache', methods=['POST'])
+@require_api_key
+def clear_graph_cache() -> Response:
+    """
+    Clear the graph cache.
+    
+    Useful after major graph changes or for testing.
+    """
+    if not _brain_graph_service:
+        return jsonify({"error": "Brain graph service not initialized"}), 503
+    
+    try:
+        brain_graph_cache.clear()
+        return jsonify({
+            "message": "Graph cache cleared successfully",
+            "timestamp_ms": int(time.time() * 1000)
+        })
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Cache clear error: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@brain_graph_bp.route('/nodes', methods=['GET'])
+@require_api_key
+def get_nodes_paginated() -> Response:
+    """
+    Get nodes with pagination.
+    
+    Query parameters:
+    - kind: filter by node kind (repeatable)
+    - domain: filter by domain (repeatable)
+    - page: page number (1-indexed, default 1)
+    - per_page: items per page (default 50, max 100)
+    - sort: sort field (score, label, updated_at)
+    - order: sort order (asc, desc)
+    """
+    if not _brain_graph_service:
+        return jsonify({"error": "Brain graph service not initialized"}), 503
+    
+    try:
+        # Parse pagination parameters
+        page = _parse_int_param('page', default=1)
+        per_page = _parse_int_param('per_page', default=50, max_value=100)
+        
+        # Parse filter parameters
+        kinds = request.args.getlist('kind')
+        domains = request.args.getlist('domain')
+        
+        # Parse sort parameters
+        sort = request.args.get('sort', 'score')
+        order = request.args.get('order', 'desc')
+        
+        if sort not in ['score', 'label', 'updated_at']:
+            sort = 'score'
+        if order not in ['asc', 'desc']:
+            order = 'desc'
+        
+        # Get all nodes (filtered)
+        all_nodes = _brain_graph_service.store.get_nodes(
+            kinds=kinds or None,
+            domains=domains or None,
+            limit=None
+        )
+        
+        now_ms = int(time.time() * 1000)
+        
+        # Convert to serializable format with scores
+        node_list = []
+        for node in all_nodes:
+            node_list.append({
+                "id": node.id,
+                "kind": node.kind,
+                "label": node.label,
+                "domain": node.domain,
+                "score": node.effective_score(now_ms, _brain_graph_service.node_half_life_hours),
+                "updated_at_ms": node.updated_at_ms,
+                "source": node.source,
+                "tags": node.tags,
+            })
+        
+        # Sort
+        if sort == 'score':
+            node_list.sort(key=lambda x: x["score"], reverse=(order == 'desc'))
+        elif sort == 'label':
+            node_list.sort(key=lambda x: x.get("label", ""), reverse=(order == 'desc'))
+        elif sort == 'updated_at':
+            node_list.sort(key=lambda x: x.get("updated_at_ms", 0), reverse=(order == 'desc'))
+        
+        # Paginate
+        total = len(node_list)
+        start = (page - 1) * per_page
+        end = start + per_page
+        paginated_nodes = node_list[start:end]
+        
+        return jsonify({
+            "version": 1,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "total_pages": (total + per_page - 1) // per_page,
+            },
+            "nodes": paginated_nodes,
+        })
+        
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Nodes pagination error: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
 @brain_graph_bp.route('/prune', methods=['POST'])
@@ -189,14 +365,28 @@ def prune_graph() -> Response:
 @brain_graph_bp.route('/patterns', methods=['GET'])
 @require_api_key
 def get_patterns() -> Response:
-    """Get inferred patterns from the graph."""
+    """
+    Get inferred patterns from the graph.
+    
+    Query parameters:
+    - limit: max items per pattern type (default 5, max 20)
+    """
     if not _brain_graph_service:
         return jsonify({"error": "Brain graph service not initialized"}), 503
     
     try:
+        limit = _parse_int_param('limit', default=5, max_value=20)
+        
         patterns = _brain_graph_service.infer_patterns()
+        
+        # Limit results
+        for key in patterns:
+            if isinstance(patterns[key], list):
+                patterns[key] = patterns[key][:limit]
+        
         return jsonify({
             "version": 1,
+            "ok": True,
             "generated_at_ms": int(time.time() * 1000),
             "patterns": patterns
         })

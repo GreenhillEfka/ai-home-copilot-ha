@@ -129,6 +129,9 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
         app: Flask application instance
         services: Optional services dict from init_services() for global access
     """
+    # Import performance blueprint
+    from copilot_core.api.performance import performance_bp
+    
     app.register_blueprint(log_fixer_tx.bp)
     app.register_blueprint(events_ingest.bp)
     app.register_blueprint(brain_graph_bp)
@@ -139,6 +142,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     app.register_blueprint(system_health_bp)
     app.register_blueprint(unifi_bp)
     app.register_blueprint(energy_bp)
+    app.register_blueprint(performance_bp)  # Performance monitoring
     
     # Register Tag System v0.2 blueprint (Decision Matrix 2026-02-14)
     from flask import Blueprint
@@ -152,6 +156,11 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
         from copilot_core import set_system_health_service
         if services.get("system_health_service"):
             set_system_health_service(services["system_health_service"])
+        
+        # Set SQL connection pool
+        from copilot_core.performance import sql_pool
+        if sql_pool:
+            sql_pool.max_connections = 5  # Configure pool size
         
         # Set UniFi service for API access
         from copilot_core.unifi import set_unifi_service as set_unifi

@@ -7,9 +7,15 @@ from typing import Dict, List, Optional, Any, Tuple, Iterable
 
 from .model import GraphNode, GraphEdge, NodeKind, EdgeType
 from .store import BrainGraphStore
+from ..performance import brain_graph_cache
 
 # Alias for backwards compatibility
 GraphStore = BrainGraphStore
+
+
+def _invalidate_graph_cache():
+    """Invalidate all graph state cache entries."""
+    brain_graph_cache.clear()
 
 
 class BrainGraphService:
@@ -84,6 +90,9 @@ class BrainGraphService:
         # Store the node
         self.store.upsert_node(updated_node)
         
+        # Invalidate graph cache on updates
+        _invalidate_graph_cache()
+        
         # Trigger pruning periodically (every ~100 operations)
         import random
         if random.randint(1, 100) == 1:
@@ -138,6 +147,9 @@ class BrainGraphService:
         
         # Store the edge
         self.store.upsert_edge(updated_edge)
+        
+        # Invalidate graph cache on edge updates
+        _invalidate_graph_cache()
         
         return updated_edge
     

@@ -1,14 +1,25 @@
 from __future__ import annotations
 
+import time
+import hashlib
+import json
 from flask import Blueprint, jsonify, make_response, request
 
 from copilot_core.brain_graph.provider import get_graph_service
+from copilot_core.performance import brain_graph_cache
 
 bp = Blueprint("graph", __name__, url_prefix="/graph")
 
 
 def _svc():
     return get_graph_service()
+
+
+def _compute_cache_key(prefix: str, **params) -> str:
+    """Compute a deterministic cache key from parameters."""
+    sorted_params = json.dumps(params, sort_keys=True, default=str)
+    content = f"{prefix}:{sorted_params}"
+    return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 
 @bp.get("/state")
@@ -38,6 +49,27 @@ def graph_state():
     limit_edges = max(1, min(limit_edges, 1500))
     hops = max(0, min(hops, 2))
 
+    # Check cache bypass
+    nocache = request.args.get('nocache', '0') == '1'
+    
+    # Compute cache key
+    cache_key = _compute_cache_key(
+        "graph_state",
+        kinds=kinds,
+        domains=domains,
+        center=center,
+        hops=hops,
+        limit_nodes=limit_nodes,
+        limit_edges=limit_edges
+    )
+    
+    # Try cache first (unless nocache)
+    if not nocache:
+        cached_result = brain_graph_cache.get(cache_key)
+        if cached_result is not None:
+            cached_result["_cached"] = True
+            return jsonify(cached_result)
+
     # Convert query params to match BrainGraphService.get_graph_state signature
     kinds = [k for k in kinds if isinstance(k, str)]
     domains = [d for d in domains if isinstance(d, str)]
@@ -50,25 +82,49 @@ def graph_state():
         limit_nodes=limit_nodes,
         limit_edges=limit_edges,
     )
+    
+    # Cache the result
+    brain_graph_cache.set(cache_key, state, ttl=30.0)
+    state["_cached"] = False
+    
     return jsonify(state)
 
 
 @bp.get("/stats")
 def graph_stats():
     """Graph statistics for health checks."""
+    # Get cache stats
+    cache_stats = brain_graph_cache.get_stats()
+    
     state = _svc().get_graph_state(limit_nodes=1, limit_edges=1)
     return jsonify({
+        "version": 1,
         "ok": True,
         "nodes": len(state.get("nodes", [])),
         "edges": len(state.get("edges", [])),
-        "updated_at_ms": state.get("generated_at_ms", 0)
+        "updated_at_ms": state.get("generated_at_ms", 0),
+        "limits": state.get("limits", {}),
+        "cache": {
+            "enabled": brain_graph_cache.enabled,
+            "size": cache_stats["size"],
+            "max_size": cache_stats["max_size"],
+            "hits": cache_stats["hits"],
+            "misses": cache_stats["misses"],
+            "hit_rate": round(cache_stats["hit_rate"], 3),
+        }
     })
 
 
 @bp.get("/patterns")
 def graph_patterns():
     """Pattern summary for health checks."""
-    return jsonify({"ok": True, "patterns": [], "message": "Use /graph/state for full data"})
+    patterns = _svc().infer_patterns()
+    return jsonify({
+        "version": 1,
+        "ok": True,
+        "generated_at_ms": int(time.time() * 1000),
+        "patterns": patterns
+    })
 
 
 @bp.get("/snapshot.svg")
@@ -89,3 +145,14 @@ def graph_snapshot_svg():
     resp = make_response(svg, 200)
     resp.headers["Content-Type"] = "image/svg+xml; charset=utf-8"
     return resp
+
+
+@bp.post("/cache/clear")
+def clear_cache():
+    """Clear graph cache."""
+    brain_graph_cache.clear()
+    return jsonify({
+        "ok": True,
+        "message": "Cache cleared",
+        "timestamp_ms": int(time.time() * 1000)
+    })

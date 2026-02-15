@@ -16,6 +16,7 @@ from copilot_core.api.v1.swagger_ui import bp as swagger_ui_bp
 from copilot_core.api.v1.user_preferences import bp as user_preferences_bp
 from copilot_core.api.v1.dashboard import bp as dashboard_bp
 from copilot_core.knowledge_graph.api import bp as knowledge_graph_bp
+from copilot_core.tags.api import bp as tags_bp
 
 api_v1 = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
@@ -36,3 +37,4 @@ api_v1.register_blueprint(swagger_ui_bp)
 api_v1.register_blueprint(user_preferences_bp)
 api_v1.register_blueprint(dashboard_bp)
 api_v1.register_blueprint(knowledge_graph_bp)
+api_v1.register_blueprint(tags_bp)
