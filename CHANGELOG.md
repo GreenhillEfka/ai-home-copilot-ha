@@ -1,5 +1,34 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.6.0] - 2026-02-15
+
+### Added
+- **Interactive Visualization (Phase 5)**: Complete visualization module with D3.js and React
+  - `src/visualizations/brain_graph/` - BrainGraphPanel with D3.js force-directed graph
+  - `src/visualizations/lovelace_cards/` - Custom Lovelace cards (mood, neurons, habitus)
+  - `src/visualizations/react_components/` - React components with Framer Motion animations
+  - Interactive zoom/pan, node selection, hover effects
+  - Real-time updates from Home Assistant states
+- **VisualizationManager**: Central manager for creating and managing visualization instances
+- **config.json**: Added visualization configuration options (brain_graph, lovelace_cards)
+- **Documentation**: `docs/visualization.md` with full usage guide
+
+### Visualization Components
+- **BrainGraphPanel**: D3.js force-directed graph with drag, zoom, selection
+- **MoodContext**: React component for mood visualization with emotion breakdown
+- **NeuronStatus**: Neuron activity display with firing rates
+- **HabitusZone**: Zone selector with settings and mood display
+- **Visualization**: Main container combining all components
+
+### Features
+- Node types: entity, mood, neuron, habitus, behavior
+- Color coding by type and state
+- Interactive graph exploration
+- Lovelace dashboard integration
+- React-based smooth animations
+
+---
+
 ## [0.5.2] - 2026-02-15
 
 ### Added
