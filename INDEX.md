@@ -4,43 +4,50 @@
 
 ## Current Release
 
-**Core Add-on v0.4.16** (2026-02-15) — `main` branch
+**Core Add-on v0.4.17** (2026-02-15) — `main` branch
 
-### Latest Update
+### Latest Updates
+- **OpenAPI Specification**: Complete API documentation (`docs/openapi.yaml`)
 - **Habitus Dashboard Cards API**: `/api/v1/habitus/dashboard_cards` endpoint
 - **Habitus Miner v0.1**: Zone-aware pattern mining backend
 - **Debug Mode Module**: Runtime debug configuration
 - **Security**: log_fixer_tx API authentication
 
 ### Features
-- **Habitus Zones v2** — Zone-aware pattern mining
-- **Tag System v0.2** — Decision Matrix with HA Labels integration
-- **Neurons**: SystemHealth, UniFi, Energy
-- **Brain Graph** — Configurable limits (nodes/edges/half-life)
-- **Security** — log_fixer_tx API authentication (v0.4.16)
+| Feature | Status |
+|---------|--------|
+| Habitus Zones v2 | ✅ Zone-aware pattern mining |
+| Tag System v0.2 | ✅ Decision Matrix with HA Labels |
+| Neurons | ✅ SystemHealth, UniFi, Energy |
+| Brain Graph | ✅ Configurable limits |
+| Event Deduplication | ✅ Idempotency-Key support |
+| OpenAPI Spec | ✅ v0.4.17 |
 
 ### API Endpoints
 | Module | Endpoints |
 |--------|-----------|
-| Habitus | `/api/v1/habitus/*` (mine, zones, candidates) |
+| Habitus | `/api/v1/habitus/*` (status, rules, mine, dashboard_cards, zones) |
+| Graph | `/api/v1/graph/*` (state, sync, patterns) |
+| Mood | `/api/v1/mood` |
 | Tags v2 | `/api/v1/tags2/*` (tags, subjects, assignments) |
+| Events | `/api/v1/events` (with idempotency) |
+| Candidates | `/api/v1/candidates` |
 | UniFi | `/api/v1/unifi/*` (wan, clients, roaming, baselines) |
 | Energy | `/api/v1/energy/*` |
 | SystemHealth | `/api/v1/system-health/*` |
 
-## Development Branches
+## Development Status
 
 | Branch | Status | Description |
 |--------|--------|-------------|
-| `main` | ✅ Stable | Production releases |
-| `dev-habitus-dashboard-cards` | ✅ Merged | Dashboard cards API + Habitus Miner v0.1 (v0.4.16) |
-| `dev-media-context-v2` | 🚧 WIP | Media context v2 docs |
-| `dev-idempotency-dedupe-events` | 📋 Planned | Event deduplication |
+| `main` | ✅ Stable | Production releases (v0.4.17) |
+| `dev-habitus-dashboard-cards` | ✅ Merged | Dashboard cards API |
 
 ## Quick Links
 
 | Doc | Path |
 |-----|------|
+| API Spec | `docs/openapi.yaml` |
 | Start Here | `docs/START_HERE.md` |
 | Ethics & Governance | `docs/ETHICS_GOVERNANCE.md` |
 | Changelog | `CHANGELOG.md` |
@@ -53,6 +60,7 @@ ha-copilot-repo/
 ├── addons/              # HA Add-on (Core service)
 ├── custom_components/   # HA Integration (adapter)
 ├── docs/                # Documentation
+│   └── openapi.yaml     # API specification
 ├── CHANGELOG.md         # Version history
 ├── INDEX.md             # This file
 └── README.md            # Install guide
@@ -60,10 +68,10 @@ ha-copilot-repo/
 
 ## Next Milestones
 
-- [ ] Interactive Brain Graph Panel
-- [ ] Multi-user learning
-- [ ] Performance optimization
-- [ ] Event deduplication (dev-idempotency-dedupe-events)
+- [ ] Client SDK generation from OpenAPI spec
+- [ ] Interactive API documentation (Swagger UI)
+- [ ] Performance benchmarks
+- [ ] Extended neuron modules
 
 ---
 
