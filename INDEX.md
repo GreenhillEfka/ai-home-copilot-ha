@@ -4,13 +4,14 @@
 
 ## Current Release
 
-**Core Add-on v0.4.15** (2026-02-14) — `main` branch
+**Core Add-on v0.4.16** (2026-02-15) — `main` branch
 
 ### Features
 - **Habitus Zones v2** — Zone-aware pattern mining
 - **Tag System v0.2** — Decision Matrix with HA Labels integration
 - **Neurons**: SystemHealth, UniFi, Energy
 - **Brain Graph** — Configurable limits (nodes/edges/half-life)
+- **Security** — log_fixer_tx API authentication (v0.4.16)
 
 ### API Endpoints
 | Module | Endpoints |
@@ -57,6 +58,7 @@ ha-copilot-repo/
 - [ ] Multi-user learning
 - [ ] Performance optimization
 - [ ] Habitus Dashboard Cards release
+- [ ] Path allowlist for log_fixer_tx rename operations (P0 follow-up)
 
 ---
 
