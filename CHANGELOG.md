@@ -1,5 +1,13 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.24] - 2026-02-15
+
+### Fixed
+- **API Response Format**: All endpoints now return `{success: true, data: {...}}`
+- **Consistent Data Structure**: mood, neurons, evaluate all use same format
+
+---
+
 ## [0.4.23] - 2026-02-15
 
 ### Added
