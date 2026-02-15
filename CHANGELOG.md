@@ -1,5 +1,29 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.29] - 2026-02-15
+
+### Fixed
+- **RESTORED tagging/ module** - Was incorrectly deleted by Autopilot in v0.4.25
+  - `tagging/` is NOT a duplicate of `tags/` - they serve different purposes:
+  - `tagging/` = TagAssignmentStore, TagRegistry with persistence & validation
+  - `tags/` = Tag System v0.2 with HabitusZone integration
+  - Both modules are needed for full functionality
+- Restored tests: test_tag_assignment_store.py, test_tag_registry.py
+
+### Architecture
+```
+tagging/                    # Persistence Layer
+├── assignments.py          # TagAssignmentStore with JSON persistence
+├── models.py               # Tag, TagDisplay, TagGovernance, TagHAConfig
+└── registry.py             # TagRegistry with YAML loading
+
+tags/                       # Integration Layer (v0.2)
+├── __init__.py             # TagRegistry with HabitusZone support
+└── api.py                  # REST API endpoints
+```
+
+---
+
 ## [0.4.28] - 2026-02-15
 
 ### Added
