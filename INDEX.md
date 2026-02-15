@@ -4,7 +4,7 @@
 
 ## Current Release
 
-**Core Add-on v0.6.3** (2026-02-15 19:21) — `main` branch
+**Core Add-on v0.7.0** (2026-02-15) — `main` branch
 
 ### Latest Updates
 - **Interactive Visualization (Phase 5)**: Full D3.js + React visualization module
@@ -25,7 +25,7 @@
 | Neurons | ✅ SystemHealth, UniFi, Energy |
 | Brain Graph | ✅ D3.js + React |
 | Event Deduplication | ✅ Idempotency-Key support |
-| OpenAPI Spec | ✅ v0.6.0 |
+| OpenAPI Spec | ✅ v0.7.0 |
 
 ### Visualization Components
 | Component | Type | Description |
@@ -55,7 +55,7 @@
 
 | Branch | Status | Description |
 |--------|--------|-------------|
-| `main` | ✅ Stable | Production releases (v0.6.0) |
+| `main` | ✅ Stable | Production releases (v0.7.0) |
 | `dev-knowledge-graph` | ✅ Merged | Knowledge Graph module |
 
 ## Quick Links
