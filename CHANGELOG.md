@@ -88,6 +88,25 @@ tags/                       # Integration Layer (v0.2)
 
 ---
 
+## [0.4.30] - 2026-02-15
+
+### Added
+- **Zone-based Mining** (`habitus_miner/zone_mining.py`):
+  - ZoneBasedMiner: Zone-aware pattern discovery
+  - ZoneMiningConfig: Per-zone thresholds and governance
+  - Filter events by zone membership
+  - Safety-critical entity blocking
+  - Top suggestions with explanations
+
+### Changed
+- **habitus_miner/__init__.py**: Updated to v0.2.0, exports zone mining API
+- Zone-filtered patterns now respect zone governance rules
+
+### Documentation
+- `docs/HABITUS_PHILOSOPHY.md`: Complete Habitus vision and philosophy
+
+---
+
 ## [0.4.26] - 2026-02-15
 
 ### Fixed
