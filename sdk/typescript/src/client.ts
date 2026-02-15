@@ -391,6 +391,48 @@ export class CopilotClient {
     },
   };
 
+  // ==================== User Preference API (MUP-L) ====================
+
+  userPreferences = {
+    get: async (userId: string): Promise<{ user_id: string; preferences: Record<string, unknown> }> => {
+      const response = await this.client.get(`/api/v1/user/${userId}/preferences`);
+      return response.data;
+    },
+
+    getZonePreference: async (userId: string, zoneId: string): Promise<{
+      user_id: string;
+      zone_id: string;
+      preference: Record<string, unknown> | null;
+    }> => {
+      const response = await this.client.get(`/api/v1/user/${userId}/zone/${zoneId}/preference`);
+      return response.data;
+    },
+
+    update: async (userId: string, data: {
+      zone_id: string;
+      comfort_bias?: number;
+      frugality_bias?: number;
+      joy_bias?: number;
+    }): Promise<{ user_id: string; zone_id: string; preference: Record<string, unknown> }> => {
+      const response = await this.client.post(`/api/v1/user/${userId}/preference`, data);
+      return response.data;
+    },
+
+    getActiveUsers: async (): Promise<{ status: string; users: Array<{ user_id: string; name: string }> }> => {
+      const response = await this.client.get('/api/v1/users/active');
+      return response.data;
+    },
+
+    getAggregatedMood: async (params?: { users?: string }): Promise<{
+      status: string;
+      mood: { comfort: number; frugality: number; joy: number };
+      user_count: number;
+    }> => {
+      const response = await this.client.get('/api/v1/mood/aggregated', { params });
+      return response.data;
+    },
+  };
+
   // ==================== System Health ====================
 
   system = {

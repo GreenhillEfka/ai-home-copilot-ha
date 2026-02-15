@@ -8,7 +8,7 @@ import os
 import requests
 from typing import Optional, Dict, Any, List
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __api_version__ = "v1"
 
 
@@ -79,6 +79,83 @@ class CoPilotClient:
     def get_tag_registry(self) -> Dict[str, Any]:
         """Get tag registry with entity classifications."""
         return self._request("GET", f"{__api_version__}/tags/registry")
+
+    # ==================== User Preference API ====================
+
+    def get_user_preferences(self, user_id: str) -> Dict[str, Any]:
+        """Get all preferences for a user.
+        
+        Args:
+            user_id: User ID (person entity_id)
+            
+        Returns:
+            Dict with user_id and preferences
+        """
+        return self._request("GET", f"{__api_version__}/user/{user_id}/preferences")
+
+    def get_user_zone_preference(self, user_id: str, zone_id: str) -> Dict[str, Any]:
+        """Get preference for a user in a specific zone.
+        
+        Args:
+            user_id: User ID (person entity_id)
+            zone_id: Zone ID (e.g., "living", "bedroom")
+            
+        Returns:
+            Dict with user_id, zone_id, and preference
+        """
+        return self._request("GET", f"{__api_version__}/user/{user_id}/zone/{zone_id}/preference")
+
+    def update_user_preference(
+        self,
+        user_id: str,
+        zone_id: str,
+        comfort_bias: Optional[float] = None,
+        frugality_bias: Optional[float] = None,
+        joy_bias: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Update a user's preference for a zone.
+        
+        Args:
+            user_id: User ID (person entity_id)
+            zone_id: Zone ID (e.g., "living", "bedroom")
+            comfort_bias: Comfort bias (0.0-1.0)
+            frugality_bias: Frugality bias (0.0-1.0)
+            joy_bias: Joy bias (0.0-1.0)
+            
+        Returns:
+            Updated preference dict
+        """
+        payload = {"zone_id": zone_id}
+        if comfort_bias is not None:
+            payload["comfort_bias"] = comfort_bias
+        if frugality_bias is not None:
+            payload["frugality_bias"] = frugality_bias
+        if joy_bias is not None:
+            payload["joy_bias"] = joy_bias
+            
+        return self._request("POST", f"{__api_version__}/user/{user_id}/preference", json=payload)
+
+    def get_active_users(self) -> List[Dict[str, Any]]:
+        """Get list of currently active (home) users.
+        
+        Returns:
+            List of active user dicts
+        """
+        return self._request("GET", f"{__api_version__}/users/active")
+
+    def get_aggregated_mood(self, user_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Get aggregated mood for multiple users.
+        
+        Args:
+            user_ids: Optional list of user IDs (default: active users)
+            
+        Returns:
+            Aggregated mood dict with comfort, frugality, joy
+        """
+        params = {}
+        if user_ids:
+            params["users"] = ",".join(user_ids)
+        return self._request("GET", f"{__api_version__}/mood/aggregated", params=params)
 
     def close(self):
         """Close the session."""

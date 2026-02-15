@@ -1,5 +1,27 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.5.1] - 2026-02-15
+
+### Added
+- **SDK User Preference API**: Python and TypeScript SDKs now include MUP-L endpoints
+  - `get_user_preferences(user_id)` / `userPreferences.get(userId)`
+  - `get_user_zone_preference(user_id, zone_id)` / `userPreferences.getZonePreference(userId, zoneId)`
+  - `update_user_preference(user_id, zone_id, ...)` / `userPreferences.update(userId, data)`
+  - `get_active_users()` / `userPreferences.getActiveUsers()`
+  - `get_aggregated_mood(user_ids)` / `userPreferences.getAggregatedMood(params)`
+
+---
+
+## [0.5.0] - 2026-02-15
+
+### Added
+- **Client SDK (Python/TypeScript)**: Official SDKs for Core API
+  - Python: `pip install ai-home-copilot-client`
+  - TypeScript: `npm install ai-home-copilot-client`
+  - Full API coverage: Habitus, Graph, Neurons, Tags, Events, Candidates, Vector, Weather, Voice
+
+---
+
 ## [0.4.34] - 2026-02-15
 
 ### Added
