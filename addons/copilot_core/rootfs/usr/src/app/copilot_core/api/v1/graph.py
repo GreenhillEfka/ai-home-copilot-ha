@@ -38,10 +38,14 @@ def graph_state():
     limit_edges = max(1, min(limit_edges, 1500))
     hops = max(0, min(hops, 2))
 
-    state = _svc().export_state(
-        kind=kinds,
-        domain=domains,
-        center=center,
+    # Convert query params to match BrainGraphService.get_graph_state signature
+    kinds = [k for k in kinds if isinstance(k, str)]
+    domains = [d for d in domains if isinstance(d, str)]
+    
+    state = _svc().get_graph_state(
+        kinds=kinds if kinds else None,
+        domains=domains if domains else None,
+        center_node=center if center else None,
         hops=hops,
         limit_nodes=limit_nodes,
         limit_edges=limit_edges,
@@ -52,11 +56,11 @@ def graph_state():
 @bp.get("/stats")
 def graph_stats():
     """Graph statistics for health checks."""
-    state = _svc().export_state(limit_nodes=1, limit_edges=1)
+    state = _svc().get_graph_state(limit_nodes=1, limit_edges=1)
     return jsonify({
         "ok": True,
-        "nodes": state.get("node_count", 0),
-        "edges": state.get("edge_count", 0),
+        "nodes": len(state.get("nodes", [])),
+        "edges": len(state.get("edges", [])),
         "updated_at_ms": state.get("generated_at_ms", 0)
     })
 

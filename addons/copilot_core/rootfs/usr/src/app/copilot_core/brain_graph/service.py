@@ -3,7 +3,7 @@ Brain Graph service providing high-level graph operations.
 """
 
 import time
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Iterable
 
 from .model import GraphNode, GraphEdge, NodeKind, EdgeType
 from .store import BrainGraphStore
@@ -255,9 +255,33 @@ class BrainGraphService:
             }
         }
     
+    def export_state(
+        self,
+        kind: Iterable[str] | None = None,
+        domain: Iterable[str] | None = None,
+        center: str | None = None,
+        hops: int = 1,
+        limit_nodes: int = 500,
+        limit_edges: int = 1500,
+        now: int | None = None,
+    ) -> dict[str, Any]:
+        """Alias for get_graph_state with different parameter names."""
+        return self.get_graph_state(
+            kinds=list(kind) if kind else None,
+            domains=list(domain) if domain else None,
+            center_node=center,
+            hops=hops,
+            limit_nodes=limit_nodes,
+            limit_edges=limit_edges,
+        )
+    
     def prune_now(self) -> Dict[str, int]:
         """Manually trigger graph pruning."""
         return self.store.prune_graph()
+    
+    def prune(self) -> Dict[str, int]:
+        """Alias for prune_now for backward compatibility."""
+        return self.prune_now()
     
     def process_ha_event(self, event_data: Dict[str, Any]):
         """Process a Home Assistant event and update the graph."""

@@ -2,18 +2,33 @@
 
 ## Endpoints to Implement
 
-1. `/api/v1/status` - System Health Check
-2. `/api/v1/capabilities` - Feature Discovery (already exists)
-3. `/api/v1/vector/*` - Vector Operations (5 endpoints)
-4. `/api/v1/dashboard/brain-summary` - Dashboard Data
+1. ✅ `/api/v1/status` - System Health Check
+2. ✅ `/api/v1/capabilities` - Feature Discovery (already exists)
+3. ✅ `/api/v1/vector/*` - Vector Operations (5 endpoints)
+4. ✅ `/api/v1/dashboard/brain-summary` - Dashboard Data
 
 ## Progress
 
-- [ ] Create `/api/v1/status` endpoint
-- [ ] Create `/api/v1/vector` directory structure
-- [ ] Implement vector_store API endpoints (5 endpoints)
-- [ ] Create `/api/v1/dashboard/brain-summary` endpoint
-- [ ] Test all new endpoints
+- [x] Create `/api/v1/status` endpoint in `app.py`
+- [x] Implement `/api/v1/vector/*` endpoints via existing `vector.py` (already registered in blueprint)
+- [x] Create `/api/v1/dashboard.py` with `brain-summary` and `health` endpoints
+- [x] Register dashboard blueprint in `blueprint.py`
+- [x] Fix `BrainGraphStore` initialization in `provider.py` to match new signature
+- [x] Add `export_state()` and `prune()` aliases in `BrainGraphService`
+- [x] Add `Iterable` import in `service.py`
+- [x] All tests pass (6/6)
+
+## Files Modified
+
+- `copilot_core/app.py` - Added `/api/v1/status` and updated capabilities with new modules
+- `copilot_core/api/v1/dashboard.py` - New file with dashboard endpoints
+- `copilot_core/api/v1/blueprint.py` - Registered dashboard blueprint
+- `copilot_core/brain_graph/provider.py` - Fixed store initialization
+- `copilot_core/brain_graph/service.py` - Added `export_state()` and `prune()` aliases, added `Iterable` import
+
+## Files Added
+
+- `copilot_core/api/v1/dashboard.py` - Dashboard API module
 
 ## Implementation Details
 
