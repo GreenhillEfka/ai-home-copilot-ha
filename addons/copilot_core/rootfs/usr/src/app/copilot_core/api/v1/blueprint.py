@@ -22,6 +22,10 @@ from copilot_core.tags.api import bp as tags_bp
 from copilot_core.api.v1.search import bp as search_bp
 from copilot_core.api.v1.notifications import bp as notifications_bp
 
+# Neuron APIs (energy, unifi)
+from copilot_core.energy.api import energy_bp
+from copilot_core.unifi.api import unifi_bp
+
 api_v1 = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
 # Compose sub-modules.
@@ -46,3 +50,7 @@ api_v1.register_blueprint(tags_bp)
 # Register new feature APIs
 api_v1.register_blueprint(search_bp)
 api_v1.register_blueprint(notifications_bp)
+
+# Register Neuron APIs
+api_v1.register_blueprint(energy_bp)
+api_v1.register_blueprint(unifi_bp)

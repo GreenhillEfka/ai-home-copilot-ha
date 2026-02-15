@@ -1,5 +1,16 @@
 # Changelog - AI Home CoPilot Core Add-on
 
+## [0.6.3] - 2026-02-15
+
+### Fixed
+- Energy API Blueprint registered in api/v1/blueprint.py
+- UniFi API Blueprint registered in api/v1/blueprint.py
+- HA Integration v0.12.0 compatibility now complete
+
+### Tests
+- py_compile validation: PASS
+- Import smoke test: PASS
+
 ## [0.6.2] - 2026-02-15
 
 ### Fixed
