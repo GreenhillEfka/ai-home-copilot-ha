@@ -99,3 +99,7 @@ def optional_token(f: Callable) -> Callable:
         request = kwargs.get('request') or (args[0] if args else None)
         return f(*args, **kwargs)
     return decorated_function
+
+
+# Alias for backward compatibility
+require_api_key = require_token
