@@ -140,7 +140,7 @@ class QueryCache:
 
 
 # Global cache instances
-brain_graph_cache = QueryCache(max_size=500, default_ttl=60.0)
+brain_graph_cache = QueryCache(max_size=100, default_ttl=60.0)
 ml_cache = QueryCache(max_size=200, default_ttl=120.0)
 api_response_cache = QueryCache(max_size=1000, default_ttl=30.0)
 
