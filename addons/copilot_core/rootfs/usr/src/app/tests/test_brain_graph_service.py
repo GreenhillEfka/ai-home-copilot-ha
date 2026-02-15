@@ -7,7 +7,7 @@ import time
 import tempfile
 import os
 from copilot_core.brain_graph.service import BrainGraphService
-from copilot_core.brain_graph.store import GraphStore
+from copilot_core.brain_graph.store import BrainGraphStore as GraphStore
 
 
 def test_service_initialization():

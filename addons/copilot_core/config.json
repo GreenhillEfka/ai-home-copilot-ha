@@ -2,7 +2,7 @@
   "name": "AI Home CoPilot Core (MVP)",
   "slug": "copilot_core",
   "description": "MVP Core Service for AI Home CoPilot with Multi-User Preference Learning, Knowledge Graph, and Brain Graph visualization.",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "url": "https://github.com/GreenhillEfka/Home-Assistant-Copilot",
   "arch": ["amd64", "aarch64"],
   "startup": "services",
@@ -30,6 +30,20 @@
       "node_min_score": 0.1,
       "edge_min_weight": 0.1
     },
+    "visualization": {
+      "enabled": true,
+      "frontend_url": "http://[HOST]:8099/visualizations",
+      "brain_graph": {
+        "width": 800,
+        "height": 600,
+        "show_legend": true,
+        "show_zoom": true
+      },
+      "lovelace_cards": {
+        "enabled": true,
+        "cards": ["mood", "neurons", "habitus"]
+      }
+    },
     "knowledge_graph": {
       "enabled": true,
       "backend": "sqlite",
@@ -54,6 +68,20 @@
       "edge_half_life_hours": "float(1.0..168.0)",
       "node_min_score": "float(0.01..1.0)",
       "edge_min_weight": "float(0.01..1.0)"
+    },
+    "visualization": {
+      "enabled": "bool",
+      "frontend_url": "str",
+      "brain_graph": {
+        "width": "int(400..2000)",
+        "height": "int(400..1500)",
+        "show_legend": "bool",
+        "show_zoom": "bool"
+      },
+      "lovelace_cards": {
+        "enabled": "bool",
+        "cards": "list(mood|neurons|habitus)"
+      }
     },
     "knowledge_graph": {
       "enabled": "bool",
