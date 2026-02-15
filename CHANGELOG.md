@@ -1,5 +1,44 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.23] - 2026-02-15
+
+### Added
+- **NeuronManager** (`neurons/manager.py`):
+  - Singleton manager for all neurons
+  - Creates and configures 18 default neurons
+  - Creates 30+ default synapse connections
+  - Evaluates full neural pipeline (Context → State → Mood)
+  - Generates suggestions from mood neurons
+  - Learning from user feedback
+- **Neuron API** (`api/v1/neurons.py`):
+  - `GET /api/v1/neurons` - List all neurons
+  - `GET /api/v1/neurons/<id>` - Get neuron state
+  - `POST /api/v1/neurons/evaluate` - Run evaluation
+  - `GET /api/v1/neurons/mood` - Get current mood
+  - `POST /api/v1/neurons/mood/evaluate` - Force mood evaluation
+  - `GET /api/v1/neurons/suggestions` - Get active suggestions
+  - `POST /api/v1/neurons/feedback` - Submit user feedback
+  - `GET /api/v1/neurons/stats` - Network statistics
+
+### Architecture (NOW INTEGRATED!)
+```
+HA States → NeuronManager.evaluate()
+         → Context Neurons (4)
+         → SynapseManager.propagate()
+         → State Neurons (6)
+         → SynapseManager.propagate()
+         → Mood Neurons (8)
+         → Suggestion Generation
+         → HA Actions (via feedback)
+```
+
+### Integration
+- API registered in blueprint.py
+- Neurons accessible via REST API
+- Ready for HA Integration connection
+
+---
+
 ## [0.4.22] - 2026-02-15
 
 ### Added

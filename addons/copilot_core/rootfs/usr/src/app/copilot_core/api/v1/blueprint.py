@@ -9,6 +9,7 @@ from copilot_core.api.v1.habitus import bp as habitus_bp
 from copilot_core.api.v1.habitus_dashboard_cards import bp as dashboard_cards_bp
 from copilot_core.api.v1.graph_ops import bp as graph_ops_bp
 from copilot_core.api.v1.vector import bp as vector_bp
+from copilot_core.api.v1.neurons import bp as neurons_bp
 from copilot_core.knowledge_graph.api import bp as knowledge_graph_bp
 
 api_v1 = Blueprint("api_v1", __name__, url_prefix="/api/v1")
@@ -23,4 +24,5 @@ api_v1.register_blueprint(habitus_bp)
 api_v1.register_blueprint(dashboard_cards_bp)
 api_v1.register_blueprint(graph_ops_bp)
 api_v1.register_blueprint(vector_bp)
+api_v1.register_blueprint(neurons_bp)
 api_v1.register_blueprint(knowledge_graph_bp)

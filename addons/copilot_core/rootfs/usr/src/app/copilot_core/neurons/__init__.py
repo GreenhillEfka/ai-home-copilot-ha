@@ -1,13 +1,4 @@
-"""Neurons module for PilotSuite neural orchestration.
-
-This module provides the base classes and implementations for:
-- Context Neurons: Objective environmental factors (presence, time, light, weather)
-- State Neurons: Smoothed, inertial state values (energy, stress, routine)
-- Mood Neurons: Aggregated outputs that trigger suggestions
-
-The neural model follows:
-    State (objective) → Neuron (evaluates aspect) → Mood (aggregates meaning) → Decision
-"""
+from .manager import NeuronManager, get_neuron_manager
 from .base import (
     BaseNeuron, NeuronState, NeuronConfig, NeuronType, MoodType,
     ContextNeuron, StateNeuron, MoodNeuron
@@ -28,6 +19,9 @@ from .mood import (
 )
 
 __all__ = [
+    # Manager
+    "NeuronManager",
+    "get_neuron_manager",
     # Base classes
     "BaseNeuron",
     "NeuronState", 
