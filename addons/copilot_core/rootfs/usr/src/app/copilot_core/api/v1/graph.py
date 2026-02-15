@@ -49,6 +49,24 @@ def graph_state():
     return jsonify(state)
 
 
+@bp.get("/stats")
+def graph_stats():
+    """Graph statistics for health checks."""
+    state = _svc().export_state(limit_nodes=1, limit_edges=1)
+    return jsonify({
+        "ok": True,
+        "nodes": state.get("node_count", 0),
+        "edges": state.get("edge_count", 0),
+        "updated_at_ms": state.get("generated_at_ms", 0)
+    })
+
+
+@bp.get("/patterns")
+def graph_patterns():
+    """Pattern summary for health checks."""
+    return jsonify({"ok": True, "patterns": [], "message": "Use /graph/state for full data"})
+
+
 @bp.get("/snapshot.svg")
 def graph_snapshot_svg():
     # v0.1: keep lightweight. Returning a placeholder (or 501) is acceptable.

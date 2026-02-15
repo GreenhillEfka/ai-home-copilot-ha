@@ -60,6 +60,17 @@ def delete_candidate(candidate_id: str):
     return jsonify({"ok": ok})
 
 
+@bp.get("/stats")
+def candidates_stats():
+    """Candidate store statistics for health checks."""
+    items = _store().list(limit=0)
+    return jsonify({
+        "ok": True,
+        "count": len(items),
+        "max_items": _store()._max_items
+    })
+
+
 @bp.get("/graph_candidates")
 def graph_candidates():
     """Generate governance-ready candidates from the Brain Graph.
