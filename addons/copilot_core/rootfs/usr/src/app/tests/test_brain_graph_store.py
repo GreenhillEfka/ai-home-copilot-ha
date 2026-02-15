@@ -58,9 +58,9 @@ class TestBrainGraphStore(unittest.TestCase):
         # Add an edge
         edge = GraphEdge(
             id="e:test",
-            from_id="test:node1",
-            to_id="test:node2",
-            type="controls",
+            from_node="test:node1",
+            to_node="test:node2",
+            edge_type="controls",
             updated_at_ms=1234567890,
             weight=0.5,
         )
@@ -127,7 +127,7 @@ class TestBrainGraphStoreIntegration(unittest.TestCase):
         
         # Test touch_edge
         edge = svc.touch_edge("test:entity", "controls", "test:zone")
-        self.assertEqual(edge.from_id, "test:entity")
+        self.assertEqual(edge.from_node, "test:entity")
 
 
 if __name__ == "__main__":
