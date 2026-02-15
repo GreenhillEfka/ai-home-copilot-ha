@@ -29,7 +29,13 @@ class TestAppSmoke(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         j = r.get_json()
         self.assertTrue(j.get("ok"))
-        self.assertIn("brain_graph", j.get("modules", {}))
+        # Check both capabilities list and features dict
+        caps = j.get("capabilities", [])
+        feats = j.get("features", {})
+        self.assertTrue(
+            "brain_graph" in caps or "brain_graph" in feats,
+            f"brain_graph not in capabilities {caps} or features {feats}"
+        )
 
 
 if __name__ == "__main__":
