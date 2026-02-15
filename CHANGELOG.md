@@ -1,5 +1,31 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.22] - 2026-02-15
+
+### Added
+- **Synapse System** (`synapses/`):
+  - `Synapse` model: Connection between neurons with weight, threshold, learning
+  - `SynapseType`: Excitatory, Inhibitory, Modulatory
+  - `SynapseState`: Active, Dormant, Learning, Pruned
+  - `Suggestion` model: Action suggestions from mood neurons
+  - `SynapseManager`: Full synapse network management
+- **Features**:
+  - Signal propagation between neurons
+  - Hebbian-like learning with reward signals
+  - Decay for inactive synapses
+  - Automatic suggestion generation from moods
+  - Mood-specific actions (relax→dim, focus→optimize, sleep→night_mode)
+  - User feedback learning
+
+### Architecture
+```
+Context → State → Mood → Suggestion → Action
+         ↑________________↓
+              Learning
+```
+
+---
+
 ## [0.4.21] - 2026-02-15
 
 ### Added
