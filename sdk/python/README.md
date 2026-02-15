@@ -1,85 +1,72 @@
 # AI Home CoPilot Python SDK
 
-Python client for AI Home CoPilot Core API.
+Client SDK for the AI Home CoPilot Core API.
 
 ## Installation
 
 ```bash
-pip install ai-home-copilot-client
+pip install ai-home-copilot-sdk
+```
+
+Or from source:
+
+```bash
+git clone https://github.com/GreenhillEfka/Home-Assistant-Copilot.git
+cd Home-Assistant-Copilot/sdk/python
+pip install -e .
 ```
 
 ## Usage
 
 ```python
-from ai_home_copilot_client import CopilotClient
+from copilot_sdk import CoPilotClient, get_client
 
-# Initialize client
-client = CopilotClient(
-    base_url="http://localhost:48099",
-    auth_token="your-token-here"  # optional
+# Quick start
+client = get_client(
+    base_url="http://homeassistant.local:8123/api/copilot",
+    auth_token="your-token"
 )
 
-# Get habitus status
-status = client.habitus.get_status()
+# Get system health
+health = client.get_system_health()
 
-# Mine rules from events
-result = client.habitus.mine_rules(events=[...])
+# Get mood context
+mood = client.get_mood_context()
 
-# Get brain graph state
-graph = client.graph.get_state()
+# Submit an event
+event_id = client.submit_event("user_action", {"action": "light_on"})
 
-# Get neurons
-neurons = client.neurons.list()
+# Get Habitus rules
+rules = client.get_habitus_rules()
 
-# Get current mood
-mood = client.neurons.get_mood()
-
-# Work with tags
-tags = client.tags.list()
-client.tags.assign_tag("light.living_room", tag_id="aicp.place.living_room")
-
-# Vector embeddings
-client.vector.create_embedding(
-    type="entity",
-    id="light.living_room",
-    domain="light",
-    area="living_room"
-)
+# Close connection
+client.close()
 ```
+
+Or use context manager:
+
+```python
+with get_client() as client:
+    mood = client.get_mood_context()
+    print(f"Current mood: {mood}")
+```
+
+## Environment Variables
+
+- `COPILOT_API_URL`: Base URL of the API (default: `http://homeassistant.local:8123/api/copilot`)
+- `COPILOT_AUTH_TOKEN`: Authentication token (optional)
 
 ## API Endpoints
 
-### Habitus
-- `get_status()` - Get miner status
-- `get_rules()` - Get discovered rules
-- `mine_rules(events)` - Mine rules from events
-- `get_zones()` - Get zones
-- `get_dashboard_cards()` - Get dashboard cards
+- `GET /api/v1/system/health` - System health status
+- `GET /api/v1/mood/context` - Current mood context
+- `GET /api/v1/graph/visualization` - Brain graph data
+- `POST /api/v1/events` - Submit event
+- `GET /api/v1/habitus/rules` - Discovered Habitus rules
+- `GET /api/v1/tags/registry` - Tag registry
 
-### Graph
-- `get_state()` - Get brain graph state
-- `get_patterns()` - Get discovered patterns
-- `sync(entities)` - Sync graph with HA entities
+## Testing
 
-### Neurons
-- `list()` - List all neurons
-- `get(neuron_id)` - Get neuron state
-- `evaluate()` - Run neural evaluation
-- `get_mood()` - Get current mood
-- `get_suggestions()` - Get suggestions
-
-### Tags
-- `list()` - Get all tags
-- `create(tag_id, description)` - Create tag
-- `get_subject_tags(subject_id)` - Get subject tags
-- `assign_tag(subject_id, tag_id)` - Assign tag
-
-### Vector Store
-- `create_embedding()` - Create embedding
-- `find_similar(entry_id)` - Find similar entities
-- `list_vectors()` - List vectors
-- `get_stats()` - Get stats
-
-## License
-
-MIT
+```bash
+python -m unittest discover tests
+```
