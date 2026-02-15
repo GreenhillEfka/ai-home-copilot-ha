@@ -7,7 +7,7 @@ import time
 import tempfile
 import os
 from copilot_core.brain_graph.model import GraphNode, GraphEdge
-from copilot_core.brain_graph.store import GraphStore
+from copilot_core.brain_graph import GraphStore
 
 
 def test_store_initialization():

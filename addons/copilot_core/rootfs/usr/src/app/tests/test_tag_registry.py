@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from copilot_core.tags.registry import TagRegistry, TagRegistryError
+from copilot_core.tagging.registry import TagRegistry, TagRegistryError
 
 DATA_PATH = ROOT / "copilot_core" / "data" / "tagging" / "tags.yaml"
 

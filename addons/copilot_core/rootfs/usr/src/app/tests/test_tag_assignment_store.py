@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from copilot_core.tags.assignments import (
+from copilot_core.tagging.assignments import (
     ALLOWED_SUBJECT_KINDS,
     TagAssignmentStore,
     TagAssignmentValidationError,
