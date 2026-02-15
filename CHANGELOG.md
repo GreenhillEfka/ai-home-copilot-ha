@@ -1,5 +1,33 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.21] - 2026-02-15
+
+### Added
+- **State Neurons** (`neurons/state.py`):
+  - `EnergyLevelNeuron`: Energy based on activity and time
+  - `StressIndexNeuron`: Stress from calendar, routine deviation, environment
+  - `RoutineStabilityNeuron`: Pattern deviation analysis
+  - `SleepDebtNeuron`: Accumulated sleep deficit
+  - `AttentionLoadNeuron`: Cognitive load from media/devices
+  - `ComfortIndexNeuron`: Environmental comfort (temp, humidity)
+- **Mood Neurons** (`neurons/mood.py`):
+  - `RelaxMoodNeuron`: Relaxed, calm state
+  - `FocusMoodNeuron`: Concentrated, productive state
+  - `ActiveMoodNeuron`: Active, energetic state
+  - `SleepMoodNeuron`: Sleepy, rest-needed state
+  - `AwayMoodNeuron`: User not present
+  - `AlertMoodNeuron`: Alert, attention-needed state
+  - `SocialMoodNeuron`: Social, interactive state
+  - `RecoveryMoodNeuron`: Recovery, healing state
+- **Neural Pipeline**: Full Context → State → Mood flow
+
+### Architecture
+- State neurons use lower smoothing (0.15) for inertial behavior
+- Mood neurons aggregate inputs with configurable weights
+- Factory functions for dynamic neuron creation
+
+---
+
 ## [0.4.20] - 2026-02-15
 
 ### Added
