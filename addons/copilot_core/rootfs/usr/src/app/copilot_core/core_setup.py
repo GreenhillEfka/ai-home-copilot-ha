@@ -32,7 +32,7 @@ from copilot_core.energy.api import energy_bp, init_energy_api
 from copilot_core.energy.service import EnergyService
 # Tag System v0.2 (Decision Matrix 2026-02-14)
 from copilot_core.tags import TagRegistry, create_tag_service
-from copilot_core.tags.api import setup_tag_api
+from copilot_core.tags.api import init_tags_api as setup_tag_api
 
 
 def init_services(hass=None, config: dict = None):

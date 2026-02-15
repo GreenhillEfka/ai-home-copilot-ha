@@ -626,3 +626,7 @@ class BrainGraphStore:
         import asyncio
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(_executor, self.get_stats)
+
+
+# Alias for backwards compatibility
+GraphStore = BrainGraphStore

@@ -4,7 +4,7 @@
 
 ## Current Release
 
-**Core Add-on v0.6.2** (2026-02-15) — `main` branch
+**Core Add-on v0.6.3** (2026-02-15 19:21) — `main` branch
 
 ### Latest Updates
 - **Interactive Visualization (Phase 5)**: Full D3.js + React visualization module
@@ -95,4 +95,4 @@ ha-copilot-repo/
 
 ---
 
-*Last updated: 2026-02-15*
+*Last updated: 2026-02-15 19:21*
