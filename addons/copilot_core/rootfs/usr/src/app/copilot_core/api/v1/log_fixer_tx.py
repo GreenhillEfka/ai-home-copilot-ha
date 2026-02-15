@@ -3,6 +3,7 @@ API v1 Blueprint - log_fixer_tx
 Transaction Log Audit & Management
 """
 from flask import Blueprint, jsonify, request
+from copilot_core.api.security import require_api_key
 from copilot_core.log_fixer_tx.recovery import TransactionManager
 
 bp = Blueprint('log_fixer_tx', __name__, url_prefix='/api/v1/log_fixer_tx')
@@ -12,6 +13,7 @@ tx_manager = TransactionManager()
 
 
 @bp.route('/status', methods=['GET'])
+@require_api_key
 def get_status():
     """
     Get log_fixer_tx status and capabilities.
@@ -34,6 +36,7 @@ def get_status():
 
 
 @bp.route('/transactions', methods=['GET'])
+@require_api_key
 def list_transactions():
     """
     List all transactions with their states.
@@ -77,6 +80,7 @@ def list_transactions():
 
 
 @bp.route('/transactions/<tx_id>', methods=['GET'])
+@require_api_key
 def get_transaction(tx_id):
     """
     Get detailed information about a specific transaction.
@@ -106,6 +110,7 @@ def get_transaction(tx_id):
 
 
 @bp.route('/transactions/<tx_id>/rollback', methods=['POST'])
+@require_api_key
 def rollback_transaction(tx_id):
     """
     Manually rollback a transaction.
@@ -149,6 +154,7 @@ def rollback_transaction(tx_id):
 
 
 @bp.route('/recover', methods=['POST'])
+@require_api_key
 def recover():
     """
     Manually trigger recovery (rollback in-flight transactions).
@@ -170,6 +176,7 @@ def recover():
 
 
 @bp.route('/transactions', methods=['POST'])
+@require_api_key
 def create_transaction():
     """
     Create and execute a new transaction (convenience endpoint).

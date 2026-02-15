@@ -1,5 +1,20 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.16] - 2026-02-15
+
+### Security Fixes (P0)
+
+**log_fixer_tx API: Add authentication requirement**
+- All endpoints now require `@require_api_key` decorator
+- Fixes P0 security issue: `/api/v1/log_fixer_tx/*` without auth
+- Prevents unauthorized transaction creation/rollback
+
+### Changed
+- `log_fixer_tx.py`: Added import and decorators to all 6 endpoints
+- `/status`, `/transactions`, `/transactions/<id>`, `/rollback`, `/recover`, `/transactions (POST)`
+
+---
+
 ## [0.4.15] - 2026-02-14
 
 ### Added
