@@ -1,5 +1,37 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.19] - 2026-02-15
+
+### Added
+- **Vector Store Module** (`copilot_core/vector_store/`):
+  - Local feature-based embeddings for entities, user preferences, and patterns
+  - Optional Ollama integration for semantic embeddings
+  - SQLite persistence with in-memory cache
+  - Cosine similarity search with configurable threshold
+- **Vector Store API** (`/api/v1/vector/`):
+  - `POST /api/v1/vector/embeddings` - Create embedding (entity, user_preference, pattern)
+  - `POST /api/v1/vector/embeddings/bulk` - Bulk create embeddings
+  - `GET /api/v1/vector/similar/<entry_id>` - Find similar entries
+  - `GET /api/v1/vector/vectors` - List vectors
+  - `GET /api/v1/vector/vectors/<id>` - Get specific vector
+  - `DELETE /api/v1/vector/vectors/<id>` - Delete vector
+  - `POST /api/v1/vector/similarity` - Compute similarity between two entries
+  - `GET /api/v1/vector/stats` - Vector store statistics
+- **Embedding Features**:
+  - Entity embeddings: domain, area, capabilities, tags, state features
+  - User preference embeddings: brightness, temperature, volume, mood weights
+  - Pattern embeddings: type, entities, conditions, confidence
+- **MUPL Integration**: User preference similarity for recommendations
+- **Tests**: Comprehensive unit tests for embeddings, store, and API
+
+### Technical Details
+- Embedding dimension: 128 (configurable)
+- Storage: SQLite at `/data/vector_store.db`
+- Cache: LRU cache with configurable size (default 500)
+- Environment variables: `COPILOT_VECTOR_DB_PATH`, `COPILOT_USE_OLLAMA`, `COPILOT_OLLAMA_MODEL`
+
+---
+
 ## [0.4.18] - 2026-02-15
 
 ### Added
