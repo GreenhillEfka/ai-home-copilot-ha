@@ -6,7 +6,10 @@ import time
 from typing import Dict, List, Optional, Any, Tuple
 
 from .model import GraphNode, GraphEdge, NodeKind, EdgeType
-from .store import GraphStore
+from .store import BrainGraphStore
+
+# Alias for backwards compatibility
+GraphStore = BrainGraphStore
 
 
 class BrainGraphService:

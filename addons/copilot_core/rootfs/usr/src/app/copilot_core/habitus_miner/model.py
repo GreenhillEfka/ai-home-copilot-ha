@@ -53,11 +53,11 @@ class Rule:
     confidence_lb: float  # Wilson lower bound for stability
     lift: float  # confidence / P(B)
     leverage: float  # P(A,B) - P(A)*P(B)
-    conviction: float | None = None  # (1-P(B))/(1-confidence)
     
-    # Metadata
+    # Metadata (non-default fields must come first)
     observation_period_days: int
     baseline_p_b: float  # baseline probability of B
+    conviction: float | None = None  # (1-P(B))/(1-confidence)
     created_at_ms: int = field(default_factory=lambda: int(time.time() * 1000))
     
     # Evidence for explainability

@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from .model import GraphNode, GraphEdge, NodeKind, EdgeType
 
 
-class GraphStore:
+class BrainGraphStore:
     """SQLite-backed graph storage with bounded capacity."""
     
     def __init__(

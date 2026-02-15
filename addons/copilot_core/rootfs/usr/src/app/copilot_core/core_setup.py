@@ -11,7 +11,10 @@ from copilot_core.api.v1 import events_ingest
 from copilot_core.api.v1.events_ingest import set_post_ingest_callback
 from copilot_core.brain_graph.api import brain_graph_bp, init_brain_graph_api
 from copilot_core.brain_graph.service import BrainGraphService
-from copilot_core.brain_graph.store import GraphStore
+from copilot_core.brain_graph.store import BrainGraphStore
+
+# Alias for backwards compatibility
+GraphStore = BrainGraphStore
 from copilot_core.brain_graph.render import GraphRenderer
 from copilot_core.ingest.event_processor import EventProcessor
 from copilot_core.dev_surface.api import dev_surface_bp, init_dev_surface_api

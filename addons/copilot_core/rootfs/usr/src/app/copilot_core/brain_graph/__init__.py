@@ -14,7 +14,10 @@ Submodules:
 
 from .model import GraphNode, GraphEdge
 from .service import BrainGraphService
-from .store import GraphStore
+from .store import BrainGraphStore
+
+# Alias for backwards compatibility
+GraphStore = BrainGraphStore
 from .bridge import GraphCandidatesBridge, CandidatePattern, PatternExtractionConfig
 
 __all__ = [
