@@ -32,6 +32,11 @@ from .energy import (
     create_pv_forecast_neuron, create_energy_cost_neuron,
     create_grid_optimization_neuron, ENERGY_NEURON_CLASSES,
 )
+from .camera import (
+    CameraPresenceNeuron, CameraActivityNeuron, SecurityAlertNeuron,
+    create_camera_presence_neuron, create_camera_activity_neuron,
+    create_security_alert_neuron, CAMERA_NEURON_CLASSES,
+)
 
 __all__ = [
     # Manager
@@ -93,4 +98,12 @@ __all__ = [
     "create_energy_cost_neuron",
     "create_grid_optimization_neuron",
     "ENERGY_NEURON_CLASSES",
+    # Camera neurons
+    "CameraPresenceNeuron",
+    "CameraActivityNeuron",
+    "SecurityAlertNeuron",
+    "create_camera_presence_neuron",
+    "create_camera_activity_neuron",
+    "create_security_alert_neuron",
+    "CAMERA_NEURON_CLASSES",
 ]

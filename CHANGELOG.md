@@ -1,5 +1,29 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.33] - 2026-02-15
+
+### Added
+- **Camera Context Neurons** (`neurons/camera.py`):
+  - `CameraPresenceNeuron`: Presence from camera/motion events
+  - `CameraActivityNeuron`: Activity level from motion frequency
+  - `SecurityAlertNeuron`: Security-focused context from alerts
+
+### Features
+- Frigate NVR integration (person/vehicle detection)
+- DeepStack / CodeProject.AI support
+- Door/window sensor integration
+- Alarm system integration
+- Zone-based presence tracking
+- Activity intensity scoring (low/medium/high)
+- Security alert weights (person: 0.8, vehicle: 0.6, alarm: 1.0)
+
+### Industry Trend 2026
+- Camera-based presence detection (no cameras needed for mood)
+- Security neuron with HA AI Tasks integration
+- Privacy-friendly: processes events, not video streams
+
+---
+
 ## [0.4.32] - 2026-02-15
 
 ### Added
