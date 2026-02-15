@@ -24,7 +24,11 @@ Kurzüberblick über laufende Arbeiten im Branch `main` (nach dem letzten Releas
 ## Next (geplant)
 - Event ingest + forwarder contracts schärfen (idempotency keys, minimal schema)
 - Brain Graph: echtes Feeding aus Events + SVG Rendering (statt Placeholder)
-- Path allowlist für log_fixer_tx rename operations
 - Interactive Brain Graph Panel (optional)
 - Multi-user preference learning
 - Performance-Optimierung bei großen Event-Mengen
+
+## Erledigt (kürzlich)
+- ✅ Path allowlist für log_fixer_tx rename operations (v0.4.16)
+- ✅ log_fixer_tx API Authentication (v0.4.16)
+- ✅ Habitus Dashboard Cards API (v0.4.16)

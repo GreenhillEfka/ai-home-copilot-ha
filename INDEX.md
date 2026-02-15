@@ -33,7 +33,7 @@
 | Branch | Status | Description |
 |--------|--------|-------------|
 | `main` | ✅ Stable | Production releases |
-| `dev-habitus-dashboard-cards` | 🚧 WIP | Dashboard cards API + Habitus Miner v0.1 |
+| `dev-habitus-dashboard-cards` | ✅ Merged | Dashboard cards API + Habitus Miner v0.1 (v0.4.16) |
 | `dev-media-context-v2` | 🚧 WIP | Media context v2 docs |
 | `dev-idempotency-dedupe-events` | 📋 Planned | Event deduplication |
 
@@ -63,8 +63,7 @@ ha-copilot-repo/
 - [ ] Interactive Brain Graph Panel
 - [ ] Multi-user learning
 - [ ] Performance optimization
-- [ ] Habitus Dashboard Cards release
-- [ ] Path allowlist for log_fixer_tx rename operations (P0 follow-up)
+- [ ] Event deduplication (dev-idempotency-dedupe-events)
 
 ---
 
