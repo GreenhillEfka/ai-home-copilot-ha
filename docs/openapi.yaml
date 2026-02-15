@@ -18,7 +18,7 @@ info:
     
     ## Idempotency
     Event endpoints support `Idempotency-Key` header for deduplication.
-  version: 0.4.16
+  version: 0.4.33
   contact:
     name: AI Home CoPilot
     url: https://github.com/GreenhillEfka/Home-Assistant-Copilot
@@ -47,6 +47,14 @@ tags:
     description: System health and diagnostics
   - name: Candidates
     description: Automation candidates discovery
+  - name: Neurons
+    description: Neural system state and evaluation
+  - name: Vector
+    description: Vector embeddings and similarity search
+  - name: Weather
+    description: Weather context and PV recommendations
+  - name: Voice
+    description: Voice assistant context integration
 
 paths:
   # ==================== HABITUS ====================
@@ -375,6 +383,375 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SystemHealth'
+
+  # ==================== NEURONS ====================
+  /api/v1/neurons:
+    get:
+      tags: [Neurons]
+      summary: List all neurons
+      operationId: listNeurons
+      responses:
+        '200':
+          description: Neuron list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NeuronsResponse'
+
+  /api/v1/neurons/{neuron_id}:
+    get:
+      tags: [Neurons]
+      summary: Get neuron state
+      operationId: getNeuron
+      parameters:
+        - name: neuron_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Neuron state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NeuronState'
+
+  /api/v1/neurons/evaluate:
+    post:
+      tags: [Neurons]
+      summary: Run neural evaluation
+      operationId: evaluateNeurons
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NeuronEvaluateRequest'
+      responses:
+        '200':
+          description: Evaluation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NeuronEvaluateResponse'
+
+  /api/v1/neurons/mood:
+    get:
+      tags: [Neurons]
+      summary: Get current mood
+      operationId: getNeuronMood
+      responses:
+        '200':
+          description: Current mood state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoodResponse'
+
+  /api/v1/neurons/suggestions:
+    get:
+      tags: [Neurons]
+      summary: Get suggestions
+      operationId: getNeuronSuggestions
+      responses:
+        '200':
+          description: Suggestions list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuggestionsResponse'
+
+  # ==================== VECTOR ====================
+  /api/v1/vector/embeddings:
+    post:
+      tags: [Vector]
+      summary: Create embedding
+      operationId: createEmbedding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VectorEmbeddingRequest'
+      responses:
+        '201':
+          description: Embedding created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorEmbeddingResponse'
+
+  /api/v1/vector/embeddings/bulk:
+    post:
+      tags: [Vector]
+      summary: Create embeddings in bulk
+      operationId: createEmbeddingsBulk
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VectorBulkRequest'
+      responses:
+        '201':
+          description: Bulk embeddings created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorBulkResponse'
+
+  /api/v1/vector/similar/{entry_id}:
+    get:
+      tags: [Vector]
+      summary: Find similar entities
+      operationId: findSimilar
+      parameters:
+        - name: entry_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: threshold
+          in: query
+          schema:
+            type: number
+            default: 0.7
+      responses:
+        '200':
+          description: Similar entities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarResponse'
+
+  /api/v1/vector/vectors:
+    get:
+      tags: [Vector]
+      summary: List vectors
+      operationId: listVectors
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Vector list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorsListResponse'
+    delete:
+      tags: [Vector]
+      summary: Clear vectors
+      operationId: clearVectors
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vectors cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorsClearResponse'
+
+  /api/v1/vector/vectors/{entry_id}:
+    get:
+      tags: [Vector]
+      summary: Get vector
+      operationId: getVector
+      parameters:
+        - name: entry_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vector details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorDetailResponse'
+    delete:
+      tags: [Vector]
+      summary: Delete vector
+      operationId: deleteVector
+      parameters:
+        - name: entry_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vector deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorDeleteResponse'
+
+  /api/v1/vector/stats:
+    get:
+      tags: [Vector]
+      summary: Get vector stats
+      operationId: getVectorStats
+      responses:
+        '200':
+          description: Vector statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VectorStatsResponse'
+
+  /api/v1/vector/similarity:
+    post:
+      tags: [Vector]
+      summary: Compute similarity between entries
+      operationId: computeSimilarity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimilarityRequest'
+      responses:
+        '200':
+          description: Similarity score
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarityResponse'
+
+  # ==================== WEATHER ====================
+  /api/v1/weather/:
+    get:
+      tags: [Weather]
+      summary: Get current weather
+      operationId: getWeather
+      responses:
+        '200':
+          description: Weather data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherResponse'
+
+  /api/v1/weather/forecast:
+    get:
+      tags: [Weather]
+      summary: Get weather forecast
+      operationId: getWeatherForecast
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        '200':
+          description: Weather forecast
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeatherForecastResponse'
+
+  /api/v1/weather/pv-recommendations:
+    get:
+      tags: [Weather]
+      summary: Get PV recommendations
+      operationId: getPvRecommendations
+      responses:
+        '200':
+          description: PV recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PvRecommendationsResponse'
+
+  # ==================== VOICE CONTEXT ====================
+  /api/v1/voice/context:
+    get:
+      tags: [Voice]
+      summary: Get voice context
+      operationId: getVoiceContext
+      responses:
+        '200':
+          description: Voice context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceContextResponse'
+    post:
+      tags: [Voice]
+      summary: Update voice context
+      operationId: updateVoiceContext
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Context updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceContextUpdateResponse'
+
+  /api/v1/voice/prompt:
+    get:
+      tags: [Voice]
+      summary: Get voice prompt
+      operationId: getVoicePrompt
+      responses:
+        '200':
+          description: Voice prompt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoicePromptResponse'
+
+  /api/v1/voice/mood_history:
+    get:
+      tags: [Voice]
+      summary: Get voice mood history
+      operationId: getVoiceMoodHistory
+      responses:
+        '200':
+          description: Mood history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceMoodHistoryResponse'
+
+  /api/v1/voice/suggestions:
+    get:
+      tags: [Voice]
+      summary: Get voice suggestions
+      operationId: getVoiceSuggestions
+      responses:
+        '200':
+          description: Voice suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceSuggestionsResponse'
 
 components:
   schemas:
@@ -785,6 +1162,452 @@ components:
           type: string
         code:
           type: string
+
+    # ---------- NEURONS ----------
+    NeuronsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            context:
+              type: object
+            state:
+              type: object
+            mood:
+              type: object
+            total_count:
+              type: integer
+
+    NeuronState:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        state:
+          type: object
+        config:
+          type: object
+
+    NeuronEvaluateRequest:
+      type: object
+      properties:
+        states:
+          type: object
+        context:
+          type: object
+        trigger:
+          type: string
+
+    NeuronEvaluateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            timestamp:
+              type: string
+            context_values:
+              type: object
+            state_values:
+              type: object
+            mood_values:
+              type: object
+            dominant_mood:
+              type: string
+            mood_confidence:
+              type: number
+            suggestions:
+              type: array
+              items:
+                type: string
+            neuron_count:
+              type: integer
+
+    SuggestionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            suggestions:
+              type: array
+              items:
+                type: string
+            mood:
+              type: string
+            timestamp:
+              type: string
+
+    # ---------- VECTOR ----------
+    VectorEmbeddingRequest:
+      type: object
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum: [entity, user_preference, pattern]
+        id:
+          type: string
+        domain:
+          type: string
+        area:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        state:
+          type: object
+        preferences:
+          type: object
+        pattern_type:
+          type: string
+        entities:
+          type: array
+          items:
+            type: string
+        conditions:
+          type: object
+        confidence:
+          type: number
+        metadata:
+          type: object
+
+    VectorEmbeddingResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        entry:
+          type: object
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+            created_at:
+              type: string
+            metadata:
+              type: object
+
+    VectorBulkRequest:
+      type: object
+      properties:
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/VectorEmbeddingRequest'
+        user_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/VectorEmbeddingRequest'
+        patterns:
+          type: array
+          items:
+            $ref: '#/components/schemas/VectorEmbeddingRequest'
+
+    VectorBulkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        results:
+          type: object
+          properties:
+            entities:
+              type: object
+              properties:
+                created:
+                  type: integer
+                failed:
+                  type: integer
+            user_preferences:
+              type: object
+              properties:
+                created:
+                  type: integer
+                failed:
+                  type: integer
+            patterns:
+              type: object
+              properties:
+                created:
+                  type: integer
+                failed:
+                  type: integer
+
+    SimilarResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        query_id:
+          type: string
+        query_type:
+          type: string
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              similarity:
+                type: number
+              type:
+                type: string
+              metadata:
+                type: object
+        count:
+          type: integer
+
+    VectorsListResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+              created_at:
+                type: string
+              updated_at:
+                type: string
+              metadata:
+                type: object
+        count:
+          type: integer
+
+    VectorsClearResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        deleted_count:
+          type: integer
+        type:
+          type: string
+
+    VectorDetailResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        entry:
+          type: object
+          properties:
+            id:
+              type: string
+            type:
+              type: string
+            vector:
+              type: array
+              items:
+                type: number
+            dimension:
+              type: integer
+            created_at:
+              type: string
+            updated_at:
+              type: string
+            metadata:
+              type: object
+
+    VectorDeleteResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        deleted:
+          type: string
+
+    VectorStatsResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        stats:
+          type: object
+          properties:
+            total_vectors:
+              type: integer
+            by_type:
+              type: object
+            dimension:
+              type: integer
+
+    SimilarityRequest:
+      type: object
+      properties:
+        id1:
+          type: string
+        id2:
+          type: string
+        vector1:
+          type: array
+          items:
+            type: number
+        vector2:
+          type: array
+          items:
+            type: number
+
+    SimilarityResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        similarity:
+          type: number
+        dimension:
+          type: integer
+
+    # ---------- WEATHER ----------
+    WeatherResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        weather:
+          type: object
+          properties:
+            temperature:
+              type: number
+            humidity:
+              type: number
+            condition:
+              type: string
+            wind_speed:
+              type: number
+            pressure:
+              type: number
+
+    WeatherForecastResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        forecast:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+              temp_high:
+                type: number
+              temp_low:
+                type: number
+              condition:
+                type: string
+              precipitation:
+                type: number
+
+    PvRecommendationsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              message:
+                type: string
+              priority:
+                type: string
+
+    # ---------- VOICE ----------
+    VoiceContextResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        context:
+          type: object
+          properties:
+            mood:
+              type: string
+            activity:
+              type: string
+            location:
+              type: string
+            time_context:
+              type: string
+
+    VoiceContextUpdateResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+
+    VoicePromptResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        prompt:
+          type: string
+
+    VoiceMoodHistoryResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: string
+              mood:
+                type: string
+              confidence:
+                type: number
+
+    VoiceSuggestionsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        suggestions:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              message:
+                type: string
+              priority:
+                type: string
 
   responses:
     ErrorResponse:
