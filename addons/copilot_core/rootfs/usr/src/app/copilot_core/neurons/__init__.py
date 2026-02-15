@@ -21,6 +21,17 @@ from .weather import (
     WeatherContextNeuron, PVForecastNeuron,
     WeatherCondition,
 )
+from .presence import (
+    mmWavePresenceNeuron, MotionPresenceNeuron, CombinedPresenceNeuron,
+    create_mmwave_presence_neuron, create_motion_presence_neuron,
+    create_combined_presence_neuron, PRESENCE_NEURON_CLASSES,
+)
+from .energy import (
+    PVForecastNeuron as EnergyPVForecastNeuron,
+    EnergyCostNeuron, GridOptimizationNeuron,
+    create_pv_forecast_neuron, create_energy_cost_neuron,
+    create_grid_optimization_neuron, ENERGY_NEURON_CLASSES,
+)
 
 __all__ = [
     # Manager
@@ -66,4 +77,20 @@ __all__ = [
     "WeatherContextNeuron",
     "PVForecastNeuron",
     "WeatherCondition",
+    # Presence neurons (mmWave)
+    "mmWavePresenceNeuron",
+    "MotionPresenceNeuron",
+    "CombinedPresenceNeuron",
+    "create_mmwave_presence_neuron",
+    "create_motion_presence_neuron",
+    "create_combined_presence_neuron",
+    "PRESENCE_NEURON_CLASSES",
+    # Energy neurons
+    "EnergyPVForecastNeuron",
+    "EnergyCostNeuron",
+    "GridOptimizationNeuron",
+    "create_pv_forecast_neuron",
+    "create_energy_cost_neuron",
+    "create_grid_optimization_neuron",
+    "ENERGY_NEURON_CLASSES",
 ]

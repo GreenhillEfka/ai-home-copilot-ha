@@ -1,5 +1,30 @@
 # CHANGELOG - AI Home CoPilot Core
 
+## [0.4.31] - 2026-02-15
+
+### Added
+- **mmWave Presence Neurons** (`neurons/presence.py`):
+  - `mmWavePresenceNeuron`: High-precision presence via mmWave radar
+  - `MotionPresenceNeuron`: Traditional PIR/motion sensor presence
+  - `CombinedPresenceNeuron`: Multi-sensor fusion for robust presence
+  - Privacy-friendly, no cameras, breathing detection
+  - Industry trend 2026: 25-40% energy savings
+
+- **Predictive Energy Neurons** (`neurons/energy.py`):
+  - `PVForecastNeuron`: Solar production forecasting
+  - `EnergyCostNeuron`: Grid price optimization
+  - `GridOptimizationNeuron`: Charge/discharge timing
+  - Optimal consumption scheduling
+
+### Features
+- mmWave detects presence without movement (breathing)
+- Sensor fusion with configurable weights (mmWave 70%, motion 30%)
+- PV forecast with hourly predictions
+- Peak/off-peak price optimization
+- Battery charge/discharge recommendations
+
+---
+
 ## [0.4.30] - 2026-02-15
 
 ### Added
