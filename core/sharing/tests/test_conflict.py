@@ -5,6 +5,7 @@ import asyncio
 import tempfile
 import os
 from datetime import datetime
+from unittest.mock import AsyncMock
 
 from core.sharing.conflict import ConflictResolver, Conflict
 

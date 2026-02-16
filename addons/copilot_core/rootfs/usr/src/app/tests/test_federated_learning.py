@@ -64,6 +64,9 @@ class TestFederatedLearner(unittest.TestCase):
         # Start a round first
         self.learner.start_round("round-1")
         
+        # Register node for privacy budget
+        self.learner.register_participant("node-1", max_epsilon=1.0)
+        
         weights = {"layer1": [0.1, 0.2], "layer2": [0.3]}
         metrics = {"loss": 0.5, "accuracy": 0.8}
         
@@ -103,15 +106,19 @@ class TestFederatedLearner(unittest.TestCase):
         round_id = "round-agg"
         self.learner.start_round(round_id)
         
+        # Register nodes for privacy budget
+        self.learner.register_participant("node-1", max_epsilon=1.0)
+        self.learner.register_participant("node-2", max_epsilon=1.0)
+        
         # Submit updates from multiple nodes
         weights1 = {"layer1": [0.1, 0.2], "layer2": [0.3]}
         weights2 = {"layer1": [0.2, 0.3], "layer2": [0.4]}
         
-        self.learner.submit_update("node-1", weights1, {"loss": 0.5})
-        self.learner.submit_update("node-2", weights2, {"loss": 0.4})
+        self.learner.submit_update("node-1", weights1, {"loss": 0.5}, round_id=round_id)
+        self.learner.submit_update("node-2", weights2, {"loss": 0.4}, round_id=round_id)
         
         # Aggregate
-        result = self.learner.aggregate_round(round_id)
+        result = self.learner.aggregate(round_id)
         
         self.assertIsNotNone(result)
         self.assertIsInstance(result, AggregatedModel)
@@ -122,7 +129,7 @@ class TestFederatedLearner(unittest.TestCase):
         if FederatedLearner is None:
             self.skipTest("FederatedLearner not available")
         # Initially should be empty
-        weights = self.learner.get_global_weights()
+        weights = self.learner.get_global_model()
         self.assertIsInstance(weights, dict)
 
 

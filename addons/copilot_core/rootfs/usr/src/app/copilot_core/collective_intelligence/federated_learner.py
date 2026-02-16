@@ -61,7 +61,8 @@ class FederatedLearner:
 
     def submit_update(self, node_id: str, weights: Dict[str, Any],
                      metrics: Optional[Dict[str, float]] = None,
-                     model_version: Optional[str] = None) -> Optional[ModelUpdate]:
+                     model_version: Optional[str] = None,
+                     round_id: Optional[str] = None) -> Optional[ModelUpdate]:
         """
         Submit a local model update.
 
@@ -70,6 +71,7 @@ class FederatedLearner:
             weights: Model weights (dict)
             metrics: Optional metrics (loss, accuracy, etc.)
             model_version: Model version being updated
+            round_id: Optional specific round ID (uses latest active if not specified)
 
         Returns:
             ModelUpdate if successful, None if min participants not met
@@ -89,13 +91,23 @@ class FederatedLearner:
             timestamp=time.time()
         )
 
-        # Register update
-        if node_id in self.active_rounds:
-            active_round = self.active_rounds[node_id]
-            if active_round.model_version == model_version:
-                active_round.updates.append(update)
-                if node_id not in active_round.participating_nodes:
-                    active_round.participating_nodes.append(node_id)
+        # Register update to specified round or latest active round
+        if round_id:
+            # Use specified round
+            if round_id in self.active_rounds:
+                active_round = self.active_rounds[round_id]
+                if active_round.model_version == model_version:
+                    active_round.updates.append(update)
+                    if node_id not in active_round.participating_nodes:
+                        active_round.participating_nodes.append(node_id)
+        else:
+            # Find latest active round for this model version
+            for rid, active_round in self.active_rounds.items():
+                if active_round.model_version == model_version:
+                    active_round.updates.append(update)
+                    if node_id not in active_round.participating_nodes:
+                        active_round.participating_nodes.append(node_id)
+                    break
 
         return update
 
