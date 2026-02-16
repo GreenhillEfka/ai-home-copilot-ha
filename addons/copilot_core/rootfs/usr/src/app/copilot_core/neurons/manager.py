@@ -29,6 +29,11 @@ from .state import (
     SleepDebtNeuron, AttentionLoadNeuron, ComfortIndexNeuron,
     create_state_neuron, STATE_NEURON_CLASSES
 )
+from .energy import (
+    PVForecastNeuron, EnergyCostNeuron, GridOptimizationNeuron,
+    create_pv_forecast_neuron, create_energy_cost_neuron,
+    create_grid_optimization_neuron, ENERGY_NEURON_CLASSES
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -117,6 +122,9 @@ class NeuronManager:
         # Create mood neurons
         self._create_mood_neurons(config.get("mood_neurons", {}))
         
+        # Create energy neurons (optional, requires HA entities)
+        self._create_energy_neurons(config.get("energy_neurons", {}))
+        
         _LOGGER.info(
             "Configured %d context, %d state, %d mood neurons",
             len(self._context_neurons),
@@ -181,6 +189,50 @@ class NeuronManager:
                 neuron_type=NeuronType.MOOD,
                 **neuron_config
             )))
+    
+    def _create_energy_neurons(self, config: Dict[str, Any]) -> None:
+        """Create energy neurons for PV/cost optimization.
+        
+        Energy neurons are optional and require HA entities:
+        - pv_forecast: PV production entity
+        - energy_cost: Electricity price entity
+        - grid_optimization: Grid import/export entity
+        """
+        # PV Forecast Neuron
+        pv_config = config.get("pv_forecast", {})
+        if pv_config.get("enabled", False):
+            self.add_neuron("state", "pv_forecast", create_pv_forecast_neuron(
+                pv_entity=pv_config.get("pv_entity"),
+                battery_entity=pv_config.get("battery_entity"),
+                weather_entity=pv_config.get("weather_entity"),
+                pv_capacity_kw=pv_config.get("pv_capacity_kw", 10.0),
+                name="PV Forecast"
+            ))
+        
+        # Energy Cost Neuron
+        cost_config = config.get("energy_cost", {})
+        if cost_config.get("enabled", False):
+            self.add_neuron("state", "energy_cost", create_energy_cost_neuron(
+                price_entity=cost_config.get("price_entity"),
+                peak_hours=cost_config.get("peak_hours"),
+                name="Energy Cost"
+            ))
+        
+        # Grid Optimization Neuron
+        grid_config = config.get("grid_optimization", {})
+        if grid_config.get("enabled", False):
+            self.add_neuron("state", "grid_optimization", create_grid_optimization_neuron(
+                pv_entity=grid_config.get("pv_entity"),
+                battery_entity=grid_config.get("battery_entity"),
+                grid_entity=grid_config.get("grid_entity"),
+                price_entity=grid_config.get("price_entity"),
+                name="Grid Optimization"
+            ))
+        
+        _LOGGER.info(
+            "Configured %d energy neurons",
+            sum(1 for n in ["pv_forecast", "energy_cost", "grid_optimization"] if n in self._state_neurons)
+        )
     
     # -------------------------------------------------------------------------
     # Neuron Management
