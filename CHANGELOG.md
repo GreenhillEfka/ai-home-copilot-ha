@@ -1,6 +1,19 @@
 # Changelog - AI Home CoPilot Core Add-on
 
-## [0.8.3] - 2026-02-16
+## [0.8.4] - 2026-02-16
+
+### Fixed
+- **test_brain_graph_api.py**: Fixed asyncio compatibility for Python 3.14+
+- **test_federated_learning.py**: Fixed `aggregate()` method call, added `round_id` parameter to `submit_update()`, registered nodes for privacy budget
+- **test_privacy_preserver.py**: Fixed test expectations for `PrivacyAwareAggregator` (internal API, node budget registration)
+- **federated_learner.py**: Fixed bug in `submit_update()` - updates weren't being registered to rounds due to wrong key lookup
+
+### Added
+- **test_brain_graph_api.py**: 8 tests passing ✅
+
+### Tests
+- Core: 44+ tests passing ✅ (federated_learning + privacy_preserver fixed)
+- HA Integration: 346 passed, 2 skipped ✅
 
 ### Added
 - **Phase 5 Feature: Brain Graph Panel Integration v0.8**
