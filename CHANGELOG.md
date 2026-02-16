@@ -1,5 +1,38 @@
 # Changelog - AI Home CoPilot Core Add-on
 
+## [0.8.6] - 2026-02-16
+
+### Added
+- **Phase 5 Feature: Home Alerts Module v0.1**
+  - Monitors batteries, climate, presence, system issues
+  - 4 severity levels (critical/high/medium/low)
+  - `/api/v1/home_alerts/alerts` - Get all alerts
+  - `/api/v1/home_alerts/acknowledge` - Acknowledge alert
+  - `/api/v1/home_alerts/health` - Home health score (0-100)
+
+- **Phase 5 Feature: Brain Graph Panel v0.8.1**
+  - Home Alerts card integration (battery/climate/presence/system)
+  - Health gauge visualization
+  - Category counts display
+
+- **Phase 5 Feature: Multi-User Preference Learning v0.8.1**
+  - Improved federated learning with privacy budget tracking
+  - Differential privacy (ε=0.1 default, configurable)
+
+### Tests
+- Home Alerts: 15 tests passing ✅
+- Brain Graph Panel: 12 tests passing ✅
+
+### Added
+- **test_home_alerts_api.py**: 15 tests passing ✅
+- **test_home_alerts_module.py**: 22 tests passing ✅
+
+### Core API
+- `/api/v1/home_alerts/*` endpoints fully documented
+
+### Manifest
+- Add-on version bumped to 0.8.6
+
 ## [0.8.5] - 2026-02-16
 
 ### Added
