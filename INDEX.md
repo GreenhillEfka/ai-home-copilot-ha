@@ -4,9 +4,10 @@
 
 ## Current Release
 
-**Core Add-on v0.7.0** (2026-02-15) — `main` branch
+**Core Add-on v0.8.1** (2026-02-16) — `main` branch
 
 ### Latest Updates
+- **SystemHealth API**: Blueprint registered, all tests passing
 - **Interactive Visualization (Phase 5)**: Full D3.js + React visualization module
 - **Brain Graph Panel**: Interactive force-directed graph with zoom/pan
 - **Lovelace Cards**: Custom cards for mood, neurons, habitus
@@ -48,14 +49,14 @@
 | Candidates | `/api/v1/candidates` |
 | UniFi | `/api/v1/unifi/*` (wan, clients, roaming, baselines) |
 | Energy | `/api/v1/energy/*` |
-| SystemHealth | `/api/v1/system-health/*` |
+| SystemHealth | `/api/v1/system_health/*` |
 | User Preferences | `/api/v1/user/*` (preferences, zones, mood) |
 
 ## Development Status
 
 | Branch | Status | Description |
 |--------|--------|-------------|
-| `main` | ✅ Stable | Production releases (v0.7.0) |
+| `main` | ✅ Stable | Production releases (v0.8.1) |
 | `dev-knowledge-graph` | ✅ Merged | Knowledge Graph module |
 
 ## Quick Links
@@ -91,9 +92,10 @@ ha-copilot-repo/
 - [x] Interactive Visualization (Phase 5)
 - [x] Cross-Home Sharing (v0.6.0)
 - [x] Collective Intelligence (v0.6.1)
+- [x] SystemHealth API registered
 - [ ] Extended neuron modules
 - [ ] Performance optimization (caching, connection pooling)
 
 ---
 
-*Last updated: 2026-02-15 19:21*
+*Last updated: 2026-02-16 02:35*
