@@ -23,9 +23,10 @@ from copilot_core.api.v1.search import bp as search_bp
 from copilot_core.api.v1.notifications import bp as notifications_bp
 from copilot_core.api.v1.user_hints import bp as user_hints_bp
 
-# Neuron APIs (energy, unifi)
+# Neuron APIs (energy, unifi, system_health)
 from copilot_core.energy.api import energy_bp
 from copilot_core.unifi.api import unifi_bp
+from copilot_core.system_health.api import system_health_bp
 
 api_v1 = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
@@ -56,3 +57,4 @@ api_v1.register_blueprint(user_hints_bp)
 # Register Neuron APIs
 api_v1.register_blueprint(energy_bp)
 api_v1.register_blueprint(unifi_bp)
+api_v1.register_blueprint(system_health_bp)

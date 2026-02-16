@@ -1,5 +1,16 @@
 # Changelog - AI Home CoPilot Core Add-on
 
+## [0.8.1] - 2026-02-16
+
+### Fixed
+- SystemHealth API blueprint now registered in main API v1 blueprint
+- test_system_health.py: Fixed incorrect import paths (api vs service)
+- test_system_health.py: Fixed Zigbee health test expectations (>10% unavailable = degraded)
+- test_system_health.py: Fixed Z-Wave health test expectations (<80% ready = degraded)
+- test_system_health.py: Fixed recorder database_size test expectations
+- test_system_health.py: Fixed blueprint route test (needs Flask app)
+- test_system_health.py: Fixed should_suppress_suggestions test (2+ issues = unhealthy)
+
 ## [0.8.0] - 2026-02-16
 
 ### Added
