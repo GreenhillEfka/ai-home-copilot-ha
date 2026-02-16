@@ -7,8 +7,8 @@
 
 | Repo | Version | Python Files | Modules | Status |
 |------|---------|--------------|---------|--------|
-| HA Integration | 0.12.1 | 223 | 20+ | ⚠️ Stable but Tech Debt |
-| Core Add-on | 0.7.0 | 130 | 20+ | ⚠️ Security Issues Pending |
+| HA Integration | 0.13.3 | 223 | 20+ | ✅ Stable (Zone Integration Complete) |
+| Core Add-on | 0.8.4 | 130 | 20+ | ✅ Stable (Tests: 528 passed) |
 
 ---
 

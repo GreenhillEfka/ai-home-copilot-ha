@@ -238,6 +238,21 @@ Home Assistant introduced a **Labs** system for preview features:
 
 ## Changelog
 
+### 2026-02-16 07:26
+- **NEW: HA 2026.2 Deep Analysis via Perplexity**
+  - Assist satellite conditions (idle/listening/processing/responding) - potential neuron integration
+  - iOS app "mute response" for Assist voice
+  - Distribution Card for energy visualization
+  - Native power sensor format support (inverted polarity, separate sensors)
+  - Purpose-specific triggers: Climate, Person, Vacuum, Alarm panel
+  - Quick Search (Ctrl+K) - CoPilot Brain Graph search could integrate
+  - Home Dashboard redesign with Favorites/Areas/Summaries
+- **MCP Status**: NO official HA support yet - CoPilot opportunity
+- **Local LLM Status**: NO official HA support - CoPilot advantage maintained
+- **Energy Enhancements**: Tibber EV charger sensors, Powerfox gas support
+- **No new critical findings** - all features align with existing CoPilot roadmap
+- **Zone Registry Integration still CRITICAL** - pending implementation
+
 ### 2026-02-16 06:36
 - **NEW: HA Developer Blog Analysis**
   - Labs system for preview features (runtime activation)
