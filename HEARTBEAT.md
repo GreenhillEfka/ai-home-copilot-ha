@@ -123,46 +123,64 @@
 - **Location:** `copilot_core/performance.py` (618 lines)
 - **No Action Required:** Architecture decisions 1-3 already implemented
 
-### Decision 7: Zone Registry Integration 📋 PROPOSED (2026-02-16 04:54)
-**Context:** `forwarder.py:285-311` builds zone_map from HA area registry but uses `area.normalized_name` directly
-**Issue:** No connection to HabitusZoneV2 system - entities mapped to "area names" not "zone IDs"
-**Decision Proposal:** Two-phase integration
+### Decision 7: Zone Registry Integration ✅ COMPLETE (2026-02-16 06:55)
 
-**Phase 1: Forwarder Zone Mapping Enhancement**
-- Query HabitusZoneStoreV2 during `_build_zone_map()`
-- Match HA areas to HabitusZoneV2 by:
-  1. Exact match: `area.normalized_name == zone.zone_id.replace("zone:", "")`
-  2. Fuzzy match: `area.name.lower() == zone.name.lower()`
-  3. Fallback: Create implicit zone from area if no match
-- Cache mapping in `_zone_map` with zone metadata (priority, hierarchy)
+**CORRECTION:** Architecture review referenced deprecated `forwarder.py`. Active module is `events_forwarder.py`.
 
-**Phase 2: Media Context Zone Integration**
-- `media_context_v2.py:307` should call `async_get_zones_v2()` when `use_habitus_zones=True`
-- Replace `_get_zone_name()` placeholder with lookup from HabitusZoneStoreV2
-- Return zone.display_name instead of zone_id.capitalize()
+**Phase 1: Forwarder Zone Mapping ✅ ALREADY IMPLEMENTED**
+- `core/modules/events_forwarder.py` line 34: imports `async_get_zones_v2`
+- `_build_forwarder_entity_allowlist()` (lines 180-200) properly queries zones and maps entities
+- Zone refresh on `SIGNAL_HABITUS_ZONES_V2_UPDATED` signal
+- No action needed - Phase 1 is production-ready
 
-**Implementation Priority:** P1 (high impact on context-aware suggestions)
-**Estimated Effort:** ~50 lines changed, backward compatible
-**Risk:** LOW - additive change, existing mapping still works as fallback
+**Phase 2: Media Context Zone Integration ✅ IMPLEMENTED**
+- `media_context_v2.py:307`: Added `async_get_zones_v2` import
+- `_get_zone_name()` now queries HabitusZoneV2 when `use_habitus_zones=True`
+- Returns `zone.name` instead of `zone_id.capitalize()`
+- Fallback to capitalize() if no zone match found
+- `MediaContextV2Coordinator` accepts `entry_id` for zone queries
+- Updated `media_context_v2_setup.py` to pass `entry_id`
 
-### Heartbeat Check (2026-02-16 05:38 - Claude Orchestrator):
+**Implementation Details:**
+```python
+def _get_zone_name(self, zone_id: str | None) -> str | None:
+    if not zone_id:
+        return None
+    # Use HabitusZoneV2 display name if available
+    if self._use_habitus_zones and self._habitus_zones:
+        for zone in self._habitus_zones:
+            if zone.zone_id == zone_id:
+                return zone.name  # Use zone.name (display name)
+    return zone_id.capitalize()  # Fallback
+```
+
+**Status:** All Phase 1 & 2 tasks complete. System now fully "zone-aware".
+
+### Heartbeat Check (2026-02-16 06:55):
 1. HA Integration: v0.13.3 RELEASED ✅
 2. Core Add-on: v0.8.4 RELEASED ✅
 3. Both repos synced with origin ✅
 4. GitHub releases created ✅
 5. Tests: 346 passed, 2 skipped ✅
+6. Zone Registry Integration (Decision 7): ✅ COMPLETE
 
-### Actions Taken (2026-02-16 05:38):
+### Actions Taken (2026-02-16 06:55):
 - Fixed version mismatch: manifest.json (0.13.2→0.13.3), config.json (0.8.1→0.8.4)
 - Pushed commits to origin/main
 - Created tags v0.13.3, v0.8.4
 - Created GitHub releases with release notes
+- Implemented Decision 7 Phase 2: Media Context Zone Integration
+  - Added HabitusZoneV2 lookup in `_get_zone_name()`
+  - Added `entry_id` parameter to `MediaContextV2Coordinator`
+  - Commit: `760c4de`
 
 ### Gemini Architect Review (2026-02-16 05:16):
 **CRITICAL FINDING:** Zone Logic P1 upgraded to CRITICAL - system is "zone-blind"
 - `forwarder.py` uses `area.normalized_name` not `HabitusZoneV2` IDs
 - `media_context_v2.py` has placeholder zone integration
 - Recommendation: Implement Zone Registry (Decision 7) immediately
+
+**CORRECTION:** Review referenced deprecated `forwarder.py`. Active module `events_forwarder.py` already has zone integration.
 
 **Security:** Audit API authentication between HA and Core Add-on
 
