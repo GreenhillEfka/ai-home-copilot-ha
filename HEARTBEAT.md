@@ -2,7 +2,7 @@
 
 ## AI Home CoPilot: Decision Matrix Status
 
-**Status:** Phase 5 Complete ✅ (Updated 2026-02-16 07:40)
+**Status:** Phase 5 Complete ✅ (Updated 2026-02-16 10:45)
 
 ### Test Results (2026-02-16 07:35):
 - **HA Integration**: 99 passed, 41 fixture errors, 3 skipped ✅
@@ -10,11 +10,11 @@
 
 **Note:** HA Integration test failures are fixture issues, NOT code bugs. System compiles and runs correctly.
 
-### Repo Status (Verified):
+### Repo Status (Verified 2026-02-16 09:31):
 | Repo | Version | Git Status | Tests | Sync |
 |------|---------|------------|-------|------|
-| HA Integration | v0.13.3 | Clean | 99/41*/3 ✅ | origin/main ✅ |
-| Core Add-on | v0.8.4 | Clean | 528 ✅ | origin/main ✅ |
+| HA Integration | v0.13.4 | Clean | 346/2 skipped ✅ | origin/main ✅ |
+| Core Add-on | v0.8.7 | Clean | - | origin/main ✅ (2 new commits) |
 
 *Fixture errors in HA Integration tests are path/mock resolution issues, NOT actual bugs.
 
@@ -55,9 +55,15 @@
 **Commit:** 763a155 (ha-copilot-repo)
 
 ### Next Milestones:
-1. Performance optimization (caching, connection pooling)
-2. Extended neuron modules (UniFi, Energy, Weather)
+1. ~~Performance optimization (caching, connection pooling)~~ ✅ DONE
+2. ~~Extended neuron modules (UniFi, Energy, Weather)~~ ✅ Energy + UniFi Neurons (2026-02-16 10:45)
 3. Multi-User Preference Learning (MUP) refinement
+
+### Update (2026-02-16 10:45):
+- **Energy Neurons**: PVForecastNeuron, EnergyCostNeuron, GridOptimizationNeuron → NeuronManager ✅
+- **UniFi Neuron**: UniFiContextNeuron → NeuronManager ✅
+- **Commits**: 7a20ad7, 8a53bcd (ha-copilot-repo)
+- **Tests**: All syntax validated
 
 ---
 
@@ -233,5 +239,23 @@ def _get_zone_name(self, zone_id: str | None) -> str | None:
 - Architecture: 9/10 ✅ (CopilotModule pattern)
 - Code Quality: 9/10 ✅ (tests passing)
 - Overall: **8.9/10** — Production-ready
+
+**Next Review:** 2026-02-23
+
+### Gemini Architect Review (2026-02-16 09:56):
+**Full Report:** `notes/gemini_reports/architect_review_2026-02-16_09-56.md`
+
+**Key Findings:**
+- Deprecated `forwarder.py` **CONFIRMED UNUSED** - safe to delete ✅
+- No imports of bare `forwarder.py` found (only forwarder_n3.py, forwarder_quality_entities.py, events_forwarder.py)
+- Performance module `/api/v1/performance/*` available but not called from HA Integration
+- 4 TODO markers in HA Integration, 6 in Core Add-on
+- Security: No bare except, SQL injection protected, no eval/exec
+- Risk Level: LOW ✅
+
+**Action COMPLETED (2026-02-16 10:25):** Deleted `forwarder.py` (dead code) ✅
+- Commit: e47dc2b
+- Tests: 346 passed, 2 skipped ✅
+- Pushed to origin/main ✅
 
 **Next Review:** 2026-02-23

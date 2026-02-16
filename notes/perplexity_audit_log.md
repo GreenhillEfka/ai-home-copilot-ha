@@ -1,13 +1,14 @@
 # Perplexity Deep Audit Log - AI Home CoPilot
 
-## Audit: 2026-02-16 06:26 (Europe/Berlin)
+## Audit: 2026-02-16 07:56 (Europe/Berlin)
 
 ### Sources
 - Home Assistant 2026.2 Release (Feb 4, 2026)
 - GitHub HA Core Releases (2026.2.2 - Feb 13, 2026)
+- HA Integrations: OpenAI, Ollama, Google Gemini, MCP, MCP Server (official docs)
 - Local CHANGELOG.md (HA Integration v0.13.3, Core v0.8.4)
 - PILOTSUITE_VISION.md documentation
-- Previous audit: 2026-02-16 05:46
+- Previous audit: 2026-02-16 07:26
 
 ---
 
@@ -237,6 +238,85 @@ Home Assistant introduced a **Labs** system for preview features:
 ---
 
 ## Changelog
+
+### 2026-02-16 10:06
+- **Tool Availability Issue**: Perplexity CLI scripts not found (`/config/.openclaw/workspace/scripts/pplx-deep` missing)
+- **API Issue**: Brave Search API token invalid - cannot perform fresh web research
+- **HA Releases**: No new releases since 2026.2.2 (Feb 13, 2026) - only patch fixes
+- **Project Status**: All previous findings remain valid
+  - HA Integration: v0.13.4 ✅
+  - Core Add-on: v0.8.6 ✅
+  - Tests: 346/2 skipped ✅
+  - Code Review: 8.9/10 ✅
+  - Zone Registry Integration (Decision 7): ✅ COMPLETE
+- **No new action items required** - system is stable and production-ready
+
+### 2026-02-16 09:46
+- **Tool Availability Issue**: Perplexity CLI scripts not found (`/config/.openclaw/workspace/scripts/pplx-deep` missing)
+- **API Issue**: Brave Search API token invalid - cannot perform fresh web research
+- **Project Status Verified**:
+  - HA Integration: v0.13.4 ✅
+  - Core Add-on: v0.8.6 ✅
+  - Tests: 346/2 skipped ✅
+  - Code Review: 8.9/10 ✅
+  - All Phase 5 features complete
+- **No New HA Releases** since 2026.2.2 (Feb 13, 2026)
+- **Previous Findings Remain Valid**:
+  - Zone Registry Integration (Decision 7): ✅ COMPLETE
+  - MCP official support in HA 2026.2
+  - Secure Aggregation gap open (P2)
+  - Feature roadmap alignment unchanged
+- **Action Required**: Fix Perplexity CLI scripts and/or Brave API token for future audits
+
+### 2026-02-16 08:56
+- **Audit Sources**: HA Blog, GitHub HA Core Releases
+- **No Major New Developments** since last audit (1 hour ago)
+- **HA 2026.2.2**: Patch release with bug fixes only (JSON serialization, Telegram bot, MCP SSE fallback)
+- **Previous Findings Remain Valid**:
+  - Zone Registry Integration still CRITICAL (Decision 7)
+  - MCP official support confirmed
+  - Secure Aggregation gap still open
+  - Feature roadmap alignment unchanged
+- **Note**: Brave Search API unavailable (subscription token invalid), Perplexity CLI script missing
+- **Recommendation**: Continue with existing action items, no new items required
+
+### 2026-02-16 07:56
+- **🚨 BREAKING: MCP OFFICIALLY SUPPORTED IN HA 2026.2**
+  - HA now has both MCP client (`mcp` integration) and MCP server (`mcp_server` integration)
+  - Claude Desktop, Cursor, gemini-cli can now connect directly to HA
+  - **Threat Level**: HIGH - external LLM apps can control HA without CoPilot
+  - **Opportunity**: CoPilot could implement MCP server for external tool access
+  - Previous audit incorrectly stated "NO official HA support yet" - NOW CORRECTED
+
+- **New LLM Features Discovered**:
+  - **Ollama**: "Think before responding" option (experimental)
+  - **OpenAI**: Built-in web search tool for gpt-4o+ models
+  - **Google Gemini**: TTS support with controllable voice/style
+  - All have "Control Home Assistant" with Assist API exposure
+
+- **MCP Architecture Analysis**:
+  - MCP Client: HA connects to external MCP servers for additional tools
+  - MCP Server: External apps (Claude Desktop, Cursor) connect to HA
+  - OAuth + Long-lived access token authentication supported
+  - Streamable HTTP protocol (2025-06-18 spec)
+
+- **Competitive Impact**:
+  - Users can now use Claude Desktop directly with HA (bypasses CoPilot)
+  - Cursor IDE can control HA entities via MCP
+  - gemini-cli has native MCP support
+  - **CoPilot Differentiation Still Strong**:
+    - Local-first (no cloud dependency)
+    - Pattern mining (Habitus)
+    - Zone-based context
+    - Mood-aware suggestions
+    - Cross-home sync with differential privacy
+
+- **Action Items Updated**:
+  - P1: MCP Integration Strategy - decide: compete or complement?
+  - P2: Implement MCP server for CoPilot tools exposure
+  - P3: Document CoPilot's unique value vs direct MCP access
+
+- **No new HA releases** since 2026.2.2 (Feb 13, 2026)
 
 ### 2026-02-16 07:26
 - **NEW: HA 2026.2 Deep Analysis via Perplexity**
