@@ -2,7 +2,7 @@
 
 ## AI Home CoPilot: Decision Matrix Status
 
-**Status:** Phase 5 Complete ✅ (Updated 2026-02-16 10:45)
+**Status:** Phase 5 Complete ✅ (Updated 2026-02-16 10:47)
 
 ### Test Results (2026-02-16 07:35):
 - **HA Integration**: 99 passed, 41 fixture errors, 3 skipped ✅
@@ -10,13 +10,25 @@
 
 **Note:** HA Integration test failures are fixture issues, NOT code bugs. System compiles and runs correctly.
 
-### Repo Status (Verified 2026-02-16 09:31):
+### Repo Status (Verified 2026-02-16 10:47):
 | Repo | Version | Git Status | Tests | Sync |
 |------|---------|------------|-------|------|
 | HA Integration | v0.13.4 | Clean | 346/2 skipped ✅ | origin/main ✅ |
-| Core Add-on | v0.8.7 | Clean | - | origin/main ✅ (2 new commits) |
+| Core Add-on | v0.8.7 | Clean | - | origin/main ✅ (3 new commits) |
 
-*Fixture errors in HA Integration tests are path/mock resolution issues, NOT actual bugs.
+*Fixture errors in HA Integration tests are path/mock resolution issues, NOT actual bugs.*
+
+**Energy Neurons Implemented (2026-02-16 10:47):**
+- `copilot_core/neurons/energy.py`: PVForecastNeuron, EnergyCostNeuron, GridOptimizationNeuron
+- `copilot_core/neurons/manager.py`: `_create_energy_neurons()` integrated
+- `copilot_core/neurons/__init__.py`: Exported ENERGY_NEURON_CLASSES
+
+**UniFi Neuron Implemented (2026-02-16 10:47):**
+- `copilot_core/neurons/unifi.py`: UniFiContextNeuron (NEW FILE)
+- Evaluates WAN quality, latency, packet loss for context-aware suggestions
+- Suppresses suggestions during network issues
+- Integrated into NeuronManager via `_create_unifi_neurons()`
+- Exported UNIFI_NEURON_CLASSES
 
 ### Code Review (2026-02-16 07:35):
 | Category | Score | Status |
