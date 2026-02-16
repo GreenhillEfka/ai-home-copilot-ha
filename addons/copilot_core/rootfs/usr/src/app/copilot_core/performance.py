@@ -130,6 +130,19 @@ class QueryCache:
                 ),
             }
     
+    def cleanup_expired(self) -> int:
+        """Remove all expired entries. Returns count removed."""
+        with self._lock:
+            now = time.time()
+            expired_keys = [
+                k for k, entry in self._cache.items()
+                if now > entry.expires_at
+            ]
+            for key in expired_keys:
+                del self._cache[key]
+            self._stats["evictions"] += len(expired_keys)
+            return len(expired_keys)
+
     def invalidate_pattern(self, pattern: str) -> int:
         """Invalidate all keys matching pattern. Returns count invalidated."""
         with self._lock:
@@ -470,7 +483,7 @@ class SQLiteConnectionPool(ConnectionPool):
 # Global SQLite connection pool
 sql_pool = SQLiteConnectionPool(
     db_path="/data/brain_graph.db",
-    max_connections=5,
+    max_connections=10,
     min_connections=1,
     connection_timeout=5.0,
     max_idle_time=300.0,

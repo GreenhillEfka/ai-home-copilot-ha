@@ -84,6 +84,10 @@ class BrainGraphStore:
                 CREATE INDEX IF NOT EXISTS idx_edges_type ON edges (edge_type);
                 CREATE INDEX IF NOT EXISTS idx_edges_updated ON edges (updated_at_ms);
                 CREATE INDEX IF NOT EXISTS idx_edges_weight ON edges (weight);
+
+                CREATE INDEX IF NOT EXISTS idx_nodes_kind_domain ON nodes (kind, domain);
+                CREATE INDEX IF NOT EXISTS idx_nodes_kind_score ON nodes (kind, score);
+                CREATE INDEX IF NOT EXISTS idx_edges_type_weight ON edges (edge_type, weight);
             """)
     
     def upsert_node(self, node: GraphNode) -> bool:

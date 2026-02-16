@@ -129,6 +129,22 @@ def invalidate_pattern() -> Dict[str, Any]:
     })
 
 
+@performance_bp.route('/cache/cleanup', methods=['POST'])
+@require_api_key
+def cleanup_expired_caches() -> Dict[str, Any]:
+    """Remove expired entries from all caches."""
+    removed = 0
+    removed += brain_graph_cache.cleanup_expired()
+    removed += ml_cache.cleanup_expired()
+    removed += api_response_cache.cleanup_expired()
+
+    return jsonify({
+        "message": f"Removed {removed} expired cache entries",
+        "removed": removed,
+        "timestamp_ms": int(time.time() * 1000),
+    })
+
+
 @performance_bp.route('/pool/status', methods=['GET'])
 @require_api_key
 def get_pool_status() -> Dict[str, Any]:
