@@ -34,6 +34,10 @@ from .energy import (
     create_pv_forecast_neuron, create_energy_cost_neuron,
     create_grid_optimization_neuron, ENERGY_NEURON_CLASSES
 )
+from .unifi import (
+    UniFiContextNeuron, NetworkQuality,
+    create_unifi_context_neuron, UNIFI_NEURON_CLASSES
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -124,6 +128,9 @@ class NeuronManager:
         
         # Create energy neurons (optional, requires HA entities)
         self._create_energy_neurons(config.get("energy_neurons", {}))
+        
+        # Create UniFi neurons (optional, requires HA entities)
+        self._create_unifi_neurons(config.get("unifi_neurons", {}))
         
         _LOGGER.info(
             "Configured %d context, %d state, %d mood neurons",
@@ -233,6 +240,28 @@ class NeuronManager:
             "Configured %d energy neurons",
             sum(1 for n in ["pv_forecast", "energy_cost", "grid_optimization"] if n in self._state_neurons)
         )
+    
+    def _create_unifi_neurons(self, config: Dict[str, Any]) -> None:
+        """Create UniFi network context neurons.
+        
+        UniFi neurons are optional and require HA entities:
+        - wan_entity: WAN status sensor
+        - latency_entity: Latency sensor (ms)
+        - packet_loss_entity: Packet loss sensor (%)
+        """
+        unifi_config = config.get("unifi_context", {})
+        if unifi_config.get("enabled", False):
+            self.add_neuron("context", "unifi_context", create_unifi_context_neuron(
+                wan_entity=unifi_config.get("wan_entity"),
+                latency_entity=unifi_config.get("latency_entity"),
+                packet_loss_entity=unifi_config.get("packet_loss_entity"),
+                latency_warning_ms=unifi_config.get("latency_warning_ms", 50.0),
+                latency_critical_ms=unifi_config.get("latency_critical_ms", 100.0),
+                loss_warning_percent=unifi_config.get("loss_warning_percent", 1.0),
+                loss_critical_percent=unifi_config.get("loss_critical_percent", 3.0),
+                name="UniFi Network"
+            ))
+            _LOGGER.info("Configured UniFi context neuron")
     
     # -------------------------------------------------------------------------
     # Neuron Management

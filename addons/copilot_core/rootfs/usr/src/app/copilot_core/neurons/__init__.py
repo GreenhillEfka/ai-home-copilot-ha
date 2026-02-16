@@ -37,6 +37,10 @@ from .camera import (
     create_camera_presence_neuron, create_camera_activity_neuron,
     create_security_alert_neuron, CAMERA_NEURON_CLASSES,
 )
+from .unifi import (
+    UniFiContextNeuron, NetworkQuality,
+    create_unifi_context_neuron, UNIFI_NEURON_CLASSES,
+)
 
 __all__ = [
     # Manager
@@ -106,4 +110,9 @@ __all__ = [
     "create_camera_activity_neuron",
     "create_security_alert_neuron",
     "CAMERA_NEURON_CLASSES",
+    # UniFi neurons
+    "UniFiContextNeuron",
+    "NetworkQuality",
+    "create_unifi_context_neuron",
+    "UNIFI_NEURON_CLASSES",
 ]
