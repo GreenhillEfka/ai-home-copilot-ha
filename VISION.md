@@ -399,8 +399,9 @@ Brain Graph verlinkt: Tag ↔ Zone ↔ Entity (bidirektional)
 
 | Priorität | Aufgabe | Status |
 |-----------|---------|--------|
-| P1 | Test Suite Remediation (24 failing tests fixen) | Offen |
-| P1 | Legacy v1 Files aufräumen (forwarder.py, media_context.py, etc.) | Teilweise |
+| P1 | Test Suite Remediation (Core 521, HACS 346 - all green) | **Erledigt** |
+| P1 | Legacy v1 Files aufräumen (media_setup, habitus_zones_entities entfernt) | **Erledigt** |
+| P1 | Dokumentation + Benutzerhandbuch (USER_MANUAL.md, deutsch) | **Erledigt** |
 | P2 | config_flow.py refactoring (1260 → mehrere Dateien) | Offen |
 | P2 | Pydantic-Validation für API Endpoints | Offen |
 | P2 | Port-Konfiguration vereinheitlichen (8099 vs 8909) | **Erledigt** |

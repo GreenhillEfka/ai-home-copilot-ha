@@ -15,6 +15,8 @@ from typing import Any, Optional
 
 from flask import Blueprint, jsonify, request
 
+from copilot_core.api.validation import validate_json
+from copilot_core.api.v1.schemas import EmbeddingRequest, SimilarityRequest, BulkEmbeddingRequest
 from copilot_core.vector_store.store import get_vector_store, VectorStore, VectorStoreConfig
 from copilot_core.vector_store.embeddings import get_embedding_engine, EmbeddingEngine
 
@@ -36,52 +38,20 @@ def _engine() -> EmbeddingEngine:
 # ==================== Embeddings ====================
 
 @bp.post("/embeddings")
-def create_embedding():
-    """Generate and store an embedding.
-    
-    Request body:
-    {
-        "type": "entity" | "user_preference" | "pattern",
-        "id": "entity_id or user_id or pattern_id",
-        // For entity:
-        "domain": "light",
-        "area": "living_room",
-        "capabilities": ["brightness", "color_temp"],
-        "tags": ["indoor", "main"],
-        "state": {...},
-        // For user_preference:
-        "preferences": {...},
-        // For pattern:
-        "pattern_type": "habitus",
-        "entities": ["light.wohnzimmer"],
-        "conditions": {...},
-        "confidence": 0.85
-    }
-    """
+@validate_json(EmbeddingRequest)
+def create_embedding(body: EmbeddingRequest):
+    """Generate and store an embedding."""
     try:
-        data = request.get_json() or {}
-        
-        entry_type = data.get("type")
-        entry_id = data.get("id")
-        
-        if not entry_type or not entry_id:
-            return jsonify({
-                "ok": False,
-                "error": "Missing required fields: type, id",
-            }), 400
-            
-        if entry_type == "entity":
+        data = body.model_dump(exclude_none=True)
+        entry_id = body.id
+
+        if body.type == "entity":
             return _create_entity_embedding(entry_id, data)
-        elif entry_type == "user_preference":
+        elif body.type == "user_preference":
             return _create_user_preference_embedding(entry_id, data)
-        elif entry_type == "pattern":
-            return _create_pattern_embedding(entry_id, data)
         else:
-            return jsonify({
-                "ok": False,
-                "error": f"Invalid type: {entry_type}. Must be entity, user_preference, or pattern",
-            }), 400
-            
+            return _create_pattern_embedding(entry_id, data)
+
     except Exception as e:
         _LOGGER.exception("Failed to create embedding")
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -471,30 +441,15 @@ def clear_vectors():
 # ==================== Bulk Operations ====================
 
 @bp.post("/embeddings/bulk")
-def create_embeddings_bulk():
-    """Create multiple embeddings at once.
-    
-    Request body:
-    {
-        "entities": [...],
-        "user_preferences": [...],
-        "patterns": [...]
-    }
-    """
+@validate_json(BulkEmbeddingRequest)
+def create_embeddings_bulk(body: BulkEmbeddingRequest):
+    """Create multiple embeddings at once."""
     import asyncio
-    
+
     try:
-        data = request.get_json() or {}
-        
-        entities = data.get("entities", [])
-        user_preferences = data.get("user_preferences", [])
-        patterns = data.get("patterns", [])
-        
-        if not entities and not user_preferences and not patterns:
-            return jsonify({
-                "ok": False,
-                "error": "No entries provided",
-            }), 400
+        entities = body.entities
+        user_preferences = body.user_preferences
+        patterns = body.patterns
             
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -589,38 +544,20 @@ def create_embeddings_bulk():
 # ==================== Similarity Between Two ====================
 
 @bp.post("/similarity")
-def compute_similarity():
-    """Compute similarity between two entries or vectors.
-    
-    Request body:
-    {
-        "id1": "entry_id_1",
-        "id2": "entry_id_2",
-        // OR
-        "vector1": [...],
-        "vector2": [...]
-    }
-    """
+@validate_json(SimilarityRequest)
+def compute_similarity(body: SimilarityRequest):
+    """Compute similarity between two entries or vectors."""
     import asyncio
     import math
-    
+
     try:
-        data = request.get_json() or {}
-        
         # Check for vector inputs
-        if "vector1" in data and "vector2" in data:
-            vec1 = data["vector1"]
-            vec2 = data["vector2"]
+        if body.vector1 is not None and body.vector2 is not None:
+            vec1 = body.vector1
+            vec2 = body.vector2
         else:
-            # Get entries
-            id1 = data.get("id1")
-            id2 = data.get("id2")
-            
-            if not id1 or not id2:
-                return jsonify({
-                    "ok": False,
-                    "error": "Provide either id1/id2 or vector1/vector2",
-                }), 400
+            id1 = body.id1
+            id2 = body.id2
                 
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)

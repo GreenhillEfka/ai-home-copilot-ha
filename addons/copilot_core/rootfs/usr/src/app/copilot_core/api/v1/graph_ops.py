@@ -7,6 +7,8 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request
 
+from copilot_core.api.validation import validate_json
+from copilot_core.api.v1.schemas import GraphOpsRequest
 from copilot_core.brain_graph.provider import get_graph_service
 
 bp = Blueprint("graph_ops", __name__, url_prefix="/graph")
@@ -71,7 +73,8 @@ _ALLOWED_EDGE_TYPES = {"observed_with", "controls"}
 
 
 @bp.post("/ops")
-def graph_ops():
+@validate_json(GraphOpsRequest)
+def graph_ops(body: GraphOpsRequest):
     """Apply a bounded set of Brain Graph operations.
 
     v0.1: only supports touch_edge/touch_node semantics.
@@ -83,35 +86,13 @@ def graph_ops():
     - Bounded, allowlisted edge types.
     - meta is ignored in v0.1.
     """
+    from_id = body.from_id
+    to_id = body.to_id
+    edge_type = body.type
+    delta = body.delta
 
+    # Reconstruct payload dict for idempotency key computation
     payload = request.get_json(silent=True) or {}
-    if not isinstance(payload, dict):
-        return jsonify({"ok": False, "error": "expected_json_object"}), 400
-
-    op = str(payload.get("op") or "").strip().lower()
-    if op not in {"touch_edge"}:
-        return jsonify({"ok": False, "error": "unsupported_op"}), 400
-
-    from_id = str(payload.get("from") or "").strip()
-    to_id = str(payload.get("to") or "").strip()
-    edge_type = str(payload.get("type") or "").strip()
-
-    if not from_id or not to_id or not edge_type:
-        return jsonify({"ok": False, "error": "missing_fields"}), 400
-
-    if edge_type not in _ALLOWED_EDGE_TYPES:
-        return jsonify({"ok": False, "error": "edge_type_not_allowed", "allowed": sorted(_ALLOWED_EDGE_TYPES)}), 400
-
-    try:
-        delta = float(payload.get("delta") if payload.get("delta") is not None else 1.0)
-    except Exception:
-        delta = 1.0
-
-    # Hard caps.
-    if delta < 0:
-        delta = 0.0
-    if delta > 5:
-        delta = 5.0
 
     now = _now()
     _idem_prune(now)

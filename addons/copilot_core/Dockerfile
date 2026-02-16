@@ -10,7 +10,8 @@ RUN apk add --no-cache python3 py3-pip graphviz && \
         python-ulid==2.7.0 \
         pyyaml==6.0.1 \
         psutil==6.1.0 \
-        neo4j==5.26.0
+        neo4j==5.26.0 \
+        pydantic==2.12.5
 
 WORKDIR /usr/src/app
 COPY rootfs/usr/src/app /usr/src/app

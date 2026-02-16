@@ -14,6 +14,8 @@ import logging
 from flask import Blueprint, request, jsonify
 
 from copilot_core.api.security import require_token
+from copilot_core.api.validation import validate_json
+from copilot_core.api.v1.schemas import BatchEventPayload
 from copilot_core.ingest.event_store import EventStore
 
 logger = logging.getLogger(__name__)
@@ -54,7 +56,8 @@ def set_store(store: EventStore) -> None:
 # ── POST /api/v1/events ─────────────────────────────────────────────
 
 @bp.route("/api/v1/events", methods=["POST"])
-def ingest_events():
+@validate_json(BatchEventPayload)
+def ingest_events(body: BatchEventPayload):
     """Accept a batch of forwarded HA events.
 
     Expected body:
@@ -63,22 +66,11 @@ def ingest_events():
     if not require_token(request):
         return jsonify({"error": "Unauthorized"}), 401
 
-    body = request.get_json(silent=True)
-    if not isinstance(body, dict):
-        return jsonify({"error": "Invalid JSON body"}), 400
-
-    items = body.get("items")
-    if not isinstance(items, list):
-        return jsonify({"error": "'items' must be a list"}), 400
-
-    if len(items) == 0:
+    if len(body.items) == 0:
         return jsonify({"accepted": 0, "rejected": 0, "deduped": 0}), 200
 
-    if len(items) > 500:
-        return jsonify({"error": "Batch too large (max 500)"}), 413
-
     store = get_store()
-    result = store.ingest_batch(items)
+    result = store.ingest_batch(body.items)
 
     # Fire post-ingest callback (e.g. EventProcessor → Brain Graph)
     accepted_events = result.pop("accepted_events", [])

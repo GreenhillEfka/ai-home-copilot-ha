@@ -7,6 +7,8 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request
 
 from copilot_core.api.security import require_token
+from copilot_core.api.validation import validate_json
+from copilot_core.api.v1.schemas import TagAssignmentRequest
 from copilot_core.tagging.assignments import (
     ALLOWED_SUBJECT_KINDS,
     TagAssignmentStore,
@@ -179,86 +181,76 @@ def get_tag(tag_id: str):
     )
 
 
-@bp.route("/assignments", methods=["GET", "POST"])
-def assignments():
+@bp.route("/assignments", methods=["GET"])
+def list_assignments():
     if not require_token(request):
         return jsonify({"error": "unauthorized"}), 401
 
     store = _load_assignments_store()
 
-    if request.method == "GET":
-        raw_kind = (request.args.get("subject_kind") or "").strip().lower()
-        if raw_kind and raw_kind not in ALLOWED_SUBJECT_KINDS:
-            return (
-                jsonify(
-                    {
-                        "error": "invalid_filter",
-                        "detail": "subject_kind filter is not supported",
-                        "allowed_subject_kinds": list(ALLOWED_SUBJECT_KINDS),
-                    }
-                ),
-                400,
-            )
-
-        filters = {
-            "subject_id": request.args.get("subject_id"),
-            "subject_kind": raw_kind or None,
-            "tag_id": request.args.get("tag_id"),
-            "materialized": _parse_bool_param(request.args.get("materialized")),
-        }
-        limit = _parse_limit(request.args.get("limit"), default=200, max_value=1000)
-
-        assignments = store.list(
-            subject_id=filters["subject_id"],
-            subject_kind=filters["subject_kind"],
-            tag_id=filters["tag_id"],
-            materialized=filters["materialized"],
-            limit=limit,
-        )
-        summary = store.summary()
-        return jsonify(
-            {
-                "ok": True,
-                "count": len(assignments),
-                "limit": limit,
-                "total": summary["count"],
-                "revision": summary["revision"],
-                "assignments": [assignment.to_dict() for assignment in assignments],
-                "filters": {k: v for k, v in filters.items() if v is not None},
-            }
-        )
-
-    payload = request.get_json(silent=True) or {}
-    subject_id = payload.get("subject_id")
-    subject_kind = payload.get("subject_kind")
-    tag_id = payload.get("tag_id")
-
-    if not subject_id or not subject_kind or not tag_id:
+    raw_kind = (request.args.get("subject_kind") or "").strip().lower()
+    if raw_kind and raw_kind not in ALLOWED_SUBJECT_KINDS:
         return (
             jsonify(
                 {
-                    "error": "invalid_payload",
-                    "detail": "subject_id, subject_kind, and tag_id are required",
+                    "error": "invalid_filter",
+                    "detail": "subject_kind filter is not supported",
                     "allowed_subject_kinds": list(ALLOWED_SUBJECT_KINDS),
                 }
             ),
             400,
         )
 
-    registry = _load_registry()
-    if not registry.get(tag_id):
-        return jsonify({"error": "tag_not_found", "tag_id": tag_id}), 404
+    filters = {
+        "subject_id": request.args.get("subject_id"),
+        "subject_kind": raw_kind or None,
+        "tag_id": request.args.get("tag_id"),
+        "materialized": _parse_bool_param(request.args.get("materialized")),
+    }
+    limit = _parse_limit(request.args.get("limit"), default=200, max_value=1000)
 
-    materialized = _coerce_bool(payload.get("materialized"), default=False)
+    assignments = store.list(
+        subject_id=filters["subject_id"],
+        subject_kind=filters["subject_kind"],
+        tag_id=filters["tag_id"],
+        materialized=filters["materialized"],
+        limit=limit,
+    )
+    summary = store.summary()
+    return jsonify(
+        {
+            "ok": True,
+            "count": len(assignments),
+            "limit": limit,
+            "total": summary["count"],
+            "revision": summary["revision"],
+            "assignments": [assignment.to_dict() for assignment in assignments],
+            "filters": {k: v for k, v in filters.items() if v is not None},
+        }
+    )
+
+
+@bp.route("/assignments", methods=["POST"])
+@validate_json(TagAssignmentRequest)
+def create_assignment(body: TagAssignmentRequest):
+    if not require_token(request):
+        return jsonify({"error": "unauthorized"}), 401
+
+    store = _load_assignments_store()
+    registry = _load_registry()
+
+    if not registry.get(body.tag_id):
+        return jsonify({"error": "tag_not_found", "tag_id": body.tag_id}), 404
+
     try:
         assignment, created = store.upsert(
-            subject_id=subject_id,
-            subject_kind=subject_kind,
-            tag_id=tag_id,
-            source=payload.get("source"),
-            confidence=payload.get("confidence"),
-            meta=payload.get("meta"),
-            materialized=materialized,
+            subject_id=body.subject_id,
+            subject_kind=body.subject_kind,
+            tag_id=body.tag_id,
+            source=body.source,
+            confidence=body.confidence,
+            meta=body.meta,
+            materialized=body.materialized,
         )
     except TagAssignmentValidationError as err:
         return jsonify({"error": "invalid_payload", "detail": str(err)}), 400
