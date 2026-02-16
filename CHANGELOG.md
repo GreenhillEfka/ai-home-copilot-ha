@@ -1,5 +1,16 @@
 # Changelog - AI Home CoPilot Core Add-on
 
+## [0.8.0] - 2026-02-16
+
+### Added
+- User Hints API (service.py, models.py)
+- Cross-Home Sync Module (v0.9.6)
+- Collective Intelligence Module (v0.9.5)
+
+### Fixed
+- Missing service.py and models.py for user_hints API
+- Brain Graph cache limit (500→100)
+
 ## [0.7.0] - 2026-02-15
 
 ### Fixed
