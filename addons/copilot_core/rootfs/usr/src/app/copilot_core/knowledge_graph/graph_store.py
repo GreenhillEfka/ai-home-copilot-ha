@@ -56,7 +56,7 @@ class GraphStore:
             neo4j_password: Neo4j password
             sqlite_path: SQLite database path (fallback)
         """
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._neo4j_driver = None
         self._sqlite_conn = None
         self._sqlite_path = sqlite_path or os.environ.get(

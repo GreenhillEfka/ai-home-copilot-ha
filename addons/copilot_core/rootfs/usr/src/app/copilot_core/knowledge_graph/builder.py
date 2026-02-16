@@ -154,6 +154,22 @@ class GraphBuilder:
         self._area_cache[area_id] = node
         return node
 
+    def _ensure_mood(self, mood: str) -> Node:
+        """Ensure a mood node exists."""
+        node_id = f"mood:{mood}"
+        existing = self._store.get_node(node_id)
+        if existing:
+            return existing
+
+        node = Node(
+            id=node_id,
+            type=NodeType.MOOD,
+            label=mood,
+            properties={},
+        )
+        self._store.add_node(node)
+        return node
+
     def _ensure_capability(self, capability: str) -> Node:
         """Ensure a capability node exists."""
         node_id = f"cap:{capability}"

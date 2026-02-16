@@ -1,7 +1,7 @@
-# AI Home CoPilot — Projekt-Statusbericht & Roadmap
+# PilotSuite — Projekt-Statusbericht & Roadmap
 
-> **Zentrale Projektanalyse** — Erstellt 2026-02-16
-> Core v0.8.8 | Integration v0.13.5
+> **Zentrale Projektanalyse** — Aktualisiert 2026-02-16
+> Core v0.9.0-alpha.1 | Integration v0.14.0-alpha.1
 > Gilt fuer beide Repos: Home-Assistant-Copilot (Core) + ai-home-copilot-ha (HACS)
 
 ---
@@ -23,9 +23,9 @@
 
 ## 1. Executive Summary
 
-AI Home CoPilot ist ein **einzigartiges Open-Source-Projekt** — es gibt kein vergleichbares System, das Pattern Learning, Privacy-First, Governance und Multi-User-Support in einer lokalen HA-Integration vereint.
+PilotSuite (ehemals AI Home CoPilot) ist ein **einzigartiges Open-Source-Projekt** — es gibt kein vergleichbares System, das Pattern Learning, Privacy-First, Governance und Multi-User-Support in einer lokalen HA-Integration vereint.
 
-**Aber:** Das System ist **nicht deployment-ready**. Es gibt kritische Security-Bugs (gebrochene Token-Auth), architektonische Schwaechen (fehlende Error Isolation), und HACS-Blocker (doppelte Entity-IDs).
+**Status Alpha Release:** Das System befindet sich in der Alpha-Phase (v0.9.0-alpha.1 / v0.14.0-alpha.1). Kritische Fixes wurden adressiert (Duplicate Entity IDs, Port-Fix), neue Features hinzugefuegt (Household, Webhook Push, NeuronManager Wiring). Security-Fixes und Error Isolation stehen als naechstes an.
 
 | Metrik | Core Add-on | HACS Integration |
 |--------|-------------|------------------|
@@ -84,18 +84,13 @@ def require_token(f):
 **Impact:** Alle geschuetzten Endpoints sind ungeschuetzt. Security-Bypass moeglich.
 **Fix-Aufwand:** 30 Minuten
 
-### CRITICAL-2: Doppelte Entity Unique-IDs (HACS)
+### CRITICAL-2: Doppelte Entity Unique-IDs (HACS) -- FIXED
+
+**Status:** BEHOBEN in v0.14.0-alpha.1
 
 **Dateien:** `button_debug.py`, `button_devlog.py`, `button_graph.py`, `button_safety.py`, `button_other.py`
 
-9+ Button-Entities haben identische `unique_id` ueber mehrere Dateien:
-- `ai_home_copilot_analyze_logs` in `button_debug.py` UND `button_other.py`
-- `ai_home_copilot_publish_brain_graph_viz` in `button_graph.py` UND `button_debug.py`
-- `ai_home_copilot_rollback_last_fix` in `button_safety.py` UND `button_debug.py`
-- u.v.m.
-
-**Impact:** HA weigert sich Entities zu erstellen. HACS-Distribution blockiert.
-**Fix-Aufwand:** 2-4 Stunden (Refactoring)
+Die doppelten `unique_id`-Eintraege (insbesondere `CopilotBrainDashboardSummaryButton`) wurden durch eindeutige ID-Vergabe behoben. HA erstellt Entities jetzt korrekt.
 
 ### CRITICAL-3: Keine Error-Isolation im Modul-Setup (HACS)
 
@@ -123,6 +118,26 @@ st.flushing = False  # <-- Wird nie erreicht bei Exception → Deadlock
 
 **Impact:** Nach einem fehlgeschlagenen HTTP-Request wird `flushing` nie zurueckgesetzt → Event-Pipeline blockiert permanent.
 **Fix-Aufwand:** 5 Minuten (try/finally)
+
+### Neue Features (v0.9.0-alpha.1 / v0.14.0-alpha.1)
+
+| Feature | Repo | Status |
+|---------|------|--------|
+| PilotSuite Umbenennung (Display-Namen) | Beide | Fertig |
+| Household/Altersgruppen-Modul | HACS | Fertig |
+| Webhook Push Integration | HACS | Fertig |
+| Zone Aggregation Pattern | HACS | Fertig |
+| Dockerfile Port-Fix (8909 -> 8099) | Core | Fertig |
+| Config durchreichen an init_services | Core | Fertig |
+| NeuronManager Wiring (Household + Webhook) | Core | Fertig |
+| Knowledge Graph/Vector/Neurons Blueprints | Core | Registriert |
+| Deutsche Dokumentation (CLAUDE.md, HANDBUCH.md, PROJEKTSTRUKTUR.md) | Beide | Fertig |
+
+### Versionsziele
+
+- **Core:** v0.9.0-alpha.1
+- **HACS Integration:** v0.14.0-alpha.1
+- **Naechstes Ziel:** Security Fixes (Token-Auth), Error Isolation, dann v1.0
 
 ---
 

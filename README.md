@@ -1,24 +1,24 @@
-# AI Home CoPilot — Core Add-on
+# PilotSuite -- Core Add-on
 
 [![Release](https://img.shields.io/github/v/release/GreenhillEfka/Home-Assistant-Copilot)](https://github.com/GreenhillEfka/Home-Assistant-Copilot/releases)
 
-Ein **privacy-first, lokaler KI-Assistent** für Home Assistant. Lernt die Muster deines Zuhauses, schlägt intelligente Automatisierungen vor — und handelt nur mit deiner Zustimmung. Alle Daten bleiben lokal.
+**PilotSuite Core** (ehemals AI Home CoPilot) -- ein **privacy-first, lokaler KI-Assistent** fuer Home Assistant. Lernt die Muster deines Zuhauses, schlaegt intelligente Automatisierungen vor -- und handelt nur mit deiner Zustimmung. Alle Daten bleiben lokal.
 
-> Erklärendes, begrenztes, dialogisches Entscheidungssystem: bewertet (Neuronen), bündelt Bedeutung (Moods), berechnet Relevanz (Synapsen), erzeugt Vorschläge, erhält Freigaben, lässt Home Assistant ausführen.
+> Erklaerend, begrenzt, dialogisch: bewertet (Neuronen), buendelt Bedeutung (Moods), berechnet Relevanz (Synapsen), erzeugt Vorschlaege, erhaelt Freigaben, laesst Home Assistant ausfuehren.
 
 ## Architektur
 
-Dieses Repo ist das **Backend (Core Add-on)** — es läuft als Home Assistant Add-on auf Port **8099**.
+Dieses Repo ist das **PilotSuite Backend (Core Add-on)** -- es laeuft als Home Assistant Add-on auf Port **8099**.
 
-Die dazugehörige **HACS-Integration** (Frontend, Sensoren, Dashboard Cards) ist ein separates Repo:
-[ai-home-copilot-ha](https://github.com/GreenhillEfka/ai-home-copilot-ha)
+Die dazugehoerige **HACS-Integration** (Frontend, Sensoren, Dashboard Cards) ist ein separates Repo:
+[PilotSuite HACS Integration](https://github.com/GreenhillEfka/ai-home-copilot-ha)
 
 ```
 Home Assistant
-├── HACS Integration (ai_home_copilot)      ← Frontend, 80+ Sensoren, 15+ Cards
-│     HTTP REST API (Token-Auth)
-│     ▼
-└── Core Add-on (copilot_core) Port 8099    ← Backend, Brain, Habitus, Mood Engine
++-- HACS Integration (ai_home_copilot)      <-- Frontend, 80+ Sensoren, 15+ Cards
+|     HTTP REST API (Token-Auth)
+|     v
++-- Core Add-on (copilot_core) Port 8099    <-- Backend, Brain, Habitus, Mood Engine
 ```
 
 ## Installation
@@ -39,8 +39,8 @@ Siehe: [ai-home-copilot-ha](https://github.com/GreenhillEfka/ai-home-copilot-ha#
 
 ## Features
 
-### Neuronales System (12 Neuronen)
-Bewertet jeden Aspekt deines Zuhauses: Anwesenheit, Stimmung, Energie, Wetter, Netzwerk, Kameras, Kontext, Zustände u.v.m.
+### Neuronales System (12+ Neuronen)
+Bewertet jeden Aspekt deines Zuhauses: Anwesenheit, Stimmung, Energie, Wetter, Netzwerk, Kameras, Kontext, Zustaende u.v.m.
 
 ### Habitus — Das Lernende Zuhause
 Pattern-Discovery-Engine: beobachtet Verhaltensmuster und schlägt passende Automatisierungen vor. Confidence-Scoring, Feedback-Loop, zeitbasierte/trigger-basierte/sequenzielle/kontextuelle Muster.
@@ -97,8 +97,11 @@ Keine stillen Updates. Updates werden als Governance-Events protokolliert.
 
 ## Dokumentation
 
-- **[VISION.md](VISION.md)** — Single Source of Truth (Architektur, Roadmap, alle Details)
-- **[CHANGELOG.md](CHANGELOG.md)** — Release-Historie
+- **[VISION.md](VISION.md)** -- Single Source of Truth (Architektur, Roadmap, alle Details)
+- **[CHANGELOG.md](CHANGELOG.md)** -- Release-Historie
+- **[HANDBUCH.md](HANDBUCH.md)** -- Installations- und Benutzerhandbuch (deutsch)
+- **[PROJEKTSTRUKTUR.md](PROJEKTSTRUKTUR.md)** -- Moduluebersicht und Verzeichnisstruktur
+- **[CLAUDE.md](CLAUDE.md)** -- Projektkontext fuer KI-Assistenten
 
 ## Lizenz
 

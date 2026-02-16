@@ -1,4 +1,25 @@
-# Changelog - AI Home CoPilot Core Add-on
+# Changelog - PilotSuite Core Add-on
+
+## [0.9.0-alpha.1] - 2026-02-16
+
+### Added
+- **PilotSuite Umbenennung**: Display-Namen in README, CHANGELOG und Dokumentation aktualisiert. Technische Bezeichner bleiben fuer Abwaertskompatibilitaet unveraendert.
+- **NeuronManager Wiring**: Household-Modul und Webhook Callbacks im NeuronManager verdrahtet. Household-Daten fliessen in Neuron-Bewertungen ein.
+- **Knowledge Graph/Vector/Neurons Blueprints**: Alle drei Blueprints sind in `api/v1/blueprint.py` registriert und aktiv.
+- **Deutsche Dokumentation**: CLAUDE.md, HANDBUCH.md, PROJEKTSTRUKTUR.md erstellt. README.md und CHANGELOG.md aktualisiert.
+
+### Fixed
+- **Dockerfile Port-Fix**: Korrektur von Port 8909 zu 8099 im Dockerfile. Der korrekte Port ist 8099 (wie in `main.py` und `config.yaml` definiert).
+- **Config durchreichen an init_services**: `_load_options_json()` Ergebnis wird jetzt korrekt als `config` Parameter an `init_services()` uebergeben. Vorher wurde die Konfiguration nicht an alle Services weitergeleitet.
+
+### Documentation
+- CLAUDE.md erstellt (Projektkontext fuer KI-Assistenten)
+- HANDBUCH.md erstellt (Installations- und Benutzerhandbuch)
+- PROJEKTSTRUKTUR.md erstellt (Moduluebersicht und Verzeichnisstruktur)
+- README.md auf PilotSuite aktualisiert
+- PROJECT_STATUS.md aktualisiert
+
+---
 
 ## [0.8.6] - 2026-02-16
 

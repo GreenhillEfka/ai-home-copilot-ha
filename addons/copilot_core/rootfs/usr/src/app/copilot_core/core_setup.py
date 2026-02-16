@@ -33,6 +33,9 @@ from copilot_core.energy.service import EnergyService
 # Tag System v0.2 (Decision Matrix 2026-02-14)
 from copilot_core.tags import TagRegistry, create_tag_service
 from copilot_core.tags.api import init_tags_api as setup_tag_api
+from copilot_core.webhook_pusher import WebhookPusher
+from copilot_core.household import HouseholdProfile
+from copilot_core.neurons.manager import NeuronManager
 
 
 def init_services(hass=None, config: dict = None):
@@ -107,6 +110,26 @@ def init_services(hass=None, config: dict = None):
     # Initialize Tag System v0.2 (Decision Matrix 2026-02-14)
     tag_registry = TagRegistry()
 
+    # Initialize Webhook Pusher
+    webhook_url = config.get("webhook_url", "") if config else ""
+    webhook_token = config.get("webhook_token", "") if config else ""
+    webhook_pusher = WebhookPusher(webhook_url, webhook_token)
+
+    # Initialize Household Profile
+    household_config = config.get("household", {}) if config else {}
+    household_profile = HouseholdProfile.from_config(household_config)
+
+    # NeuronManager: Household-Profil setzen und Webhook-Callbacks registrieren
+    neuron_manager = NeuronManager()
+    neuron_manager.set_household(household_profile)
+    if webhook_pusher.enabled:
+        neuron_manager.on_mood_change(
+            lambda mood, conf: webhook_pusher.push_mood_changed(mood, conf)
+        )
+        neuron_manager.on_suggestion(
+            lambda suggestion: webhook_pusher.push_suggestion(suggestion)
+        )
+
     return {
         "system_health_service": system_health_service,
         "unifi_service": unifi_service,
@@ -118,6 +141,9 @@ def init_services(hass=None, config: dict = None):
         "mood_service": mood_service,
         "event_processor": event_processor,
         "tag_registry": tag_registry,
+        "webhook_pusher": webhook_pusher,
+        "household_profile": household_profile,
+        "neuron_manager": neuron_manager,
     }
 
 

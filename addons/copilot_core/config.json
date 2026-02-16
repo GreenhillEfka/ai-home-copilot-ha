@@ -1,8 +1,8 @@
 {
-  "name": "AI Home CoPilot Core (MVP)",
+  "name": "PilotSuite Core",
   "slug": "copilot_core",
-  "description": "MVP Core Service for AI Home CoPilot with Multi-User Preference Learning, Knowledge Graph, Brain Graph visualization, Cross-Home Sync, and Collective Intelligence.",
-  "version": "0.8.7",
+  "description": "MVP Core Service for PilotSuite with Multi-User Preference Learning, Knowledge Graph, Brain Graph visualization, Cross-Home Sync, and Collective Intelligence.",
+  "version": "0.9.0",
   "url": "https://github.com/GreenhillEfka/Home-Assistant-Copilot",
   "arch": ["amd64", "aarch64"],
   "startup": "services",
@@ -68,6 +68,11 @@
       "enabled": true,
       "federated_learning": true,
       "differential_privacy_epsilon": 0.1
+    },
+    "webhook_url": "",
+    "webhook_token": "",
+    "household": {
+      "members": []
     }
   },
   "schema": {
@@ -119,6 +124,11 @@
       "enabled": "bool",
       "federated_learning": "bool",
       "differential_privacy_epsilon": "float(0.01..1.0)"
+    },
+    "webhook_url": "str?",
+    "webhook_token": "password?",
+    "household": {
+      "members": "list?"
     }
   }
 }

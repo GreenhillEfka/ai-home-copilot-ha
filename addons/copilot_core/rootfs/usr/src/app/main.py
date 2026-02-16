@@ -5,6 +5,7 @@ Minimal entry point that delegates service initialization and blueprint
 registration to modular components (core_setup.py).
 """
 
+import json
 import os
 
 from flask import Flask, request, jsonify
@@ -14,7 +15,16 @@ from waitress import serve
 from copilot_core.api.security import validate_token
 from copilot_core.core_setup import init_services, register_blueprints
 
-APP_VERSION = os.environ.get("COPILOT_VERSION", "0.8.7")
+APP_VERSION = os.environ.get("COPILOT_VERSION", "0.9.0")
+
+
+def _load_options_json(path: str = "/data/options.json") -> dict:
+    """Lade Add-on Konfiguration aus options.json (Home Assistant Supervisor)."""
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            return json.load(fh) or {}
+    except Exception:
+        return {}
 
 DEV_LOG_PATH = "/data/dev_logs.jsonl"
 DEV_LOG_MAX_CACHE = 200
@@ -27,8 +37,11 @@ app.config['COMPRESS_MIMETYPES'] = ['application/json', 'text/html']
 app.config['COMPRESS_LEVEL'] = 6  # Balance between compression ratio and CPU
 app.config['COMPRESS_MIN_SIZE'] = 500  # Only compress responses > 500 bytes
 
+# Konfiguration aus /data/options.json laden und an Services durchreichen
+_options = _load_options_json()
+
 # Initialize all services (returns dict for potential testing/DI)
-_services = init_services()
+_services = init_services(config=_options)
 
 # Register all API blueprints (pass services for tag system & global accessors)
 register_blueprints(app, _services)

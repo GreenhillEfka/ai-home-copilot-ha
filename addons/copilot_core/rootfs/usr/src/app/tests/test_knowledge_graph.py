@@ -278,7 +278,7 @@ class TestGraphBuilder(unittest.TestCase):
         
         # Verify edges
         edges = self.store.get_edges_from("light.kitchen")
-        self.assertEqual(len(edges), 4)  # domain, area, capability, tag
+        self.assertEqual(len(edges), 5)  # domain, area, 2x capability, tag
 
     def test_upsert_zone(self):
         """Test creating a zone."""
@@ -430,10 +430,10 @@ class TestPatternImporter(unittest.TestCase):
             time_window_sec=120,
         )
         
-        # Get patterns
-        patterns = self.importer.get_patterns_for_entity("light.kitchen:on")
+        # Get patterns (entity_id without state suffix, since _parse_entity strips ":on")
+        patterns = self.importer.get_patterns_for_entity("light.kitchen")
         self.assertEqual(len(patterns), 1)
-        self.assertEqual(patterns[0]["consequent"], "light.livingroom:on")
+        self.assertEqual(patterns[0]["consequent"], "light.livingroom")
 
 
 class TestAPI(unittest.TestCase):

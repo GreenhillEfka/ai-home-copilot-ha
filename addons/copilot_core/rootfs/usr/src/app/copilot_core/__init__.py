@@ -11,7 +11,7 @@ Core services for AI Home CoPilot:
 - Dev Surface: Development utilities
 """
 
-__version__ = "0.8.7"
+__version__ = "0.9.0"
 
 # Global service instances (initialized by init_services)
 _system_health_service = None

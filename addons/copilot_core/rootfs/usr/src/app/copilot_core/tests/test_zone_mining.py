@@ -258,9 +258,9 @@ class TestZoneBasedMinerIntegration:
         
         mock_tag_zone = MockTagZoneIntegration(zones)
         base_config = MiningConfig(
-            min_support_a=3,
-            min_support_b=3,
-            dt_sec=[60, 300],  # 1 min and 5 min windows
+            min_support_A=3,
+            min_support_B=3,
+            windows=[60, 300],  # 1 min and 5 min windows
         )
         
         return ZoneBasedMiner(mock_tag_zone, base_config)

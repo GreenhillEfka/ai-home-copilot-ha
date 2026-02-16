@@ -1,11 +1,23 @@
-"""Neuron Manager - Orchestrates all neurons in the neural system.
+"""Neuron Manager -- Orchestriert alle Neuronen im neuronalen System.
 
-The NeuronManager is responsible for:
-- Creating and configuring neurons
-- Running the neural pipeline (Context → State → Mood)
-- Managing state updates from Home Assistant
-- Generating suggestions from mood neurons
-- Providing API-ready data
+Der NeuronManager ist verantwortlich fuer:
+  - Erstellen und Konfigurieren von Neuronen
+  - Ausfuehren der neuronalen Pipeline: Kontext -> Zustand -> Stimmung -> Vorschlaege
+  - Verwaltung von State-Updates aus Home Assistant
+  - Generierung von Vorschlaegen (Suggestions) basierend auf Mood-Neuronen
+  - Bereitstellung API-faehiger Daten
+
+Pipeline-Ablauf:
+  1. Kontext-Neuronen auswerten (objektive Umgebungsdaten)
+  2. Zustands-Neuronen auswerten (geglaettete Werte)
+  3. Mood-Neuronen auswerten (aggregierte Stimmung)
+  4. Dominante Stimmung bestimmen
+  5. Vorschlaege generieren (inkl. haushaltsbewusster Logik)
+
+Haushaltsbewusste Vorschlaege (wenn HouseholdProfile gesetzt):
+  - Kinder allein zuhause: Dringlichkeitsbenachrichtigung + Tueren/Rolllaeden sichern
+  - Bettzeit naehert sich: Licht dimmen fuer Kinderzimmer
+  - Kinder anwesend: Familienfreundliche Medien-Lautstaerke
 """
 from __future__ import annotations
 
@@ -15,6 +27,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Callable
 from collections import defaultdict
+from copilot_core.household import HouseholdProfile
 
 from .base import (
     BaseNeuron, NeuronConfig, NeuronState, NeuronType, MoodType,
@@ -44,7 +57,11 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class NeuralPipelineResult:
-    """Result of running the neural pipeline."""
+    """Ergebnis eines vollstaendigen Pipeline-Durchlaufs.
+
+    Enthaelt Kontext-, Zustands- und Mood-Werte, die dominante Stimmung,
+    generierte Vorschlaege und den Zustand aller Neuronen.
+    """
     timestamp: str
     context_values: Dict[str, float]
     state_values: Dict[str, float]
@@ -96,7 +113,10 @@ class NeuronManager:
         # Mood history for smoothing
         self._mood_history: List[Dict[str, float]] = []
         self._history_max: int = 10
-        
+
+        # Household profile (optional)
+        self._household: Optional[HouseholdProfile] = None
+
         _LOGGER.info("NeuronManager initialized")
     
     # -------------------------------------------------------------------------
@@ -327,7 +347,7 @@ class NeuronManager:
     
     def set_context(self, context: Dict[str, Any]) -> None:
         """Set additional context for evaluation.
-        
+
         This can include:
         - presence: Presence data by zone
         - sun: Sun position data
@@ -336,27 +356,51 @@ class NeuronManager:
         - now: Current timestamp
         """
         self._context.update(context)
+
+    def set_household(self, profile: HouseholdProfile) -> None:
+        """Setzt das Haushaltsprofil fuer altersabhaengige Vorschlaege.
+
+        Nach dem Setzen werden bei jeder Evaluation haushaltsbewusste
+        Vorschlaege generiert (z.B. Kinder allein, Bettzeit, Lautstaerke).
+        """
+        self._household = profile
+        _LOGGER.info("Household profile set with %d members", len(profile.members))
     
     # -------------------------------------------------------------------------
     # Pipeline Execution
     # -------------------------------------------------------------------------
     
     def evaluate(self) -> NeuralPipelineResult:
-        """Run the full neural pipeline.
-        
-        Pipeline:
-        1. Evaluate context neurons (objective data)
-        2. Evaluate state neurons (smoothed values)
-        3. Evaluate mood neurons (aggregated)
-        4. Determine dominant mood
-        5. Generate suggestions
-        
+        """Fuehrt die vollstaendige neuronale Pipeline aus.
+
+        Pipeline-Schritte:
+          1. Kontext-Neuronen auswerten (objektive Umgebungsdaten)
+          2. Zustands-Neuronen auswerten (geglaettete Werte)
+          3. Mood-Neuronen auswerten (aggregierte Stimmung)
+          4. Dominante Stimmung bestimmen (mit Glaettung ueber Historie)
+          5. Vorschlaege generieren (stimmungs- und haushaltsbezogen)
+
         Returns:
-            NeuralPipelineResult with all values and suggestions
+            NeuralPipelineResult mit allen Werten und Vorschlaegen.
         """
         timestamp = datetime.now(timezone.utc).isoformat()
         
-        # Build evaluation context
+        # Anwesende Personen aus HA-States ableiten
+        present_persons: List[str] = []
+        for eid, state_val in self._ha_states.items():
+            if eid.startswith("person."):
+                st = state_val if isinstance(state_val, str) else (
+                    state_val.get("state", "") if isinstance(state_val, dict) else ""
+                )
+                if st == "home":
+                    present_persons.append(eid)
+
+        # Haushaltszusammenfassung erstellen, falls Profil gesetzt
+        household_summary: Dict[str, Any] = {}
+        if self._household:
+            household_summary = self._household.presence_summary(present_persons)
+
+        # Evaluierungskontext aufbauen
         eval_context = {
             "states": self._ha_states,
             "now": self._context.get("now", datetime.now(timezone.utc)),
@@ -365,9 +409,11 @@ class NeuronManager:
             "weather": self._context.get("weather", {}),
             "history": self._context.get("history", {}),
             "neurons": {},  # Will be filled with neuron outputs
+            "household": household_summary,
+            "present_persons": present_persons,
         }
         
-        # 1. Evaluate context neurons
+        # 1. Kontext-Neuronen auswerten
         context_values = {}
         for name, neuron in self._context_neurons.items():
             try:
@@ -379,7 +425,7 @@ class NeuronManager:
                 _LOGGER.error("Error evaluating context neuron %s: %s", name, e)
                 context_values[name] = 0.5
         
-        # 2. Evaluate state neurons (using context values)
+        # 2. Zustands-Neuronen auswerten (nutzt Kontext-Werte)
         eval_context["context_values"] = context_values
         state_values = {}
         for name, neuron in self._state_neurons.items():
@@ -392,7 +438,7 @@ class NeuronManager:
                 _LOGGER.error("Error evaluating state neuron %s: %s", name, e)
                 state_values[name] = 0.5
         
-        # 3. Evaluate mood neurons (using context + state values)
+        # 3. Mood-Neuronen auswerten (nutzt Kontext- und Zustands-Werte)
         eval_context["state_values"] = state_values
         mood_values = {}
         for name, neuron in self._mood_neurons.items():
@@ -405,13 +451,13 @@ class NeuronManager:
                 _LOGGER.error("Error evaluating mood neuron %s: %s", name, e)
                 mood_values[name] = 0.0
         
-        # 4. Determine dominant mood
+        # 4. Dominante Stimmung bestimmen
         dominant_mood, confidence = self._determine_mood(mood_values)
         
-        # 5. Generate suggestions
+        # 5. Vorschlaege generieren
         suggestions = self._generate_suggestions(dominant_mood, mood_values, eval_context)
         
-        # Build result
+        # Ergebnis zusammenbauen
         neuron_states = {
             name: neuron.state.to_dict()
             for name, neuron in self.get_all_neurons().items()
@@ -428,11 +474,11 @@ class NeuronManager:
             neuron_states=neuron_states,
         )
         
-        # Check for mood change
+        # Stimmungswechsel pruefen und Callback auslösen
         if self._last_result and self._last_result.dominant_mood != dominant_mood:
             self._on_mood_changed(dominant_mood, confidence)
         
-        # Generate suggestion callbacks
+        # Vorschlags-Callbacks ausfuehren
         for suggestion in suggestions:
             if self._on_suggestion:
                 self._on_suggestion(suggestion)
@@ -450,17 +496,18 @@ class NeuronManager:
         return result
     
     def _determine_mood(self, mood_values: Dict[str, float]) -> tuple:
-        """Determine the dominant mood from mood values.
-        
-        Uses smoothed history to prevent rapid changes.
-        
+        """Bestimmt die dominante Stimmung aus den Mood-Werten.
+
+        Verwendet eine geglaettete Historie (letzte 3 Werte), um schnelle
+        Stimmungswechsel zu vermeiden.
+
         Returns:
-            (mood_name, confidence) tuple
+            Tuple (mood_name, confidence).
         """
         if not mood_values:
             return "relax", 0.0
         
-        # Apply smoothing from history
+        # Glaettung ueber die Historie anwenden
         if self._mood_history:
             smoothed = {}
             for mood, value in mood_values.items():
@@ -469,7 +516,7 @@ class NeuronManager:
                 smoothed[mood] = sum(history_values) / len(history_values)
             mood_values = smoothed
         
-        # Find dominant mood
+        # Dominante Stimmung ermitteln (hoechster Wert)
         dominant_mood = max(mood_values, key=mood_values.get)
         confidence = mood_values[dominant_mood]
         
@@ -545,36 +592,39 @@ class NeuronManager:
         mood_values: Dict[str, float],
         context: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
-        """Generate zone-aware suggestions with entity targeting.
+        """Generiert zone-aware Vorschlaege basierend auf Stimmung und Haushalt.
 
-        Each suggestion includes:
-        - entity_ids: specific entities to target
-        - granularity: 'all' (whole domain), 'zone', or 'entity'
-        - zone: area/room name when applicable
+        Jeder Vorschlag enthaelt entity_ids, granularity und zone.
+        Zwei Vorschlagsquellen:
+          1. Stimmungsbasiert: relax, focus, sleep, away, alert
+          2. Haushaltsbewusst (wenn HouseholdProfile gesetzt):
+             - Kinder allein zuhause: DRINGENDE Sicherheitsbenachrichtigung
+             - Bettzeit naehert sich: Licht dimmen
+             - Kinder anwesend: Familienfreundliche Lautstaerke
 
         Args:
-            dominant_mood: Current dominant mood
-            mood_values: All mood values
-            context: Evaluation context (includes HA states)
+            dominant_mood: Aktuelle dominante Stimmung.
+            mood_values: Alle Mood-Werte.
+            context: Evaluierungskontext inkl. Haushaltsdaten.
 
         Returns:
-            List of suggestion dicts with entity-specific actions
+            Liste von Vorschlags-Dicts mit Entity-spezifischen Aktionen.
         """
         suggestions = []
 
-        # Get context values
+        # Kontextwerte auslesen
         light_level = context.get("context_values", {}).get("light_level", 0.5)
         presence = context.get("context_values", {}).get("presence", 0.5)
         time_of_day = context.get("context_values", {}).get("time_of_day", 0.5)
 
-        # Detect active presence zones for zone-aware suggestions
+        # Aktive Praesenz-Zonen fuer zone-aware Vorschlaege erkennen
         presence_data = context.get("presence", {})
         active_zones = [
             z for z, v in presence_data.items()
             if isinstance(v, (int, float)) and v > 0.5
         ] if presence_data else []
 
-        # Generate suggestions based on mood
+        # Stimmungsbasierte Vorschlaege generieren
         if dominant_mood == "relax":
             if light_level > 0.6:
                 zone = active_zones[0] if active_zones else None
@@ -656,6 +706,52 @@ class NeuronManager:
                 "confidence": mood_values.get("alert", 0.5),
                 "priority": "high",
             })
+
+        # ----- Haushaltsbewusste Vorschlaege -----
+        household = context.get("household", {})
+        if household:
+            # Kinder allein zuhause -> DRINGENDE Sicherheitsbenachrichtigung
+            if household.get("only_children_home"):
+                suggestions.append({
+                    "type": "notification",
+                    "mood": "alert",
+                    "suggestion": "URGENT: Only children are home without adult supervision",
+                    "actions": [
+                        {"domain": "lock", "action": "lock"},
+                        {"domain": "cover", "action": "close_cover"},
+                    ],
+                    "confidence": 1.0,
+                    "priority": "urgent",
+                })
+
+            # Bettzeit naehert sich -> Licht in Kinderzimmern dimmen
+            now_dt = context.get("now", datetime.now(timezone.utc))
+            current_hour = now_dt.hour if hasattr(now_dt, "hour") else 20
+            earliest_bed = household.get("earliest_bedtime_hour", 23)
+            if household.get("children_home") and 0 < earliest_bed - current_hour <= 1:
+                suggestions.append({
+                    "type": "action",
+                    "mood": "sleep",
+                    "suggestion": "Bedtime approaching for children - dimming lights",
+                    "actions": [
+                        {"domain": "light", "action": "turn_on", "brightness_pct": 20},
+                    ],
+                    "confidence": 0.9,
+                    "priority": "medium",
+                })
+
+            # Kinder anwesend -> Lautstaerke auf familienfreundliches Niveau
+            if household.get("children_home"):
+                suggestions.append({
+                    "type": "action",
+                    "mood": "social",
+                    "suggestion": "Children present - set family-friendly media volume",
+                    "actions": [
+                        {"domain": "media_player", "action": "volume_set", "volume_level": 0.3},
+                    ],
+                    "confidence": 0.8,
+                    "priority": "low",
+                })
 
         return suggestions
     
