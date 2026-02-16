@@ -2,7 +2,7 @@
   "name": "AI Home CoPilot Core (MVP)",
   "slug": "copilot_core",
   "description": "MVP Core Service for AI Home CoPilot with Multi-User Preference Learning, Knowledge Graph, Brain Graph visualization, Cross-Home Sync, and Collective Intelligence.",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "url": "https://github.com/GreenhillEfka/Home-Assistant-Copilot",
   "arch": ["amd64", "aarch64"],
   "startup": "services",
