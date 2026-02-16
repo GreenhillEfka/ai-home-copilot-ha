@@ -70,6 +70,39 @@
 1. ~~Performance optimization (caching, connection pooling)~~ ✅ DONE
 2. ~~Extended neuron modules (UniFi, Energy, Weather)~~ ✅ Energy + UniFi Neurons (2026-02-16 10:45)
 3. Multi-User Preference Learning (MUP) refinement
+4. ~~Architecture Merge (HACS + Add-on)~~ 🔄 IN PROGRESS (2026-02-16)
+
+### Architecture Merge Progress (2026-02-16):
+**Status:** Phase 2 Complete, Phase 4 Complete ✅
+
+**Phase 1: Backup** ✅
+- Created backup branches: `backup/pre-merge-20260216`
+- Both repos backed up
+
+**Phase 2: Sensor Refactoring** ✅
+- `presence_sensors.py` → Now uses Add-on API
+- `activity_sensors.py` → Now uses Add-on API
+- `mood_sensor.py` → Already correct (uses coordinator.data)
+- `neuron_dashboard.py` → Already correct (uses coordinator.data)
+- Commit: `5273bc1` in ai_home_copilot_hacs_repo
+
+**Phase 3: Duplicates** ✅ (No action needed)
+- `performance.py` in HACS is a LOCAL cache utility (different from Add-on)
+- Kept both - they serve different purposes
+
+**Phase 4: Cleanup** ✅
+- Deleted `custom_components/copilot/` (empty stub)
+- Commit: `de7b7b5c` in workspace
+
+**Architecture (Correct):**
+```
+HA States → Coordinator → Add-on Neurons → API → Output Sensors
+Context Sensors (light, weather, time) → Read HA States directly (INPUT)
+```
+
+**Remaining:**
+- Test the refactored sensors
+- Merge backup branch to main when verified
 
 ### Update (2026-02-16 10:45):
 - **Energy Neurons**: PVForecastNeuron, EnergyCostNeuron, GridOptimizationNeuron → NeuronManager ✅
