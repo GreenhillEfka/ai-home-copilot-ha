@@ -1,0 +1,40 @@
+{
+  "lastCheck": "2026-02-15T03:49:00+01:00",
+  "activeWorkers": 0,
+  "maxWorkers": 3,
+  "pendingTasks": [],
+  "completedToday": [
+    {
+      "task": "Security Fixes Release",
+      "time": "2026-02-15T01:32:00+01:00",
+      "result": "v0.7.4 (integration) + v0.4.16 (core)"
+    },
+    {
+      "task": "Debug Mode v0.8.0",
+      "time": "2026-02-15T02:12:00+01:00",
+      "result": "Debug sensor + service + API endpoint"
+    },
+    {
+      "task": "Autopilot Cycle",
+      "time": "2026-02-15T03:45:00+01:00",
+      "result": "Completed M0-M3, awaiting user decision"
+    }
+  ],
+  "runningJobs": [],
+  "problematicJobs": [
+    {
+      "id": "90568659-7a0c-4e1c-aa7e-b79299c81e97",
+      "name": "Cron Job Results Monitor",
+      "errors": 6,
+      "issue": "cron delivery target is missing"
+    },
+    {
+      "id": "9e079369-c01d-4b93-9545-9d4e947de8fd",
+      "name": "Codex Code Review",
+      "errors": 1,
+      "issue": "cron delivery target is missing"
+    }
+  ],
+  "nextScheduled": null,
+  "notes": "All milestones complete. System stable. 2 jobs need delivery config fix."
+}
