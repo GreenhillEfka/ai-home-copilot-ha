@@ -14,7 +14,7 @@ from waitress import serve
 from copilot_core.api.security import require_token
 from copilot_core.core_setup import init_services, register_blueprints
 
-APP_VERSION = os.environ.get("COPILOT_VERSION", "0.1.1")
+APP_VERSION = os.environ.get("COPILOT_VERSION", "0.8.7")
 
 DEV_LOG_PATH = "/data/dev_logs.jsonl"
 DEV_LOG_MAX_CACHE = 200
