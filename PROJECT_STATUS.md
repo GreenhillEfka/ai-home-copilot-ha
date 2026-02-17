@@ -1,7 +1,7 @@
 # PilotSuite — Projekt-Statusbericht & Roadmap
 
-> **Zentrale Projektanalyse** — Aktualisiert 2026-02-17 17:15
-> Core v0.9.1-alpha.3 | Integration v0.14.1-alpha.3
+> **Zentrale Projektanalyse** — Aktualisiert 2026-02-17 17:25
+> Core v0.9.1-alpha.4 | Integration v0.14.1-alpha.4
 > Gilt fuer beide Repos: Home-Assistant-Copilot (Core) + ai-home-copilot-ha (HACS)
 
 ---
@@ -25,13 +25,13 @@
 
 PilotSuite (ehemals AI Home CoPilot) ist ein **einzigartiges Open-Source-Projekt** — es gibt kein vergleichbares System, das Pattern Learning, Privacy-First, Governance und Multi-User-Support in einer lokalen HA-Integration vereint.
 
-**Status Alpha Release:** Das System befindet sich in der Alpha-Phase (v0.9.1-alpha.3 / v0.14.1-alpha.3). Alle kritischen Fixes wurden adressiert (Token-Auth, Port-Fix, Error-Isolation, Zone-Integration), Mood Engine API implementiert, HabitusZone Integration aktiviert.
+**Status Alpha Release:** Das System befindet sich in der Alpha-Phase (v0.9.1-alpha.4 / v0.14.1-alpha.4). Alle kritischen Fixes wurden adressiert (Token-Auth, Port-Fix, Error-Isolation, Zone-Integration), Mood Engine API implementiert, HabitusZone Integration aktiviert, HA Add-on Standard Port 8099 korrigiert.
 
 | Metrik | Core Add-on | HACS Integration |
 |--------|-------------|------------------|
-| Code Quality | 8/10 | 8.5/10 |
+| Code Quality | 8.5/10 | 8.5/10 |
 | Security | 9/10 | 9/10 |
-| HA-Kompatibilitaet | 9/10 | 9/10 |
+| HA-Kompatibilitaet | 9.5/10 | 9.5/10 |
 | Test Coverage | 7/10 | 7/10 |
 | Architektur | 9/10 | 9/10 |
 | Feature-Vollstaendigkeit | 8.5/10 | 8.5/10 |
@@ -40,14 +40,14 @@ PilotSuite (ehemals AI Home CoPilot) ist ein **einzigartiges Open-Source-Projekt
 
 **Geschaetzter Aufwand bis v1.0:** 2-3 Wochen fokussierte Entwicklung (P1.3-P1.5)
 
-**Status Update 2026-02-17 17:15:**
+**Status Update 2026-02-17 17:25:**
 - P0.3 Error-Isolation: ✅ Implemented in both repos (runtime.py)
 - P1.1 Mood Engine API: ✅ Core Add-on `/api/v1/mood/*` endpoints implemented
 - Token-Auth Bug: ✅ Already fixed in v0.9.0-alpha.1 (commit d8be957)
-- Port-Konflikt: ✅ Fixed (8099 → 8909) in v0.9.1-alpha.2 / v0.14.1-alpha.2
+- Port-Konflikt: ✅ Fixed (8099 als HA Add-on Standard in v0.9.1-alpha.4)
 - HabitusZone Integration: ✅ Aktiviert (use_habitus_zones=True) in v0.14.1-alpha.3
-- CHANGELOG.md: ✅ Updated for v0.9.1-alpha.3 / v0.14.1-alpha.3
-- PROJECT_STATUS.md: ✅ Updated fuer v0.9.1-alpha.3 / v0.14.1-alpha.3
+- CHANGELOG.md: ✅ Updated for v0.9.1-alpha.4 / v0.14.1-alpha.4
+- PROJECT_STATUS.md: ✅ Updated fuer v0.9.1-alpha.4 / v0.14.1-alpha.4
 
 ---
 
