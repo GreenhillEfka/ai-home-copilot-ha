@@ -33,7 +33,7 @@
 - **MUPL Module**: Multi-User Preference Learning ✅
 - **HabitusZone Integration**: use_habitus_zones=True ✅
 - **Port-Konflikt**: HA Add-on Standard Port 8099 ✅
-- **OpenAI Chat Completions API**: OpenClaw Assistant als OpenAI-kompatibler Chat Endpoint ✅
+- **OpenAI Chat Completions API**: OpenClaw Assistant als OpenAI-kompatibler Chat Endpoint ❌ REMOVED
 
 ### Code Review (2026-02-17 18:00):
 | Category | Score | Status |
