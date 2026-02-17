@@ -18,7 +18,7 @@ info:
     
     ## Idempotency
     Event endpoints support `Idempotency-Key` header for deduplication.
-  version: 0.4.34
+  version: 0.9.1-alpha.6
   contact:
     name: AI Home CoPilot
     url: https://github.com/GreenhillEfka/Home-Assistant-Copilot
