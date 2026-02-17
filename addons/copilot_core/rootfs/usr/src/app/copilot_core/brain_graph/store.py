@@ -46,8 +46,11 @@ class BrainGraphStore:
         self._init_db()
     
     def _init_db(self):
-        """Initialize SQLite schema."""
+        """Initialize SQLite schema with WAL mode for better concurrency."""
         with sqlite3.connect(self.db_path) as conn:
+            # Enable WAL mode for better concurrency (SQLite best practice)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS nodes (
                     id TEXT PRIMARY KEY,
