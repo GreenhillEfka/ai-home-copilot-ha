@@ -73,11 +73,6 @@
     "webhook_token": "",
     "household": {
       "members": []
-    },
-    "openai_api": {
-      "enabled": true,
-      "endpoint_type": "chat_completions",
-      "model": "gpt-5.3-codex"
     }
   },
   "schema": {
