@@ -19,9 +19,6 @@
     "8099/tcp": "CoPilot Core HTTP API (mood, brain_graph, habitus)"
   },
   "webui": "http://[HOST]:[PORT:8099]/",
-  "environment": {
-    "PORT": "8099"
-  },
   "options": {
     "log_level": "info",
     "auth_token": "",
