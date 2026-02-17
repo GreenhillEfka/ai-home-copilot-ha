@@ -1,26 +1,21 @@
 # Changelog - PilotSuite Core Add-on
 
-## [0.9.1-alpha.6] - 2026-02-17
+## [0.9.1-alpha.7] - 2026-02-17
 
 ### Added
-- **MUPL Module:** Multi-User Preference Learning
-  - UserRole: DEVICE_MANAGER, EVERYDAY_USER, RESTRICTED_USER, UNKNOWN
-  - UserProfile: User profile with inferred role and preferences
-  - RoleInferenceConfig: Konfiguration für role inference
-  - MultiUserPreferenceLearning: Main engine für role inference und RBAC
-  - create_mupl_module() factory function
-
-### Features
-- Device Manager Role: High device count + automation creation
-- Everyday User Role: Regular device usage
-- Restricted User Role: Limited device access
-- Role-Based Access Control (RBAC): device access based on role
-- Role inference from behavior patterns (device usage, automations)
+- **OpenAPI Spec v0.9.1-alpha.6:** API Specification aktualisiert
+  - Mood Endpoints dokumentiert (/zones/{name}/orchestrate, force_mood, status)
+  - Performance Endpoints dokumentiert (stats, metrics, cache/clear)
+  
+### Documentation
+- docs/API_DOCUMENTATION.md: Neue API Dokumentation
+- OpenAPI Spec: Version 0.9.1-alpha.6
+- Alle Endpoints dokumentiert mit Auth/Idempotency/Errors
 
 ### Tests
-- Syntax-Check: ✅ mupl.py, __init__.py kompilieren
-- MUPL Module: ✅ Created and exported
+- OpenAPI Spec: ✅ Validated
+- API Documentation: ✅ Created
 
 ---
 
-## [0.9.1-alpha.5] - 2026-02-17
+## [0.9.1-alpha.6] - 2026-02-17
