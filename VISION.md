@@ -115,7 +115,7 @@ Vorschlag angezeigt → User Feedback → Lernen
 
 | Repo | Rolle | Version | Port |
 |------|-------|---------|------|
-| **Home-Assistant-Copilot** | Core Add-on (Backend) | v0.9.1-alpha.1 | 8909 |
+| **Home-Assistant-Copilot** | Core Add-on (Backend) | v0.9.1-alpha.3 | 8099 |
 | **ai-home-copilot-ha** | HACS Integration (Frontend) | v0.13.5 | - (verbindet sich zum Core) |
 
 ### Systemarchitektur
@@ -146,7 +146,7 @@ Vorschlag angezeigt → User Feedback → Lernen
 │                              │ HTTP REST API (Token-Auth)       │
 │                              ▼                                  │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │         Core Add-on (copilot_core) - Port 8909           │  │
+│  │         Core Add-on (copilot_core) - Port 8099           │  │
 │  │                                                           │  │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────────┐  │  │
 │  │  │ Brain    │ │ Habitus  │ │ Mood     │ │ Candidates │  │  │

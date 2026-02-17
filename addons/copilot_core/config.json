@@ -9,16 +9,19 @@
   "boot": "auto",
   "init": false,
   "ingress": true,
-  "ingress_port": 8909,
+  "ingress_port": 8099,
   "panel_icon": "mdi:brain",
   "panel_title": "CoPilot",
   "ports": {
-    "8909/tcp": 8909
+    "8099/tcp": 8099
   },
   "ports_description": {
-    "8909/tcp": "CoPilot Core HTTP API (mood, brain_graph, habitus)"
+    "8099/tcp": "CoPilot Core HTTP API (mood, brain_graph, habitus)"
   },
-  "webui": "http://[HOST]:[PORT:8909]/",
+  "webui": "http://[HOST]:[PORT:8099]/",
+  "environment": {
+    "PORT": "8099"
+  },
   "options": {
     "log_level": "info",
     "auth_token": "",
