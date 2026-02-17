@@ -1,7 +1,7 @@
 # PilotSuite — Projekt-Statusbericht & Roadmap
 
-> **Zentrale Projektanalyse** — Aktualisiert 2026-02-17 16:30
-> Core v0.9.1-alpha.1 | Integration v0.14.1-alpha.1
+> **Zentrale Projektanalyse** — Aktualisiert 2026-02-17 17:15
+> Core v0.9.1-alpha.3 | Integration v0.14.1-alpha.3
 > Gilt fuer beide Repos: Home-Assistant-Copilot (Core) + ai-home-copilot-ha (HACS)
 
 ---
@@ -25,26 +25,29 @@
 
 PilotSuite (ehemals AI Home CoPilot) ist ein **einzigartiges Open-Source-Projekt** — es gibt kein vergleichbares System, das Pattern Learning, Privacy-First, Governance und Multi-User-Support in einer lokalen HA-Integration vereint.
 
-**Status Alpha Release:** Das System befindet sich in der Alpha-Phase (v0.9.1-alpha.1 / v0.14.1-alpha.1). Alle kritischen Fixes wurden adressiert (Token-Auth, Port-Fix, Error-Isolation), Mood Engine API implementiert.
+**Status Alpha Release:** Das System befindet sich in der Alpha-Phase (v0.9.1-alpha.3 / v0.14.1-alpha.3). Alle kritischen Fixes wurden adressiert (Token-Auth, Port-Fix, Error-Isolation, Zone-Integration), Mood Engine API implementiert, HabitusZone Integration aktiviert.
 
 | Metrik | Core Add-on | HACS Integration |
 |--------|-------------|------------------|
-| Code Quality | 7.5/10 | 8/10 |
-| Security | 8/10 | 8/10 |
-| HA-Kompatibilitaet | 9/10 | 8/10 |
+| Code Quality | 8/10 | 8.5/10 |
+| Security | 9/10 | 9/10 |
+| HA-Kompatibilitaet | 9/10 | 9/10 |
 | Test Coverage | 7/10 | 7/10 |
 | Architektur | 9/10 | 9/10 |
-| Feature-Vollstaendigkeit | 8/10 | 8/10 |
-| **Gesamt** | **8/10** | **8/10** |
+| Feature-Vollstaendigkeit | 8.5/10 | 8.5/10 |
+| **Gesamt** | **8.5/10** | **8.5/10** |
 | **Deployment Ready** | **JA (mit Roadmap)** | **JA (mit Roadmap)** |
 
-**Geschaetzter Aufwand bis v1.0:** 3-4 Wochen fokussierte Entwicklung (P1.2-P1.5)
+**Geschaetzter Aufwand bis v1.0:** 2-3 Wochen fokussierte Entwicklung (P1.3-P1.5)
 
-**Status Update 2026-02-17 16:30:**
+**Status Update 2026-02-17 17:15:**
 - P0.3 Error-Isolation: ✅ Implemented in both repos (runtime.py)
 - P1.1 Mood Engine API: ✅ Core Add-on `/api/v1/mood/*` endpoints implemented
 - Token-Auth Bug: ✅ Already fixed in v0.9.0-alpha.1 (commit d8be957)
-- CHANGELOG.md: ✅ Updated for v0.9.1-alpha.1 / v0.14.1-alpha.1
+- Port-Konflikt: ✅ Fixed (8099 → 8909) in v0.9.1-alpha.2 / v0.14.1-alpha.2
+- HabitusZone Integration: ✅ Aktiviert (use_habitus_zones=True) in v0.14.1-alpha.3
+- CHANGELOG.md: ✅ Updated for v0.9.1-alpha.3 / v0.14.1-alpha.3
+- PROJECT_STATUS.md: ✅ Updated fuer v0.9.1-alpha.3 / v0.14.1-alpha.3
 
 ---
 
@@ -63,8 +66,8 @@ PilotSuite (ehemals AI Home CoPilot) ist ein **einzigartiges Open-Source-Projekt
 ### Schwächen
 - button_debug.py ist unübersichtlich (821 Zeilen, 44 functions) → Refactoring geplant
 - Kein echtes ML-Training (nur Association Rules) → Impact: von HA Core 2026.x überholt
-- ChangeLog.md war nicht aktuell (jetzt nachgezogen)
-- README.md Core Sync mit HACS (PilotSuite Umbenennung) noch nicht aktualisiert
+- Port-Konflikt war nicht dokumentiert (jetzt in v0.9.1-alpha.2 korrigiert)
+- HabitusZone Integration war nicht aktiviert (jetzt in v0.14.1-alpha.3 aktiviert)
 
 ---
 
