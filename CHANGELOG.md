@@ -1,5 +1,22 @@
 # Changelog - PilotSuite Core Add-on
 
+## [0.9.1-alpha.2] - 2026-02-17
+
+### Fixed
+- **Port-Konflikt:** Alle Port-Referenzen von 8099 → 8909 korrigiert
+  - `config.json`: ingress_port und webui URL auf 8909
+  - `README.md`: Alle Port-Referenzen auf 8909
+  - `VISION.md`: Core Add-on Port auf 8909
+
+### Documentation
+- Alle Port-Referenzen konsistent auf 8909 aktualisiert
+
+### Tests
+- Syntax-Check: ✅ Alle Python-Dateien kompilieren ohne Fehler
+- Konfiguration: ✅ config.json valid (ingress_port=8909)
+
+---
+
 ## [0.9.1-alpha.1] - 2026-02-17
 
 ### Added
