@@ -324,3 +324,38 @@ curl -s "http://192.168.31.84:11434/api/generate" \
 curl http://localhost:11434/api/generate \
   -d '{"model": "glm-5:cloud", "prompt": "Hi"}'
 ```
+
+---
+
+## Home Assistant Integration (2026-02-17)
+
+### HA API Zugriff
+**Nabu Casa URL:** `https://js71lc792ufv9o245ysczlg2wj1mmgfu.ui.nabu.casa`
+
+**Longlife Token:** (aus .openclaw/openclaw.json HOMEASSISTANT_TOKEN)
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhMjBjYmI1MWE3OTY0ODBmYmZlOGI0YzMxYTNjZTQ4MCIsImlhdCI6MTc3MDM5NzI0NCwiZXhwIjoyMDg1NzU3MjQ0fQ.GPoq80EzJU1pUhjiPTF2_1RYtpAn0rwifEro04JC6h8
+```
+
+**Verfügbare Lichter:**
+- `light.deckenlicht` - Deckenlicht (links + rechts) ✅
+- `light.retrolampe` - Retrolampe (muss über HA App gesteuert werden)
+
+### Aktions-Pattern (FUNKTIONIEREND!)
+```bash
+# Licht ausschalten
+curl -X POST "HA_URL/api/services/light/turn_off" \
+  -H "Authorization: Bearer TOKEN" \
+  -d '{"entity_id": "light.deckenlicht"}'
+
+# Licht einschalten mit Helligkeit
+curl -X POST "HA_URL/api/services/light/turn_on" \
+  -H "Authorization: Bearer TOKEN" \
+  -d '{"entity_id": "light.deckenlicht", "brightness_pct": 69}
+```
+
+**Tested & Working (2026-02-17 18:33):**
+- Deckenlicht ausgeschaltet ✅
+- Deckenlicht auf 69% eingeschaltet ✅
+
+**Status:** HA Integration vollständig aktiv - alle Lichter steuerbar!
