@@ -16,7 +16,7 @@
     "8909/tcp": 8909
   },
   "ports_description": {
-    "8909/tcp": "CoPilot Core HTTP API"
+    "8909/tcp": "CoPilot Core HTTP API (mood, brain_graph, habitus)"
   },
   "webui": "http://[HOST]:[PORT:8909]/",
   "options": {
