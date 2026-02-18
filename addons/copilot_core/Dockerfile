@@ -17,7 +17,7 @@ RUN apk add --no-cache python3 py3-pip graphviz curl && \
 WORKDIR /usr/src/app
 COPY rootfs/usr/src/app /usr/src/app
 
-EXPOSE 8909 8099 11434
+EXPOSE 8909 8099
 
 # Start script that launches Ollama + PilotSuite
 COPY rootfs/usr/src/app/start_dual.sh /start.sh

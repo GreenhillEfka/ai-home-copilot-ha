@@ -25,90 +25,8 @@ logger = logging.getLogger(__name__)
 
 conversation_bp = Blueprint('conversation', __name__, url_prefix='/chat')
 
-# HA Service function definitions for function calling
-HA_FUNCTIONS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "execute_services",
-            "description": "Execute Home Assistant services to control devices",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "list": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "domain": {
-                                    "type": "string",
-                                    "description": "The domain of the service (e.g., light, switch, climate)"
-                                },
-                                "service": {
-                                    "type": "string",
-                                    "description": "The service to call (e.g., turn_on, turn_off)"
-                                },
-                                "service_data": {
-                                    "type": "object",
-                                    "description": "Data to pass to the service",
-                                    "properties": {
-                                        "entity_id": {
-                                            "type": "string",
-                                            "description": "The entity_id to control"
-                                        }
-                                    }
-                                }
-                            },
-                            "required": ["domain", "service", "service_data"]
-                        }
-                    }
-                },
-                "required": ["list"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_states",
-            "description": "Get the current state of Home Assistant entities",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "domain": {
-                        "type": "string",
-                        "description": "Filter by domain (e.g., light, sensor)"
-                    }
-                }
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "get_history",
-            "description": "Get history of entities",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "entity_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of entity IDs"
-                    },
-                    "start_time": {
-                        "type": "string",
-                        "description": "Start time (ISO format)"
-                    },
-                    "end_time": {
-                        "type": "string",
-                        "description": "End time (ISO format)"
-                    }
-                }
-            }
-        }
-    }
-]
+# HA Functions (loaded from MCP tools)
+HA_FUNCTIONS = get_openai_functions()
 
 # System prompt for Home Assistant conversation
 HA_SYSTEM_PROMPT = """You are a helpful Home Assistant assistant. You can control devices in the home through Home Assistant services.
@@ -217,6 +135,15 @@ Confirm with minimal words like "Done", "On", "Off"."""
 
 # Default character
 DEFAULT_CHARACTER = "copilot"
+
+
+@conversation_bp.route('/tools', methods=['GET'])
+def list_tools():
+    """List available MCP tools for function calling"""
+    return jsonify({
+        "tools": get_tools(),
+        "count": len(HA_TOOLS)
+    })
 
 
 @conversation_bp.route('/characters', methods=['GET'])
