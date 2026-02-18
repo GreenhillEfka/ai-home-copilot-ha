@@ -2,12 +2,15 @@
 Transaction Log Engine - Append-only JSONL-based WAL
 """
 import json
+import logging
 import os
 import fcntl
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import ulid
+
+logger = logging.getLogger(__name__)
 
 
 class TransactionLog:
@@ -170,7 +173,7 @@ class TransactionLog:
                         records.append(json.loads(line))
                     except json.JSONDecodeError as e:
                         # Log corruption - should be handled by recovery
-                        print(f"WARNING: Corrupted log line: {e}")
+                        logger.warning(f"Corrupted log line: {e}")
                         
         return records
         
