@@ -82,7 +82,7 @@
       "members": []
     },
     "conversation": {
-      "ollama_url": "http://localhost:11434",
+      "ollama_url": "http://host.docker.internal:11434",
       "ollama_model": "llm2.5-thinking:latest",
       "character": "copilot"
     }
