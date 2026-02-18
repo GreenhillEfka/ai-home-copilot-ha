@@ -10,12 +10,16 @@ Features:
 - Function calling for HA services
 - Streaming support
 - Conversation context
+- Ollama integration for offline AI
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import logging
 import json
 import os
+import requests
+import time
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -193,24 +197,53 @@ def _build_context(messages):
 
 def _process_conversation(user_message, context, functions):
     """
-    Process conversation - this will integrate with our AI system
-    For now, returns a basic response
-    
-    TODO: Connect to actual AI (Ollama, OpenAI, etc.)
+    Process conversation through Ollama for offline AI
+    Uses llm2.5-thinking:latest by default
     """
-    # This is where we'd integrate with our brain/AI system
-    # For MVP, return a simple response
+    # Get Ollama settings from environment or config
+    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    ollama_model = os.environ.get("OLLAMA_MODEL", "llm2.5-thinking:latest")
     
-    response_content = f"I understand you said: '{user_message}'. This is PilotSuite's conversation endpoint. "
-    response_content += "Full AI integration coming soon!"
+    # Build system prompt with HA context
+    system_prompt = HA_SYSTEM_PROMPT
     
-    # Check if function calling is needed
-    # For now, no function calls
+    # Prepare messages for Ollama
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message}
+    ]
+    
+    try:
+        # Call Ollama
+        ollama_response = requests.post(
+            f"{ollama_url}/api/chat",
+            json={
+                "model": ollama_model,
+                "messages": messages,
+                "stream": False
+            },
+            timeout=60
+        )
+        
+        if ollama_response.status_code == 200:
+            result = ollama_response.json()
+            response_content = result.get("message", {}).get("content", "")
+        else:
+            logger.warning(f"Ollama returned {ollama_response.status_code}")
+            response_content = _fallback_response(user_message)
+            
+    except requests.exceptions.ConnectionError:
+        logger.error(f"Could not connect to Ollama at {ollama_url}")
+        response_content = _offline_fallback(user_message)
+    except Exception as e:
+        logger.exception("Error calling Ollama")
+        response_content = _fallback_response(user_message)
+    
     response = {
         "id": f"chatcmpl-{os.urandom(12).hex()}",
         "object": "chat.completion",
         "created": int(__import__('time').time()),
-        "model": "pilotsuite-conversation-1",
+        "model": ollama_model,
         "choices": [
             {
                 "index": 0,
@@ -230,6 +263,14 @@ def _process_conversation(user_message, context, functions):
     }
     
     return response
+
+
+def _fallback_response(user_message):
+    return f"I understand: '{user_message}'. Ollama not connected."
+
+
+def _offline_fallback(user_message):
+    return f"I'm offline. Message: '{user_message}'. Check Ollama at localhost:11434 with llm2.5-thinking:latest."
 
 
 def _stream_response(response):
