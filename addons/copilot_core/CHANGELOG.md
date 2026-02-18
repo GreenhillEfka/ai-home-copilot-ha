@@ -1,3 +1,12 @@
+## 0.9.1-alpha.8 - 2026-02-18
+- **button_debug.py Modularisierung** (HA Integration)
+  - Refactoring: 821 → 60 Zeilen Hauptdatei
+  - 8 separate Module für bessere Wartbarkeit
+- **HA Integration v0.14.1** released
+  - Race Condition Fixes
+  - Port-Konflikt behoben (8099)
+
+
 # Add-on Changelog – AI Home CoPilot Core (MVP)
 
 This file exists so Home Assistant can show an add-on changelog.
