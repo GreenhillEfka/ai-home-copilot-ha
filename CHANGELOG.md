@@ -8,6 +8,10 @@
   - Cache-Invalidierung wird bis zum Batch-Ende verzögert
   - ~10-50x weniger Cache-Invalidierungen bei vielen Events
   - Deutlich verbesserte Performance bei hohem Event-Aufkommen
+- **Optimiertes Pruning** (4 Table Scans → 2)
+  - JOIN-basierte Node/Edge Limitierung in einem Durchgang
+  - Deterministic Pruning (statt random)
+- **Pruning-Trigger**: Alle 100 Operationen statt zufällig
 
 ### Bugfix
 - **Ollama Conversation Endpoint**: Bereinigung undefinierter Funktionsreferenzen

@@ -405,7 +405,11 @@ class BrainGraphStore:
         return nodes, edges
     
     def prune_graph(self, now_ms: Optional[int] = None) -> Dict[str, int]:
-        """Remove low-salience nodes/edges and enforce capacity limits."""
+        """Remove low-salience nodes/edges and enforce capacity limits.
+        
+        Optimized: Uses only 2 table scans (one for edges, one for nodes)
+        instead of 4 separate scans.
+        """
         if now_ms is None:
             now_ms = int(time.time() * 1000)
             
@@ -414,8 +418,9 @@ class BrainGraphStore:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            # First pass: Remove edges with very low effective weight
+            # ========== Single pass for edges ==========
             cursor.execute("SELECT * FROM edges")
+            all_edges = []
             weak_edge_ids = []
             
             for row in cursor.fetchall():
@@ -429,51 +434,36 @@ class BrainGraphStore:
                     evidence=json.loads(row[6]) if row[6] else None,
                     meta=json.loads(row[7]) if row[7] else {},
                 )
+                effective_weight = edge.effective_weight(now_ms)
                 
-                if edge.effective_weight(now_ms) < self.edge_min_weight:
+                if effective_weight < self.edge_min_weight:
                     weak_edge_ids.append(edge.id)
+                all_edges.append((edge.id, effective_weight, edge.updated_at_ms))
             
+            # Remove weak edges
             if weak_edge_ids:
                 placeholders = ",".join("?" * len(weak_edge_ids))
                 cursor.execute(f"DELETE FROM edges WHERE id IN ({placeholders})", weak_edge_ids)
                 stats["edges_removed"] += cursor.rowcount
             
-            # Second pass: Enforce edge limit by keeping top edges by effective weight
-            cursor.execute("SELECT COUNT(*) FROM edges")
-            edge_count = cursor.fetchone()[0]
-            
-            if edge_count > self.max_edges:
-                # Calculate effective weights and keep top N
-                cursor.execute("SELECT * FROM edges")
-                edges_with_weights = []
-                
-                for row in cursor.fetchall():
-                    edge = GraphEdge(
-                        id=row[0],
-                        from_node=row[1],
-                        to_node=row[2], 
-                        edge_type=row[3],
-                        updated_at_ms=row[4],
-                        weight=row[5],
-                        evidence=json.loads(row[6]) if row[6] else None,
-                        meta=json.loads(row[7]) if row[7] else {},
-                    )
-                    effective_weight = edge.effective_weight(now_ms)
-                    edges_with_weights.append((edge.id, effective_weight, edge.updated_at_ms))
-                
-                # Sort by weight desc, then recency desc for ties
-                edges_with_weights.sort(key=lambda x: (x[1], x[2]), reverse=True)
-                
-                # Keep top N, remove the rest
-                edges_to_remove = [edge_id for edge_id, _, _ in edges_with_weights[self.max_edges:]]
+            # Enforce edge limit in same pass
+            if len(all_edges) > self.max_edges:
+                # Sort by weight desc, then recency desc
+                all_edges.sort(key=lambda x: (x[1], x[2]), reverse=True)
+                edges_to_remove = [eid for eid, _, _ in all_edges[self.max_edges:]]
                 
                 if edges_to_remove:
                     placeholders = ",".join("?" * len(edges_to_remove))
                     cursor.execute(f"DELETE FROM edges WHERE id IN ({placeholders})", edges_to_remove)
                     stats["edges_removed"] += cursor.rowcount
             
-            # Third pass: Remove nodes with low effective score and no edges
-            cursor.execute("SELECT * FROM nodes")
+            # ========== Single pass for nodes ==========
+            cursor.execute("""
+                SELECT n.*, 
+                       (SELECT COUNT(*) FROM edges WHERE from_node = n.id OR to_node = n.id) as edge_count
+                FROM nodes n
+            """)
+            all_nodes = []
             weak_node_ids = []
             
             for row in cursor.fetchall():
@@ -488,57 +478,32 @@ class BrainGraphStore:
                     tags=json.loads(row[7]) if row[7] else None,
                     meta=json.loads(row[8]) if row[8] else {},
                 )
+                edge_count = row[9]  # Already joined from subquery
+                effective_score = node.effective_score(now_ms)
                 
-                if node.effective_score(now_ms) < self.node_min_score:
-                    # Check if node has any remaining edges
-                    cursor.execute(
-                        "SELECT COUNT(*) FROM edges WHERE from_node = ? OR to_node = ?",
-                        (node.id, node.id)
-                    )
-                    edge_count = cursor.fetchone()[0]
-                    
-                    if edge_count == 0:
-                        weak_node_ids.append(node.id)
+                if effective_score < self.node_min_score and edge_count == 0:
+                    weak_node_ids.append(node.id)
+                all_nodes.append((node.id, effective_score, node.updated_at_ms))
             
+            # Remove weak nodes
             if weak_node_ids:
                 placeholders = ",".join("?" * len(weak_node_ids))
                 cursor.execute(f"DELETE FROM nodes WHERE id IN ({placeholders})", weak_node_ids)
                 stats["nodes_removed"] += cursor.rowcount
             
-            # Fourth pass: Enforce node limit by keeping top nodes by effective score
-            cursor.execute("SELECT COUNT(*) FROM nodes")
-            node_count = cursor.fetchone()[0]
-            
-            if node_count > self.max_nodes:
-                # Calculate effective scores and keep top N
-                cursor.execute("SELECT * FROM nodes")
-                nodes_with_scores = []
-                
-                for row in cursor.fetchall():
-                    node = GraphNode(
-                        id=row[0],
-                        kind=row[1],
-                        label=row[2],
-                        updated_at_ms=row[3], 
-                        score=row[4],
-                        domain=row[5],
-                        source=json.loads(row[6]) if row[6] else None,
-                        tags=json.loads(row[7]) if row[7] else None,
-                        meta=json.loads(row[8]) if row[8] else {},
-                    )
-                    effective_score = node.effective_score(now_ms)
-                    nodes_with_scores.append((node.id, effective_score, node.updated_at_ms))
-                
-                # Sort by score desc, then recency desc for ties
-                nodes_with_scores.sort(key=lambda x: (x[1], x[2]), reverse=True)
-                
-                # Keep top N, remove the rest (and their edges)
-                nodes_to_remove = [node_id for node_id, _, _ in nodes_with_scores[self.max_nodes:]]
+            # Enforce node limit in same pass
+            if len(all_nodes) > self.max_nodes:
+                # Sort by score desc, then recency desc
+                all_nodes.sort(key=lambda x: (x[1], x[2]), reverse=True)
+                nodes_to_remove = [nid for nid, _, _ in all_nodes[self.max_nodes:]]
                 
                 if nodes_to_remove:
                     placeholders = ",".join("?" * len(nodes_to_remove))
                     # Remove associated edges first
-                    cursor.execute(f"DELETE FROM edges WHERE from_node IN ({placeholders}) OR to_node IN ({placeholders})", nodes_to_remove * 2)
+                    cursor.execute(
+                        f"DELETE FROM edges WHERE from_node IN ({placeholders}) OR to_node IN ({placeholders})", 
+                        nodes_to_remove
+                    )
                     # Remove nodes
                     cursor.execute(f"DELETE FROM nodes WHERE id IN ({placeholders})", nodes_to_remove)
                     stats["nodes_removed"] += cursor.rowcount

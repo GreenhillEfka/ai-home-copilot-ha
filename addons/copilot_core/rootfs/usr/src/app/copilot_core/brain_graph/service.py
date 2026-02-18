@@ -35,6 +35,10 @@ class BrainGraphService:
         self._batch_mode = False
         self._batch_size = 0
         self._pending_invalidations = 0
+        
+        # Pruning counter for deterministic cleanup
+        self._operation_count = 0
+        self._prune_interval = 100  # Prune every N operations
     
     def begin_batch(self, size: int = 50):
         """Start batch processing mode - delays cache invalidation until commit."""
@@ -119,9 +123,10 @@ class BrainGraphService:
         else:
             _invalidate_graph_cache()
         
-        # Trigger pruning periodically (every ~100 operations)
-        import random
-        if random.randint(1, 100) == 1:
+        # Trigger pruning deterministically (every N operations)
+        self._operation_count += 1
+        if self._operation_count >= self._prune_interval:
+            self._operation_count = 0
             self.store.prune_graph(now_ms)
         
         return updated_node
