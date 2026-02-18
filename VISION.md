@@ -2,7 +2,7 @@
 
 > **Single Source of Truth** for the entire AI Home CoPilot project.
 > Both repos (Core Add-on + HACS Integration) reference this document.
-> Last Updated: 2026-02-16 | Core v0.8.8 | Integration v0.13.5
+> Last Updated: 2026-02-18 | Core v0.9.2 | Integration v0.15.0
 
 ---
 
@@ -23,6 +23,7 @@ Ein **privacy-first, lokaler KI-Assistent** für Home Assistant, der die Muster 
 | **Privacy-first** | PII-Redaktion, bounded Storage | Max 2KB Metadata/Node, Context-ID auf 12 Zeichen gekürzt |
 | **Governance-first** | Vorschläge vor Aktionen | Human-in-the-Loop, kein stilles Automatisieren |
 | **Safe Defaults** | Begrenzte Speicher, opt-in Persistenz | Max 500 Nodes, 1500 Edges, optional JSONL |
+| **Offline Voice** | Lokale Sprachsteuerung | Ollama-Integration, kein Cloud-TTS/STT |
 
 ---
 
@@ -367,7 +368,50 @@ Brain Graph verlinkt: Tag ↔ Zone ↔ Entity (bidirektional)
 
 ---
 
-## 12. Completed Milestones
+## 12. Offline Conversation AI (PilotSuite Voice)
+
+**Status:** ✅ v0.9.2-alpha.1 (2026-02-18)
+
+PilotSuite bietet einen **OpenAI-kompatiblen Conversation Endpoint** für Home Assistant, der vollständig offline funktioniert.
+
+### Architektur
+
+```
+User Voice → HA Assist → Extended OpenAI Conversation → PilotSuite Core → Ollama
+```
+
+### Features
+
+- **OpenAI-kompatibler Endpoint:** `/api/v1/chat/completions`
+- **Ollama Integration:** `llm2.5-thinking:latest` oder eigene Modelle
+- **Extended OpenAI Conversation:** HA HACS Custom Component
+- **Kein Cloud API:** 100% lokal, keine externen Calls
+- **Privacy-first:** Alle Daten bleiben im Netzwerk
+
+### Konfiguration
+
+| Option | Default | Beschreibung |
+|--------|---------|--------------|
+| `ollama_url` | `http://localhost:11434` | Ollama Server URL |
+| `ollama_model` | `llm2.5-thinking:latest` | Modell für Konversation |
+
+### Vorteile
+
+1. **Offline:** Kein Internet für Sprachsteuerung nötig
+2. **Kosteneffizient:** Keine API-Gebühren
+3. **Datenschutz:** Alle Konversationen lokal
+4. **Erweiterbar:** Eigene Modelle möglich
+
+### Integration
+
+1. Ollama mit Modell installieren
+2. PilotSuite Core Add-on (v0.9.2+)
+3. Extended OpenAI Conversation (HACS)
+4. Als Conversation Agent in HA konfigurieren
+
+---
+
+## 16. Completed Milestones
 
 | Milestone | Version | Status |
 |-----------|---------|--------|
@@ -395,7 +439,7 @@ Brain Graph verlinkt: Tag ↔ Zone ↔ Entity (bidirektional)
 
 ---
 
-## 13. Roadmap
+## 16. Roadmap
 
 ### Nächste Schritte (Q1 2026)
 
@@ -419,7 +463,7 @@ Brain Graph verlinkt: Tag ↔ Zone ↔ Entity (bidirektional)
 
 ---
 
-## 14. Dokumentationsstruktur
+## 16. Dokumentationsstruktur
 
 Dieses Dokument (`VISION.md`) ist die **Single Source of Truth**.
 
@@ -453,7 +497,7 @@ Die folgenden Dokumente sind durch `VISION.md` ersetzt und nur noch historisch r
 
 ---
 
-## 15. Praxisdialoge (CoPilot-Persönlichkeit)
+## 16. Praxisdialoge (CoPilot-Persönlichkeit)
 
 So kommuniziert der CoPilot mit dem User:
 
