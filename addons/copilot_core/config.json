@@ -13,6 +13,7 @@
   "init": false,
   "ingress": true,
   "ingress_port": 8909,
+  "map": ["share:rw"],
   "panel_icon": "mdi:brain",
   "panel_title": "CoPilot",
   "ports": {

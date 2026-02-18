@@ -78,6 +78,7 @@ def init_services(hass=None, config: dict = None):
         "webhook_pusher": None,
         "household_profile": None,
         "neuron_manager": None,
+        "conversation_memory": None,
     }
 
     # Initialize system health service (requires hass)
@@ -200,6 +201,14 @@ def init_services(hass=None, config: dict = None):
         services["neuron_manager"] = neuron_manager
     except Exception:
         _LOGGER.exception("Failed to init NeuronManager")
+
+    # Initialize Conversation Memory (lifelong learning)
+    try:
+        from copilot_core.conversation_memory import ConversationMemory
+        services["conversation_memory"] = ConversationMemory()
+        _LOGGER.info("ConversationMemory initialized (lifelong learning active)")
+    except Exception:
+        _LOGGER.exception("Failed to init ConversationMemory")
 
     # Set conversation env vars from config (used by conversation.py)
     try:

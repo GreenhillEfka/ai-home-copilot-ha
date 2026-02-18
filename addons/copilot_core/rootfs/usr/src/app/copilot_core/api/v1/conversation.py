@@ -315,6 +315,26 @@ def _get_user_context() -> str:
                     f"{stats.get('edge_count', 0)} Edges"
                 )
 
+        # Habitus patterns (recent discoveries)
+        habitus_svc = services.get("habitus_service")
+        if habitus_svc:
+            recent = habitus_svc.list_recent_patterns(limit=3)
+            if recent:
+                pattern_lines = []
+                for p in recent:
+                    meta = p.get("metadata", {})
+                    ant = meta.get("antecedent", {}).get("full", "?")
+                    cons = meta.get("consequent", {}).get("full", "?")
+                    pattern_lines.append(f"{ant} -> {cons}")
+                context_parts.append("Erkannte Muster: " + "; ".join(pattern_lines))
+
+        # Conversation memory: learned preferences
+        conv_memory = services.get("conversation_memory")
+        if conv_memory:
+            pref_context = conv_memory.get_preferences_for_prompt()
+            if pref_context:
+                context_parts.append(pref_context)
+
     except Exception as exc:
         logger.debug("Could not load user context: %s", exc)
 
@@ -432,8 +452,16 @@ def _handle_chat_completions():
 
         logger.info("Chat request: %s...", user_message[:80] if user_message else "(system-only)")
 
+        # Store user message in conversation memory (lifelong learning)
+        _store_in_memory(user_message, role="user")
+
         response = _process_conversation(messages, model_override=model_override,
                                          temperature=temperature, max_tokens=max_tokens)
+
+        # Store assistant response in memory
+        assistant_content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+        if assistant_content:
+            _store_in_memory(assistant_content, role="assistant")
 
         if stream:
             return _stream_response(response)
@@ -542,6 +570,63 @@ def llm_status():
         "integration_url": f"http://[HOST]:8909/v1",
         "integration_hint": "Use base_url=http://<addon-host>:8909/v1 in extended_openai_conversation",
     })
+
+
+@conversation_bp.route('/memory', methods=['GET'])
+def memory_stats():
+    """Return conversation memory statistics."""
+    try:
+        from flask import current_app
+        services = current_app.config.get("COPILOT_SERVICES", {})
+        conv_memory = services.get("conversation_memory")
+        if conv_memory:
+            stats = conv_memory.get_stats()
+            prefs = conv_memory.get_user_preferences()
+            return jsonify({
+                "stats": stats,
+                "preferences": [
+                    {"key": p.key, "value": p.value, "confidence": p.confidence,
+                     "source": p.source, "mentions": p.mention_count}
+                    for p in prefs
+                ],
+            })
+        return jsonify({"stats": {}, "preferences": [], "message": "Memory not initialized"})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@conversation_bp.route('/memory/preferences', methods=['GET'])
+def memory_preferences():
+    """Return learned user preferences."""
+    try:
+        from flask import current_app
+        services = current_app.config.get("COPILOT_SERVICES", {})
+        conv_memory = services.get("conversation_memory")
+        if conv_memory:
+            prefs = conv_memory.get_user_preferences()
+            return jsonify({
+                "preferences": [
+                    {"key": p.key, "value": p.value, "confidence": p.confidence,
+                     "source": p.source, "mentions": p.mention_count}
+                    for p in prefs
+                ],
+            })
+        return jsonify({"preferences": []})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+def _store_in_memory(content: str, role: str = "user"):
+    """Store a message in conversation memory (fire-and-forget)."""
+    try:
+        from flask import current_app
+        services = current_app.config.get("COPILOT_SERVICES", {})
+        conv_memory = services.get("conversation_memory")
+        if conv_memory and content:
+            character = os.environ.get("CONVERSATION_CHARACTER", DEFAULT_CHARACTER)
+            conv_memory.store_message(role=role, content=content, character=character)
+    except Exception:
+        logger.debug("Could not store message in memory", exc_info=True)
 
 
 # ---------------------------------------------------------------------------
