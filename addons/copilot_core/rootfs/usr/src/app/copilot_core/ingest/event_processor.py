@@ -37,6 +37,7 @@ class EventProcessor:
     def process_events(self, events: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Process a batch of events through all registered processors.
+        Uses batch mode for brain graph updates to improve performance.
         
         Args:
             events: List of normalized event dictionaries from EventStore
@@ -50,6 +51,10 @@ class EventProcessor:
             "brain_graph_updates": 0
         }
         
+        # Use batch mode for brain graph performance
+        if self.brain_graph_service:
+            self.brain_graph_service.begin_batch(size=len(events))
+        
         for event in events:
             try:
                 for processor in self.processors:
@@ -59,6 +64,10 @@ class EventProcessor:
                 logger.error(f"Error processing event {event.get('id', 'unknown')}: {e}")
                 dev_surface.error("event_processor", f"Failed to process event {event.get('id', 'unknown')}", error=e, context={"event": event})
                 stats["errors"] += 1
+        
+        # Commit batch and invalidate cache once
+        if self.brain_graph_service:
+            self.brain_graph_service.commit_batch()
         
         # Track processed events for metrics
         dev_surface.increment_events_processed(stats["processed"])

@@ -30,6 +30,29 @@ class BrainGraphService:
         self.store = store or GraphStore()
         self.node_half_life_hours = node_half_life_hours
         self.edge_half_life_hours = edge_half_life_hours
+        
+        # Batch processing support for performance
+        self._batch_mode = False
+        self._batch_size = 0
+        self._pending_invalidations = 0
+    
+    def begin_batch(self, size: int = 50):
+        """Start batch processing mode - delays cache invalidation until commit."""
+        self._batch_mode = True
+        self._batch_size = size
+        self._pending_invalidations = 0
+    
+    def commit_batch(self):
+        """Commit batch and invalidate cache once if needed."""
+        if self._batch_mode and self._pending_invalidations > 0:
+            _invalidate_graph_cache()
+        self._batch_mode = False
+        self._pending_invalidations = 0
+    
+    def rollback_batch(self):
+        """Rollback batch without invalidating cache."""
+        self._batch_mode = False
+        self._pending_invalidations = 0
     
     def touch_node(
         self,
@@ -90,8 +113,11 @@ class BrainGraphService:
         # Store the node
         self.store.upsert_node(updated_node)
         
-        # Invalidate graph cache on updates
-        _invalidate_graph_cache()
+        # Invalidate graph cache on updates (batched)
+        if self._batch_mode:
+            self._pending_invalidations += 1
+        else:
+            _invalidate_graph_cache()
         
         # Trigger pruning periodically (every ~100 operations)
         import random
@@ -148,8 +174,11 @@ class BrainGraphService:
         # Store the edge
         self.store.upsert_edge(updated_edge)
         
-        # Invalidate graph cache on edge updates
-        _invalidate_graph_cache()
+        # Invalidate graph cache on edge updates (batched)
+        if self._batch_mode:
+            self._pending_invalidations += 1
+        else:
+            _invalidate_graph_cache()
         
         return updated_edge
     
