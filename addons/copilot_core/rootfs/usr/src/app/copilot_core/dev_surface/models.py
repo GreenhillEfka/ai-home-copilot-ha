@@ -16,6 +16,7 @@ class DevLogEntry:
     context: Optional[Dict[str, Any]] = None
     error_type: Optional[str] = None
     stack_trace: Optional[str] = None
+    duration_ms: Optional[float] = None  # Operation duration for perf tracking
     
     @classmethod
     def create(cls, level: str, module: str, message: str, **kwargs) -> 'DevLogEntry':
@@ -69,6 +70,12 @@ class SystemHealth:
     events_processed_24h: int = 0
     errors_24h: int = 0
     status: str = "unknown"  # healthy, degraded, error
+    cache_enabled: bool = False
+    cache_hits: int = 0
+    cache_misses: int = 0
+    cache_evictions: int = 0
+    batch_mode_enabled: bool = False
+    pending_invalidations: int = 0
     
     @classmethod
     def create_current(cls, **kwargs) -> 'SystemHealth':

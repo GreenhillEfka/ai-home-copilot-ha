@@ -137,7 +137,13 @@ class DevSurfaceService:
             brain_graph_edges=brain_edges,
             events_processed_24h=self._events_processed_24h,
             errors_24h=self._errors_24h,
-            status=status
+            status=status,
+            cache_enabled=True,  # Always enabled now
+            cache_hits=getattr(self, '_cache_hits', 0),
+            cache_misses=getattr(self, '_cache_misses', 0),
+            cache_evictions=getattr(self, '_cache_evictions', 0),
+            batch_mode_enabled=getattr(self, '_batch_mode_enabled', False),
+            pending_invalidations=getattr(self, '_pending_invalidations', 0)
         )
     
     def clear_logs(self):
