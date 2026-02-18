@@ -1,7 +1,7 @@
 #!/bin/sh
 # PilotSuite Core + Ollama startup script
 # Ollama is bundled in the addon for offline LLM support.
-# Models are persisted in /data/ollama/models (survives container restarts).
+# Models are persisted in /share/ (NOT /data/) to avoid bloating HA backups.
 
 set -e
 
@@ -11,7 +11,7 @@ echo "Starting PilotSuite Core with Ollama..."
 MODEL=${OLLAMA_MODEL:-lfm2.5-thinking}
 
 # Ensure model persistence directory exists
-export OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama/models}
+export OLLAMA_MODELS=${OLLAMA_MODELS:-/share/ai_home_copilot/ollama/models}
 mkdir -p "$OLLAMA_MODELS"
 
 # Check if Ollama is installed

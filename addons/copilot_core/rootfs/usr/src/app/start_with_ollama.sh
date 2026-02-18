@@ -7,7 +7,7 @@ set -e
 echo "Starting PilotSuite Core..."
 
 # Ensure model persistence
-export OLLAMA_MODELS=${OLLAMA_MODELS:-/data/ollama/models}
+export OLLAMA_MODELS=${OLLAMA_MODELS:-/share/ai_home_copilot/ollama/models}
 mkdir -p "$OLLAMA_MODELS"
 
 NEED_OLLAMA=${CONVERSATION_ENABLED:-false}

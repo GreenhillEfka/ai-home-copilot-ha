@@ -29,8 +29,9 @@ RUN echo "@edge-community https://dl-cdn.alpinelinux.org/alpine/edge/community" 
       curl -fsSL "https://ollama.com/download/ollama-linux-${DLARCH}.tgz" | tar xz -C /usr)) || \
     echo "WARNING: Ollama installation failed -- LLM features will be unavailable"
 
-# Persist Ollama models across container restarts (HA addon /data is persistent)
-ENV OLLAMA_MODELS=/data/ollama/models
+# Persist Ollama models in /share/ (NOT /data/) to avoid bloating HA backups
+# /share/ is persistent, shared between addons, and can be excluded from backups
+ENV OLLAMA_MODELS=/share/ai_home_copilot/ollama/models
 
 WORKDIR /usr/src/app
 COPY rootfs/usr/src/app /usr/src/app
