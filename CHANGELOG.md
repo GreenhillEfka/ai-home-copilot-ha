@@ -1,5 +1,17 @@
 # Changelog - PilotSuite Core Add-on
 
+## [3.2.1] - 2026-02-19
+
+### Fix: numeric_state + Conditions in create_automation
+
+- **pilotsuite.create_automation** erweitert:
+  - Neuer Trigger-Typ `numeric_state` für Schwellenwert-basierte Automationen
+    (z.B. "Wenn Luftfeuchtigkeit > 70%", "Wenn Batterie < 15%")
+  - `trigger_above` / `trigger_below` Parameter
+  - `conditions` Array — optionale Bedingungen (numeric_state + template)
+    Beispiel: Badlüfter nur wenn Außenfeuchte < 80%
+- Tool-Description aktualisiert (LLM kennt jetzt alle 4 Trigger-Typen)
+
 ## [3.2.0] - 2026-02-19
 
 ### Müllabfuhr + Geburtstags-Erinnerungen (Server-Side)

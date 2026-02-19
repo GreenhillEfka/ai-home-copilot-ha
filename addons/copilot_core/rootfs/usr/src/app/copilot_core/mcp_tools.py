@@ -227,7 +227,9 @@ HA_TOOLS = [
             "Create a Home Assistant automation. Use this when the user asks to "
             "set up a rule like 'when X happens, do Y'. You MUST parse the user's "
             "intent into structured trigger and action data. Supports state, time, "
-            "and sun triggers with turn_on/turn_off/scene/notify actions."
+            "sun, and numeric_state triggers with turn_on/turn_off/scene/notify "
+            "actions. Use numeric_state for sensor thresholds (e.g. humidity > 70%). "
+            "Conditions can restrict when the automation fires."
         ),
         input_schema={
             "type": "object",
@@ -238,12 +240,12 @@ HA_TOOLS = [
                 },
                 "trigger_type": {
                     "type": "string",
-                    "enum": ["state", "time", "sun"],
-                    "description": "Type of trigger: state (entity changes), time (at HH:MM), sun (sunset/sunrise)"
+                    "enum": ["state", "time", "sun", "numeric_state"],
+                    "description": "Type of trigger: state (entity changes), time (at HH:MM), sun (sunset/sunrise), numeric_state (sensor crosses threshold)"
                 },
                 "trigger_entity": {
                     "type": "string",
-                    "description": "Entity ID that triggers the automation (for state triggers, e.g. switch.coffee_machine)"
+                    "description": "Entity ID that triggers the automation (required for state and numeric_state triggers)"
                 },
                 "trigger_to": {
                     "type": "string",
@@ -265,6 +267,45 @@ HA_TOOLS = [
                 "trigger_sun_offset": {
                     "type": "string",
                     "description": "Optional offset for sun trigger (e.g. '-00:30:00' for 30 min before)"
+                },
+                "trigger_above": {
+                    "type": "number",
+                    "description": "Trigger when sensor rises ABOVE this value (numeric_state only, e.g. 70 for 70% humidity)"
+                },
+                "trigger_below": {
+                    "type": "number",
+                    "description": "Trigger when sensor falls BELOW this value (numeric_state only, e.g. 20 for 20% battery)"
+                },
+                "conditions": {
+                    "type": "array",
+                    "description": "Optional list of conditions that must ALL pass for the automation to run. Use to restrict triggers (e.g. only fire if outdoor humidity < 80%).",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": ["numeric_state", "template"],
+                                "description": "Condition type: numeric_state checks a sensor value, template evaluates a Jinja2 expression"
+                            },
+                            "entity_id": {
+                                "type": "string",
+                                "description": "Entity to check (for numeric_state conditions)"
+                            },
+                            "above": {
+                                "type": "number",
+                                "description": "Condition passes when entity state is above this value"
+                            },
+                            "below": {
+                                "type": "number",
+                                "description": "Condition passes when entity state is below this value"
+                            },
+                            "value_template": {
+                                "type": "string",
+                                "description": "Jinja2 template for template condition (must evaluate to true/false)"
+                            }
+                        },
+                        "required": ["type"]
+                    }
                 },
                 "action_service": {
                     "type": "string",
