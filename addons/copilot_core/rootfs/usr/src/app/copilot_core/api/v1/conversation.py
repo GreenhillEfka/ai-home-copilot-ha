@@ -1025,8 +1025,36 @@ def _execute_create_automation(args: dict) -> dict:
         trigger = {"platform": "sun", "event": event}
         if args.get("trigger_sun_offset"):
             trigger["offset"] = args["trigger_sun_offset"]
+    elif trigger_type == "numeric_state":
+        entity = args.get("trigger_entity")
+        if not entity:
+            return {"error": "trigger_entity is required for numeric_state triggers"}
+        trigger = {"platform": "numeric_state", "entity_id": entity}
+        if args.get("trigger_above") is not None:
+            trigger["above"] = float(args["trigger_above"])
+        if args.get("trigger_below") is not None:
+            trigger["below"] = float(args["trigger_below"])
+        if "above" not in trigger and "below" not in trigger:
+            return {"error": "numeric_state trigger requires trigger_above or trigger_below"}
     else:
         return {"error": f"Unknown trigger_type: {trigger_type}"}
+
+    # Build optional conditions
+    conditions = []
+    for cond in args.get("conditions", []):
+        ctype = cond.get("type")
+        if ctype == "numeric_state":
+            cd = {"condition": "numeric_state", "entity_id": cond.get("entity_id")}
+            if cond.get("above") is not None:
+                cd["above"] = float(cond["above"])
+            if cond.get("below") is not None:
+                cd["below"] = float(cond["below"])
+            conditions.append(cd)
+        elif ctype == "template":
+            conditions.append({
+                "condition": "template",
+                "value_template": cond.get("value_template", "{{ true }}"),
+            })
 
     # Build action dict
     action_service = args.get("action_service", "")
@@ -1056,6 +1084,8 @@ def _execute_create_automation(args: dict) -> dict:
         "mode": "single",
         "tags": ["pilotsuite_styx"],
     }
+    if conditions:
+        config["condition"] = conditions
 
     headers = {"Authorization": f"Bearer {ha_token}", "Content-Type": "application/json"}
     try:
