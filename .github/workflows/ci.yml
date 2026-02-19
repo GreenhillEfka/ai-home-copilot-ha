@@ -19,6 +19,11 @@ jobs:
         run: |
           python -m py_compile $(find addons/copilot_core/rootfs/usr/src/app -name '*.py')
 
+      - name: Install dependencies
+        run: |
+          pip install flask flask-compress waitress requests pyyaml \
+            pydantic psutil python-ulid numpy
+
       - name: Import smoke test (create_app)
         env:
           PYTHONPATH: addons/copilot_core/rootfs/usr/src/app
@@ -44,7 +49,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install flask flask-compress waitress requests pyyaml \
-            pydantic psutil python-ulid pytest pytest-cov
+            pydantic psutil python-ulid numpy pytest pytest-cov
 
       - name: Run full test suite
         env:
