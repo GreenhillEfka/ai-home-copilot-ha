@@ -1,4 +1,4 @@
-"""AI Home CoPilot Python SDK.
+"""PilotSuite Python SDK.
 Version: 0.4.33
 """
 

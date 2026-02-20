@@ -1,4 +1,4 @@
-# USER_MANUAL.md - AI Home CoPilot User Guide
+# USER_MANUAL.md - PilotSuite User Guide
 
 > **Version:** 0.12.1 (HA Integration) + 0.7.0 (Core Add-on)  
 > **Last Updated:** 2026-02-16
@@ -78,13 +78,13 @@ curl http://homeassistant.local:8909/version
 
 1. Open **HACS** in Home Assistant
 2. Go to **Integrations**
-3. Search for **AI Home CoPilot**
+3. Search for **PilotSuite**
 4. Click **Download**
 
 ### Step 2: Configure Integration
 
 1. **Settings** → **Devices & Services** → **Add Integration**
-2. Search for **AI Home CoPilot**
+2. Search for **PilotSuite**
 3. Configure:
    - **Core URL:** `http://homeassistant.local:8909`
    - **Auth Token:** (same as Core add-on config)
@@ -115,7 +115,7 @@ The integration automatically discovers:
 - All areas/zones
 - All devices
 
-You can configure specific options in **Settings** → **Devices & Services** → **AI Home CoPilot** → **Configure**.
+You can configure specific options in **Settings** → **Devices & Services** → **PilotSuite** → **Configure**.
 
 ### Environment Variables (Advanced)
 
@@ -130,7 +130,7 @@ You can configure specific options in **Settings** → **Devices & Services** �
 
 ### Understanding Zone Hierarchy
 
-AI Home CoPilot uses a three-level hierarchy:
+PilotSuite uses a three-level hierarchy:
 
 ```
 Floor → Area → Room
@@ -320,7 +320,7 @@ Zones automatically track occupancy state:
 
 ## 📱 Dashboard Cards
 
-AI Home CoPilot provides Lovelace cards for visualization.
+PilotSuite provides Lovelace cards for visualization.
 
 ### Available Cards
 
@@ -371,7 +371,7 @@ layout: dot
 
 #### Habitus Rules Card
 ```yaml
-type: custom:ai-home-copilot-habitus-rules
+type: custom:pilotsuite-styx-habitus-rules
 title: Suggested Automations
 min_confidence: 0.7
 limit: 10

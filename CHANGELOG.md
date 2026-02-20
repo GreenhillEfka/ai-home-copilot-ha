@@ -1,5 +1,100 @@
 # Changelog - PilotSuite Core Add-on
 
+## [4.0.0] - 2026-02-20
+
+### Official Release — Repository Rename + Feature-Complete
+
+**Repository umbenannt:** `Home-Assistant-Copilot` → `pilotsuite-styx-core`
+Alle internen URLs, Dokumentation und Konfigurationsdateien aktualisiert.
+GitHub leitet alte URLs automatisch weiter (301 Redirect).
+
+#### Warum v4.0.0?
+
+Dies ist der erste offizielle Release von PilotSuite Styx als feature-complete Produkt.
+Alle Komponenten sind synchron auf v4.0.0:
+
+| Komponente | Repo | Version |
+|-----------|------|---------|
+| **Core Add-on** | `pilotsuite-styx-core` | 4.0.0 |
+| **HACS Integration** | `pilotsuite-styx-ha` | 4.0.0 |
+| **Adapter** | `pilotsuite-styx-core` (Unterverzeichnis) | 4.0.0 |
+
+#### Feature-Ueberblick (Cumulative seit v0.9.x)
+
+**KI & Conversation**
+- Ollama LLM (qwen3:4b) lokal auf dem Host — kein Cloud-Zwang
+- 26 LLM Tools (Licht, Klima, Szenen, Automationen, Kalender, Einkauf, Erinnerungen, Web-Suche, ...)
+- OpenAI-kompatible API (`/v1/chat/completions`) fuer externe Clients
+- RAG Pipeline: Semantisches Langzeitgedaechtnis (Bag-of-Words Embedding, Cosine Similarity)
+- Charakter-System: 6 Presets (Copilot, Butler, Energiemanager, Security Guard, Friendly, Minimal)
+- Telegram Bot Integration
+
+**Brain Graph & Wissensmanagement**
+- Live Brain Graph: Entitaeten, Zonen, Zustaende als Knoten/Kanten
+- SVG Snapshot Rendering (`/api/v1/graph/snapshot.svg`)
+- SQLite WAL-Mode, atomare Queries, Thread-Safe Cache
+- Knowledge Graph (SQLite oder Neo4j Backend)
+- Neuron-System: Persistente Lern-Einheiten
+
+**Mood & Habitus**
+- 3D Mood Engine: Comfort, Joy, Frugality pro Zone
+- 15 gewichtete Event-Typen, abgeleitete Indizes (Stress, Comfort, Energy)
+- SQLite-Persistenz, 30-Tage History
+- Habitus Mining: Automatische Pattern-Erkennung aus Nutzerverhalten
+- Habitus Zonen: Raeume mit zugeordneten Entitaeten
+
+**Automationen & Vorschlaege**
+- Natural Language Automation Creation ("Wenn Luftfeuchtigkeit > 70%, Luefter an")
+- 4 Trigger-Typen: state, time, numeric_state, template
+- Suggestion Inbox: Habitus Rules + Brain Graph Candidates + User Hints
+- Accept/Reject mit echtem HA-Automation-Backend
+- A/B Testing fuer Automation-Varianten (Chi-Squared Signifikanz)
+
+**Haushalt & Alltag**
+- Muellabfuhr-Erinnerungen (Vorabend + Morgens, TTS + Notification)
+- Geburtstags-Erinnerungen (14-Tage Vorschau, Alters-Erkennung)
+- Kalender-Integration (HA calendar.* Entities)
+- Einkaufsliste (CRUD + SQLite-Persistenz)
+- Erinnerungen mit Snooze-Funktion
+- Hauswirtschafts-Dashboard
+
+**Smart Home Features**
+- Szenen-System: 8 Built-in Presets + Custom Szenen pro Zone
+- HomeKit Bridge: Zonen an Apple HomeKit exponieren (QR-Codes, Setup-Codes)
+- Musikwolke: Audio-Follow (Musik folgt Person durch Raeume)
+- Media Zonen: Player-Zonen-Zuordnung + Playback-Steuerung
+- Presence Tracking: Wer ist wo, Ankunfts-/Abfahrt-History
+- Proaktive Vorschlaege bei Raum-Eintritt
+
+**Multi-Home & Multi-User**
+- Cross-Home Sharing: Pattern-Austausch zwischen Homes
+- Federated Learning: Differential Privacy (Laplace-Mechanismus)
+- Multi-User Preference Learning (MUPL): Pro-Person Profile
+- Kollektive Pattern Library mit gewichteter Confidence
+
+**Netzwerk & Monitoring**
+- UniFi-Integration: Netzwerk-Health, Client-Tracking
+- Frigate NVR Bridge: Kamera-Ereignisse, Person/Motion Detection
+- Energy Context: Energieverbrauch pro Zone
+- Weather Context: Wetter-Einfluss auf Vorschlaege
+
+**Infrastruktur**
+- 40+ REST API Endpoints (30 Flask Blueprints)
+- Deep Health Check (`/api/v1/health/deep`): Services, DBs, Speicher, Circuit Breaker
+- Request Timing Middleware: Correlation IDs, Slow Request Logging
+- Docker HEALTHCHECK, Startup Pre-Flight Checks
+- Circuit Breaker fuer HA Supervisor + Ollama
+- CI Pipeline: Lint + Test + Security (bandit)
+- Multi-Arch: amd64 + aarch64
+- Web-Suche (DuckDuckGo), News (RSS), Warnungen (NINA/DWD)
+
+#### Aenderungen in v4.0.0
+
+- **Repository Rename**: `Home-Assistant-Copilot` → `pilotsuite-styx-core`
+- **Alle URLs aktualisiert**: repository.json, config.json, openapi.yaml, SDK, Docs
+- **Cross-Referenzen**: `ai-home-copilot-ha` → `pilotsuite-styx-ha` in allen Docs
+- **Adapter Version**: 3.9.1 → 4.0.0
+
 ## [3.9.0] - 2026-02-20
 
 ### Full Consolidation — Alles in einer Version

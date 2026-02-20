@@ -6,7 +6,7 @@
 
 ## Projektueberblick
 
-**PilotSuite Core Add-on** (ehemals AI Home CoPilot Core) ist das Backend fuer die PilotSuite-Plattform. Es laeuft als Home Assistant Add-on auf Port **8909** und stellt eine Flask/Waitress REST-API bereit.
+**PilotSuite Core Add-on** (ehemals PilotSuite Core) ist das Backend fuer die PilotSuite-Plattform. Es laeuft als Home Assistant Add-on auf Port **8909** und stellt eine Flask/Waitress REST-API bereit.
 
 Das Core Add-on implementiert die gesamte Intelligenz: Neural Pipeline, Brain Graph, Habitus Mining, Mood Engine, Candidate Management und mehr.
 
@@ -96,7 +96,7 @@ services = init_services(config=options)
 ### Dateistruktur
 
 ```
-addons/copilot_core/
+copilot_core/
 +-- Dockerfile               # Container-Build
 +-- config.yaml              # HA Add-on Manifest
 +-- rootfs/usr/src/app/
@@ -146,10 +146,11 @@ addons/copilot_core/
 
 ## Wo kommen wir her
 
-### Version v3.9.1 -- HA Conformity Release
+### Version v4.0.0 -- Official Release
 
-- 24 Module implementiert und registriert
-- 37+ API Endpoints (Flask Blueprints)
+- Repository umbenannt: `Home-Assistant-Copilot` → `pilotsuite-styx-core`
+- 28 Backend-Module implementiert und registriert
+- 40+ API Endpoints (30 Flask Blueprints)
 - 566 Tests, 1 skipped, alle gruen
 - Security: Token-Validierung mit `hmac.compare_digest` (bestaetigt korrekt)
 - Brain Graph mit Persistenz, Pruning, SVG-Snapshots
@@ -161,7 +162,7 @@ addons/copilot_core/
 - Cross-Home Sync und Collective Intelligence (Phase 5)
 - System Health Checks (Zigbee, Z-Wave, Recorder, etc.)
 - Performance: GZIP Compression, Connection Pooling, Caching
-- Ollama LLM Integration (Styx Chat-Assistent mit 26 Tools)
+- Ollama LLM Integration (Styx Chat-Assistent mit 26 Tools, Standard: qwen3:4b)
 
 ---
 

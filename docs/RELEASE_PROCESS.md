@@ -1,4 +1,4 @@
-# AI Home CoPilot - Secure Release Process
+# PilotSuite - Secure Release Process
 
 ## Philosophie
 

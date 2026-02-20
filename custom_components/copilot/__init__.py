@@ -1,4 +1,4 @@
-"""AI Home CoPilot (Adapter) – MVP scaffold.
+"""PilotSuite (Adapter) – MVP scaffold.
 
 This will later:
 - expose sensors for suggestion inbox

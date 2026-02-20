@@ -1,7 +1,7 @@
 """
-AI Home CoPilot Core TypeScript SDK
+PilotSuite Core TypeScript SDK
 
-Client SDK for interacting with the AI Home CoPilot Core API.
+Client SDK for interacting with the PilotSuite Core API.
 """
 
 import os
@@ -13,7 +13,7 @@ __api_version__ = "v1"
 
 
 class CoPilotClient:
-    """Client for AI Home CoPilot Core API."""
+    """Client for PilotSuite Core API."""
 
     def __init__(
         self,

@@ -6,13 +6,13 @@
 
 ### Pending Releases
 
-#### Core Add-on (Home-Assistant-Copilot)
+#### Core Add-on (pilotsuite-styx-core)
 - ✅ **v0.4.6** - Brain Graph API Documentation & Capabilities
 - ✅ **v0.4.7** - Privacy-first Event Envelope System
 - ✅ **v0.4.8** - Capabilities Discovery Endpoint  
 - ✅ **v0.4.9** - Brain Dashboard Summary API
 
-#### HA Integration (ai-home-copilot-ha)
+#### HA Integration (pilotsuite-styx-ha)
 - ✅ **v0.4.3** - Enhanced Token Management UX
 - ✅ **v0.4.4** - Enhanced Error Handling & Diagnostics
 - ✅ **v0.4.5** - Configurable Event Forwarder Entity Allowlist
@@ -48,10 +48,10 @@ ssh-add ~/.ssh/id_ed25519
 
 # 4. Git remote auf SSH umstellen
 cd /config/.openclaw/workspace/ai_home_copilot_hacs_repo
-git remote set-url origin git@github.com:GreenhillEfka/ai-home-copilot-ha.git
+git remote set-url origin git@github.com:GreenhillEfka/pilotsuite-styx-ha.git
 
 cd /config/.openclaw/workspace/ha-copilot-repo
-git remote set-url origin git@github.com:GreenhillEfka/Home-Assistant-Copilot.git
+git remote set-url origin git@github.com:GreenhillEfka/pilotsuite-styx-core.git
 ```
 
 ### Option 2: Personal Access Token
@@ -62,15 +62,15 @@ git remote set-url origin git@github.com:GreenhillEfka/Home-Assistant-Copilot.gi
 
 # 2. Token in Git konfigurieren
 git config --global credential.helper store
-git config --global user.name "AI Home CoPilot Autopilot"
+git config --global user.name "PilotSuite Autopilot"
 git config --global user.email "autopilot@example.com"
 
 # 3. Remote URLs mit Token
 cd /config/.openclaw/workspace/ai_home_copilot_hacs_repo
-git remote set-url origin https://TOKEN@github.com/GreenhillEfka/ai-home-copilot-ha.git
+git remote set-url origin https://TOKEN@github.com/GreenhillEfka/pilotsuite-styx-ha.git
 
 cd /config/.openclaw/workspace/ha-copilot-repo  
-git remote set-url origin https://TOKEN@github.com/GreenhillEfka/Home-Assistant-Copilot.git
+git remote set-url origin https://TOKEN@github.com/GreenhillEfka/pilotsuite-styx-core.git
 ```
 
 ---
@@ -115,7 +115,7 @@ gh release create v0.4.6 --title "Dashboard Button v0.4.6" --notes-file CHANGELO
 
 set -e
 
-echo "🚀 AI Home CoPilot - Release Deployment"
+echo "🚀 PilotSuite - Release Deployment"
 echo "======================================="
 
 # Core Add-on
@@ -167,8 +167,8 @@ echo "4. Notify users about updates"
 ### 1. GitHub Release Check
 ```bash
 # Releases erstellt?
-curl -s https://api.github.com/repos/GreenhillEfka/ai-home-copilot-ha/releases | jq '.[].tag_name'
-curl -s https://api.github.com/repos/GreenhillEfka/Home-Assistant-Copilot/releases | jq '.[].tag_name'
+curl -s https://api.github.com/repos/GreenhillEfka/pilotsuite-styx-ha/releases | jq '.[].tag_name'
+curl -s https://api.github.com/repos/GreenhillEfka/pilotsuite-styx-core/releases | jq '.[].tag_name'
 
 # Expected: v0.4.3, v0.4.4, v0.4.5, v0.4.6 (HA) + v0.4.6, v0.4.7, v0.4.8, v0.4.9 (Core)
 ```

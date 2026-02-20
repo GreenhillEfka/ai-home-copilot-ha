@@ -2,7 +2,8 @@
 
 > **Single Source of Truth** for the entire PilotSuite project.
 > Both repos (Core Add-on + HACS Integration) reference this document.
-> Last Updated: 2026-02-19 | Core v3.8.0 | Integration v3.8.0
+> Last Updated: 2026-02-20 | Core v4.0.0 | Integration v4.0.0
+> Repos: `pilotsuite-styx-core` (Core Add-on) + `pilotsuite-styx-ha` (HACS Integration)
 
 ---
 
@@ -105,8 +106,8 @@ Akzeptiert -> aehnliche boosten | Modifiziert -> Parameter anpassen | Abgelehnt 
 
 | Repo | Rolle | Version | Port |
 |------|-------|---------|------|
-| **Home-Assistant-Copilot** | Core Add-on (Backend) | v3.8.0 | 8909 |
-| **ai-home-copilot-ha** | HACS Integration (Frontend) | v3.8.0 | - (verbindet sich zum Core) |
+| **pilotsuite-styx-core** | Core Add-on (Backend) | v3.8.0 | 8909 |
+| **pilotsuite-styx-ha** | HACS Integration (Frontend) | v3.8.0 | - (verbindet sich zum Core) |
 
 Warum zwei Repos: HACS-Anforderung (eigenstaendiges Repo), unabhaengige Skalierung, Headless-Betrieb moeglich, bekanntes Muster (ESPHome, Node-RED).
 
@@ -304,8 +305,7 @@ User Spracheingabe -> HA Assist (STT -> Intent -> Conversation Agent)
 | Option | Default | Beschreibung |
 |--------|---------|--------------|
 | `ollama_url` | `http://localhost:11434` | Ollama Server URL |
-| `ollama_model` | `lfm2.5-thinking:latest` | Modell fuer Konversation |
-| `tool_model` | `qwen3:4b` | Modell fuer Tool-Calling (lfm2.5 unterstuetzt kein Tool-Calling) |
+| `ollama_model` | `qwen3:4b` | Standard-Modell (Konversation + Tool-Calling) |
 
 ---
 
