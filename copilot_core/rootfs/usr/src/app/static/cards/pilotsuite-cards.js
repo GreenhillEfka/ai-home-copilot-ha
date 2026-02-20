@@ -397,9 +397,52 @@ class HaCopilotHabitusCard extends LitElement {
                 </div>
               `
             : ""}
+          ${currentZone
+            ? html`
+                <div class="homekit-section">
+                  <div class="hk-title">
+                    <span class="hk-icon"></span> HomeKit — ${currentZone.name} by Styx
+                  </div>
+                  <div class="hk-body">
+                    <div class="hk-qr">
+                      <img
+                        src="${this._coreBase}/api/v1/homekit/qr/${currentZone.id}.svg"
+                        alt="HomeKit QR"
+                        class="hk-qr-img"
+                        onerror="this.style.display='none'"
+                      />
+                    </div>
+                    <div class="hk-info">
+                      <div class="hk-detail">
+                        <span class="hk-label">Apple Home</span>
+                        <span class="hk-value">${currentZone.name} by Styx</span>
+                      </div>
+                      <div class="hk-detail">
+                        <span class="hk-label">Entities</span>
+                        <span class="hk-value">${currentZone.entity_count || 0}</span>
+                      </div>
+                      <div class="hk-hint">
+                        Scanne den QR-Code mit der<br/>Apple Home App zum Pairen.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `
+            : ""}
         </div>
       </ha-card>
     `;
+  }
+
+  get _coreBase() {
+    // Try to get Core URL from entity attributes or default
+    const stateObj = this.hass && this._config
+      ? this.hass.states[this._config.entity]
+      : null;
+    if (stateObj && stateObj.attributes && stateObj.attributes.core_base) {
+      return stateObj.attributes.core_base;
+    }
+    return "http://homeassistant.local:8909";
   }
 
   _behaviorIcon(type) {
@@ -441,6 +484,75 @@ class HaCopilotHabitusCard extends LitElement {
       .b-icon { font-size: 20px; }
       .b-name { font-size: 14px; font-weight: 500; color: var(--primary-text-color); }
       .b-time { font-size: 12px; color: var(--secondary-text-color); }
+
+      /* HomeKit Section */
+      .homekit-section {
+        margin-top: 24px;
+        padding: 16px;
+        background: var(--card-background-color);
+        border: 1px solid var(--divider-color);
+        border-radius: 12px;
+      }
+      .hk-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .hk-icon { font-size: 18px; }
+      .hk-body {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      .hk-qr {
+        flex-shrink: 0;
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+      .hk-qr-img {
+        width: 112px;
+        height: 112px;
+        object-fit: contain;
+      }
+      .hk-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .hk-detail {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .hk-label {
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .hk-value {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--primary-text-color);
+      }
+      .hk-hint {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--secondary-text-color);
+        line-height: 1.4;
+        font-style: italic;
+      }
     `;
   }
 }
