@@ -2,6 +2,7 @@
 Brain Graph service providing high-level graph operations.
 """
 
+import threading
 import time
 from typing import Dict, List, Optional, Any, Tuple, Iterable
 
@@ -39,24 +40,31 @@ class BrainGraphService:
         # Pruning counter for deterministic cleanup
         self._operation_count = 0
         self._prune_interval = 100  # Prune every N operations
+
+        # Thread-safety: protects _batch_mode, _pending_invalidations, _operation_count
+        self._lock = threading.Lock()
     
     def begin_batch(self, size: int = 50):
         """Start batch processing mode - delays cache invalidation until commit."""
-        self._batch_mode = True
-        self._batch_size = size
-        self._pending_invalidations = 0
-    
+        with self._lock:
+            self._batch_mode = True
+            self._batch_size = size
+            self._pending_invalidations = 0
+
     def commit_batch(self):
         """Commit batch and invalidate cache once if needed."""
-        if self._batch_mode and self._pending_invalidations > 0:
+        with self._lock:
+            should_invalidate = self._batch_mode and self._pending_invalidations > 0
+            self._batch_mode = False
+            self._pending_invalidations = 0
+        if should_invalidate:
             _invalidate_graph_cache()
-        self._batch_mode = False
-        self._pending_invalidations = 0
-    
+
     def rollback_batch(self):
         """Rollback batch without invalidating cache."""
-        self._batch_mode = False
-        self._pending_invalidations = 0
+        with self._lock:
+            self._batch_mode = False
+            self._pending_invalidations = 0
     
     def touch_node(
         self,
@@ -117,18 +125,24 @@ class BrainGraphService:
         # Store the node
         self.store.upsert_node(updated_node)
         
-        # Invalidate graph cache on updates (batched)
-        if self._batch_mode:
-            self._pending_invalidations += 1
-        else:
+        # Invalidate graph cache on updates (batched) + trigger pruning
+        should_invalidate = False
+        should_prune = False
+        with self._lock:
+            if self._batch_mode:
+                self._pending_invalidations += 1
+            else:
+                should_invalidate = True
+            self._operation_count += 1
+            if self._operation_count >= self._prune_interval:
+                self._operation_count = 0
+                should_prune = True
+
+        if should_invalidate:
             _invalidate_graph_cache()
-        
-        # Trigger pruning deterministically (every N operations)
-        self._operation_count += 1
-        if self._operation_count >= self._prune_interval:
-            self._operation_count = 0
+        if should_prune:
             self.store.prune_graph(now_ms)
-        
+
         return updated_node
     
     def touch_edge(
@@ -180,11 +194,15 @@ class BrainGraphService:
         self.store.upsert_edge(updated_edge)
         
         # Invalidate graph cache on edge updates (batched)
-        if self._batch_mode:
-            self._pending_invalidations += 1
-        else:
+        should_invalidate = False
+        with self._lock:
+            if self._batch_mode:
+                self._pending_invalidations += 1
+            else:
+                should_invalidate = True
+        if should_invalidate:
             _invalidate_graph_cache()
-        
+
         return updated_edge
     
     def link(

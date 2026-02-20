@@ -1,5 +1,14 @@
 # Changelog - PilotSuite Core Add-on
 
+## [4.1.0] - 2026-02-20
+
+### Race Conditions + Stability
+
+- **brain_graph/service.py** — `threading.Lock` für `_batch_mode`, `_pending_invalidations`, `_operation_count`; batch/commit/rollback und touch_node/touch_edge sind jetzt thread-safe
+- **brain_graph/store.py** — `_write_lock` für alle Schreiboperationen (upsert_node, upsert_edge, prune_graph); `_connect()` Helper mit 30s Timeout; verbesserte SQLite-Pragmas (`busy_timeout`, `cache_size`, `temp_store`, `wal_autocheckpoint`)
+- **candidates/store.py** — `threading.RLock` schützt alle öffentlichen Methoden; Backup vor jedem Speichern (.bak)
+- **ingest/event_processor.py** — Lock-Scope erweitert: umfasst jetzt den gesamten Batch-Lifecycle (begin_batch → process → commit/rollback → ID-Tracking); `rollback_batch()` statt stilles `commit_batch()` bei Fehler
+
 ## [4.0.1] - 2026-02-20
 
 ### Patch — Version-Fix, Branding-Cleanup, Add-on Store Fix

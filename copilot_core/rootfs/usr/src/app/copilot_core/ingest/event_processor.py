@@ -61,9 +61,9 @@ class EventProcessor:
             "brain_graph_updates": 0,
         }
 
-        # Deduplicate: filter out already-processed events
-        unique_events = []
         with self._lock:
+            # Deduplicate: filter out already-processed events
+            unique_events = []
             for event in events:
                 event_id = event.get("id", "")
                 if event_id and event_id in self._processed_ids:
@@ -71,44 +71,39 @@ class EventProcessor:
                     continue
                 unique_events.append(event)
 
-        if not unique_events:
-            return stats
+            if not unique_events:
+                return stats
 
-        # Use batch mode for brain graph performance
-        if self.brain_graph_service:
-            self.brain_graph_service.begin_batch(size=len(unique_events))
+            # Use batch mode for brain graph performance
+            if self.brain_graph_service:
+                self.brain_graph_service.begin_batch(size=len(unique_events))
 
-        successful_events = []
-        for event in unique_events:
-            try:
-                for processor in self.processors:
-                    processor(event)
-                stats["processed"] += 1
-                successful_events.append(event)
-            except Exception as e:
-                logger.error("Error processing event %s: %s", event.get("id", "unknown"), e)
-                dev_surface.error(
-                    "event_processor",
-                    f"Failed to process event {event.get('id', 'unknown')}",
-                    error=e,
-                    context={"event": event},
-                )
-                stats["errors"] += 1
-
-        # Only commit batch if at least some events succeeded
-        if self.brain_graph_service:
-            if successful_events:
-                self.brain_graph_service.commit_batch()
-            else:
-                # All failed — discard the batch instead of committing partial state
+            successful_events = []
+            for event in unique_events:
                 try:
-                    self.brain_graph_service.commit_batch()
-                except Exception:
-                    pass
-                logger.warning("All %d events failed; batch discarded", len(unique_events))
+                    for processor in self.processors:
+                        processor(event)
+                    stats["processed"] += 1
+                    successful_events.append(event)
+                except Exception as e:
+                    logger.error("Error processing event %s: %s", event.get("id", "unknown"), e)
+                    dev_surface.error(
+                        "event_processor",
+                        f"Failed to process event {event.get('id', 'unknown')}",
+                        error=e,
+                        context={"event": event},
+                    )
+                    stats["errors"] += 1
 
-        # Record successfully processed IDs for idempotency
-        with self._lock:
+            # Only commit batch if at least some events succeeded
+            if self.brain_graph_service:
+                if successful_events:
+                    self.brain_graph_service.commit_batch()
+                else:
+                    self.brain_graph_service.rollback_batch()
+                    logger.warning("All %d events failed; batch rolled back", len(unique_events))
+
+            # Record successfully processed IDs for idempotency
             for event in successful_events:
                 event_id = event.get("id", "")
                 if event_id:

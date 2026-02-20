@@ -6,6 +6,7 @@ FIX: Added async support via ThreadPoolExecutor for non-blocking I/O.
 
 import json
 import sqlite3
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -35,22 +36,34 @@ class BrainGraphStore:
     ):
         self.db_path = Path(db_path)
         self.max_nodes = max_nodes
-        self.max_edges = max_edges  
+        self.max_edges = max_edges
         self.node_min_score = node_min_score
         self.edge_min_weight = edge_min_weight
-        
+        self._connect_timeout = 30  # seconds
+
+        # Serialize write operations to avoid SQLite "database is locked" errors
+        self._write_lock = threading.Lock()
+
         # Ensure parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Initialize database
         self._init_db()
     
+    def _connect(self) -> sqlite3.Connection:
+        """Create a new SQLite connection with proper timeout and pragmas."""
+        return sqlite3.connect(self.db_path, timeout=self._connect_timeout)
+
     def _init_db(self):
         """Initialize SQLite schema with WAL mode for better concurrency."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             # Enable WAL mode for better concurrency (SQLite best practice)
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
+            conn.execute("PRAGMA busy_timeout=30000")
+            conn.execute("PRAGMA cache_size=-8000")  # 8 MB
+            conn.execute("PRAGMA temp_store=MEMORY")
+            conn.execute("PRAGMA wal_autocheckpoint=1000")
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS nodes (
                     id TEXT PRIMARY KEY,
@@ -95,7 +108,7 @@ class BrainGraphStore:
     
     def upsert_node(self, node: GraphNode) -> bool:
         """Insert or update a node. Returns True if inserted/updated."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._write_lock, self._connect() as conn:
             cursor = conn.cursor()
             
             cursor.execute(
@@ -121,7 +134,7 @@ class BrainGraphStore:
     
     def upsert_edge(self, edge: GraphEdge) -> bool:
         """Insert or update an edge. Returns True if inserted/updated."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._write_lock, self._connect() as conn:
             cursor = conn.cursor()
             
             cursor.execute(
@@ -146,10 +159,10 @@ class BrainGraphStore:
     
     def get_node(self, node_id: str) -> Optional[GraphNode]:
         """Retrieve a node by ID."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
+
             cursor.execute("SELECT * FROM nodes WHERE id = ?", (node_id,))
             row = cursor.fetchone()
             
@@ -175,7 +188,7 @@ class BrainGraphStore:
         limit: Optional[int] = None
     ) -> List[GraphNode]:
         """Retrieve nodes with optional filtering."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
@@ -224,7 +237,7 @@ class BrainGraphStore:
         limit: Optional[int] = None
     ) -> List[GraphEdge]:
         """Retrieve edges with optional filtering."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
@@ -288,7 +301,7 @@ class BrainGraphStore:
             
             # FIX: Batch query all edges from current layer in ONE query
             if current_layer:
-                with sqlite3.connect(self.db_path) as conn:
+                with self._connect() as conn:
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
                     
@@ -334,7 +347,7 @@ class BrainGraphStore:
         
         # FIX: Batch fetch all nodes in ONE query instead of N queries
         if visited_nodes:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._connect() as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
                 
@@ -370,7 +383,7 @@ class BrainGraphStore:
         # FIX: Batch fetch all edges between visited nodes in ONE query
         edges = []
         if visited_nodes:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._connect() as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
                 
@@ -412,12 +425,12 @@ class BrainGraphStore:
         """
         if now_ms is None:
             now_ms = int(time.time() * 1000)
-            
+
         stats = {"nodes_removed": 0, "edges_removed": 0}
-        
-        with sqlite3.connect(self.db_path) as conn:
+
+        with self._write_lock, self._connect() as conn:
             cursor = conn.cursor()
-            
+
             # ========== Single pass for edges ==========
             cursor.execute("SELECT * FROM edges")
             all_edges = []
@@ -514,7 +527,7 @@ class BrainGraphStore:
     
     def get_stats(self) -> Dict[str, int]:
         """Get current graph statistics."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             cursor = conn.cursor()
             
             cursor.execute("SELECT COUNT(*) FROM nodes")
