@@ -1,6 +1,22 @@
 # Changelog - PilotSuite Core Add-on
 
-## [3.9.0] - 2026-02-19
+## [3.9.0] - 2026-02-20
+
+### Full Consolidation — Alles in einer Version
+
+- **Branch-Konsolidierung** — Alle Arbeit aus 10 Remote-Branches zusammengeführt:
+  - `master` (Original Autopilot: SOUL.md, MEMORY.md, Skills, OpenClaw, Concept Docs)
+  - `wip/phase5-cross-home` (Cross-Home Sharing, Interactive Viz, SDKs, Neurons)
+  - `wip/phase5-collective-intelligence` (Federated Learning Tests)
+  - `backup/pre-merge-20260216` (Memory Logs, Code Reviews, Quality Gates)
+  - `backup/2026-02-19` (German Docs, Archive, Post-Merge Notes)
+  - `dev-habitus-dashboard-cards` (Habitus Dashboard Cards History)
+  - `dev`, `release/v0.4.1` (Early Development History)
+  - `claude/research-repos-scope-4e3L6` (DeepSeek-R1 Audit)
+- **301 Dateien konsolidiert** — Skills, Worker-Configs, Memory, Reports, Concept Docs,
+  HACS Custom Component, Perplexity Scripts, SDK, Knowledge Graph, Tests
+- **Version vereinheitlicht** — config.json auf 3.9.0 (beide Repos synchron)
+- **Nichts verloren** — Jede einzigartige Datei aus jedem Branch wurde eingesammelt
 
 ### Production-Ready Bug Sweep
 
