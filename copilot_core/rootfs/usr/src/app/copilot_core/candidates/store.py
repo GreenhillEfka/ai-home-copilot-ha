@@ -17,6 +17,7 @@ Persistence: Simple JSON file storage for MVP.
 from __future__ import annotations
 
 import json
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -78,29 +79,40 @@ class CandidateStore:
     def __init__(self, storage_path: str = "/data/candidates.json"):
         self.storage_path = Path(storage_path)
         self._candidates: Dict[str, Candidate] = {}
+        # RLock allows nested calls (e.g. add_candidate -> _save_to_disk)
+        self._lock = threading.RLock()
         self._load_from_disk()
     
     def _load_from_disk(self) -> None:
         """Load candidates from JSON file."""
         if not self.storage_path.exists():
             return
-        
-        try:
-            with open(self.storage_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                for candidate_data in data.get("candidates", []):
-                    candidate = Candidate.from_dict(candidate_data)
-                    self._candidates[candidate.candidate_id] = candidate
-        except Exception:
-            # Corrupted file - start fresh but don't crash
-            self._candidates = {}
+
+        with self._lock:
+            try:
+                with open(self.storage_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    for candidate_data in data.get("candidates", []):
+                        candidate = Candidate.from_dict(candidate_data)
+                        self._candidates[candidate.candidate_id] = candidate
+            except Exception:
+                # Corrupted file - start fresh but don't crash
+                self._candidates = {}
     
     def _save_to_disk(self) -> None:
-        """Persist candidates to JSON file."""
+        """Persist candidates to JSON file (caller must hold self._lock)."""
         try:
             # Ensure directory exists
             self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
+            # Backup existing file before overwrite
+            backup_path = self.storage_path.with_suffix('.bak')
+            if self.storage_path.exists():
+                try:
+                    self.storage_path.replace(backup_path)
+                except OSError:
+                    pass  # best-effort backup
+
             # Write atomically via temp file
             temp_path = self.storage_path.with_suffix('.tmp')
             data = {
@@ -108,100 +120,104 @@ class CandidateStore:
                 "saved_at": time.time(),
                 "candidates": [c.to_dict() for c in self._candidates.values()]
             }
-            
+
             with open(temp_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
-            
+
             # Atomic replace
             temp_path.replace(self.storage_path)
-            
+
         except Exception as e:
             raise RuntimeError(f"Failed to save candidates: {e}")
     
-    def add_candidate(self, pattern_id: str, evidence: Dict[str, Any], 
+    def add_candidate(self, pattern_id: str, evidence: Dict[str, Any],
                      metadata: Dict[str, Any] = None) -> str:
         """Add new candidate from pattern discovery."""
-        candidate = Candidate(
-            pattern_id=pattern_id,
-            evidence=evidence,
-            metadata=metadata or {}
-        )
-        
-        self._candidates[candidate.candidate_id] = candidate
-        self._save_to_disk()
-        return candidate.candidate_id
-    
+        with self._lock:
+            candidate = Candidate(
+                pattern_id=pattern_id,
+                evidence=evidence,
+                metadata=metadata or {}
+            )
+            self._candidates[candidate.candidate_id] = candidate
+            self._save_to_disk()
+            return candidate.candidate_id
+
     def get_candidate(self, candidate_id: str) -> Optional[Candidate]:
         """Get candidate by ID."""
-        return self._candidates.get(candidate_id)
-    
+        with self._lock:
+            return self._candidates.get(candidate_id)
+
     def update_candidate_state(self, candidate_id: str, new_state: CandidateState,
                               retry_after: float = None) -> bool:
         """Update candidate state. Returns True if found and updated."""
-        candidate = self._candidates.get(candidate_id)
-        if not candidate:
-            return False
-        
-        candidate.update_state(new_state, retry_after)
-        self._save_to_disk()
-        return True
-    
-    def list_candidates(self, state: CandidateState = None, 
+        with self._lock:
+            candidate = self._candidates.get(candidate_id)
+            if not candidate:
+                return False
+            candidate.update_state(new_state, retry_after)
+            self._save_to_disk()
+            return True
+
+    def list_candidates(self, state: CandidateState = None,
                        include_ready_deferred: bool = False) -> List[Candidate]:
         """List candidates, optionally filtered by state."""
-        result = []
-        now = time.time()
-        
-        for candidate in self._candidates.values():
-            # State filter
-            if state and candidate.state != state:
-                continue
-            
-            # Handle deferred candidates
-            if candidate.state == "deferred":
-                if include_ready_deferred and candidate.retry_after and now >= candidate.retry_after:
+        with self._lock:
+            result = []
+            now = time.time()
+
+            for candidate in self._candidates.values():
+                # State filter
+                if state and candidate.state != state:
+                    continue
+
+                # Handle deferred candidates
+                if candidate.state == "deferred":
+                    if include_ready_deferred and candidate.retry_after and now >= candidate.retry_after:
+                        result.append(candidate)
+                    elif not include_ready_deferred:
+                        result.append(candidate)
+                    # Skip deferred candidates that aren't ready yet
+                    continue
+                else:
                     result.append(candidate)
-                elif not include_ready_deferred:
-                    result.append(candidate)
-                # Skip deferred candidates that aren't ready yet (when include_ready_deferred=True)
-                continue
-            else:
-                result.append(candidate)
-        
-        # Sort by created_at (newest first)
-        return sorted(result, key=lambda c: c.created_at, reverse=True)
+
+            # Sort by created_at (newest first)
+            return sorted(result, key=lambda c: c.created_at, reverse=True)
     
     def get_stats(self) -> Dict[str, Any]:
         """Get storage statistics."""
-        now = time.time()
-        stats = {"total": len(self._candidates)}
-        
-        # Count by state
-        for state in ["pending", "offered", "accepted", "dismissed", "deferred"]:
-            stats[state] = len([c for c in self._candidates.values() if c.state == state])
-        
-        # Ready deferred candidates
-        ready_deferred = len([
-            c for c in self._candidates.values() 
-            if c.state == "deferred" and c.retry_after and now >= c.retry_after
-        ])
-        stats["ready_deferred"] = ready_deferred
-        
-        return stats
-    
+        with self._lock:
+            now = time.time()
+            stats = {"total": len(self._candidates)}
+
+            # Count by state
+            for state in ["pending", "offered", "accepted", "dismissed", "deferred"]:
+                stats[state] = len([c for c in self._candidates.values() if c.state == state])
+
+            # Ready deferred candidates
+            ready_deferred = len([
+                c for c in self._candidates.values()
+                if c.state == "deferred" and c.retry_after and now >= c.retry_after
+            ])
+            stats["ready_deferred"] = ready_deferred
+
+            return stats
+
     def cleanup_old_candidates(self, max_age_days: int = 30) -> int:
         """Remove old dismissed/accepted candidates. Returns count removed."""
-        cutoff = time.time() - (max_age_days * 24 * 60 * 60)
-        to_remove = []
-        
-        for candidate_id, candidate in self._candidates.items():
-            if candidate.state in ["dismissed", "accepted"] and candidate.updated_at < cutoff:
-                to_remove.append(candidate_id)
-        
-        for candidate_id in to_remove:
-            del self._candidates[candidate_id]
-        
-        if to_remove:
-            self._save_to_disk()
-        
-        return len(to_remove)
+        with self._lock:
+            cutoff = time.time() - (max_age_days * 24 * 60 * 60)
+            to_remove = []
+
+            for candidate_id, candidate in self._candidates.items():
+                if candidate.state in ["dismissed", "accepted"] and candidate.updated_at < cutoff:
+                    to_remove.append(candidate_id)
+
+            for candidate_id in to_remove:
+                del self._candidates[candidate_id]
+
+            if to_remove:
+                self._save_to_disk()
+
+            return len(to_remove)
