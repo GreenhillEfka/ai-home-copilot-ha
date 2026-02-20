@@ -1,5 +1,5 @@
 {
-  "name": "AI Home CoPilot: UniFi Module Test (einmalig)",
+  "name": "PilotSuite: UniFi Module Test (einmalig)",
   "interval": null,
   "timeoutSeconds": 600,
   "model": "ollama/glm-5:cloud",

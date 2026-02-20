@@ -2,7 +2,7 @@
 UniFi Neuron - Network Monitoring Module
 
 Provides WAN status, client roaming, and traffic baselines
-for AI Home CoPilot context awareness.
+for PilotSuite context awareness.
 """
 
 __version__ = "0.1.0"

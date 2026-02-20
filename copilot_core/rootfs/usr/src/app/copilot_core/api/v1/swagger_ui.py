@@ -38,7 +38,7 @@ def swagger_ui():
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>AI Home CoPilot API Documentation</title>
+    <title>PilotSuite API Documentation</title>
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css">
     <style>
         html { box-sizing: border-box; overflow: -moz-scrollbars-vertical; overflow-y: scroll; }
@@ -108,7 +108,7 @@ def _generate_inline_spec() -> str:
     """Generate a minimal OpenAPI spec inline if file not found."""
     return """openapi: 3.0.3
 info:
-  title: AI Home CoPilot API
+  title: PilotSuite API
   version: 0.4.33
   description: |
     Interactive API documentation loaded from external file.

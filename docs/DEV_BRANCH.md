@@ -1,4 +1,4 @@
-# Dev Branch Policy (Home-Assistant-Copilot)
+# Dev Branch Policy (pilotsuite-styx-core)
 
 ## Branches
 - **`main`**: stabil / release-getrieben

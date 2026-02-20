@@ -1,4 +1,4 @@
-# AI Home CoPilot – Next version concept (draft)
+# PilotSuite – Next version concept (draft)
 
 User goal (2026-02-07):
 - Build first *Stimmungsmodule* (mood modules).

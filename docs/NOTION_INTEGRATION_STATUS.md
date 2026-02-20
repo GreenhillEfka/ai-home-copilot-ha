@@ -1,4 +1,4 @@
-# AI Home CoPilot - Notion Integration
+# PilotSuite - Notion Integration
 
 ## Problem
 

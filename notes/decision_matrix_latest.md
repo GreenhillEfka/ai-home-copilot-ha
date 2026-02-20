@@ -1,4 +1,4 @@
-# Decision Matrix — AI Home CoPilot (2026-02-14 21:10)
+# Decision Matrix — PilotSuite (2026-02-14 21:10)
 
 **Status:** RUN #10 | **Version:** 1.1 | **Urgency:** 🔴 CRITICAL
 
@@ -150,5 +150,5 @@ See separate implementation plan if Option A chosen.
 ---
 
 *Decision Matrix updated: 2026-02-14 21:10 UTC+1*
-*Worker: AI Home CoPilot Decision Matrix*
+*Worker: PilotSuite Decision Matrix*
 *Run: #10*

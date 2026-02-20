@@ -1,7 +1,7 @@
 # Copilot-Core — DeepSeek-R1 Ollama Integration Scope
 
 > Technischer Scope für die LLM-Integration auf der Core-Seite (Add-on).
-> Siehe auch: `ai-home-copilot-ha/docs/DEEPSEEK_R1_SCOPE.md` für den HA-seitigen Scope.
+> Siehe auch: `pilotsuite-styx-ha/docs/DEEPSEEK_R1_SCOPE.md` für den HA-seitigen Scope.
 
 ---
 

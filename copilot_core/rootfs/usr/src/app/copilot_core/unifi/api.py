@@ -2,7 +2,7 @@
 UniFi Network Monitoring REST API
 
 Flask blueprint for UniFi neuron endpoints.
-Provides network context for AI Home CoPilot suggestions.
+Provides network context for PilotSuite suggestions.
 """
 
 import logging

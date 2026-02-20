@@ -1,4 +1,4 @@
-# AI Home CoPilot Architecture Review
+# PilotSuite Architecture Review
 **Datum:** 2026-02-14 22:09
 **Modell:** Gemini 2.5 Pro
 **Scope:** HA Integration (ai_home_copilot_hacs_repo) + Core Add-on (ha-copilot-repo)
@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Das AI Home CoPilot Projekt verfügt über eine grundsätzlich solide Zwei-Komponenten-Architektur, die eine saubere Trennung von UI (HA-Integration) und Core-Logik (Add-on) anstrebt. Die Analyse zeigt jedoch signifikante Inkonsistenzen zwischen den beiden Repositories, insbesondere bei Versionierung und API-Nutzung. Die Kernarchitektur-Konzepte wie "Neuronen" und die "State→Neuron→Mood"-Kette sind in der Dokumentation zwar beschrieben, im Code aber nur rudimentär und prozedural statt in klaren Abstraktionen umgesetzt. Es gibt wachsende technische Schulden durch redundanten Code und offene TODOs. Die Sicherheit muss durch Härtung der Webhooks und striktere Eingabevalidierung verbessert werden.
+Das PilotSuite Projekt verfügt über eine grundsätzlich solide Zwei-Komponenten-Architektur, die eine saubere Trennung von UI (HA-Integration) und Core-Logik (Add-on) anstrebt. Die Analyse zeigt jedoch signifikante Inkonsistenzen zwischen den beiden Repositories, insbesondere bei Versionierung und API-Nutzung. Die Kernarchitektur-Konzepte wie "Neuronen" und die "State→Neuron→Mood"-Kette sind in der Dokumentation zwar beschrieben, im Code aber nur rudimentär und prozedural statt in klaren Abstraktionen umgesetzt. Es gibt wachsende technische Schulden durch redundanten Code und offene TODOs. Die Sicherheit muss durch Härtung der Webhooks und striktere Eingabevalidierung verbessert werden.
 
 ---
 

@@ -24,6 +24,6 @@ Implement MediaContext v0.1 as read-only signals (Music vs TV/Other) without bre
 ## User actions to validate
 1) Update integration to v0.1.17 via HACS + restart HA.
 2) Set:
-   - AI Home CoPilot media music players (csv): spotify + sonos
-   - AI Home CoPilot media TV players (csv): smarttv + apple tv
+   - PilotSuite media music players (csv): spotify + sonos
+   - PilotSuite media TV players (csv): smarttv + apple tv
 3) Play music / turn on TV; verify new sensors in HA.

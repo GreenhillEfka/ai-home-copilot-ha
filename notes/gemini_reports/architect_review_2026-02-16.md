@@ -1,4 +1,4 @@
-# AI Home CoPilot - Architecture Review Report
+# PilotSuite - Architecture Review Report
 
 **Date:** 2026-02-16 08:46  
 **Reviewer:** Gemini Architect Worker (fallback: direct analysis)  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The AI Home CoPilot project is **production-ready** with an overall score of **8.9/10**. The two-repo architecture (HA Integration + Core Add-on) is well-designed with clear separation of concerns. Recent fixes (bare except replacement, zone integration) have improved code quality. Minor technical debt exists in deprecated modules and TODO markers.
+The PilotSuite project is **production-ready** with an overall score of **8.9/10**. The two-repo architecture (HA Integration + Core Add-on) is well-designed with clear separation of concerns. Recent fixes (bare except replacement, zone integration) have improved code quality. Minor technical debt exists in deprecated modules and TODO markers.
 
 **Key Findings:**
 - ✅ 346 tests passing in HA Integration
@@ -235,7 +235,7 @@ HA Integration (HACS)          Core Add-on (Docker)
 
 ## 9. Conclusion
 
-The AI Home CoPilot project demonstrates **excellent architectural discipline** with:
+The PilotSuite project demonstrates **excellent architectural discipline** with:
 
 - Clean separation between HA Integration (UI/Events) and Core Add-on (Business Logic)
 - Well-designed module pattern with standardized lifecycle

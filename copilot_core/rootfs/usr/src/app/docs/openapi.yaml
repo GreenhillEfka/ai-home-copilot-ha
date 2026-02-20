@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: AI Home CoPilot Core API
+  title: PilotSuite Core API
   description: |
-    REST API for the AI Home CoPilot Core Add-on.
+    REST API for the PilotSuite Core Add-on.
     
     This API provides endpoints for:
     - Habitus pattern mining and rules discovery
@@ -20,8 +20,8 @@ info:
     Event endpoints support `Idempotency-Key` header for deduplication.
   version: 0.9.1-alpha.6
   contact:
-    name: AI Home CoPilot
-    url: https://github.com/GreenhillEfka/Home-Assistant-Copilot
+    name: PilotSuite
+    url: https://github.com/GreenhillEfka/pilotsuite-styx-core
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT

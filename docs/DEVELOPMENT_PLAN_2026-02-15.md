@@ -104,7 +104,7 @@ sensor.ai_copilot_mood_confidence:
 ```yaml
 openapi: 3.0.0
 info:
-  title: AI Home CoPilot Core API
+  title: PilotSuite Core API
   version: 1.0.0
 paths:
   /api/v1/status:

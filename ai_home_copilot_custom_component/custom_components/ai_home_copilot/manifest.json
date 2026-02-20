@@ -1,6 +1,6 @@
 {
   "domain": "ai_home_copilot",
-  "name": "AI Home CoPilot",
+  "name": "PilotSuite",
   "codeowners": [],
   "config_flow": true,
   "documentation": "https://example.invalid/ai_home_copilot",

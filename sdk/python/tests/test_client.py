@@ -1,5 +1,5 @@
 """
-Tests for AI Home CoPilot Python SDK.
+Tests for PilotSuite Python SDK.
 """
 
 import unittest

@@ -96,7 +96,7 @@ entities:
 
 ### Options Flow
 
-Navigate to **Settings → Devices & Services → AI Home CoPilot → Configure**
+Navigate to **Settings → Devices & Services → PilotSuite → Configure**
 
 #### Neuron Configuration
 

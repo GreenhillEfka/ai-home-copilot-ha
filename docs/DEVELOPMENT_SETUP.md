@@ -1,4 +1,4 @@
-# AI Home CoPilot - Entwicklungs-Setup
+# PilotSuite - Entwicklungs-Setup
 
 ## Überblick
 

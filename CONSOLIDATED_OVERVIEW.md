@@ -1,19 +1,19 @@
 # PilotSuite — Konsolidierte Gesamtuebersicht aller Repos & Branches
 
 > **Erstellt:** 2026-02-18 | Analyse beider Repos mit allen Branches, Tags, Commits und Code
-> **Repos:** Home-Assistant-Copilot (Core Add-on) + ai-home-copilot-ha (HACS Integration)
+> **Repos:** pilotsuite-styx-core (Core Add-on) + pilotsuite-styx-ha (HACS Integration)
 > **Zweck:** Alles was je gemacht wurde in ein Gesamtkonzept zusammengefuehrt
 
 ---
 
 ## 1. Projektuebersicht
 
-**PilotSuite** (ehemals AI Home CoPilot) ist ein zweiteiliges System fuer Home Assistant:
+**PilotSuite** (ehemals PilotSuite) ist ein zweiteiliges System fuer Home Assistant:
 
 | Komponente | Repo | Rolle | Aktuelle Version | Technologie |
 |-----------|------|-------|-----------------|-------------|
-| **Core Add-on** | `Home-Assistant-Copilot` | Backend: KI-Engine, Brain Graph, APIs | v0.9.8-alpha.1 | Flask/Waitress, Python 3.11+, Docker |
-| **HACS Integration** | `ai-home-copilot-ha` | Frontend: Sensoren, Dashboard, HA-Anbindung | v0.15.2 | HA asyncio, Python 3.11+ |
+| **Core Add-on** | `pilotsuite-styx-core` | Backend: KI-Engine, Brain Graph, APIs | v0.9.8-alpha.1 | Flask/Waitress, Python 3.11+, Docker |
+| **HACS Integration** | `pilotsuite-styx-ha` | Frontend: Sensoren, Dashboard, HA-Anbindung | v0.15.2 | HA asyncio, Python 3.11+ |
 
 **Vision:** Ein privacy-first, lokaler KI-Assistent der Verhaltensmuster im Smart Home lernt und intelligente Automatisierungen vorschlaegt — ohne Cloud, ohne eigenmaechtige Aktionen, immer mit Zustimmung des Nutzers.
 
@@ -73,7 +73,7 @@ States → Neuronen → Moods → Synapsen → Vorschlaege → Dialog/Freigabe �
 │                                                                       │
 │  ┌────────────────────────────────────────────────────────────────┐  │
 │  │        HACS Integration (ai_home_copilot) — Port: —            │  │
-│  │        Repo: ai-home-copilot-ha                                 │  │
+│  │        Repo: pilotsuite-styx-ha                                 │  │
 │  │                                                                  │  │
 │  │  22+ Core-Module      80+ Sensoren      15+ Dashboard Cards    │  │
 │  │  ┌──────────────┐   ┌─────────────┐   ┌────────────────────┐  │  │
@@ -101,7 +101,7 @@ States → Neuronen → Moods → Synapsen → Vorschlaege → Dialog/Freigabe �
 │                                 ▼                                     │
 │  ┌────────────────────────────────────────────────────────────────┐  │
 │  │        Core Add-on (copilot_core) — Port 8099                  │  │
-│  │        Repo: Home-Assistant-Copilot                             │  │
+│  │        Repo: pilotsuite-styx-core                             │  │
 │  │                                                                  │  │
 │  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌─────────────┐ │  │
 │  │  │ Brain      │ │ Habitus    │ │ Mood       │ │ Candidates  │ │  │
@@ -559,7 +559,7 @@ Im Branch `wip/phase5-cross-home` angelegt (Grundgeruest).
 
 ## 15. Komplette Branch-Uebersicht
 
-### Home-Assistant-Copilot (Core Add-on)
+### pilotsuite-styx-core (Core Add-on)
 
 | Branch | Zweck | Status | Unique Features |
 |--------|-------|--------|-----------------|
@@ -573,7 +573,7 @@ Im Branch `wip/phase5-cross-home` angelegt (Grundgeruest).
 | **claude/research-repos-scope-4e3L6** | Research | Abgeschlossen | DeepSeek-R1 Integration Scope |
 | **backup/pre-merge-20260216** | Backup | Archiv | Backup vor Merge-Refactoring |
 
-### ai-home-copilot-ha (HACS Integration)
+### pilotsuite-styx-ha (HACS Integration)
 
 | Branch | Zweck | Status | Unique Features |
 |--------|-------|--------|-----------------|

@@ -1,14 +1,14 @@
 # PilotSuite — Styx (Core Add-on)
 
-[![Release](https://img.shields.io/github/v/release/GreenhillEfka/Home-Assistant-Copilot)](https://github.com/GreenhillEfka/Home-Assistant-Copilot/releases)
-[![CI](https://github.com/GreenhillEfka/Home-Assistant-Copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/GreenhillEfka/Home-Assistant-Copilot/actions)
+[![Release](https://img.shields.io/github/v/release/GreenhillEfka/pilotsuite-styx-core)](https://github.com/GreenhillEfka/pilotsuite-styx-core/releases)
+[![CI](https://github.com/GreenhillEfka/pilotsuite-styx-core/actions/workflows/ci.yml/badge.svg)](https://github.com/GreenhillEfka/pilotsuite-styx-core/actions)
 
 **Styx** — ein privacy-first, lokaler KI-Assistent fuer Home Assistant. Lernt die Muster deines Zuhauses, bewertet Stimmung und Kontext, schlaegt intelligente Automatisierungen vor — und handelt nur mit deiner Zustimmung.
 
 Dieses Repo ist das **PilotSuite Backend (Core Add-on)** — es laeuft als Home Assistant Add-on auf Port **8909** mit Flask + Waitress und bundled Ollama (LLM).
 
 Die dazugehoerige **HACS-Integration** (Sensoren, Dashboard Cards, Module):
-[PilotSuite HACS Integration](https://github.com/GreenhillEfka/ai-home-copilot-ha)
+[PilotSuite HACS Integration](https://github.com/GreenhillEfka/pilotsuite-styx-ha)
 
 ```
 Home Assistant
@@ -26,14 +26,14 @@ Home Assistant
 1. Home Assistant → **Settings** → **Add-ons** → **Add-on Store**
 2. Menue (⋮) → **Repositories** → URL hinzufuegen:
    ```
-   https://github.com/GreenhillEfka/Home-Assistant-Copilot
+   https://github.com/GreenhillEfka/pilotsuite-styx-core
    ```
 3. **PilotSuite Core** installieren und starten
 4. Das Add-on laeuft auf Port **8909** mit bundled Ollama
 
 ### HACS Integration
 
-Siehe: [ai-home-copilot-ha Installation](https://github.com/GreenhillEfka/ai-home-copilot-ha#schnellstart)
+Siehe: [pilotsuite-styx-ha Installation](https://github.com/GreenhillEfka/pilotsuite-styx-ha#schnellstart)
 
 ## Features
 
@@ -138,7 +138,7 @@ Authorization: Bearer <token>
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Services, Datenfluss, Persistenz |
 | [ROADMAP](docs/ROADMAP.md) | Phase 5-6, Zukunftsplaene |
 | [CHANGELOG](CHANGELOG.md) | Release-Historie |
-| [HACS Integration](https://github.com/GreenhillEfka/ai-home-copilot-ha) | Sensoren, Module, Dashboard |
+| [HACS Integration](https://github.com/GreenhillEfka/pilotsuite-styx-ha) | Sensoren, Module, Dashboard |
 
 ## Lizenz
 

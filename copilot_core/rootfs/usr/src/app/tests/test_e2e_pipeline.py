@@ -447,7 +447,7 @@ def test_flask_api_smoke(result: TestResult):
 
 def main():
     print("=" * 60)
-    print("AI Home CoPilot Core — End-to-End Pipeline Test")
+    print("PilotSuite Core — End-to-End Pipeline Test")
     print("=" * 60)
 
     result = TestResult()

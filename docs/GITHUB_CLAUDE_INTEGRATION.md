@@ -1,4 +1,4 @@
-# Claude CLI Integration für AI Home CoPilot
+# Claude CLI Integration für PilotSuite
 
 ## Überblick
 
@@ -19,7 +19,7 @@ gh auth status
 
 ```bash
 # Repositories
-export REPO_HA="GreenhillEfka/ai-home-copilot-ha"
+export REPO_HA="GreenhillEfka/pilotsuite-styx-ha"
 export REPO_CORE="GreenhillEfka/ai-home-copilot-addon"
 
 # Clonen (falls nicht vorhanden)

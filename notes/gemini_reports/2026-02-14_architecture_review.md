@@ -1,4 +1,4 @@
-# AI Home CoPilot Architecture Review
+# PilotSuite Architecture Review
 
 **Date:** 2026-02-14 23:00 CET  
 **Analyzer:** Gemini Architect Worker (fallback: Manual + Ollama)  
@@ -343,7 +343,7 @@ max_nodes=500, max_edges=1500  # Hardcoded defaults
 
 ## Conclusion
 
-The AI Home CoPilot project demonstrates mature architecture with clear separation between HA Integration and Core Add-on. The modular runtime design enables extensibility while the privacy-first and governance-first principles ensure safe home automation.
+The PilotSuite project demonstrates mature architecture with clear separation between HA Integration and Core Add-on. The modular runtime design enables extensibility while the privacy-first and governance-first principles ensure safe home automation.
 
 **Key Achievements:**
 - M0-M3 milestones complete

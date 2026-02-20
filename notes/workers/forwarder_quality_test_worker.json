@@ -1,5 +1,5 @@
 {
-  "name": "AI Home CoPilot: Forwarder Quality Test (einmalig)",
+  "name": "PilotSuite: Forwarder Quality Test (einmalig)",
   "interval": null,
   "timeoutSeconds": 600,
   "model": "ollama/glm-5:cloud",

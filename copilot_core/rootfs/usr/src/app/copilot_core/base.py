@@ -1,5 +1,5 @@
 """
-CopilotModule Base Classes - AI Home CoPilot v0.7.0 Modular Runtime Architecture
+CopilotModule Base Classes - PilotSuite v0.7.0 Modular Runtime Architecture
 
 This module provides the foundational base classes for all Copilot Core modules,
 ensuring consistent interface patterns, lifecycle management, and error handling.
@@ -37,7 +37,7 @@ class ModuleMetadata:
         name: str,
         version: str,
         description: str = "",
-        author: str = "AI Home CoPilot",
+        author: str = "PilotSuite",
         dependencies: Optional[list[str]] = None,
     ):
         self.name = name
@@ -62,7 +62,7 @@ class ModuleMetadata:
 
 class CopilotModule(ABC):
     """
-    Abstract base class for all AI Home CoPilot modules.
+    Abstract base class for all PilotSuite modules.
     
     Provides:
     - Standardized module lifecycle (init, start, stop, shutdown)
@@ -472,7 +472,7 @@ def create_module_metadata(
     name: str,
     version: str,
     description: str = "",
-    author: str = "AI Home CoPilot",
+    author: str = "PilotSuite",
     dependencies: Optional[list[str]] = None,
 ) -> ModuleMetadata:
     """Factory function for creating ModuleMetadata."""

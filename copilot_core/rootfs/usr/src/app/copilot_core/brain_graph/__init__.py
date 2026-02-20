@@ -1,5 +1,5 @@
 """
-Brain Graph module for AI Home CoPilot.
+Brain Graph module for PilotSuite.
 
 Privacy-first, bounded graph of entities, zones, devices, and relationships
 with automatic decay and salience-based pruning.

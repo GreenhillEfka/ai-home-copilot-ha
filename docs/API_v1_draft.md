@@ -1,4 +1,4 @@
-# AI Home CoPilot Core – API v1 (Draft)
+# PilotSuite Core – API v1 (Draft)
 
 Auth: `X-Auth-Token: <token>`
 Content-Type: application/json

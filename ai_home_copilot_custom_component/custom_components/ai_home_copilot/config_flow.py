@@ -45,7 +45,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             except Exception:  # noqa: BLE001
                 errors["base"] = "cannot_connect"
             else:
-                title = f"AI Home CoPilot ({user_input[CONF_HOST]}:{user_input[CONF_PORT]})"
+                title = f"PilotSuite ({user_input[CONF_HOST]}:{user_input[CONF_PORT]})"
                 return self.async_create_entry(title=title, data=user_input)
 
         schema = vol.Schema(

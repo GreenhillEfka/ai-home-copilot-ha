@@ -1,4 +1,4 @@
-"""Quick Search API for AI Home CoPilot.
+"""Quick Search API for PilotSuite.
 
 Provides fast search across:
 - HA Entities (by name, domain, state, area)

@@ -1,4 +1,4 @@
-# Architecture Review - AI Home CoPilot
+# Architecture Review - PilotSuite
 **Datum:** 2026-02-15 23:26  
 **Reviewer:** Gemini Architect (1M Context)
 

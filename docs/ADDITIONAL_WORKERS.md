@@ -29,7 +29,7 @@
 ### Struktur
 ```json
 {
-  "name": "AI Home CoPilot: {Module Name} Test",
+  "name": "PilotSuite: {Module Name} Test",
   "interval": null,  // einmalig
   "timeoutSeconds": 600,
   "model": "ollama/glm-5:cloud",

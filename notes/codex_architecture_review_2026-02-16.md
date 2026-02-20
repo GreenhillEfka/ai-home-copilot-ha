@@ -1,4 +1,4 @@
-# Codex Architecture Review – AI Home CoPilot
+# Codex Architecture Review – PilotSuite
 
 **Date:** 2026-02-16  
 **Reviewer:** Codex Architecture Reviewer  
@@ -12,7 +12,7 @@
 
 **Overall Rating: 8/10**
 
-The AI Home CoPilot architecture demonstrates solid engineering practices with clear separation of concerns, well-defined abstractions, and thoughtful integration with Home Assistant's patterns. The system successfully balances local-first architecture with scalable core add-on capabilities.
+The PilotSuite architecture demonstrates solid engineering practices with clear separation of concerns, well-defined abstractions, and thoughtful integration with Home Assistant's patterns. The system successfully balances local-first architecture with scalable core add-on capabilities.
 
 However, there are critical integration gaps between the HA Integration and Core Add-on that need addressing before production deployment.
 
@@ -274,7 +274,7 @@ The architecture is production-ready for core functionality with important cavea
 
 ## Conclusion
 
-The AI Home CoPilot demonstrates sophisticated understanding of smart home orchestration with a clear architectural vision. The Habitus Zones concept is particularly strong, balancing user control with AI-assisted automation.
+The PilotSuite demonstrates sophisticated understanding of smart home orchestration with a clear architectural vision. The Habitus Zones concept is particularly strong, balancing user control with AI-assisted automation.
 
 The main risk is the zone integration gap, which renders the system partially "zone-blind." Once this is addressed, the architecture is solid for production deployment.
 

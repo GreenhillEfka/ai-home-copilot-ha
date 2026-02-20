@@ -1,4 +1,4 @@
-# AI Home CoPilot (custom integration)
+# PilotSuite (custom integration)
 
 This folder contains a Home Assistant custom integration: `ai_home_copilot`.
 
@@ -12,7 +12,7 @@ Example:
 Then restart Home Assistant.
 
 ## Setup
-Settings → Devices & services → Add integration → **AI Home CoPilot**
+Settings → Devices & services → Add integration → **PilotSuite**
 
 Config fields:
 - Host (default: `homeassistant.local`) — set to your HA host LAN IP/hostname if needed

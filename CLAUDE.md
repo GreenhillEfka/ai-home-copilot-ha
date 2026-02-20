@@ -6,7 +6,7 @@
 
 ## Projektueberblick
 
-**PilotSuite Core Add-on** (ehemals AI Home CoPilot Core) ist das Backend fuer die PilotSuite-Plattform. Es laeuft als Home Assistant Add-on auf Port **8909** und stellt eine Flask/Waitress REST-API bereit.
+**PilotSuite Core Add-on** (ehemals PilotSuite Core) ist das Backend fuer die PilotSuite-Plattform. Es laeuft als Home Assistant Add-on auf Port **8909** und stellt eine Flask/Waitress REST-API bereit.
 
 Das Core Add-on implementiert die gesamte Intelligenz: Neural Pipeline, Brain Graph, Habitus Mining, Mood Engine, Candidate Management und mehr.
 

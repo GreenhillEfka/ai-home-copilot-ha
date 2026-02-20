@@ -1,4 +1,4 @@
-"""User Preference API endpoints for AI Home CoPilot Core.
+"""User Preference API endpoints for PilotSuite Core.
 
 Provides endpoints for Multi-User Preference Learning (MUP-L).
 Privacy-first: user IDs remain local and are never forwarded to external services.

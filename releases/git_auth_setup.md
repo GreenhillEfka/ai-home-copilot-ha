@@ -46,10 +46,10 @@ cat ~/.ssh/copilot_deploy.pub
 
 # Update remotes to use SSH
 cd /config/.openclaw/workspace/ha-copilot-repo
-git remote set-url origin git@github.com:GreenhillEfka/Home-Assistant-Copilot.git
+git remote set-url origin git@github.com:GreenhillEfka/pilotsuite-styx-core.git
 
 cd /config/.openclaw/workspace/ai_home_copilot_hacs_repo  
-git remote set-url origin git@github.com:GreenhillEfka/ai-home-copilot-ha.git
+git remote set-url origin git@github.com:GreenhillEfka/pilotsuite-styx-ha.git
 ```
 
 ## Post-Authentication Deployment

@@ -1,4 +1,4 @@
-# AI Home CoPilot – Blueprint v0.1 (Home Assistant Add-on + Custom Panel)
+# PilotSuite – Blueprint v0.1 (Home Assistant Add-on + Custom Panel)
 
 Status: Entwurf für MVP-Umsetzung. **Keine Technikdetails/YAML**, aber implementierungsnah.
 

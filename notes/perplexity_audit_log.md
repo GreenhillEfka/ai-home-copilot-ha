@@ -1,4 +1,4 @@
-# Perplexity Deep Audit Log - AI Home CoPilot
+# Perplexity Deep Audit Log - PilotSuite
 
 ## Audit vom 2026-02-15 12:36 CET
 
@@ -36,7 +36,7 @@
 
 ---
 
-### Vergleich mit AI Home CoPilot (v0.8.10)
+### Vergleich mit PilotSuite (v0.8.10)
 
 | Feature | HA Trend | CoPilot Status | Gap? |
 |---------|----------|----------------|------|
@@ -103,7 +103,7 @@
 
 ### Fazit
 
-Der AI Home CoPilot ist **sehr gut positioniert** im aktuellen Home Assistant Ökosystem:
+Der PilotSuite ist **sehr gut positioniert** im aktuellen Home Assistant Ökosystem:
 - ✅ Privacy-First Ansatz entspricht HA-Philosophie
 - ✅ Neuronales System ist innovativ und einzigartig
 - ✅ Vorschlags-basierter Ansatz aligniert mit HA "Suggest with AI"
@@ -122,5 +122,5 @@ Der AI Home CoPilot ist **sehr gut positioniert** im aktuellen Home Assistant Ö
 
 ---
 
-*Audit durchgeführt von: AI Home CoPilot Autopilot*
+*Audit durchgeführt von: PilotSuite Autopilot*
 *Modell: Perplexity sonar-reasoning-pro*

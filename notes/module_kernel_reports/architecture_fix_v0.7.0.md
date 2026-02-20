@@ -1,4 +1,4 @@
-# AI Home CoPilot v0.7.0 Architecture Fix Report
+# PilotSuite v0.7.0 Architecture Fix Report
 
 **Date:** 2026-02-14  
 **Author:** Architecture Fixer  

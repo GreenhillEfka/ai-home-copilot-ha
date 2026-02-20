@@ -487,14 +487,14 @@ ZoneGraphResponse = {
 
 | Entity Type | Entity ID | Name | Purpose |
 |-------------|-----------|------|---------|
-| **Text** | `sensor.habitus_zones_v2_json` | AI Home CoPilot habitus zones v2 (bulk editor) | Bulk-Zone-Editing (YAML/JSON) |
-| **Button** | `button.habitus_zones_v2_validate` | AI Home CoPilot validate habitus zones v2 | Validierung mit Details |
-| **Button** | `button.habitus_zones_v2_sync_graph` | AI Home CoPilot sync zones to brain graph | Manuelle Graph-Sync |
-| **Sensor** | `sensor.habitus_zones_v2_count` | AI Home CoPilot habitus zones v2 count | Anzahl konfigurierter Zones |
-| **Sensor** | `sensor.habitus_zones_v2_health` | AI Home CoPilot habitus zones v2 health | Gesamt-Health-Status |
-| **Sensor** | `sensor.habitus_zones_v2_states` | AI Home CoPilot habitus zones v2 states | Aggregierte State-Übersicht |
-| **Select** | `select.habitus_zones_v2_global_state` | AI Home CoPilot zones global state | Globaler Mode (auto/manual/disabled) |
-| **Button** | `button.habitus_zones_v2_reload` | AI Home CoPilot reload zones v2 | Reload + Re-sync |
+| **Text** | `sensor.habitus_zones_v2_json` | PilotSuite habitus zones v2 (bulk editor) | Bulk-Zone-Editing (YAML/JSON) |
+| **Button** | `button.habitus_zones_v2_validate` | PilotSuite validate habitus zones v2 | Validierung mit Details |
+| **Button** | `button.habitus_zones_v2_sync_graph` | PilotSuite sync zones to brain graph | Manuelle Graph-Sync |
+| **Sensor** | `sensor.habitus_zones_v2_count` | PilotSuite habitus zones v2 count | Anzahl konfigurierter Zones |
+| **Sensor** | `sensor.habitus_zones_v2_health` | PilotSuite habitus zones v2 health | Gesamt-Health-Status |
+| **Sensor** | `sensor.habitus_zones_v2_states` | PilotSuite habitus zones v2 states | Aggregierte State-Übersicht |
+| **Select** | `select.habitus_zones_v2_global_state` | PilotSuite zones global state | Globaler Mode (auto/manual/disabled) |
+| **Button** | `button.habitus_zones_v2_reload` | PilotSuite reload zones v2 | Reload + Re-sync |
 
 ### 7.2 Sensor: Zone States
 
@@ -502,7 +502,7 @@ ZoneGraphResponse = {
 class HabitusZonesStatesSensor(CopilotBaseEntity, SensorEntity):
     """Aggregierte Zone States - v2 neue Entity."""
 
-    _attr_name = "AI Home CoPilot habitus zones v2 states"
+    _attr_name = "PilotSuite habitus zones v2 states"
     _attr_unique_id = "ai_home_copilot_habitus_zones_v2_states"
     _attr_icon = "mdi:state-machine"
     _attr_state_class = None
@@ -534,7 +534,7 @@ class HabitusZonesStatesSensor(CopilotBaseEntity, SensorEntity):
 class HabitusZonesGlobalStateSelect(CopilotBaseEntity, SelectEntity):
     """Globaler Zone Mode - v2 neue Entity."""
 
-    _attr_name = "AI Home CoPilot zones global state"
+    _attr_name = "PilotSuite zones global state"
     _attr_unique_id = "ai_home_copilot_habitus_zones_v2_global_state"
     _attr_icon = "mdi:cog-transfer"
     _attr_options = ["auto", "manual", "disabled"]
@@ -554,7 +554,7 @@ class HabitusZonesGlobalStateSelect(CopilotBaseEntity, SelectEntity):
 class HabitusZonesSyncGraphButton(CopilotBaseEntity, ButtonEntity):
     """Manuelle Sync zu Brain Graph - v2 neue Entity."""
 
-    _attr_name = "AI Home CoPilot sync zones to brain graph"
+    _attr_name = "PilotSuite sync zones to brain graph"
     _attr_unique_id = "ai_home_copilot_habitus_zones_v2_sync_graph"
     _attr_icon = "mdi:graph-outline"
 
@@ -578,7 +578,7 @@ class HabitusZonesSyncGraphButton(CopilotBaseEntity, ButtonEntity):
         persistent_notification.async_create(
             self.hass,
             f"Brain Graph Sync:\n- Zones processed: {len(results)}\n- Success: {success_count}\n- Failed: {len(results) - success_count}",
-            title="AI Home CoPilot Zones → Brain Graph Sync",
+            title="PilotSuite Zones → Brain Graph Sync",
             notification_id="habitus_zones_v2_graph_sync",
         )
 ```

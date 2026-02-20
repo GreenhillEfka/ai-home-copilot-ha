@@ -1,13 +1,13 @@
-# AI Home CoPilot - Quick Start Guide
+# PilotSuite - Quick Start Guide
 
-## Was ist AI Home CoPilot?
+## Was ist PilotSuite?
 
-AI Home CoPilot ist ein **intelligentes Heimautomatisierungs-System**, das dein Home Assistant Setup **kontinuierlich analysiert** und **automatisch Verbesserungen vorschlägt**. Statt starrer Automationen bekommst du einen **digitalen Hausmeister**, der aus deinen Gewohnheiten lernt.
+PilotSuite ist ein **intelligentes Heimautomatisierungs-System**, das dein Home Assistant Setup **kontinuierlich analysiert** und **automatisch Verbesserungen vorschlägt**. Statt starrer Automationen bekommst du einen **digitalen Hausmeister**, der aus deinen Gewohnheiten lernt.
 
 ## System-Architektur
 
 ```
-[Home Assistant] ←→ [AI Home CoPilot Integration] ←→ [Core Add-on (Brain)]
+[Home Assistant] ←→ [PilotSuite Integration] ←→ [Core Add-on (Brain)]
       ↑                                                       ↓
    Deine Geräte                                        AI Analyse & Empfehlungen
 ```
@@ -24,11 +24,11 @@ AI Home CoPilot ist ein **intelligentes Heimautomatisierungs-System**, das dein 
 
 1. **Add-on Repository hinzufügen:**
    - Home Assistant → Add-ons → Add-on Store → ⋮ → Repositories
-   - URL: `https://github.com/GreenhillEfka/Home-Assistant-Copilot`
+   - URL: `https://github.com/GreenhillEfka/pilotsuite-styx-core`
    - "ADD REPOSITORY"
 
-2. **AI Home CoPilot Core installieren:**
-   - Neues Add-on "AI Home CoPilot Core" → "INSTALL"
+2. **PilotSuite Core installieren:**
+   - Neues Add-on "PilotSuite Core" → "INSTALL"
    - Configuration: Standard-Einstellungen OK
    - "START" + "Auto-Start" aktivieren
 
@@ -40,23 +40,23 @@ AI Home CoPilot ist ein **intelligentes Heimautomatisierungs-System**, das dein 
 
 1. **HACS Repository hinzufügen:**
    - HACS → Integrations → ⋮ → Custom repositories
-   - URL: `https://github.com/GreenhillEfka/ai-home-copilot-ha`
+   - URL: `https://github.com/GreenhillEfka/pilotsuite-styx-ha`
    - Category: Integration → "ADD"
 
 2. **Integration installieren:**
-   - HACS → "AI Home CoPilot" suchen → Download
+   - HACS → "PilotSuite" suchen → Download
    - Home Assistant neu starten
 
 3. **Integration konfigurieren:**
    - Einstellungen → Geräte & Dienste → "Integration hinzufügen"
-   - "AI Home CoPilot" suchen
+   - "PilotSuite" suchen
    - Core Add-on URL: `http://127.0.0.1:8686` (Standard)
    - Auth Token: (Optional - für erweiterte Features)
 
 ### Schritt 3: Erste Schritte
 
 1. **Entity Allowlist konfigurieren:**
-   - AI Home CoPilot Integration → "Configure"
+   - PilotSuite Integration → "Configure"
    - Wähle Bereiche (Wohnzimmer, Küche, etc.)
    - Aktiviere wichtige Geräte-Typen
    - "Submit"
@@ -148,11 +148,11 @@ Lösung:
 
 ### Logs sammeln
 1. **HA Integration**: Einstellungen → System → Logs → `custom_components.ai_home_copilot`
-2. **Core Add-on**: Add-ons → AI Home CoPilot Core → Log-Tab
+2. **Core Add-on**: Add-ons → PilotSuite Core → Log-Tab
 
 ### GitHub Issues
-- **HA Integration**: https://github.com/GreenhillEfka/ai-home-copilot-ha/issues
-- **Core Add-on**: https://github.com/GreenhillEfka/Home-Assistant-Copilot/issues
+- **HA Integration**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues
+- **Core Add-on**: https://github.com/GreenhillEfka/pilotsuite-styx-core/issues
 
 ### Community
 - **Home Assistant Forum**: [AI CoPilot Thread]
@@ -187,10 +187,10 @@ Core Add-on Config:
 ### Manuelle Updates
 ```bash
 # Core Add-on
-Add-ons → AI Home CoPilot Core → Update
+Add-ons → PilotSuite Core → Update
 
 # HA Integration  
-HACS → Integrations → AI Home CoPilot → Update
+HACS → Integrations → PilotSuite → Update
 ```
 
 ## Changelog

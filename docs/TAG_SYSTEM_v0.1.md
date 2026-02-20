@@ -1,6 +1,6 @@
-# TAG_SYSTEM v0.1 (AI Home CoPilot) — Spezifikation (Entwurf)
+# TAG_SYSTEM v0.1 (PilotSuite) — Spezifikation (Entwurf)
 
-**Ziel:** Ein konsistentes, privacy-first Tag-System für AI Home CoPilot (AICoPilot), das
+**Ziel:** Ein konsistentes, privacy-first Tag-System für PilotSuite (AICoPilot), das
 - sauber zwischen *physischer Struktur* (Areas/Zones), *Inventar* (Devices/Entities), *Semantik/Intention* (Rollen) und *Organisation* (Labels) trennt,
 - in Home Assistant (HA) möglichst nativ über **Labels** arbeitet,
 - intern (Core Add-on / „Brain Graph“) reichere Semantik (Rollen, Kategorien, Provenienz, Governance) abbildet,
@@ -71,7 +71,7 @@ Eine Kategorie ist **kein eigener Datentyp**, sondern Namenskonvention.
 - Punkt-segmentiert ist gut für Prefix-Queries (z. B. alle `aicp.role.*`).
 
 ### 2.2 Namespaces
-- `aicp.*` — von AI Home CoPilot verwaltete Tags (empfohlen)
+- `aicp.*` — von PilotSuite verwaltete Tags (empfohlen)
 - `user.*` — vom Nutzer definierte Tags, die AICoPilot respektiert, aber nicht umbenennt
 - `sys.*` — reserviert (intern), **nicht** exportiert als HA-Label, außer explizit erlaubt
 - `ha.*` — optionales Mirror/Mapping für vorhandene HA-Labels (nur als Alias-Layer)

@@ -1,6 +1,6 @@
 # Tag-System — Research Brief (Spezialist)
 
-Ziel: Ein perfektes, sauberes Tag-System für AI Home CoPilot.
+Ziel: Ein perfektes, sauberes Tag-System für PilotSuite.
 
 Bitte liefern:
 - Taxonomie / Namensschema (namespace, scope, versioning, de/en?)

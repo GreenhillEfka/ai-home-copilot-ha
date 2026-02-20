@@ -82,7 +82,7 @@
 
 ---
 
-## AI Home CoPilot Projekt (Stand 2026-02-16 02:50)
+## PilotSuite Projekt (Stand 2026-02-16 02:50)
 
 ### Versionen (aktuell)
 - **HA Integration**: v0.13.2 - Brain Graph Panel v0.8, Cross-Home Sync, Collective Intelligence ✅

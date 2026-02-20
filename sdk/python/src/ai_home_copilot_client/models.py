@@ -1,4 +1,4 @@
-"""AI Home CoPilot API Types.
+"""PilotSuite API Types.
 Generated from OpenAPI spec v0.4.33
 """
 

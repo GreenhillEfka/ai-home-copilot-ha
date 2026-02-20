@@ -5,12 +5,12 @@ Implement Habitus zones as a user-curated, local-first selection layer for entit
 
 ## Implemented (Phase 1)
 - Store: `ai_home_copilot.habitus_zones` (HA storage), keyed by config entry id.
-- Text entity: `AI Home CoPilot habitus zones (json)`
+- Text entity: `PilotSuite habitus zones (json)`
   - Value is JSON list of zones: `[{id,name,entity_ids:[...]}]`
   - On set: validates/normalizes and saves; shows persistent notification.
-- Button: `AI Home CoPilot validate habitus zones`
+- Button: `PilotSuite validate habitus zones`
   - Checks referenced entity_ids exist (best-effort via current states) and reports missing.
-- Sensor: `AI Home CoPilot habitus zones count`
+- Sensor: `PilotSuite habitus zones count`
   - Updates via dispatcher signal on save.
 
 ## Notes

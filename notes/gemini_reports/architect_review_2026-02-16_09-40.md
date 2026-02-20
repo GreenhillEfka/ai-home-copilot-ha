@@ -1,4 +1,4 @@
-# AI Home CoPilot - Architecture Review Report
+# PilotSuite - Architecture Review Report
 
 **Date:** 2026-02-16 09:40  
 **Reviewer:** Gemini Architect Worker (direct analysis - Gemini CLI quota exhausted)  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The AI Home CoPilot project remains **production-ready** with an overall score of **8.9/10**. No new critical issues identified since the last review (08:46). The system is stable with 346 tests passing.
+The PilotSuite project remains **production-ready** with an overall score of **8.9/10**. No new critical issues identified since the last review (08:46). The system is stable with 346 tests passing.
 
 **Key Findings:**
 - ✅ HA Integration tests: 346 passed, 2 skipped

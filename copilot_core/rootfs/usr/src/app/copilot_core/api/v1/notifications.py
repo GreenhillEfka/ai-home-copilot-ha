@@ -1,4 +1,4 @@
-"""Notification System for AI Home CoPilot.
+"""Notification System for PilotSuite.
 
 Provides push notifications for:
 - Mood changes

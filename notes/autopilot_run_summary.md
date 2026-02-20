@@ -19,7 +19,7 @@
 ## Release
 
 - **Tag:** `v0.5.8`
-- **GitHub:** https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.5.8
+- **GitHub:** https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.5.8
 - **Commit:** `46b7924`
 
 ## Test Coverage

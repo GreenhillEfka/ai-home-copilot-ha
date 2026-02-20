@@ -1,6 +1,6 @@
 # PilotSuite Core Add-on -- Architektur
 
-> Technisches Architekturdokument fuer das PilotSuite Core Add-on (ehemals AI Home CoPilot Core).
+> Technisches Architekturdokument fuer das PilotSuite Core Add-on (ehemals PilotSuite Core).
 > Stand: v3.8.1
 
 ---

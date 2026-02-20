@@ -57,7 +57,7 @@ class TestSwaggerUI:
     def test_swagger_ui_has_correct_title(self, client):
         """Test that Swagger UI HTML has correct title."""
         response = client.get("/api/v1/docs/")
-        assert b"AI Home CoPilot API Documentation" in response.data
+        assert b"PilotSuite API Documentation" in response.data
 
     def test_swagger_ui_loads_from_correct_url(self, client):
         """Test that Swagger UI loads spec from correct URL."""

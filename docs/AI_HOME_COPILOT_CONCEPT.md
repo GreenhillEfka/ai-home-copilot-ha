@@ -1,14 +1,14 @@
-# AI Home CoPilot – Gesamtkonzept, Architektur & Workflow
+# PilotSuite – Gesamtkonzept, Architektur & Workflow
 
 > **Ziel dieses Dokuments**  
-> Dieses Dokument ist die **vollständige, konsolidierte Konzeptbeschreibung** des AI Home CoPilot – extrahiert aus allen bisherigen Chatverläufen (plus bereits getroffene, dokumentierte Setup‑Entscheidungen in diesem Repo). Es beschreibt **Architektur, Module, neuronales Modell, Workflows, Betriebsmodi und Schlussfolgerungen**.
+> Dieses Dokument ist die **vollständige, konsolidierte Konzeptbeschreibung** des PilotSuite – extrahiert aus allen bisherigen Chatverläufen (plus bereits getroffene, dokumentierte Setup‑Entscheidungen in diesem Repo). Es beschreibt **Architektur, Module, neuronales Modell, Workflows, Betriebsmodi und Schlussfolgerungen**.
 >
 > Es ist **kein Implementierungsleitfaden**, sondern eine **strategisch‑technische Blaupause**, die später in Code, Dashboards und Add-ons überführt werden kann.
 
 ---
 
 ## 1. Grundidee & Positionierung
-Der **AI Home CoPilot** ist ein **systemischer Entscheidungs‑ und Vorschlagslayer** über Home Assistant. Er ist:
+Der **PilotSuite** ist ein **systemischer Entscheidungs‑ und Vorschlagslayer** über Home Assistant. Er ist:
 
 - kein monolithisches KI‑System
 - kein autonomer Smart‑Home‑Controller
@@ -263,7 +263,7 @@ Diese Daten sind Grundlage für:
 ---
 
 ## 14. Fazit
-Der AI Home CoPilot ist ein **lebendes, wachsendes Entscheidungssystem**, das Smart Home von einer regelbasierten Automatik zu einem **kontextbewussten, erklärbaren Assistenzsystem** entwickelt.
+Der PilotSuite ist ein **lebendes, wachsendes Entscheidungssystem**, das Smart Home von einer regelbasierten Automatik zu einem **kontextbewussten, erklärbaren Assistenzsystem** entwickelt.
 
 Er denkt nicht für den Nutzer – **er denkt mit ihm.**
 

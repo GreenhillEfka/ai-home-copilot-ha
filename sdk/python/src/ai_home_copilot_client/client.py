@@ -1,4 +1,4 @@
-"""AI Home CoPilot Python Client."""
+"""PilotSuite Python Client."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ class CopilotNotFoundError(CopilotError):
 
 
 class CopilotClient:
-    """Async Python client for AI Home CoPilot Core API."""
+    """Async Python client for PilotSuite Core API."""
 
     def __init__(
         self,

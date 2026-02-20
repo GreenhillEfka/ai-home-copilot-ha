@@ -1,4 +1,4 @@
-# AI Home CoPilot Architecture Review
+# PilotSuite Architecture Review
 **Date:** 2026-02-16 06:05 CET  
 **Reviewer:** Gemini Architect Worker (Automated)  
 **Repos:** HA Integration v0.13.3, Core Add-on v0.8.4
@@ -265,7 +265,7 @@ def _get_zone_name(self, zone_id: str | None) -> str | None:
 
 ## Conclusion
 
-The AI Home CoPilot project is in **good health** with excellent test coverage, clean architecture, and security-first design. The primary technical debt item (Zone Registry Integration) is well-documented and has a clear implementation path.
+The PilotSuite project is in **good health** with excellent test coverage, clean architecture, and security-first design. The primary technical debt item (Zone Registry Integration) is well-documented and has a clear implementation path.
 
 **Risk Level:** LOW  
 **Technical Debt:** MINIMAL  

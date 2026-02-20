@@ -1,4 +1,4 @@
-"""Neuron API endpoints for AI Home CoPilot.
+"""Neuron API endpoints for PilotSuite.
 
 Exposes the neural system via REST API for Home Assistant integration.
 

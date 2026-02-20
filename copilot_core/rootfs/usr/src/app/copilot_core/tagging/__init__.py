@@ -1,4 +1,4 @@
-"""Tagging primitives for AI Home CoPilot."""
+"""Tagging primitives for PilotSuite."""
 
 from .models import Tag, TagDisplay, TagGovernance, TagHAConfig
 from .registry import TagRegistry, TagRegistryError

@@ -1,4 +1,4 @@
-# AI Home CoPilot — Autopilot Log (10min loop)
+# PilotSuite — Autopilot Log (10min loop)
 
 Window: 2026-02-14 16:00–20:00 (Europe/Berlin)
 
@@ -32,7 +32,7 @@ This log is appended by the Autopilot cron.
 - `ha-copilot-repo/CHANGELOG.md` (+v0.4.14 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/Home-Assistant-Copilot/releases/tag/v0.4.14
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-core/releases/tag/v0.4.14
 - All py_compile checks passed
 - Functional tests verified
 
@@ -59,7 +59,7 @@ This log is appended by the Autopilot cron.
 - `CHANGELOG.md` (+v0.6.7 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.7
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.7
 - Branch: wip/module-unifi_module/20260209-2149
 - py_compile verified for all modules
 
@@ -85,7 +85,7 @@ This log is appended by the Autopilot cron.
 - `CHANGELOG.md` (+v0.6.6 + v0.6.5 entries)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.6
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.6
 - Branch: wip/module-forwarder_quality/20260208-172947
 - py_compile verified
 
@@ -123,7 +123,7 @@ This log is appended by the Autopilot cron.
 - `CHANGELOG.md` (+v0.6.4 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.4
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.4
 - Branch: development
 - Py_compile verified for all test files
 
@@ -157,7 +157,7 @@ This log is appended by the Autopilot cron.
 - `CHANGELOG.md` (+v0.6.2 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.2
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.2
 - Branch: development (merged from feature/weather-context-v0.6.2)
 - Py_compile verified for all new modules
 
@@ -239,7 +239,7 @@ This log is appended by the Autopilot cron.
 - `CHANGELOG.md` (+v0.6.1 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.1
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.1
 - All py_compile checks passed
 - Branch pushed: development
 
@@ -262,7 +262,7 @@ This log is appended by the Autopilot cron.
 - `CHANGELOG.md` (+v0.6.0 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.0
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.0
 - All py_compile checks passed
 - Branch pushed: `dev/autopilot-debug-level-v0.6.0`
 
@@ -311,7 +311,7 @@ This log is appended by the Autopilot cron.
 - `CHANGELOG.md` (+v0.4.12 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/Home-Assistant-Copilot/releases/tag/v0.4.12
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-core/releases/tag/v0.4.12
 - All py_compile checks passed
 - Modules verified: UniFi (v0.1), Energy (v0.1), Brain Graph, Mood, Habitus, Candidates
 
@@ -336,7 +336,7 @@ This log is appended by the Autopilot cron.
 - `addons/copilot_core/config.json` (version: 0.4.12 → 0.4.13)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/Home-Assistant-Copilot/releases/tag/v0.4.13
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-core/releases/tag/v0.4.13
 - All modules compile (py_compile verified)
 - UniFi + Energy Neurons now official releases
 
@@ -367,7 +367,7 @@ This log is appended by the Autopilot cron.
 - `CHANGELOG.md` (+v0.5.9 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.5.9
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.5.9
 - py_compile verified for all modules
 - Commit pushed to main (159bd15)
 - Tag v0.5.9 created and pushed
@@ -426,7 +426,7 @@ Manually trigger a new autopilot window or run with fresh parameters.
 - `CHANGELOG.md` (+v0.6.3 entry)
 
 ### Status
-- **✅ RELEASED**: https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.3
+- **✅ RELEASED**: https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.3
 - Branch: development
 - py_compile verified for test file
 

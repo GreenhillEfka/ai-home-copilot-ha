@@ -127,4 +127,4 @@ for pattern in patterns:
 ---
 
 **Generated:** 2026-02-14 18:13 GMT+1  
-**Worker:** AI Home CoPilot - Subagent
+**Worker:** PilotSuite - Subagent

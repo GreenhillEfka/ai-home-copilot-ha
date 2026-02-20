@@ -1,6 +1,6 @@
 # HEARTBEAT.md
 
-## AI Home CoPilot: Decision Matrix Status
+## PilotSuite: Decision Matrix Status
 
 **Status:** Phase 5 Complete ✅ (Updated 2026-02-16 10:47)
 

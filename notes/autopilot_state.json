@@ -9,7 +9,7 @@
       "branch": "wip/module-forwarder_quality/20260208-172947",
       "result": "released",
       "summary": "Token UX verbessert (v0.6.6)",
-      "release_url": "https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.6"
+      "release_url": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.6"
     },
     {
       "ts": "2026-02-14T16:30:00+01:00",
@@ -17,7 +17,7 @@
       "branch": "wip/module-unifi_module/20260209-2149",
       "result": "released",
       "summary": "Module Architecture Fix v0.6.7 (module.py base classes)",
-      "release_url": "https://github.com/GreenhillEfka/ai-home-copilot-ha/releases/tag/v0.6.7"
+      "release_url": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v0.6.7"
     },
     {
       "ts": "2026-02-14T16:50:00+01:00",
@@ -25,7 +25,7 @@
       "branch": "dev/autopilot-tag-system-v0.2",
       "result": "released",
       "summary": "Tag System v0.2 (Decision Matrix Implementation)",
-      "release_url": "https://github.com/GreenhillEfka/Home-Assistant-Copilot/releases/tag/v0.4.14"
+      "release_url": "https://github.com/GreenhillEfka/pilotsuite-styx-core/releases/tag/v0.4.14"
     }
   ],
   "pending_questions": [

@@ -1,4 +1,4 @@
-# Architektur-Review: AI Home CoPilot
+# Architektur-Review: PilotSuite
 **Datum:** 2026-02-15 00:15 (Europe/Berlin)
 **Modell:** Gemini CLI (gemini-2.5-pro)
 **Umfang:** HA Integration + Core Add-on Cross-Repo Analyse
@@ -7,7 +7,7 @@
 
 ## Zusammenfassung
 
-Die Architektur des AI Home CoPilot basiert auf einer soliden Trennung zwischen der Core-Logik (dem "Add-on", `copilot_core`) und der Präsentationsschicht (der Home Assistant Integration). Die Core-Logik ist konzeptionell reich und modular aufgebaut (Brain Graph, Habitus, Neuronen). Die HA-Integration agiert jedoch nur als ein sehr dünner Client, der lediglich den Status und die Version des Cores anzeigt. Die eigentliche Funktionalität des Cores (Neuronen, Moods, etc.) wird in der HA-UI nicht abgebildet.
+Die Architektur des PilotSuite basiert auf einer soliden Trennung zwischen der Core-Logik (dem "Add-on", `copilot_core`) und der Präsentationsschicht (der Home Assistant Integration). Die Core-Logik ist konzeptionell reich und modular aufgebaut (Brain Graph, Habitus, Neuronen). Die HA-Integration agiert jedoch nur als ein sehr dünner Client, der lediglich den Status und die Version des Cores anzeigt. Die eigentliche Funktionalität des Cores (Neuronen, Moods, etc.) wird in der HA-UI nicht abgebildet.
 
 Das größte Problem ist die brüchige und inkonsistente API zwischen den beiden Komponenten. Es gibt klare Anzeichen für technische Schulden und einen Mangel an synchronisierter Entwicklung, was zu Instabilität und zukünftigen Fehlern führen wird.
 

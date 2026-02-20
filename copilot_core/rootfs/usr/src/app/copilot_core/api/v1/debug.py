@@ -1,4 +1,4 @@
-"""Debug mode endpoints for AI Home CoPilot Core."""
+"""Debug mode endpoints for PilotSuite Core."""
 from flask import Blueprint, jsonify, request
 
 from copilot_core.debug import get_debug, set_debug

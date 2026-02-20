@@ -1,4 +1,4 @@
-# AI Home CoPilot Architecture Review
+# PilotSuite Architecture Review
 **Date:** 2026-02-16 02:20
 **Analyst:** Gemini Architect Worker
 **Scope:** HA Integration + Core Add-on
@@ -251,7 +251,7 @@ connector/
 
 ## Conclusion
 
-The AI Home CoPilot architecture is functional with strong test coverage (346 tests). Primary concerns are:
+The PilotSuite architecture is functional with strong test coverage (346 tests). Primary concerns are:
 
 1. **5 God classes** requiring extraction
 2. **Tag system duplication** needing API contract

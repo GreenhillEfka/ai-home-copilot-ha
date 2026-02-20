@@ -1,4 +1,4 @@
-# AI Home CoPilot Architecture Review
+# PilotSuite Architecture Review
 **Date:** 2026-02-16 05:30 (Europe/Berlin)  
 **Reviewer:** Gemini Architect Worker  
 **Scope:** HA Integration v0.13.3 + Core Add-on v0.8.4
@@ -9,7 +9,7 @@
 
 **Overall Score: 7/10** ⭐⭐⭐⭐⭐⭐⭐
 
-The AI Home CoPilot project demonstrates solid architecture fundamentals with well-structured modules, comprehensive test coverage (346 tests passing), and clear separation of concerns. However, critical integration gaps exist between the Zone System and core components, creating a "zone-blind" state that limits context-aware functionality.
+The PilotSuite project demonstrates solid architecture fundamentals with well-structured modules, comprehensive test coverage (346 tests passing), and clear separation of concerns. However, critical integration gaps exist between the Zone System and core components, creating a "zone-blind" state that limits context-aware functionality.
 
 **Key Strengths:**
 - Clean repository state (both synced, no pending changes)

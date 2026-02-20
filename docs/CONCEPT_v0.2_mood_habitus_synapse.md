@@ -1,4 +1,4 @@
-# AI Home CoPilot – Konzept v0.2 (Mood + Habitus + Synapsen + Vorschläge)
+# PilotSuite – Konzept v0.2 (Mood + Habitus + Synapsen + Vorschläge)
 
 Stand: 2026-02-07
 

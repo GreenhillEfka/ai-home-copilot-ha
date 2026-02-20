@@ -1,7 +1,7 @@
 # Safety-Point Backup + Confirm Flow Spec (Update/Rollback UX)
 
 ## Overview
-This spec defines a privacy-first safety point backup mechanism and a confirm flow for updates/rollbacks in the `ai-home-copilot-ha` repository. The goal is to capture a minimal, encrypted snapshot of critical system state before any update or rollback operation, present it to the user for explicit confirmation, and provide a reliable rollback path if the update fails.
+This spec defines a privacy-first safety point backup mechanism and a confirm flow for updates/rollbacks in the `pilotsuite-styx-ha` repository. The goal is to capture a minimal, encrypted snapshot of critical system state before any update or rollback operation, present it to the user for explicit confirmation, and provide a reliable rollback path if the update fails.
 
 ## Goals
 - **Safety:** Ensure the user can recover to a known good state after any update.
@@ -88,7 +88,7 @@ This spec defines a privacy-first safety point backup mechanism and a confirm fl
 ### Minimal PR Size
 - All new scripts and config changes are encapsulated in a single PR. Approx. **200–300 lines of code** across 5–6 files.
 - No external dependencies added; only `pynacl` (already listed in `requirements.txt` if not, add it with a minimal version).
-- No releases or tags are required; the change is scoped to the `ai-home-copilot-ha` repo only.
+- No releases or tags are required; the change is scoped to the `pilotsuite-styx-ha` repo only.
 
 ## Privacy‑First Design Details
 - **No external communication:** The backup and rollback scripts never call any cloud API; they only read/write local files.

@@ -1,4 +1,4 @@
-# AI Home CoPilot - Project Index
+# PilotSuite - Project Index
 
 > Quick reference for current status, structure, and next steps.
 

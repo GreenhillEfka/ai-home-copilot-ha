@@ -1,4 +1,4 @@
-# AI Home CoPilot Release Bundle
+# PilotSuite Release Bundle
 **Erstellt:** 2026-02-10 13:49 CET  
 **Status:** Production-Ready, Git Auth Required
 

@@ -1,4 +1,4 @@
-"""Knowledge Graph module for AI Home CoPilot.
+"""Knowledge Graph module for PilotSuite.
 
 Provides Neo4j-backed graph storage with SQLite fallback for capturing
 relationships between entities, patterns, moods, and contexts.

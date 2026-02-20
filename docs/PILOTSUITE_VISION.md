@@ -6,7 +6,7 @@
 
 ## 1. Was ist PilotSuite?
 
-**PilotSuite = AI Home CoPilot** – Ein **erklärbares, neuronales Orchestrierungssystem** über Home Assistant.
+**PilotSuite = PilotSuite** – Ein **erklärbares, neuronales Orchestrierungssystem** über Home Assistant.
 
 ### Was es IST:
 - Ein **Entscheidungs- und Vorschlagslayer**, der Sensorik, Kontext, Stimmung, Historie und Nutzerintention zusammenführt

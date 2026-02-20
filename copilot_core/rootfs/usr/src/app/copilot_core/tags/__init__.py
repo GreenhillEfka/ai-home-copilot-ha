@@ -1,4 +1,4 @@
-# Tag System v0.2 — AI Home CoPilot Core Add-on
+# Tag System v0.2 — PilotSuite Core Add-on
 """
 Tag System v0.2 Implementation
 
@@ -44,7 +44,7 @@ class TagFacet(str, Enum):
 
 class TagNamespace(str, Enum):
     """Tag-Namespaces (Policy: user.* NICHT als intern, Decision Matrix P1)."""
-    AICP = "aicp"         # AI Home CoPilot verwaltet (empfohlen)
+    AICP = "aicp"         # PilotSuite verwaltet (empfohlen)
     SYS = "sys"           # Reserviert (intern, nie als HA-Label)
     HA = "ha"             # Mapping für vorhandene HA-Labels
 

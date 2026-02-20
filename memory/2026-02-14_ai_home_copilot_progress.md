@@ -1,4 +1,4 @@
-# Activity Log - AI Home CoPilot Project Agent
+# Activity Log - PilotSuite Project Agent
 # Generated: 2026-02-14 17:58 (Europe/Berlin)
 
 ## Session Summary

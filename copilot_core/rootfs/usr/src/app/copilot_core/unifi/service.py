@@ -84,7 +84,7 @@ class UniFiService:
     """
     UniFi network monitoring service.
     
-    Provides network context for AI Home CoPilot:
+    Provides network context for PilotSuite:
     - Detect network instability (affects all automations)
     - Client roaming patterns (location context)
     - Traffic anomalies (energy-saving opportunities)

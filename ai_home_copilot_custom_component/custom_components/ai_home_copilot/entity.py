@@ -17,7 +17,7 @@ class CopilotBaseEntity(CoordinatorEntity[CopilotDataUpdateCoordinator]):
     def device_info(self):
         return {
             "identifiers": {("ai_home_copilot", f"{self._host}:{self._port}")},
-            "name": "AI Home CoPilot Core",
+            "name": "PilotSuite Core",
             "manufacturer": "Custom",
             "model": "MVP Core",
         }

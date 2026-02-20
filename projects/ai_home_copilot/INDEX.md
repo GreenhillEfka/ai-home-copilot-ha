@@ -1,4 +1,4 @@
-# AI Home CoPilot - INDEX.md
+# PilotSuite - INDEX.md
 
 ## Last Updated
 $(date '+%Y-%m-%d %H:%M')

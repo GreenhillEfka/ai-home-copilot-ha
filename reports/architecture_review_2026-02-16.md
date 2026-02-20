@@ -1,9 +1,9 @@
 # Codex Architecture Review Report
-## AI Home CoPilot Integration (v0.13.0)
+## PilotSuite Integration (v0.13.0)
 
 **Review Date:** 2026-02-16  
 **Reviewer:** Codex Architecture Reviewer  
-**Target:** AI Home CoPilot HA Integration (v0.13.0) + Core Add-on (v0.8.1)
+**Target:** PilotSuite HA Integration (v0.13.0) + Core Add-on (v0.8.1)
 
 ---
 
@@ -11,7 +11,7 @@
 
 **Overall Rating: 8/10**
 
-The AI Home CoPilot demonstrates sophisticated architectural design with clear separation of concerns, robust modularity, and thoughtful attention to privacy-first principles. The Habitus Zone system represents a particularly strong innovation. Key strengths include the CopilotModule architecture, ML context layer, and comprehensive test coverage.
+The PilotSuite demonstrates sophisticated architectural design with clear separation of concerns, robust modularity, and thoughtful attention to privacy-first principles. The Habitus Zone system represents a particularly strong innovation. Key strengths include the CopilotModule architecture, ML context layer, and comprehensive test coverage.
 
 ---
 
@@ -205,7 +205,7 @@ UI Layer (Buttons/Sensors) → Module Layer → Core Runtime → HA Core
 
 ## Conclusion
 
-The AI Home CoPilot demonstrates mature architecture with a clear vision for context-aware automation. The Habitus Zones system is a standout innovation that solves real problems in home automation. With focused improvements to zone conflict resolution, state persistence, and character service integration, this could become the gold standard for privacy-first home automation.
+The PilotSuite demonstrates mature architecture with a clear vision for context-aware automation. The Habitus Zones system is a standout innovation that solves real problems in home automation. With focused improvements to zone conflict resolution, state persistence, and character service integration, this could become the gold standard for privacy-first home automation.
 
 **Final Rating: 8/10 (Excellent - Production Ready with P0 Fixes)**
 

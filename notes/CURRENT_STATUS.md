@@ -1,4 +1,4 @@
-# AI Home CoPilot — Current Status (2026-02-11 03:50 UTC)
+# PilotSuite — Current Status (2026-02-11 03:50 UTC)
 
 ## 🎯 Summary
 **All NEXT milestones complete and stability-tested.** Ready for extended testing or LATER features.
@@ -61,17 +61,17 @@ HA Events → Forwarder N3 → Core API
 
 ## 📦 Release Status
 
-### HA Integration (ai-home-copilot-ha)
+### HA Integration (pilotsuite-styx-ha)
 - **Latest:** v0.5.6
 - **Branch:** main
 - **Tags:** v0.4.0–v0.5.6 (15 releases)
-- **GitHub:** https://github.com/GreenhillEfka/ai-home-copilot-ha
+- **GitHub:** https://github.com/GreenhillEfka/pilotsuite-styx-ha
 
-### Core Add-on (Home-Assistant-Copilot)
+### Core Add-on (pilotsuite-styx-core)
 - **Latest:** copilot_core-v0.4.6
 - **Branch:** main  
 - **Tags:** v0.4.0–v0.4.5 + copilot_core-v0.4.6 (7 releases)
-- **GitHub:** https://github.com/GreenhillEfka/Home-Assistant-Copilot
+- **GitHub:** https://github.com/GreenhillEfka/pilotsuite-styx-core
 
 ## ⏱️ Time Window
 - **Started:** ~23:39 (2026-02-10)

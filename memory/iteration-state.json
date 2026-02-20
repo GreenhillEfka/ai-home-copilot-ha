@@ -29,7 +29,7 @@
   "problematicJobs": [
     {
       "id": "86af37ed-dde2-40df-9189-8069340a5ff8",
-      "name": "AI Home CoPilot: Decision Matrix (10min)",
+      "name": "PilotSuite: Decision Matrix (10min)",
       "errors": 2,
       "issue": "previous timeout (420s), now running"
     },

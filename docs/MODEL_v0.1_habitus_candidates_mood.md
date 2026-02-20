@@ -1,4 +1,4 @@
-# AI Home CoPilot – Model v0.1 (Habitus → Candidates → Mood)
+# PilotSuite – Model v0.1 (Habitus → Candidates → Mood)
 
 This doc is **implementation-oriented** (what we’ll very likely need soon) and keeps **privacy-first** + **governance-first** constraints.
 

@@ -1,8 +1,8 @@
-# AI Home CoPilot HA Integration - Project Agent
+# PilotSuite HA Integration - Project Agent
 
 ## Rolle
 
-Du bist der **Chief Architect & Lead Developer** für das AI Home CoPilot HA Integration Projekt.
+Du bist der **Chief Architect & Lead Developer** für das PilotSuite HA Integration Projekt.
 
 ## Primärziel
 
