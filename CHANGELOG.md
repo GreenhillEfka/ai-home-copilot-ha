@@ -1,5 +1,14 @@
 # Changelog - PilotSuite Core Add-on
 
+## [7.6.4] - 2026-02-21 — ADD-ON DISCOVERY FIX
+
+### config.json → config.yaml Migration
+
+- **ROOT CAUSE**: `config.json` hatte Schema-Mismatch — `list(a|b|c)` (Einzelwert-Enum) trifft auf `["a","b","c"]` (Array) in options → Supervisor Schema-Validation schlaegt fehl → Add-on wird STILL uebersprungen
+- `config.json` entfernt, durch `config.yaml` ersetzt (modernes Format)
+- Options/Schema drastisch vereinfacht: flache Keys statt 5-fach verschachtelter Objekte
+- `start_dual.sh` aktualisiert fuer flache Config-Keys
+
 ## [7.6.3] - 2026-02-21 — REPO HYGIENE
 
 ### Add-on Repository Cleanup
