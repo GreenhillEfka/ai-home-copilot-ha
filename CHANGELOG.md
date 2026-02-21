@@ -1,5 +1,12 @@
 # Changelog - PilotSuite Core Add-on
 
+## [4.5.0] - 2026-02-21
+
+### Conflict Resolution API
+
+- **api/v1/user_preferences.py** — Neuer Endpoint: `POST /user/conflicts/evaluate` — Erkennt Praeferenz-Konflikte zwischen aktiven Nutzern; paarweiser Divergenz-Check (Schwellenwert 0.3); drei Strategien: `weighted`, `compromise`, `override`; gibt aufgeloesten Mood + Konflikt-Details zurueck
+- **config.json** — Version auf 4.5.0
+
 ## [4.4.0] - 2026-02-21
 
 ### Test Coverage + Quality

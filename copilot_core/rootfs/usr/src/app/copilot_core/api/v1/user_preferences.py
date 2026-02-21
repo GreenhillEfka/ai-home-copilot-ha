@@ -494,3 +494,91 @@ def list_delegations():
         store._save_extra("delegations", active)
 
     return jsonify({"status": "ok", "delegations": active, "count": len(active)})
+
+
+# ==================== Conflict Resolution ====================
+
+
+@bp.post("/conflicts/evaluate")
+def evaluate_conflicts():
+    """Evaluate preference conflicts between active users.
+
+    Body (optional):
+        user_ids: list of user IDs (default: all known users)
+        strategy: "weighted" | "compromise" | "override"
+        override_user: user_id for override strategy
+
+    Returns:
+        Conflict state with details and resolved mood.
+    """
+    data = request.get_json(silent=True) or {}
+    user_ids = data.get("user_ids")
+    strategy = data.get("strategy", "weighted")
+    override_user = data.get("override_user")
+
+    store = _store()
+    users = store.get_all_users()
+
+    if user_ids:
+        users = {uid: u for uid, u in users.items() if uid in user_ids}
+
+    if len(users) < 2:
+        return jsonify({
+            "active": False,
+            "conflict_count": 0,
+            "users_involved": list(users.keys()),
+            "resolution": strategy,
+            "resolved_mood": {"comfort": 0.5, "frugality": 0.5, "joy": 0.5},
+            "details": [],
+        })
+
+    # Extract per-user moods and priorities
+    user_moods = {}
+    user_priorities = {}
+    for uid, u in users.items():
+        user_moods[uid] = u.preferences.get(
+            "mood_weights", {"comfort": 0.5, "frugality": 0.5, "joy": 0.5}
+        )
+        user_priorities[uid] = u.priority
+
+    # Detect conflicts (threshold: 0.3 divergence on any axis)
+    threshold = 0.3
+    conflicts = []
+    uids = list(user_moods.keys())
+    for i, ua in enumerate(uids):
+        for ub in uids[i + 1:]:
+            for axis in ("comfort", "frugality", "joy"):
+                va = user_moods[ua].get(axis, 0.5)
+                vb = user_moods[ub].get(axis, 0.5)
+                div = abs(va - vb)
+                if div >= threshold:
+                    conflicts.append({
+                        "axis": axis,
+                        "user_a": ua,
+                        "user_b": ub,
+                        "value_a": round(va, 2),
+                        "value_b": round(vb, 2),
+                        "divergence": round(div, 2),
+                    })
+
+    # Resolve
+    if strategy == "override" and override_user and override_user in user_moods:
+        resolved = dict(user_moods[override_user])
+    elif strategy == "compromise":
+        resolved = {"comfort": 0.0, "frugality": 0.0, "joy": 0.0}
+        for um in user_moods.values():
+            for k in resolved:
+                resolved[k] += um.get(k, 0.5)
+        n = len(user_moods)
+        resolved = {k: round(v / n, 3) for k, v in resolved.items()}
+    else:
+        resolved = store.get_aggregated_mood(uids)
+
+    return jsonify({
+        "active": len(conflicts) > 0,
+        "conflict_count": len(conflicts),
+        "users_involved": uids,
+        "resolution": strategy,
+        "resolved_mood": resolved,
+        "details": conflicts,
+    })
