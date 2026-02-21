@@ -1,5 +1,19 @@
 # Changelog - PilotSuite Core Add-on
 
+## [5.3.0] - 2026-02-21
+
+### Test Coverage — Sankey Renderer Tests
+
+#### Test Suite (NEW)
+- **tests/test_sankey.py** — 25 tests for Sankey energy flow diagram renderer
+  - `TestDataclasses` — SankeyNode, SankeyFlow, SankeyData defaults and custom values
+  - `TestColors` — Device color lookup, theme completeness
+  - `TestRenderer` — SVG generation: empty state, basic flow, dark/light themes, multiple flows, tooltips, valid XML, custom dimensions
+  - `TestBuildSankey` — Energy data builder: consumption-only, solar production, zone data, zero baselines, flow positivity, default titles
+
+#### Infrastructure
+- **config.json** — Version 5.3.0
+
 ## [5.2.0] - 2026-02-21
 
 ### Sankey Energy Flow Diagrams — SVG + JSON
