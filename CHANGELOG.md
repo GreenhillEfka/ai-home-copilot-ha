@@ -1,5 +1,35 @@
 # Changelog - PilotSuite Core Add-on
 
+## [5.18.0] - 2026-02-21
+
+### Regional Tariff Engine — Dynamic Electricity Pricing with aWATTar/EPEX
+
+#### Tariff Engine (NEW)
+- **regional/tariff_engine.py** — `RegionalTariffEngine` with dynamic pricing support
+- aWATTar API parser (DE/AT): MWh→kWh conversion with country-specific surcharges
+- Time-of-use (HT/NT) schedule: German weekday/weekend price curves
+- Fixed rate fallback for simple tariffs
+- Price level classification: very_low/low/normal/high/very_high
+- Optimal consumption window finder (cheapest N-hour block)
+- Tariff recommendation engine: charge_now/wait/shift/discharge actions
+- Bilingual recommendations (DE/EN) with savings calculations
+- Configurable: country, tariff type, fixed rate, feed-in rate
+
+#### API Endpoints (6 NEW)
+- `GET /api/v1/regional/tariff/summary` — Current price, stats, level
+- `GET /api/v1/regional/tariff/prices` — All hourly prices
+- `GET /api/v1/regional/tariff/optimal?hours=3` — Cheapest time window
+- `GET /api/v1/regional/tariff/recommendation` — Action recommendation
+- `POST /api/v1/regional/tariff/ingest` — Ingest aWATTar/manual data
+- `POST /api/v1/regional/tariff/config` — Configure tariff type/rates
+
+#### Test Suite (NEW — 52 tests)
+- **tests/test_tariff_engine.py** — aWATTar parsing, TOU, fixed, summary, windows, recommendations
+
+#### Infrastructure
+- **regional/__init__.py** — Exports RegionalTariffEngine
+- **regional/api.py** — Updated with tariff endpoints
+
 ## [5.17.0] - 2026-02-21
 
 ### Fuel Price Tracker — Tankerkoenig Integration with EV vs ICE Comparison
