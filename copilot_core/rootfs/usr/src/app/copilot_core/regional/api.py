@@ -1,4 +1,4 @@
-"""Regional Context API endpoints (v5.25.0)."""
+"""Regional Context API endpoints (v6.3.0)."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ _forecast_engine = None
 _battery_optimizer = None
 _heat_pump_controller = None
 _ev_charging_planner = None
+_gas_meter = None
 
 
 def init_regional_api(
@@ -33,9 +34,10 @@ def init_regional_api(
     battery_optimizer=None,
     heat_pump_controller=None,
     ev_charging_planner=None,
+    gas_meter=None,
 ) -> None:
     """Initialize all regional services."""
-    global _provider, _warning_manager, _fuel_tracker, _tariff_engine, _alert_engine, _forecast_engine, _battery_optimizer, _heat_pump_controller, _ev_charging_planner
+    global _provider, _warning_manager, _fuel_tracker, _tariff_engine, _alert_engine, _forecast_engine, _battery_optimizer, _heat_pump_controller, _ev_charging_planner, _gas_meter
     _provider = provider
     _warning_manager = warning_manager
     _fuel_tracker = fuel_tracker
@@ -45,8 +47,9 @@ def init_regional_api(
     _battery_optimizer = battery_optimizer
     _heat_pump_controller = heat_pump_controller
     _ev_charging_planner = ev_charging_planner
+    _gas_meter = gas_meter
     logger.info(
-        "Regional API initialized (warnings: %s, fuel: %s, tariff: %s, alerts: %s, forecast: %s, battery: %s, heatpump: %s, ev: %s)",
+        "Regional API initialized (warnings: %s, fuel: %s, tariff: %s, alerts: %s, forecast: %s, battery: %s, heatpump: %s, ev: %s, gas: %s)",
         warning_manager is not None,
         fuel_tracker is not None,
         tariff_engine is not None,
@@ -55,6 +58,7 @@ def init_regional_api(
         battery_optimizer is not None,
         heat_pump_controller is not None,
         ev_charging_planner is not None,
+        gas_meter is not None,
     )
 
 
@@ -1034,3 +1038,98 @@ def ingest_ev_data():
     except Exception as exc:
         logger.error("EV data ingestion failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+# ── Gas Meter endpoints (v6.3.0) ───────────────────────────────────────────
+
+
+@regional_bp.route("/gas", methods=["GET"])
+@require_token
+def get_gas_dashboard():
+    """Get complete gas meter dashboard."""
+    if not _gas_meter:
+        return jsonify({"error": "Gas meter not initialized"}), 503
+    dashboard = _gas_meter.get_dashboard()
+    return jsonify({"ok": True, **asdict(dashboard)})
+
+
+@regional_bp.route("/gas/impulse", methods=["POST"])
+@require_token
+def record_gas_impulse():
+    """Record gas impulse(s).
+
+    JSON body (optional): {"count": 1}
+    """
+    if not _gas_meter:
+        return jsonify({"error": "Gas meter not initialized"}), 503
+    body = request.get_json(silent=True) or {}
+    count = int(body.get("count", 1))
+    if count == 1:
+        meter = _gas_meter.record_impulse()
+    else:
+        meter = _gas_meter.record_impulses(count)
+    return jsonify({"ok": True, "meter_m3": round(meter, 3), "impulses": count})
+
+
+@regional_bp.route("/gas/reading", methods=["POST"])
+@require_token
+def record_gas_reading():
+    """Record direct meter reading.
+
+    JSON body: {"meter_m3": 1234.56}
+    """
+    if not _gas_meter:
+        return jsonify({"error": "Gas meter not initialized"}), 503
+    body = request.get_json(silent=True) or {}
+    meter_m3 = float(body.get("meter_m3", 0))
+    delta = _gas_meter.record_meter_reading(meter_m3)
+    return jsonify({"ok": True, "meter_m3": meter_m3, "delta_m3": round(delta, 3)})
+
+
+@regional_bp.route("/gas/stats/<period>", methods=["GET"])
+@require_token
+def get_gas_stats(period):
+    """Get gas statistics for a period (today/yesterday/week/month/year)."""
+    if not _gas_meter:
+        return jsonify({"error": "Gas meter not initialized"}), 503
+    stats = _gas_meter.get_period_stats(period)
+    return jsonify({"ok": True, **asdict(stats)})
+
+
+@regional_bp.route("/gas/forecast/<period>", methods=["GET"])
+@require_token
+def get_gas_forecast(period):
+    """Get gas consumption forecast (month/year)."""
+    if not _gas_meter:
+        return jsonify({"error": "Gas meter not initialized"}), 503
+    forecast = _gas_meter.get_forecast(period)
+    return jsonify({"ok": True, **asdict(forecast)})
+
+
+@regional_bp.route("/gas/config", methods=["POST"])
+@require_token
+def configure_gas_meter():
+    """Update gas meter configuration.
+
+    JSON body: {"gas_price_ct_kwh": 9.5, "impulse_factor_m3": 0.01, "region": "sued", ...}
+    """
+    if not _gas_meter:
+        return jsonify({"error": "Gas meter not initialized"}), 503
+    body = request.get_json(silent=True) or {}
+    config = _gas_meter.update_config(**body)
+    return jsonify({"ok": True, "config": asdict(config)})
+
+
+@regional_bp.route("/gas/initial", methods=["POST"])
+@require_token
+def set_gas_initial_reading():
+    """Set initial meter reading.
+
+    JSON body: {"meter_m3": 12345.67}
+    """
+    if not _gas_meter:
+        return jsonify({"error": "Gas meter not initialized"}), 503
+    body = request.get_json(silent=True) or {}
+    meter_m3 = float(body.get("meter_m3", 0))
+    _gas_meter.set_initial_reading(meter_m3)
+    return jsonify({"ok": True, "initial_meter_m3": meter_m3})

@@ -1,5 +1,34 @@
 # Changelog - PilotSuite Core Add-on
 
+## [6.3.0] - 2026-02-21
+
+### Gas Meter & Gastherme — Impulszähler, Preise, Statistiken, Forecast
+
+#### Gas Meter Engine (NEW)
+- **regional/gas_meter.py** — `GasMeterEngine`
+- Impulse-based gas meter support (binary_sensor.gasdurchflusssensor)
+- Direct m³ reading via counter entity
+- Configurable impulse factor (0.01 or 0.10 m³/Impuls)
+- kWh conversion: Brennwert × Zustandszahl (H-Gas Standard)
+- Regional gas price defaults (Nord/Ost/Süd/West/Bundesdurchschnitt)
+- Manual gas price configuration (ct/kWh)
+- Initial meter reading import
+- Daily/weekly/monthly/yearly statistics with cost calculation
+- Month/year forecast with trend detection (steigend/fallend/stabil)
+- Complete dashboard with all stats, config, and pricing
+
+#### API Endpoints (7 NEW)
+- `GET /api/v1/regional/gas` — Gas meter dashboard
+- `POST /api/v1/regional/gas/impulse` — Record impulse(s)
+- `POST /api/v1/regional/gas/reading` — Direct meter reading
+- `GET /api/v1/regional/gas/stats/<period>` — Period statistics
+- `GET /api/v1/regional/gas/forecast/<period>` — Consumption forecast
+- `POST /api/v1/regional/gas/config` — Update configuration
+- `POST /api/v1/regional/gas/initial` — Set initial meter reading
+
+#### Test Suite (NEW — 38 tests)
+- **tests/test_gas_meter.py** — Config, impulses, readings, conversions, statistics, forecast, dashboard, regional prices, edge cases
+
 ## [6.2.0] - 2026-02-21
 
 ### Anomaly Detection v2 — Multi-Dimensional Pattern Analysis
