@@ -10,7 +10,7 @@
 set -e
 
 echo "============================================"
-echo "  PilotSuite v4.0.0 -- Styx"
+echo "  PilotSuite v7.6.4 -- Styx"
 echo "  Die Verbindung beider Welten"
 echo "  Local AI for your Smart Home"
 echo "============================================"
@@ -24,23 +24,17 @@ OPTIONS_FILE="/data/options.json"
 if [ -f "$OPTIONS_FILE" ]; then
     echo "Loading addon configuration from $OPTIONS_FILE..."
 
-    # Extract conversation settings via Python (jq not available on Alpine base)
+    # Extract configuration via Python (jq not available on Alpine base)
     eval "$(python3 -c "
 import json, os
 try:
     with open('$OPTIONS_FILE') as f:
         opts = json.load(f)
-    conv = opts.get('conversation', {})
     pairs = {
-        'OLLAMA_URL': conv.get('ollama_url', ''),
-        'OLLAMA_MODEL': conv.get('ollama_model', ''),
-        'CLOUD_API_URL': conv.get('cloud_api_url', ''),
-        'CLOUD_API_KEY': conv.get('cloud_api_key', ''),
-        'CLOUD_MODEL': conv.get('cloud_model', ''),
-        'PREFER_LOCAL': str(conv.get('prefer_local', True)).lower(),
-        'CONVERSATION_ENABLED': str(conv.get('enabled', True)).lower(),
-        'ASSISTANT_NAME': conv.get('assistant_name', ''),
-        'CONVERSATION_CHARACTER': conv.get('character', ''),
+        'OLLAMA_URL': opts.get('conversation_ollama_url', ''),
+        'OLLAMA_MODEL': opts.get('conversation_ollama_model', ''),
+        'CONVERSATION_ENABLED': str(opts.get('conversation_enabled', True)).lower(),
+        'ASSISTANT_NAME': opts.get('conversation_assistant_name', ''),
     }
     # Log level
     ll = opts.get('log_level', '')
