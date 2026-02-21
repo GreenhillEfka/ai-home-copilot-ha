@@ -18,21 +18,23 @@ _multi_home: object | None = None
 _maintenance_engine: object | None = None
 _anomaly_engine: object | None = None
 _zone_engine: object | None = None
+_light_engine: object | None = None
 
 
 def init_hub_api(dashboard=None, plugin_manager=None, multi_home=None,
                  maintenance_engine=None, anomaly_engine=None,
-                 zone_engine=None) -> None:
+                 zone_engine=None, light_engine=None) -> None:
     """Initialize hub services."""
-    global _dashboard, _plugin_manager, _multi_home, _maintenance_engine, _anomaly_engine, _zone_engine
+    global _dashboard, _plugin_manager, _multi_home, _maintenance_engine, _anomaly_engine, _zone_engine, _light_engine
     _dashboard = dashboard
     _plugin_manager = plugin_manager
     _multi_home = multi_home
     _maintenance_engine = maintenance_engine
     _anomaly_engine = anomaly_engine
     _zone_engine = zone_engine
+    _light_engine = light_engine
     logger.info(
-        "Hub API initialized (dashboard: %s, plugins: %s, multi_home: %s, anomaly: %s, zones: %s)",
+        "Hub API initialized (dashboard: %s, plugins: %s, multi_home: %s, anomaly: %s, zones: %s, light: %s)",
         dashboard is not None,
         plugin_manager is not None,
         multi_home is not None,
@@ -591,3 +593,103 @@ def get_zone_modes():
     if not _zone_engine:
         return jsonify({"error": "Zone engine not initialized"}), 503
     return jsonify({"ok": True, "modes": _zone_engine.get_modes()})
+
+
+# ── Light Intelligence endpoints (v6.5.0) ──────────────────────────────────
+
+
+@hub_bp.route("/light", methods=["GET"])
+@require_token
+def get_light_dashboard():
+    """Get light intelligence dashboard."""
+    if not _light_engine:
+        return jsonify({"error": "Light engine not initialized"}), 503
+    dashboard = _light_engine.get_dashboard()
+    return jsonify({"ok": True, **asdict(dashboard)})
+
+
+@hub_bp.route("/light/sun", methods=["POST"])
+@require_token
+def update_sun():
+    """Update sun position.
+
+    JSON body: {"elevation": 45.0, "azimuth": 180.0}
+    """
+    if not _light_engine:
+        return jsonify({"error": "Light engine not initialized"}), 503
+    body = request.get_json(silent=True) or {}
+    sun = _light_engine.update_sun(
+        float(body.get("elevation", 0)),
+        float(body.get("azimuth", 0)),
+    )
+    return jsonify({"ok": True, **asdict(sun)})
+
+
+@hub_bp.route("/light/brightness", methods=["POST"])
+@require_token
+def update_light_brightness():
+    """Update brightness readings.
+
+    JSON body: {"readings": [{"entity_id": "...", "lux": ...}, ...]}
+    """
+    if not _light_engine:
+        return jsonify({"error": "Light engine not initialized"}), 503
+    body = request.get_json(silent=True) or {}
+    count = _light_engine.update_brightness_batch(body.get("readings", []))
+    return jsonify({"ok": True, "updated": count})
+
+
+@hub_bp.route("/light/zone/<zone_id>", methods=["GET"])
+@require_token
+def get_zone_light(zone_id):
+    """Get zone brightness analysis."""
+    if not _light_engine:
+        return jsonify({"error": "Light engine not initialized"}), 503
+    zb = _light_engine.get_zone_brightness(zone_id)
+    return jsonify({"ok": True, **asdict(zb)})
+
+
+@hub_bp.route("/light/scenes", methods=["GET"])
+@require_token
+def get_light_scenes():
+    """Get available mood scenes."""
+    if not _light_engine:
+        return jsonify({"error": "Light engine not initialized"}), 503
+    return jsonify({"ok": True, "scenes": _light_engine.get_scenes()})
+
+
+@hub_bp.route("/light/scene", methods=["POST"])
+@require_token
+def set_light_scene():
+    """Set active scene.
+
+    JSON body: {"scene_id": "relax", "zone_id"?: "..."}
+    """
+    if not _light_engine:
+        return jsonify({"error": "Light engine not initialized"}), 503
+    body = request.get_json(silent=True) or {}
+    result = _light_engine.set_active_scene(
+        body.get("scene_id", ""),
+        body.get("zone_id"),
+    )
+    return jsonify({"ok": result})
+
+
+@hub_bp.route("/light/suggest", methods=["GET"])
+@require_token
+def suggest_light_scene():
+    """Get scene suggestion based on current conditions."""
+    if not _light_engine:
+        return jsonify({"error": "Light engine not initialized"}), 503
+    scene = _light_engine.suggest_scene()
+    if not scene:
+        return jsonify({"ok": True, "suggestion": None})
+    return jsonify({
+        "ok": True,
+        "suggestion": {
+            "scene_id": scene.scene_id,
+            "name_de": scene.name_de,
+            "brightness_pct": scene.brightness_pct,
+            "color_temp_k": scene.color_temp_k,
+        },
+    })
