@@ -1,4 +1,4 @@
-"""Regional Context API endpoints (v5.20.0)."""
+"""Regional Context API endpoints (v5.23.0)."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ _fuel_tracker = None
 _tariff_engine = None
 _alert_engine = None
 _forecast_engine = None
+_battery_optimizer = None
 
 
 def init_regional_api(
@@ -27,22 +28,25 @@ def init_regional_api(
     tariff_engine=None,
     alert_engine=None,
     forecast_engine=None,
+    battery_optimizer=None,
 ) -> None:
     """Initialize all regional services."""
-    global _provider, _warning_manager, _fuel_tracker, _tariff_engine, _alert_engine, _forecast_engine
+    global _provider, _warning_manager, _fuel_tracker, _tariff_engine, _alert_engine, _forecast_engine, _battery_optimizer
     _provider = provider
     _warning_manager = warning_manager
     _fuel_tracker = fuel_tracker
     _tariff_engine = tariff_engine
     _alert_engine = alert_engine
     _forecast_engine = forecast_engine
+    _battery_optimizer = battery_optimizer
     logger.info(
-        "Regional API initialized (warnings: %s, fuel: %s, tariff: %s, alerts: %s, forecast: %s)",
+        "Regional API initialized (warnings: %s, fuel: %s, tariff: %s, alerts: %s, forecast: %s, battery: %s)",
         warning_manager is not None,
         fuel_tracker is not None,
         tariff_engine is not None,
         alert_engine is not None,
         forecast_engine is not None,
+        battery_optimizer is not None,
     )
 
 
@@ -640,3 +644,97 @@ def configure_forecast():
         _forecast_engine._default_price = float(body["grid_price_ct"])
 
     return jsonify({"ok": True, "configured": True})
+
+
+# ── Battery Optimizer endpoints (v5.23.0) ────────────────────────────────
+
+
+@regional_bp.route("/battery/schedule", methods=["GET"])
+@require_token
+def get_battery_schedule():
+    """Get optimized battery charge/discharge schedule."""
+    if not _battery_optimizer:
+        return jsonify({"error": "Battery optimizer not initialized"}), 503
+    hours = int(request.args.get("hours", 48))
+    schedule = _battery_optimizer.optimize(horizon_hours=hours)
+    return jsonify({"ok": True, **asdict(schedule)})
+
+
+@regional_bp.route("/battery/status", methods=["GET"])
+@require_token
+def get_battery_status():
+    """Get current battery status."""
+    if not _battery_optimizer:
+        return jsonify({"error": "Battery optimizer not initialized"}), 503
+    status = _battery_optimizer.get_status()
+    return jsonify({"ok": True, **asdict(status)})
+
+
+@regional_bp.route("/battery/soc", methods=["POST"])
+@require_token
+def update_battery_soc():
+    """Update battery state of charge.
+
+    JSON body: {"soc_pct": 65.0}
+    """
+    if not _battery_optimizer:
+        return jsonify({"error": "Battery optimizer not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+    soc = body.get("soc_pct")
+    if soc is None:
+        return jsonify({"ok": False, "error": "soc_pct required"}), 400
+
+    _battery_optimizer.set_soc(float(soc))
+    return jsonify({"ok": True, "soc_pct": _battery_optimizer.config.current_soc_pct})
+
+
+@regional_bp.route("/battery/config", methods=["POST"])
+@require_token
+def configure_battery():
+    """Configure battery system.
+
+    JSON body: {
+        "capacity_kwh": 10.0,
+        "max_charge_kw": 5.0,
+        "max_discharge_kw": 5.0,
+        "min_soc_pct": 10.0,
+        "max_soc_pct": 95.0,
+        "round_trip_efficiency": 0.92
+    }
+    """
+    if not _battery_optimizer:
+        return jsonify({"error": "Battery optimizer not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+    _battery_optimizer.update_config(**body)
+    return jsonify({"ok": True, "configured": True, "config": asdict(_battery_optimizer.config)})
+
+
+@regional_bp.route("/battery/ingest", methods=["POST"])
+@require_token
+def ingest_battery_data():
+    """Ingest forecast data for battery optimization.
+
+    JSON body: {"forecast_hours": [...]}
+    """
+    if not _battery_optimizer:
+        return jsonify({"error": "Battery optimizer not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+
+    try:
+        if "forecast_hours" in body:
+            _battery_optimizer.import_forecast_data(body["forecast_hours"])
+        if "prices" in body:
+            _battery_optimizer.set_prices(
+                {int(k): float(v) for k, v in body["prices"].items()}
+            )
+        if "pv_forecast" in body:
+            _battery_optimizer.set_pv_forecast(
+                {int(k): float(v) for k, v in body["pv_forecast"].items()}
+            )
+        return jsonify({"ok": True, "ingested": True})
+    except Exception as exc:
+        logger.error("Battery data ingestion failed: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 500

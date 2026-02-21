@@ -1,5 +1,34 @@
 # Changelog - PilotSuite Core Add-on
 
+## [5.23.0] - 2026-02-21
+
+### Battery Strategy Optimizer — ML-based Charge/Discharge Scheduling
+
+#### Battery Optimizer Engine (NEW)
+- **regional/battery_optimizer.py** — `BatteryStrategyOptimizer` with greedy optimization
+- 48h charge/discharge schedule combining prices, PV, consumption patterns
+- 4 strategies: arbitrage (buy low/sell high), solar_first, peak_shaving, backup
+- SoC constraint management (min/max limits, cycle budget)
+- Battery degradation cost model (EUR/kWh cycled)
+- Solar priority: free energy always charged first
+- Consumption pattern defaults (German household curve)
+- Round-trip efficiency modeling (AC-to-AC)
+- Savings estimation vs no-battery baseline
+
+#### API Endpoints (5 NEW)
+- `GET /api/v1/regional/battery/schedule` — Optimized charge/discharge schedule
+- `GET /api/v1/regional/battery/status` — Current battery state
+- `POST /api/v1/regional/battery/soc` — Update state of charge
+- `POST /api/v1/regional/battery/config` — Configure battery system
+- `POST /api/v1/regional/battery/ingest` — Import forecast data
+
+#### Test Suite (NEW — 23 tests)
+- **tests/test_battery_optimizer.py** — Init, optimization, solar, arbitrage, status, import
+
+#### Infrastructure
+- **regional/__init__.py** — Exports BatteryStrategyOptimizer
+- **regional/api.py** — init_regional_api() accepts battery_optimizer parameter
+
 ## [5.22.0] - 2026-02-21
 
 ### Styx Greeting & Onboarding — Welcome Flow for New Installations
