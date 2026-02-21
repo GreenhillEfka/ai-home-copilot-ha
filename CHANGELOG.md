@@ -1,5 +1,34 @@
 # Changelog - PilotSuite Core Add-on
 
+## [7.6.0] - 2026-02-21 — PRODUCTION-READY RELEASE
+
+### Bulletproof Startup — Alle Engines verdrahtet und funktionsfaehig
+
+#### Critical Fix: Full Engine Wiring in core_setup.py
+- **core_setup.py** — Alle 17 Hub-Engines werden beim Start instanziiert
+- Alle Engines beim SystemIntegrationHub registriert
+- `auto_wire()` automatisch aufgerufen: 14 Event-Subscriptions aktiv
+- Brain Architecture synchronisiert mit Integration Hub
+- `hub_bp` Blueprint registriert: 120+ API Endpoints live
+- `init_hub_api()` mit allen 17 Engines aufgerufen
+- Graceful degradation: try/except fuer den gesamten Hub-Block
+
+#### Startup-Sequenz:
+1. 17 Hub-Engines instanziiert (Dashboard, Plugins, MultiHome, Maintenance, Anomaly, Zones, Light, Modes, Media, Energy, Templates, Scenes, Presence, Notifications, Integration, BrainArchitecture, BrainActivity)
+2. 14 Engines beim SystemIntegrationHub registriert
+3. Auto-Wiring: 14 Event-Subscriptions erstellt
+4. Brain Architecture mit Hub synchronisiert
+5. init_hub_api() aufgerufen mit allen Globals
+6. hub_bp registriert: 120+ Endpoints unter /api/v1/hub/*
+
+#### Test Suite: 233 Hub Tests bestanden
+- test_system_integration.py: 34 tests
+- test_brain_architecture.py: 41 tests
+- test_brain_activity.py: 35 tests
+- test_scene_intelligence.py: 46 tests
+- test_presence_intelligence.py: 38 tests
+- test_notification_intelligence.py: 39 tests
+
 ## [7.5.0] - 2026-02-21
 
 ### Brain Activity — Pulse, Sleep & Chat History
