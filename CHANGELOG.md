@@ -1,5 +1,38 @@
 # Changelog - PilotSuite Core Add-on
 
+## [5.8.0] - 2026-02-21
+
+### Notification Engine — Smart Alert Aggregation
+
+#### Notification Engine (NEW)
+- **notifications/engine.py** — Central notification hub for all PilotSuite modules
+- Priority levels: CRITICAL (1), HIGH (2), NORMAL (3), LOW (4)
+- Deduplication: identical alerts within configurable time window merged (default 10 min)
+- Rate limiting: max N notifications/hour per channel (default 20/h)
+- CRITICAL priority bypasses both dedup and rate limits
+- LOW priority batched into periodic digest summaries
+- History buffer with max 500 entries
+- Thread-safe with `threading.Lock`
+- `notify()` — Submit notification, returns None if deduped/rate-limited
+- `flush_pending()` — Get & clear pending for delivery
+- `get_digest()` — Notification summary with by-source and by-priority counts
+- `get_history()` — Recent items with optional source filter
+- `register_handler()` — Channel-specific delivery callbacks
+
+#### API Endpoints (NEW)
+- `GET /api/v1/notifications` — History with limit and source filter
+- `POST /api/v1/notifications` — Submit notification
+- `GET /api/v1/notifications/digest` — Digest summary
+- `GET /api/v1/notifications/pending` — Flush pending for delivery
+- `GET /api/v1/notifications/stats` — Engine statistics
+
+#### Test Suite (NEW — 35+ tests)
+- **tests/test_notification_engine.py** — Priority, notify, dedup, rate limiting, history, digest, pending, stats, clear, handlers
+
+#### Infrastructure
+- **notifications/__init__.py** — Module with public exports
+- **config.json** — Version 5.8.0
+
 ## [5.7.0] - 2026-02-21
 
 ### Comfort Index — Environmental Comfort Scoring + Adaptive Lighting
