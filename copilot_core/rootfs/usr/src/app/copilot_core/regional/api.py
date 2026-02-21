@@ -1,4 +1,4 @@
-"""Regional Context API endpoints (v5.17.0)."""
+"""Regional Context API endpoints (v5.18.0)."""
 
 from __future__ import annotations
 
@@ -15,18 +15,23 @@ regional_bp = Blueprint("regional", __name__, url_prefix="/api/v1/regional")
 _provider = None
 _warning_manager = None
 _fuel_tracker = None
+_tariff_engine = None
 
 
-def init_regional_api(provider=None, warning_manager=None, fuel_tracker=None) -> None:
-    """Initialize regional context provider, warning manager, and fuel tracker."""
-    global _provider, _warning_manager, _fuel_tracker
+def init_regional_api(
+    provider=None, warning_manager=None, fuel_tracker=None, tariff_engine=None
+) -> None:
+    """Initialize all regional services."""
+    global _provider, _warning_manager, _fuel_tracker, _tariff_engine
     _provider = provider
     _warning_manager = warning_manager
     _fuel_tracker = fuel_tracker
+    _tariff_engine = tariff_engine
     logger.info(
-        "Regional API initialized (warnings: %s, fuel: %s)",
+        "Regional API initialized (warnings: %s, fuel: %s, tariff: %s)",
         warning_manager is not None,
         fuel_tracker is not None,
+        tariff_engine is not None,
     )
 
 
@@ -309,3 +314,115 @@ def configure_fuel():
         _fuel_tracker.update_grid_price(float(body["grid_price_eur_kwh"]))
 
     return jsonify({"ok": True, "configured": True, "has_api_key": _fuel_tracker.has_api_key})
+
+
+# ── Tariff Engine endpoints (v5.18.0) ────────────────────────────────────
+
+
+@regional_bp.route("/tariff/summary", methods=["GET"])
+@require_token
+def get_tariff_summary():
+    """Get electricity tariff summary with current price and stats."""
+    if not _tariff_engine:
+        return jsonify({"error": "Tariff engine not initialized"}), 503
+    summary = _tariff_engine.get_summary()
+    return jsonify({"ok": True, **asdict(summary)})
+
+
+@regional_bp.route("/tariff/prices", methods=["GET"])
+@require_token
+def get_tariff_prices():
+    """Get hourly electricity prices."""
+    if not _tariff_engine:
+        return jsonify({"error": "Tariff engine not initialized"}), 503
+    prices = _tariff_engine.get_hourly_prices()
+    return jsonify({
+        "ok": True,
+        "prices": [asdict(p) for p in prices],
+        "total": len(prices),
+        "tariff_type": _tariff_engine.tariff_type,
+    })
+
+
+@regional_bp.route("/tariff/optimal", methods=["GET"])
+@require_token
+def get_optimal_window():
+    """Find cheapest time window for consumption.
+
+    Query param: ?hours=3 (default 3)
+    """
+    if not _tariff_engine:
+        return jsonify({"error": "Tariff engine not initialized"}), 503
+    hours = int(request.args.get("hours", 3))
+    window = _tariff_engine.find_optimal_window(duration_hours=hours)
+    if not window:
+        return jsonify({"ok": True, "window": None, "message": "Not enough data"})
+    return jsonify({"ok": True, **asdict(window)})
+
+
+@regional_bp.route("/tariff/recommendation", methods=["GET"])
+@require_token
+def get_tariff_recommendation():
+    """Get tariff-based energy recommendation."""
+    if not _tariff_engine:
+        return jsonify({"error": "Tariff engine not initialized"}), 503
+    rec = _tariff_engine.get_recommendation()
+    return jsonify({"ok": True, **asdict(rec)})
+
+
+@regional_bp.route("/tariff/ingest", methods=["POST"])
+@require_token
+def ingest_tariff_prices():
+    """Ingest electricity prices from aWATTar or manual input.
+
+    JSON body: {"source": "awattar"|"manual", "data": {...}}
+    """
+    if not _tariff_engine:
+        return jsonify({"error": "Tariff engine not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+    source = body.get("source", "manual")
+    data = body.get("data", {})
+
+    try:
+        if source in ("awattar", "awattar_de", "awattar_at"):
+            prices = _tariff_engine.process_awattar_response(data)
+        else:
+            prices_list = data if isinstance(data, list) else data.get("prices", [])
+            prices = _tariff_engine.process_manual_prices(prices_list)
+
+        summary = _tariff_engine.get_summary()
+        return jsonify({
+            "ok": True,
+            "source": source,
+            "hours_ingested": len(prices),
+            **asdict(summary),
+        })
+    except Exception as exc:
+        logger.error("Tariff ingestion failed: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@regional_bp.route("/tariff/config", methods=["POST"])
+@require_token
+def configure_tariff():
+    """Configure tariff engine.
+
+    JSON body: {
+        "country": "DE",
+        "tariff_type": "dynamic"|"time_of_use"|"fixed",
+        "fixed_rate_eur_kwh": 0.30,
+        "feed_in_eur_kwh": 0.082
+    }
+    """
+    if not _tariff_engine:
+        return jsonify({"error": "Tariff engine not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+    _tariff_engine.update_config(
+        country=body.get("country"),
+        tariff_type=body.get("tariff_type"),
+        fixed_rate=body.get("fixed_rate_eur_kwh"),
+        feed_in=body.get("feed_in_eur_kwh"),
+    )
+    return jsonify({"ok": True, "configured": True, "tariff_type": _tariff_engine.tariff_type})
