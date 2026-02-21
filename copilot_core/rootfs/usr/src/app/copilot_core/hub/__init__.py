@@ -1,4 +1,4 @@
-"""PilotSuite Hub — Unified Dashboard & Plugin Architecture (v7.5.0)."""
+"""PilotSuite Hub — Unified Dashboard & Plugin Architecture (v7.6.0)."""
 
 from .dashboard import DashboardHub  # noqa: F401
 from .plugin_manager import PluginManager  # noqa: F401

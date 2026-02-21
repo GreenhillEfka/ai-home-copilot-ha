@@ -1,4 +1,4 @@
-"""Hub API endpoints for PilotSuite (v7.5.0)."""
+"""Hub API endpoints for PilotSuite (v7.6.0)."""
 
 from __future__ import annotations
 

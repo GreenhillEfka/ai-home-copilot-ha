@@ -96,6 +96,24 @@ def init_services(hass=None, config: dict = None):
         "birthday_service": None,
         "vector_store": None,
         "embedding_engine": None,
+        # PilotSuite Hub engines (v7.6.0)
+        "hub_dashboard": None,
+        "hub_plugin_manager": None,
+        "hub_multi_home": None,
+        "hub_maintenance": None,
+        "hub_anomaly": None,
+        "hub_zones": None,
+        "hub_light": None,
+        "hub_modes": None,
+        "hub_media": None,
+        "hub_energy": None,
+        "hub_templates": None,
+        "hub_scenes": None,
+        "hub_presence": None,
+        "hub_notifications": None,
+        "hub_integration": None,
+        "hub_brain_arch": None,
+        "hub_brain_activity": None,
     }
 
     # Initialize system health service (requires hass)
@@ -368,6 +386,80 @@ def init_services(hass=None, config: dict = None):
     except Exception:
         _LOGGER.exception("Failed to init ProactiveContextEngine")
 
+    # ── PilotSuite Hub — All 17 engines (v7.6.0) ──────────────────────────
+    try:
+        from copilot_core.hub import (
+            DashboardHub,
+            PluginManager,
+            MultiHomeManager,
+            PredictiveMaintenanceEngine,
+            AnomalyDetectionEngine,
+            HabitusZoneEngine,
+            LightIntelligenceEngine,
+            ZoneModeEngine,
+            MediaFollowEngine,
+            EnergyAdvisorEngine,
+            AutomationTemplateEngine,
+            SceneIntelligenceEngine,
+            PresenceIntelligenceEngine,
+            NotificationIntelligenceEngine,
+            SystemIntegrationHub,
+            BrainArchitectureEngine,
+            BrainActivityEngine,
+        )
+
+        services["hub_dashboard"] = DashboardHub()
+        services["hub_plugin_manager"] = PluginManager()
+        services["hub_multi_home"] = MultiHomeManager()
+        services["hub_maintenance"] = PredictiveMaintenanceEngine()
+        services["hub_anomaly"] = AnomalyDetectionEngine()
+        services["hub_zones"] = HabitusZoneEngine()
+        services["hub_light"] = LightIntelligenceEngine()
+        services["hub_modes"] = ZoneModeEngine()
+        services["hub_media"] = MediaFollowEngine()
+        services["hub_energy"] = EnergyAdvisorEngine()
+        services["hub_templates"] = AutomationTemplateEngine()
+        services["hub_scenes"] = SceneIntelligenceEngine()
+        services["hub_presence"] = PresenceIntelligenceEngine()
+        services["hub_notifications"] = NotificationIntelligenceEngine()
+        services["hub_integration"] = SystemIntegrationHub()
+        services["hub_brain_arch"] = BrainArchitectureEngine()
+        services["hub_brain_activity"] = BrainActivityEngine()
+
+        # Register all engines with the Integration Hub
+        integration_hub = services["hub_integration"]
+        engine_map = {
+            "dashboard": services["hub_dashboard"],
+            "plugin_manager": services["hub_plugin_manager"],
+            "multi_home": services["hub_multi_home"],
+            "predictive_maintenance": services["hub_maintenance"],
+            "anomaly_detection": services["hub_anomaly"],
+            "habitus_zones": services["hub_zones"],
+            "light_intelligence": services["hub_light"],
+            "zone_modes": services["hub_modes"],
+            "media_follow": services["hub_media"],
+            "energy_advisor": services["hub_energy"],
+            "automation_templates": services["hub_templates"],
+            "scene_intelligence": services["hub_scenes"],
+            "presence_intelligence": services["hub_presence"],
+            "notification_intelligence": services["hub_notifications"],
+        }
+        for name, engine in engine_map.items():
+            integration_hub.register_engine(name, engine)
+
+        # Auto-wire default event subscriptions
+        wire_count = integration_hub.auto_wire()
+
+        # Sync Brain Architecture with Integration Hub
+        services["hub_brain_arch"].sync_with_hub(integration_hub)
+
+        _LOGGER.info(
+            "PilotSuite Hub initialized: 17 engines, %d event subscriptions, brain synced",
+            wire_count,
+        )
+    except Exception:
+        _LOGGER.exception("Failed to init PilotSuite Hub engines")
+
     # Initialize Telegram Bot (requires conversation to be configured)
     try:
         tg_config = config.get("telegram", {}) if config else {}
@@ -591,6 +683,34 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     from copilot_core.mcp_server import mcp_bp
     app.register_blueprint(mcp_bp)
     
+    # Register PilotSuite Hub API (v7.6.0 — 17 engines, 120+ endpoints)
+    try:
+        from copilot_core.hub.api import hub_bp, init_hub_api
+        if services:
+            init_hub_api(
+                dashboard=services.get("hub_dashboard"),
+                plugin_manager=services.get("hub_plugin_manager"),
+                multi_home=services.get("hub_multi_home"),
+                maintenance_engine=services.get("hub_maintenance"),
+                anomaly_engine=services.get("hub_anomaly"),
+                zone_engine=services.get("hub_zones"),
+                light_engine=services.get("hub_light"),
+                mode_engine=services.get("hub_modes"),
+                media_engine=services.get("hub_media"),
+                energy_advisor=services.get("hub_energy"),
+                template_engine=services.get("hub_templates"),
+                scene_engine=services.get("hub_scenes"),
+                presence_engine=services.get("hub_presence"),
+                notification_engine=services.get("hub_notifications"),
+                integration_hub=services.get("hub_integration"),
+                brain_architecture=services.get("hub_brain_arch"),
+                brain_activity=services.get("hub_brain_activity"),
+            )
+        app.register_blueprint(hub_bp)
+        _LOGGER.info("Registered Hub API (/api/v1/hub/* — 120+ endpoints)")
+    except Exception:
+        _LOGGER.exception("Failed to register Hub API")
+
     # Store services in app config for conversation context injection
     if services:
         app.config["COPILOT_SERVICES"] = services
