@@ -1,5 +1,32 @@
 # Changelog - PilotSuite Core Add-on
 
+## [6.5.0] - 2026-02-21
+
+### Licht-Intelligence — Sonnenstand, Helligkeit, Schwellwertregler, Mood-Szenen
+
+#### Light Intelligence Engine (NEW)
+- **hub/light_intelligence.py** — `LightIntelligenceEngine`
+- Sun position tracking (elevation, azimuth, phase classification)
+- Outdoor/indoor brightness averaging per zone
+- Normalized illumination ratio (indoor/outdoor) mit Ausleuchtungsgrad
+- Cloud-resilient moving average filter (Hysterese gegen Wolkenschwankungen)
+- 8 Mood-Szenen: Energize, Focus, Relax, Cozy Evening, Night Light, Morning Glow, Dimmed, Off
+- Automatic scene suggestion based on sun phase, hour, outdoor brightness
+- Zone-level brightness thresholds with dimming suggestions
+- Per-zone or global scene activation
+
+#### API Endpoints (7 NEW)
+- `GET /api/v1/hub/light` — Light dashboard
+- `POST /api/v1/hub/light/sun` — Update sun position
+- `POST /api/v1/hub/light/brightness` — Update brightness readings
+- `GET /api/v1/hub/light/zone/<id>` — Zone brightness analysis
+- `GET /api/v1/hub/light/scenes` — Available mood scenes
+- `POST /api/v1/hub/light/scene` — Set active scene
+- `GET /api/v1/hub/light/suggest` — Scene suggestion
+
+#### Test Suite (NEW — 29 tests)
+- **tests/test_light_intelligence.py** — Sun phases, brightness, cloud resilience, zones, scenes, dashboard
+
 ## [6.4.0] - 2026-02-21
 
 ### Habitus-Zonen — Room-to-Zone Grouping with Entity Adoption
