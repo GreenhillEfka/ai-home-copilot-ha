@@ -1,1 +1,3 @@
-"""Prediction module for PilotSuite v2.2.0"""
+"""Prediction module for PilotSuite v5.5.0"""
+
+from .schedule_planner import SchedulePlanner  # noqa: F401

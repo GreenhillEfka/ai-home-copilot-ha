@@ -1,5 +1,39 @@
 # Changelog - PilotSuite Core Add-on
 
+## [5.5.0] - 2026-02-21
+
+### Smart Schedule Planner — Optimal 24h Device Scheduling
+
+#### Schedule Planner (NEW)
+- **prediction/schedule_planner.py** — Generates optimal daily device schedules
+- Combines PV forecast, dynamic pricing (aWATTar), and device baselines
+- Composite slot scoring: `w_pv * pv_factor + w_price * price_factor + w_peak * peak_factor`
+- Greedy assignment by priority (1=highest, 5=lowest)
+- Peak shaving: prevents concurrent load exceeding household limit (11kW default)
+- Default solar curve for Central European latitudes
+- `DeviceProfile` / `ScheduleSlot` / `DeviceSchedule` / `DailyPlan` dataclasses
+- Configurable weights, power limits, and device profiles
+
+#### API Endpoints (NEW)
+- `GET /api/v1/predict/schedule/daily` — Full 24h schedule with hourly slot data
+- `GET /api/v1/predict/schedule/next` — Next upcoming scheduled device
+
+#### Test Suite (NEW)
+- **tests/test_schedule_planner.py** — 30+ tests covering:
+  - Dataclass defaults and custom values
+  - Default profile validation (5 device types)
+  - PV curve shape and range validation
+  - Price map with off-peak and custom pricing
+  - Full plan generation with various device lists
+  - PV optimization: high PV reduces device cost
+  - Peak shaving: concurrent power limit enforcement
+  - Scoring: custom weights, non-negative scores
+  - Edge cases: short PV forecast padding, custom dates, invalid prices
+
+#### Infrastructure
+- **config.json** — Version 5.5.0
+- **prediction/__init__.py** — Updated, exports SchedulePlanner
+
 ## [5.4.0] - 2026-02-21
 
 ### OpenAPI Spec v5.4.0 — Complete Energy API Documentation

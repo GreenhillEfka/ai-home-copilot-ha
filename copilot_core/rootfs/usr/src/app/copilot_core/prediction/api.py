@@ -28,6 +28,7 @@ _forecaster = None
 _optimizer = None
 _ts_forecaster = None
 _load_scheduler = None
+_schedule_planner = None
 
 
 def init_prediction_api(
@@ -35,13 +36,15 @@ def init_prediction_api(
     optimizer=None,
     ts_forecaster=None,
     load_scheduler=None,
+    schedule_planner=None,
 ) -> None:
     """Inject service singletons at startup."""
-    global _forecaster, _optimizer, _ts_forecaster, _load_scheduler
+    global _forecaster, _optimizer, _ts_forecaster, _load_scheduler, _schedule_planner
     _forecaster = forecaster
     _optimizer = optimizer
     _ts_forecaster = ts_forecaster
     _load_scheduler = load_scheduler
+    _schedule_planner = schedule_planner
     logger.info("Prediction API initialized")
 
 
@@ -239,4 +242,121 @@ def cancel_load_shift(schedule_id: str):
         return jsonify({"ok": True, **result}), 200
     except Exception as exc:
         logger.error("Cancel schedule failed: %s", exc, exc_info=True)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# v5.5.0 — Smart Schedule Planner
+# ═══════════════════════════════════════════════════════════════════════════
+
+# -- GET /api/v1/predict/schedule/daily -----------------------------------
+
+@prediction_bp.route("/schedule/daily", methods=["GET"])
+@require_token
+def get_daily_schedule():
+    """Generate optimal 24h device schedule.
+
+    Query params:
+        devices: comma-separated device types (default: all)
+    """
+    if _schedule_planner is None:
+        return jsonify({"ok": False, "error": "SchedulePlanner not initialized"}), 503
+
+    device_param = request.args.get("devices")
+    device_list = device_param.split(",") if device_param else None
+
+    # Get price data from optimizer if available
+    price_schedule = None
+    if _optimizer is not None:
+        with _optimizer._lock:
+            price_schedule = list(_optimizer._prices) if _optimizer._prices else None
+
+    try:
+        plan = _schedule_planner.generate_plan(
+            price_schedule=price_schedule,
+            device_list=device_list,
+        )
+        return jsonify({
+            "ok": True,
+            "date": plan.date,
+            "generated_at": plan.generated_at,
+            "devices_scheduled": plan.devices_scheduled,
+            "unscheduled_devices": plan.unscheduled_devices,
+            "total_estimated_cost_eur": plan.total_estimated_cost_eur,
+            "total_pv_coverage_percent": plan.total_pv_coverage_percent,
+            "peak_load_watts": plan.peak_load_watts,
+            "schedules": [
+                {
+                    "device_type": s.device_type,
+                    "start_hour": s.start_hour,
+                    "end_hour": s.end_hour,
+                    "start": s.start,
+                    "end": s.end,
+                    "estimated_cost_eur": s.estimated_cost_eur,
+                    "pv_coverage_percent": s.pv_coverage_percent,
+                    "priority": s.priority,
+                }
+                for s in plan.device_schedules
+            ],
+            "hourly_slots": [
+                {
+                    "hour": s.hour,
+                    "pv_factor": round(s.pv_factor, 2),
+                    "price_eur_kwh": round(s.price_eur_kwh, 4),
+                    "allocated_watts": round(s.allocated_watts, 0),
+                    "devices": s.devices,
+                    "score": round(s.score, 3),
+                }
+                for s in plan.slots
+            ],
+        }), 200
+    except Exception as exc:
+        logger.error("Daily schedule generation failed: %s", exc, exc_info=True)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+# -- GET /api/v1/predict/schedule/next ------------------------------------
+
+@prediction_bp.route("/schedule/next", methods=["GET"])
+@require_token
+def get_next_scheduled():
+    """Get the next scheduled device run from today's plan."""
+    if _schedule_planner is None:
+        return jsonify({"ok": False, "error": "SchedulePlanner not initialized"}), 503
+
+    try:
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+
+        plan = _schedule_planner.generate_plan()
+        upcoming = [
+            s for s in plan.device_schedules
+            if datetime.fromisoformat(s.start) > now
+        ]
+
+        if not upcoming:
+            return jsonify({
+                "ok": True,
+                "next": None,
+                "message": "No upcoming scheduled devices today",
+            }), 200
+
+        upcoming.sort(key=lambda s: s.start)
+        nxt = upcoming[0]
+
+        return jsonify({
+            "ok": True,
+            "next": {
+                "device_type": nxt.device_type,
+                "start": nxt.start,
+                "end": nxt.end,
+                "start_hour": nxt.start_hour,
+                "end_hour": nxt.end_hour,
+                "estimated_cost_eur": nxt.estimated_cost_eur,
+                "pv_coverage_percent": nxt.pv_coverage_percent,
+            },
+            "remaining_today": len(upcoming),
+        }), 200
+    except Exception as exc:
+        logger.error("Next schedule lookup failed: %s", exc, exc_info=True)
         return jsonify({"ok": False, "error": str(exc)}), 500
