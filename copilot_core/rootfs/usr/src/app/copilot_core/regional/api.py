@@ -1,4 +1,4 @@
-"""Regional Context API endpoints (v5.24.0)."""
+"""Regional Context API endpoints (v5.25.0)."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ _alert_engine = None
 _forecast_engine = None
 _battery_optimizer = None
 _heat_pump_controller = None
+_ev_charging_planner = None
 
 
 def init_regional_api(
@@ -31,9 +32,10 @@ def init_regional_api(
     forecast_engine=None,
     battery_optimizer=None,
     heat_pump_controller=None,
+    ev_charging_planner=None,
 ) -> None:
     """Initialize all regional services."""
-    global _provider, _warning_manager, _fuel_tracker, _tariff_engine, _alert_engine, _forecast_engine, _battery_optimizer, _heat_pump_controller
+    global _provider, _warning_manager, _fuel_tracker, _tariff_engine, _alert_engine, _forecast_engine, _battery_optimizer, _heat_pump_controller, _ev_charging_planner
     _provider = provider
     _warning_manager = warning_manager
     _fuel_tracker = fuel_tracker
@@ -42,8 +44,9 @@ def init_regional_api(
     _forecast_engine = forecast_engine
     _battery_optimizer = battery_optimizer
     _heat_pump_controller = heat_pump_controller
+    _ev_charging_planner = ev_charging_planner
     logger.info(
-        "Regional API initialized (warnings: %s, fuel: %s, tariff: %s, alerts: %s, forecast: %s, battery: %s, heatpump: %s)",
+        "Regional API initialized (warnings: %s, fuel: %s, tariff: %s, alerts: %s, forecast: %s, battery: %s, heatpump: %s, ev: %s)",
         warning_manager is not None,
         fuel_tracker is not None,
         tariff_engine is not None,
@@ -51,6 +54,7 @@ def init_regional_api(
         forecast_engine is not None,
         battery_optimizer is not None,
         heat_pump_controller is not None,
+        ev_charging_planner is not None,
     )
 
 
@@ -883,4 +887,150 @@ def ingest_heatpump_data():
         return jsonify({"ok": True, "imported": imported})
     except Exception as exc:
         logger.error("Heat pump data ingestion failed: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+# ── EV Charging Planner endpoints (v5.25.0) ──────────────────────────────
+
+
+@regional_bp.route("/ev/schedule", methods=["GET"])
+@require_token
+def get_ev_schedule():
+    """Get optimized EV charging schedule."""
+    if not _ev_charging_planner:
+        return jsonify({"error": "EV charging planner not initialized"}), 503
+    hours = int(request.args.get("hours", 48))
+    schedule = _ev_charging_planner.optimize(horizon_hours=hours)
+    return jsonify({"ok": True, **asdict(schedule)})
+
+
+@regional_bp.route("/ev/status", methods=["GET"])
+@require_token
+def get_ev_status():
+    """Get current EV charging status."""
+    if not _ev_charging_planner:
+        return jsonify({"error": "EV charging planner not initialized"}), 503
+    status = _ev_charging_planner.get_status()
+    return jsonify({"ok": True, **asdict(status)})
+
+
+@regional_bp.route("/ev/soc", methods=["POST"])
+@require_token
+def update_ev_soc():
+    """Update EV state of charge.
+
+    JSON body: {"soc_pct": 45.0}
+    """
+    if not _ev_charging_planner:
+        return jsonify({"error": "EV charging planner not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+    soc = body.get("soc_pct")
+    if soc is None:
+        return jsonify({"ok": False, "error": "soc_pct required"}), 400
+
+    _ev_charging_planner.set_soc(float(soc))
+    return jsonify({"ok": True, "soc_pct": _ev_charging_planner.config.current_soc_pct})
+
+
+@regional_bp.route("/ev/departure", methods=["POST"])
+@require_token
+def set_ev_departure():
+    """Set departure schedule.
+
+    JSON body: {
+        "departure_time": "2026-02-22T07:30:00+01:00",
+        "departure_soc_pct": 80.0,
+        "recurrence": "weekdays"
+    }
+    """
+    if not _ev_charging_planner:
+        return jsonify({"error": "EV charging planner not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+    dep_time = body.get("departure_time", "")
+    dep_soc = float(body.get("departure_soc_pct", 80.0))
+    recurrence = body.get("recurrence", "none")
+
+    _ev_charging_planner.set_departure(dep_time, dep_soc, recurrence)
+    return jsonify({"ok": True, "departure_time": dep_time, "departure_soc_pct": dep_soc})
+
+
+@regional_bp.route("/ev/config", methods=["POST"])
+@require_token
+def configure_ev():
+    """Configure EV and charger.
+
+    JSON body: {
+        "battery_capacity_kwh": 60.0,
+        "max_charge_rate_kw": 11.0,
+        "charger_efficiency": 0.92,
+        "connector_type": "type2",
+        "vehicle_name": "VW ID.4",
+        "target_soc_pct": 80.0
+    }
+    """
+    if not _ev_charging_planner:
+        return jsonify({"error": "EV charging planner not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+    _ev_charging_planner.update_config(**body)
+    return jsonify({"ok": True, "configured": True, "config": asdict(_ev_charging_planner.config)})
+
+
+@regional_bp.route("/ev/strategy", methods=["POST"])
+@require_token
+def set_ev_strategy():
+    """Set EV charging strategy.
+
+    JSON body: {"strategy": "cost_optimized"|"solar_first"|"fastest"|"balanced"}
+    """
+    if not _ev_charging_planner:
+        return jsonify({"error": "EV charging planner not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+    strategy = body.get("strategy", "")
+    if strategy not in _ev_charging_planner.STRATEGIES:
+        return jsonify({
+            "ok": False,
+            "error": f"Invalid strategy. Choose from: {', '.join(_ev_charging_planner.STRATEGIES)}",
+        }), 400
+
+    _ev_charging_planner.set_strategy(strategy)
+    return jsonify({"ok": True, "strategy": strategy})
+
+
+@regional_bp.route("/ev/ingest", methods=["POST"])
+@require_token
+def ingest_ev_data():
+    """Ingest tariff/PV data for EV charging optimization.
+
+    JSON body: {
+        "tariff": [{"hour": 0, "price_ct": 25.0}, ...],
+        "pv_forecast": {"10": 3.0, "11": 5.0, ...}
+    }
+    """
+    if not _ev_charging_planner:
+        return jsonify({"error": "EV charging planner not initialized"}), 503
+
+    body = request.get_json(silent=True) or {}
+
+    try:
+        imported = {}
+        if "tariff" in body:
+            _ev_charging_planner.import_tariff_data(body["tariff"])
+            imported["tariff_hours"] = len(body["tariff"])
+        if "pv_forecast" in body:
+            _ev_charging_planner.set_pv_forecast(
+                {int(k): float(v) for k, v in body["pv_forecast"].items()}
+            )
+            imported["pv_hours"] = len(body["pv_forecast"])
+        if "prices" in body:
+            _ev_charging_planner.set_prices(
+                {int(k): float(v) for k, v in body["prices"].items()}
+            )
+            imported["price_hours"] = len(body["prices"])
+        return jsonify({"ok": True, "imported": imported})
+    except Exception as exc:
+        logger.error("EV data ingestion failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500

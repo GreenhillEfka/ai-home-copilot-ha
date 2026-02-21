@@ -1,5 +1,35 @@
 # Changelog - PilotSuite Core Add-on
 
+## [5.25.0] - 2026-02-21
+
+### EV Charging Planner — Smart Charging from Tariff+Solar+Departure
+
+#### EV Charging Engine (NEW)
+- **regional/ev_charging_planner.py** — `EVChargingPlanner` with cost/solar optimization
+- 4 strategies: cost_optimized, solar_first, fastest, balanced
+- Departure-aware scheduling with SoC targets and deadlines
+- Solar surplus priority — free charging from PV excess
+- Charger efficiency modeling (AC losses)
+- Range estimation from SoC and vehicle consumption profile
+- Connector types: type2, ccs, chademo
+- 1-phase and 3-phase charging support
+
+#### API Endpoints (7 NEW)
+- `GET /api/v1/regional/ev/schedule` — Optimized charging schedule
+- `GET /api/v1/regional/ev/status` — Current EV charging state
+- `POST /api/v1/regional/ev/soc` — Update state of charge
+- `POST /api/v1/regional/ev/departure` — Set departure schedule
+- `POST /api/v1/regional/ev/config` — Configure EV and charger
+- `POST /api/v1/regional/ev/strategy` — Set charging strategy
+- `POST /api/v1/regional/ev/ingest` — Import tariff/PV data
+
+#### Test Suite (NEW — 40 tests)
+- **tests/test_ev_charging_planner.py** — Config, energy calc, optimization, departure, import, status
+
+#### Infrastructure
+- **regional/__init__.py** — Exports EVChargingPlanner
+- **regional/api.py** — init_regional_api() accepts ev_charging_planner parameter
+
 ## [5.24.0] - 2026-02-21
 
 ### Heat Pump Controller — COP-Optimized Scheduling
