@@ -1,5 +1,29 @@
 # Changelog - PilotSuite Core Add-on
 
+## [1.0.0] - 2026-02-21
+
+### Stable Release — Feature-Complete
+
+PilotSuite Styx Core Add-on erreicht **v1.0.0 Stable**. Alle geplanten Meilensteine sind abgeschlossen.
+
+**Cumulative seit v4.0.0:**
+- **v4.1.0** Race Conditions Fix (threading.Lock/RLock, SQLite WAL)
+- **v4.2.0** Brain Graph Pruning (Daemon-Thread, konfigurierbar), OpenAPI Spec
+- **v4.3.0** MUPL Role API + Delegation Workflows (delegate/revoke/list mit Expiry)
+- **v4.4.0** Test Coverage: 18 neue Tests (Role/Delegation API)
+- **v4.5.0** Conflict Resolution API (POST /user/conflicts/evaluate)
+
+**Gesamtbilanz:**
+- Ollama LLM (qwen3:4b, bundled, kein Cloud-Zwang)
+- 26 LLM Tools (Licht, Klima, Szenen, Automationen, Kalender, Einkauf, Web-Suche, ...)
+- OpenAI-kompatible API (`/v1/chat/completions`)
+- RAG Pipeline (Bag-of-Words, Cosine Similarity, Langzeitgedaechtnis)
+- Brain Graph + Habitus Miner + Mood Engine + 14 Neuronen
+- Conflict Resolution (weighted/compromise/override)
+- 40+ REST API Endpoints, Deep Health, Circuit Breaker
+- Multi-Arch: amd64 + aarch64
+- CI Pipeline: Lint + Test + Security (bandit)
+
 ## [4.5.0] - 2026-02-21
 
 ### Conflict Resolution API
