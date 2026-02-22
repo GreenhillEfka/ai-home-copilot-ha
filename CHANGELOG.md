@@ -1,5 +1,21 @@
 # Changelog - PilotSuite Core Add-on
 
+## [7.7.8] - 2026-02-22 — STARTUP + VERSION RELIABILITY PATCH
+
+### Ollama Startup Hardening
+- `HOME` wird beim Start explizit gesetzt (`/tmp` Fallback), damit `ollama serve` in HA-Containern nicht mit `Error: $HOME is not defined` abbricht.
+- Ollama bleibt der primaere lokale Runtime-Pfad im Container; externe URL wird nur bei expliziter externer Konfiguration genutzt.
+
+### Non-Blocking Modellbereitstellung
+- Modell-Pulls laufen jetzt in einem Hintergrund-Worker.
+- API-Start blockiert nicht mehr durch lange Modell-Downloads oder 60s Ready-Wartefenster.
+- Fallback-Modell (`qwen3:0.6b`) und konfiguriertes Modell werden asynchron nachgezogen.
+
+### Versionskonsistenz
+- Laufzeitversion kommt aus `COPILOT_VERSION`/`BUILD_VERSION` statt aus veralteten Hardcodes.
+- Dockerfile exportiert `COPILOT_VERSION=${BUILD_VERSION}` zur Laufzeit.
+- Semver-Fallback auf `0.0.0` fuer Test-/Dev-Umgebungen ohne Build-Metadaten.
+
 ## [7.7.7] - 2026-02-22 — PRODUCTION READINESS PROGRAM
 
 ### Validierung und Hardening

@@ -9,8 +9,15 @@
 
 set -e
 
+# Ensure HOME exists for Ollama runtime; some base images do not define it.
+export HOME="${HOME:-/tmp}"
+mkdir -p "$HOME" 2>/dev/null || true
+
+CORE_VERSION="${COPILOT_VERSION:-${BUILD_VERSION:-0.0.0}}"
+export COPILOT_VERSION="$CORE_VERSION"
+
 echo "============================================"
-echo "  PilotSuite v7.7.4 -- Styx"
+echo "  PilotSuite v${CORE_VERSION} -- Styx"
 echo "  Die Verbindung beider Welten"
 echo "  Local AI for your Smart Home"
 echo "============================================"
@@ -119,35 +126,27 @@ export OLLAMA_HOST="127.0.0.1:${INTERNAL_OLLAMA_PORT}"
 echo "Starting Ollama service on port ${INTERNAL_OLLAMA_PORT} (models dir: $OLLAMA_MODELS)..."
 ollama serve &
 OLLAMA_PID=$!
+MODEL_PULL_PID=""
 
 # Cleanup on exit
 cleanup() {
+    if [ -n "$MODEL_PULL_PID" ]; then
+        kill "$MODEL_PULL_PID" 2>/dev/null || true
+        wait "$MODEL_PULL_PID" 2>/dev/null || true
+    fi
     echo "Shutting down Ollama (PID $OLLAMA_PID)..."
     kill "$OLLAMA_PID" 2>/dev/null || true
     wait "$OLLAMA_PID" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
-# Wait for Ollama to be ready (max 60s with exponential backoff)
-echo "Waiting for Ollama on port ${INTERNAL_OLLAMA_PORT}..."
+# Non-blocking readiness check: never delay API startup for Ollama/model downloads.
 READY=false
-WAIT=1
-TOTAL_WAIT=0
-MAX_WAIT=60
-while [ "$TOTAL_WAIT" -lt "$MAX_WAIT" ]; do
-    if curl -sf -m 3 "${INTERNAL_OLLAMA_URL}/api/tags" >/dev/null 2>&1; then
-        echo "Ollama is ready! (after ${TOTAL_WAIT}s)"
-        READY=true
-        break
-    fi
-    echo "    Waiting... (${TOTAL_WAIT}s/${MAX_WAIT}s)"
-    sleep "$WAIT"
-    TOTAL_WAIT=$((TOTAL_WAIT + WAIT))
-    [ "$WAIT" -lt 4 ] && WAIT=$((WAIT * 2))
-done
-
-if [ "$READY" = "false" ]; then
-    echo "WARNING: Ollama did not start within ${MAX_WAIT}s -- LLM features may be unavailable"
+if curl -sf -m 1 "${INTERNAL_OLLAMA_URL}/api/tags" >/dev/null 2>&1; then
+    echo "Ollama is ready."
+    READY=true
+else
+    echo "Ollama warmup in progress; startup continues and model pulls run in background."
 fi
 
 # Model pull (idempotent)
@@ -164,16 +163,38 @@ pull_model() {
     fi
 }
 
-if [ "$READY" = "true" ]; then
-    pull_model "$FALLBACK_MODEL" "fallback" || true
-
-    if [ "$MODEL" != "$FALLBACK_MODEL" ]; then
-        if ! pull_model "$MODEL" "configured"; then
-            echo "INFO: Falling back to $FALLBACK_MODEL"
-            export OLLAMA_MODEL="$FALLBACK_MODEL"
+model_pull_worker() {
+    (
+        # Continue waiting in background if Ollama was not ready within initial window.
+        if [ "$READY" != "true" ]; then
+            echo "Model pull worker: waiting for Ollama in background..."
+            ATTEMPTS=0
+            MAX_ATTEMPTS=720  # ~1h at 5s intervals
+            until curl -sf -m 3 "${INTERNAL_OLLAMA_URL}/api/tags" >/dev/null 2>&1; do
+                ATTEMPTS=$((ATTEMPTS + 1))
+                if [ "$ATTEMPTS" -ge "$MAX_ATTEMPTS" ]; then
+                    echo "WARNING: Model pull worker timed out waiting for Ollama"
+                    exit 0
+                fi
+                sleep 5
+            done
         fi
-    fi
-fi
+
+        pull_model "$FALLBACK_MODEL" "fallback" || true
+
+        if [ "$MODEL" != "$FALLBACK_MODEL" ]; then
+            if ! pull_model "$MODEL" "configured"; then
+                echo "WARNING: Configured model pull failed ($MODEL). Fallback remains available."
+            fi
+        fi
+
+        echo "Model pull worker finished."
+    ) &
+    MODEL_PULL_PID=$!
+}
+
+# Start model pulls in background so API startup is never blocked by long downloads.
+model_pull_worker
 
 echo ""
 echo "Starting PilotSuite Core API on port ${PORT:-8909}..."

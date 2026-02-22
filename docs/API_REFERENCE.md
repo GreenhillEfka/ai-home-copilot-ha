@@ -290,7 +290,7 @@ Version und Name des Add-ons.
 {
   "name": "Styx",
   "suite": "PilotSuite",
-  "version": "7.7.7",
+  "version": "7.7.8",
   "time": "2025-01-15T10:30:00+00:00"
 }
 ```
@@ -304,7 +304,7 @@ Tiefgehender Health-Check aller Services und externen Abhaengigkeiten.
 ```json
 {
   "healthy": true,
-  "version": "7.7.7",
+  "version": "7.7.8",
   "uptime_s": 7200,
   "checks": {
     "brain_graph_service": true,
