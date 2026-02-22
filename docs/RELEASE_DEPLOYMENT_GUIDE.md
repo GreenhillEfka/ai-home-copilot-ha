@@ -47,10 +47,10 @@ eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
 
 # 4. Git remote auf SSH umstellen
-cd /config/.openclaw/workspace/ai_home_copilot_hacs_repo
+cd /path/to/pilotsuite-styx-ha
 git remote set-url origin git@github.com:GreenhillEfka/pilotsuite-styx-ha.git
 
-cd /config/.openclaw/workspace/ha-copilot-repo
+cd /path/to/pilotsuite-styx-core
 git remote set-url origin git@github.com:GreenhillEfka/pilotsuite-styx-core.git
 ```
 
@@ -66,10 +66,10 @@ git config --global user.name "PilotSuite Autopilot"
 git config --global user.email "autopilot@example.com"
 
 # 3. Remote URLs mit Token
-cd /config/.openclaw/workspace/ai_home_copilot_hacs_repo
+cd /path/to/pilotsuite-styx-ha
 git remote set-url origin https://TOKEN@github.com/GreenhillEfka/pilotsuite-styx-ha.git
 
-cd /config/.openclaw/workspace/ha-copilot-repo  
+cd /path/to/pilotsuite-styx-core  
 git remote set-url origin https://TOKEN@github.com/GreenhillEfka/pilotsuite-styx-core.git
 ```
 
@@ -81,7 +81,7 @@ git remote set-url origin https://TOKEN@github.com/GreenhillEfka/pilotsuite-styx
 
 ```bash
 # 1. Core Add-on Releases
-cd /config/.openclaw/workspace/ha-copilot-repo
+cd /path/to/pilotsuite-styx-core
 
 # Push alle pending Tags
 git push origin main
@@ -94,7 +94,7 @@ gh release create v0.4.8 --title "Capabilities API v0.4.8" --notes-file CHANGELO
 gh release create v0.4.9 --title "Dashboard API v0.4.9" --notes-file CHANGELOG.md
 
 # 2. HA Integration Releases
-cd /config/.openclaw/workspace/ai_home_copilot_hacs_repo
+cd /path/to/pilotsuite-styx-ha
 
 # Push alle pending Tags
 git push origin main
@@ -120,7 +120,7 @@ echo "======================================="
 
 # Core Add-on
 echo "📦 Deploying Core Add-on releases..."
-cd /config/.openclaw/workspace/ha-copilot-repo
+cd /path/to/pilotsuite-styx-core
 
 if git status --porcelain | grep -q .; then
     echo "❌ Working directory not clean. Aborting."
@@ -139,7 +139,7 @@ done
 
 # HA Integration  
 echo "🏠 Deploying HA Integration releases..."
-cd /config/.openclaw/workspace/ai_home_copilot_hacs_repo
+cd /path/to/pilotsuite-styx-ha
 
 git push origin main
 git push origin --tags
@@ -177,7 +177,7 @@ curl -s https://api.github.com/repos/GreenhillEfka/pilotsuite-styx-core/releases
 ```bash
 # HACS erkennt neue Version?
 # Check: Manifest version matches released tag
-jq '.version' /config/.openclaw/workspace/ai_home_copilot_hacs_repo/custom_components/ai_home_copilot/manifest.json
+jq '.version' /path/to/pilotsuite-styx-ha/custom_components/ai_home_copilot/manifest.json
 
 # Expected: "0.4.6"
 ```
@@ -186,7 +186,7 @@ jq '.version' /config/.openclaw/workspace/ai_home_copilot_hacs_repo/custom_compo
 ```bash
 # Add-on Store erkennt neue Version?
 # Check: config.json version matches tag
-jq '.version' /config/.openclaw/workspace/ha-copilot-repo/addons/copilot_core/config.json
+jq '.version' /path/to/pilotsuite-styx-core/addons/copilot_core/config.json
 
 # Expected: "0.4.9"
 ```

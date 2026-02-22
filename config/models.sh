@@ -1,16 +1,16 @@
 #!/bin/bash
 # OpenClaw Model Configuration
 # Defines model priorities and fallbacks
-# Remote Ollama Server: 192.168.31.84:11434
+# Remote Ollama Server (set your LAN IP below)
 
 # Set remote Ollama host (for glm-5:cloud and local models)
-export OLLAMA_HOST="http://192.168.31.84:11434"
+export OLLAMA_HOST="${OLLAMA_HOST:-http://localhost:11434}"
 
 # Priority order for agent usage
 # 1. Primary (Remote Ollama)
 # 2. Fallback (MiniMax Cloud API)
 
-export PRIMARY_MODEL="glm-5:cloud"           # Remote Ollama (192.168.31.84:11434)
+export PRIMARY_MODEL="glm-5:cloud"           # Remote Ollama
 export FALLBACK_MODEL="minimax-portal/MiniMax-M2.1"  # MiniMax Cloud API
 
 # CLI tools (fallbacks when APIs fail)
