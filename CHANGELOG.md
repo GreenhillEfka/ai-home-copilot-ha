@@ -1,5 +1,11 @@
 # Changelog - PilotSuite Core Add-on
 
+## [7.7.11] - 2026-02-22 — RELEASE SYNC
+
+### Sync-Release
+- Core/HA Versionsstand auf `7.7.11` synchronisiert, damit beide Repos denselben releasefähigen Baseline-Stand ausweisen.
+- Keine funktionalen Core-Codeaenderungen gegenueber `7.7.10`.
+
 ## [7.7.10] - 2026-02-22 — VERSION CONSISTENCY HOTFIX
 
 ### Version-Drift beseitigt
