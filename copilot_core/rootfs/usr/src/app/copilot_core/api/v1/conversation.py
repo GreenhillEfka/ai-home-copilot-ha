@@ -795,7 +795,9 @@ def llm_status():
         "calls_this_hour": calls_this_hour,
         "max_calls_per_hour": MAX_CALLS_PER_HOUR,
         "assistant_name": ASSISTANT_NAME,
-        "version": os.environ.get("COPILOT_VERSION", "1.1.0"),
+        "version": os.environ.get("COPILOT_VERSION")
+        or os.environ.get("BUILD_VERSION")
+        or "0.0.0",
         "character": os.environ.get("CONVERSATION_CHARACTER", "copilot"),
         "characters": list(CONVERSATION_CHARACTERS.keys()),
         "integration_url": "http://[HOST]:8909/v1",

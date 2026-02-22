@@ -1,5 +1,15 @@
 # Changelog - PilotSuite Core Add-on
 
+## [7.7.10] - 2026-02-22 — VERSION CONSISTENCY HOTFIX
+
+### Version-Drift beseitigt
+- `copilot_core.__version__` liest jetzt die Laufzeitversion aus `COPILOT_VERSION`/`BUILD_VERSION` statt aus einem veralteten Hardcode.
+- Conversation-Status (`/chat/status`) nutzt denselben Version-Source-of-Truth inklusive sauberem `0.0.0`-Fallback.
+
+### Wirkung
+- Keine verwirrenden Versionsspruenge mehr zwischen UI-/Statuspfaden (z. B. alte 3.x/0.x Artefakte trotz 7.7.x Release).
+- Konsistente Versionserkennung ueber API, Dashboard und Runtime-Diagnose.
+
 ## [7.7.9] - 2026-02-22 — OLLAMA GUARANTEE + NETWORK FAILSAFE
 
 ### Setup/Runtime Hardening

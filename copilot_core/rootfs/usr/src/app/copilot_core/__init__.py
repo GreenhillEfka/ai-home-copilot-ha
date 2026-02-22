@@ -11,7 +11,9 @@ Core services for PilotSuite:
 - Dev Surface: Development utilities
 """
 
-__version__ = "3.9.1"
+import os
+
+__version__ = os.environ.get("COPILOT_VERSION") or os.environ.get("BUILD_VERSION") or "0.0.0"
 
 # Global service instances (initialized by init_services)
 _system_health_service = None
