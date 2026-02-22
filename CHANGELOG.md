@@ -1,5 +1,31 @@
 # Changelog - PilotSuite Core Add-on
 
+## [7.7.12] - 2026-02-22 — LLM FALLBACK + CLOUD CONFIG UX
+
+### Chat provider robustness
+- `LLMProvider.chat()` gibt jetzt in allen Fehlerpfaden konsistent ein Dict zurueck (kein `None` bei unvollstaendiger Cloud-Konfiguration).
+- Lokale Modellauflosung kennt Alias-Modelle wie `pilotsuite`/`auto` und nutzt direkt das konfigurierte Ollama-Standardmodell.
+- Bei expliziten externen Modellen (z. B. `gpt-4o-mini`) gilt:
+  - mit Cloud-Fallback: nach lokalem 404 direkt Cloud versuchen
+  - ohne Cloud-Fallback: auf konfiguriertes lokales Modell zurueckfallen
+- Offline-Fehlermeldungen differenzieren jetzt zwischen:
+  - Modell nicht installiert
+  - Timeout
+  - Unerreichbarkeit
+  - HTTP-Fehlern
+
+### Add-on Konfiguration (Cloud Fallback)
+- Neue Add-on Optionen in `config.yaml` + UI-Labels:
+  - `conversation_cloud_api_url`
+  - `conversation_cloud_api_key`
+  - `conversation_cloud_model`
+  - `conversation_prefer_local`
+- `start_dual.sh` exportiert diese Werte als Laufzeit-ENV (`CLOUD_API_URL`, `CLOUD_API_KEY`, `CLOUD_MODEL`, `PREFER_LOCAL`).
+- Startlog zeigt Cloud-Fallback-Status (`configured`/`disabled`) fuer schnellere Diagnose.
+
+### Tests
+- Neue Tests fuer LLM-Fallback-/Cloud-Routing und Offline-Fehlerpfade hinzugefuegt.
+
 ## [7.7.11] - 2026-02-22 — RELEASE SYNC
 
 ### Sync-Release

@@ -42,6 +42,7 @@ class LLMProvider:
         self.cloud_model = os.environ.get("CLOUD_MODEL", "")
         self.prefer_local = os.environ.get("PREFER_LOCAL", "true").lower() == "true"
         self.timeout = int(os.environ.get("LLM_TIMEOUT", "120"))
+        self._last_ollama_issue = "unknown"
 
     def reload_config(self):
         """Explicitly reload config from environment (e.g. after settings change)."""
@@ -60,18 +61,21 @@ class LLMProvider:
             result = self._try_ollama(messages, tools, model, temperature, max_tokens)
             if result is not None:
                 return result
-            if self.cloud_api_url:
+            if self.has_cloud_fallback:
                 logger.info("Ollama unavailable, falling back to cloud API")
-                return self._try_cloud(messages, tools, model, temperature, max_tokens)
+                cloud = self._try_cloud(messages, tools, model, temperature, max_tokens)
+                if cloud is not None:
+                    return cloud
             return {"content": self._offline_msg(), "tool_calls": None, "provider": "none"}
         else:
-            if self.cloud_api_url:
+            if self.has_cloud_fallback:
                 result = self._try_cloud(messages, tools, model, temperature, max_tokens)
                 if result is not None:
                     return result
-            return self._try_ollama(messages, tools, model, temperature, max_tokens) or {
-                "content": self._offline_msg(), "tool_calls": None, "provider": "none"
-            }
+            result = self._try_ollama(messages, tools, model, temperature, max_tokens)
+            if result is not None:
+                return result
+            return {"content": self._offline_msg(), "tool_calls": None, "provider": "none"}
 
     @property
     def active_model(self) -> str:
@@ -107,51 +111,93 @@ class LLMProvider:
             return False
 
     def _try_ollama(self, messages, tools, model, temperature, max_tokens):
-        model = model or self.ollama_model
-        payload = {"model": model, "messages": messages, "stream": False}
+        requested_model = (model or self.ollama_model or "").strip()
+        alias_models = {"", "pilotsuite", "default", "auto", "local", "ollama"}
+        candidate_models: list[str] = []
+        if requested_model.lower() in alias_models:
+            if self.ollama_model:
+                candidate_models.append(self.ollama_model)
+        else:
+            candidate_models.append(requested_model)
+            # Explicit external model requests should fall back to cloud when configured.
+            # Only try the configured local model as second chance if no cloud fallback exists.
+            if not self.has_cloud_fallback and self.ollama_model and self.ollama_model not in candidate_models:
+                candidate_models.append(self.ollama_model)
+
+        if not candidate_models and self.ollama_model:
+            candidate_models = [self.ollama_model]
+
         opts = {}
         if temperature is not None:
             opts["temperature"] = temperature
         if max_tokens is not None:
             opts["num_predict"] = max_tokens
-        if opts:
-            payload["options"] = opts
-        if tools:
-            payload["tools"] = tools
 
-        last_err = None
-        for attempt in range(_MAX_RETRIES + 1):
-            try:
-                resp = http_requests.post(
-                    f"{self.ollama_url}/api/chat", json=payload, timeout=self.timeout,
+        for i, candidate_model in enumerate(candidate_models):
+            should_try_next_model = False
+            payload = {"model": candidate_model, "messages": messages, "stream": False}
+            if opts:
+                payload["options"] = opts
+            if tools:
+                payload["tools"] = tools
+
+            for attempt in range(_MAX_RETRIES + 1):
+                try:
+                    resp = http_requests.post(
+                        f"{self.ollama_url}/api/chat", json=payload, timeout=self.timeout,
+                    )
+                    if resp.status_code == 200:
+                        self._last_ollama_issue = ""
+                        msg = resp.json().get("message", {})
+                        logger.info("LLM response via ollama/%s", candidate_model)
+                        return {
+                            "content": msg.get("content", ""),
+                            "tool_calls": msg.get("tool_calls"),
+                            "provider": "ollama",
+                        }
+
+                    body = (resp.text or "")[:200]
+                    if resp.status_code == 404 and "not found" in body.lower():
+                        self._last_ollama_issue = f"model_not_found:{candidate_model}"
+                        logger.warning("Ollama model not found: %s", candidate_model)
+                        should_try_next_model = True
+                        break
+
+                    self._last_ollama_issue = f"http_{resp.status_code}"
+                    logger.warning("Ollama %s: %s", resp.status_code, body)
+                    break
+                except http_requests.exceptions.ConnectionError:
+                    self._last_ollama_issue = "unreachable"
+                    if attempt < _MAX_RETRIES:
+                        delay = _RETRY_BASE_DELAY * (2 ** attempt)
+                        logger.info(
+                            "Ollama connection failed, retry %d/%d in %.1fs",
+                            attempt + 1,
+                            _MAX_RETRIES,
+                            delay,
+                        )
+                        time.sleep(delay)
+                        continue
+                    logger.warning("Ollama not reachable at %s after %d retries", self.ollama_url, _MAX_RETRIES)
+                    break
+                except http_requests.exceptions.Timeout:
+                    self._last_ollama_issue = "timeout"
+                    logger.warning("Ollama timeout after %ds", self.timeout)
+                    break
+                except Exception:
+                    self._last_ollama_issue = "error"
+                    logger.exception("Ollama error")
+                    break
+
+            if should_try_next_model and i + 1 < len(candidate_models):
+                logger.info(
+                    "Falling back from requested model '%s' to configured Ollama model '%s'",
+                    requested_model,
+                    candidate_models[i + 1],
                 )
-                if resp.status_code != 200:
-                    logger.warning("Ollama %s: %s", resp.status_code, resp.text[:200])
-                    return None
-                msg = resp.json().get("message", {})
-                logger.info("LLM response via ollama/%s", model)
-                return {
-                    "content": msg.get("content", ""),
-                    "tool_calls": msg.get("tool_calls"),
-                    "provider": "ollama",
-                }
-            except http_requests.exceptions.ConnectionError as e:
-                last_err = e
-                if attempt < _MAX_RETRIES:
-                    delay = _RETRY_BASE_DELAY * (2 ** attempt)
-                    logger.info("Ollama connection failed, retry %d/%d in %.1fs",
-                                attempt + 1, _MAX_RETRIES, delay)
-                    time.sleep(delay)
-                    continue
-                logger.warning("Ollama not reachable at %s after %d retries",
-                               self.ollama_url, _MAX_RETRIES)
-                return None
-            except http_requests.exceptions.Timeout:
-                logger.warning("Ollama timeout after %ds", self.timeout)
-                return None
-            except Exception:
-                logger.exception("Ollama error")
-                return None
+                continue
+            if not should_try_next_model:
+                break
         return None
 
     # ------------------------------------------------------------------
@@ -199,9 +245,22 @@ class LLMProvider:
             return None
 
     def _offline_msg(self) -> str:
+        issue = str(getattr(self, "_last_ollama_issue", "") or "")
+        if issue.startswith("model_not_found:"):
+            model = issue.split(":", 1)[1]
+            ollama_state = f"Ollama erreichbar, aber Modell '{model}' nicht installiert"
+        elif issue == "timeout":
+            ollama_state = f"Ollama ({self.ollama_url}) antwortet nicht rechtzeitig"
+        elif issue in ("unreachable", "error", "unknown"):
+            ollama_state = f"Ollama ({self.ollama_url}) nicht erreichbar"
+        elif issue.startswith("http_"):
+            ollama_state = f"Ollama ({self.ollama_url}) liefert {issue.replace('_', ' ').upper()}"
+        else:
+            ollama_state = f"Ollama ({self.ollama_url}) nicht erreichbar"
+
         return (
-            f"Kein LLM-Provider verfuegbar. Ollama ({self.ollama_url}) nicht erreichbar"
-            + (", Cloud-API nicht konfiguriert." if not self.cloud_api_url
+            f"Kein LLM-Provider verfuegbar. {ollama_state}"
+            + (", Cloud-API nicht konfiguriert." if not self.has_cloud_fallback
                else f", Cloud-API ebenfalls nicht erreichbar.")
             + " Bitte pruefe die Addon-Konfiguration."
         )

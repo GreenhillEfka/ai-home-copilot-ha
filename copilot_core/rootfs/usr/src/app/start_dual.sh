@@ -37,6 +37,10 @@ try:
     pairs = {
         'OLLAMA_URL': opts.get('conversation_ollama_url', ''),
         'OLLAMA_MODEL': opts.get('conversation_ollama_model', ''),
+        'CLOUD_API_URL': opts.get('conversation_cloud_api_url', ''),
+        'CLOUD_API_KEY': opts.get('conversation_cloud_api_key', ''),
+        'CLOUD_MODEL': opts.get('conversation_cloud_model', ''),
+        'PREFER_LOCAL': str(opts.get('conversation_prefer_local', True)).lower(),
         'CONVERSATION_ENABLED': str(opts.get('conversation_enabled', True)).lower(),
         'ASSISTANT_NAME': opts.get('conversation_assistant_name', ''),
     }
@@ -117,7 +121,12 @@ MODEL=${OLLAMA_MODEL:-qwen3:4b}
 export OLLAMA_MODELS=${OLLAMA_MODELS:-/share/pilotsuite/ollama/models}
 mkdir -p "$OLLAMA_MODELS" 2>/dev/null || echo "WARNING: Cannot create $OLLAMA_MODELS (is /share mounted?)"
 
-echo "Configuration: model=$MODEL, ollama_url=${OLLAMA_URL}, internal=${USE_INTERNAL_OLLAMA}"
+if [ -n "${CLOUD_API_URL:-}" ] && [ -n "${CLOUD_API_KEY:-}" ]; then
+    CLOUD_STATUS="configured"
+else
+    CLOUD_STATUS="disabled"
+fi
+echo "Configuration: model=$MODEL, ollama_url=${OLLAMA_URL}, internal=${USE_INTERNAL_OLLAMA}, cloud_fallback=${CLOUD_STATUS}"
 
 # ---------------------------------------------------------------------------
 # Ollama startup (only if using internal)

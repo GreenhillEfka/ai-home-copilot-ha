@@ -44,6 +44,17 @@ Siehe: [pilotsuite-styx-ha Installation](https://github.com/GreenhillEfka/pilots
 - OpenAI-kompatible API (`/v1/chat/completions`, `/v1/models`)
 - Telegram Bot Integration mit Server-side Tool Loop
 
+#### Optional Cloud Fallback (Self-Repair / High-Performance)
+
+Im Add-on unter **Configuration**:
+- `conversation_cloud_api_url` (z. B. `https://api.openai.com/v1`)
+- `conversation_cloud_api_key`
+- `conversation_cloud_model` (z. B. `gpt-4o-mini`)
+- `conversation_prefer_local` (`true` = Ollama zuerst, dann Cloud-Fallback)
+
+Hinweis:
+- Wenn ein Client ein nicht lokal installiertes Modell anfragt (z. B. `gpt-4o-mini`), versucht Styx zuerst den konfigurierten lokalen Ollama-Standard und faellt danach optional auf Cloud zurueck.
+
 ### Neural Pipeline
 
 ```
