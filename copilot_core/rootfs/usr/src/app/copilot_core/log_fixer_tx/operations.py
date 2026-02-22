@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, List
 # Security: Allowed paths for rename operations
 ALLOWED_RENAME_PATHS: List[str] = [
     "/config/homeassistant",
-    "/config/.openclaw/workspace",
+    "/config/workspace",
     "/config/www",
     "/config/custom_components",
 ]

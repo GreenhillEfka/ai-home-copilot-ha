@@ -8,7 +8,7 @@ import os
 import sys
 
 # Add app directory to path
-sys.path.insert(0, '/config/.openclaw/workspace/ha-copilot-repo/addons/copilot_core/rootfs/usr/src/app')
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from copilot_core.brain_graph.model import GraphNode, GraphEdge
 from copilot_core.brain_graph.store import GraphStore

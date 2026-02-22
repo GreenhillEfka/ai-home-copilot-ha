@@ -20,3 +20,13 @@ htmlcov/
 .vscode/
 
 .venv/
+
+# Secrets & credentials (defensive)
+.env
+.env.*
+*.pem
+*.key
+*.cert
+*.p12
+secrets.yaml
+credentials.json
