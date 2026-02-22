@@ -10,7 +10,7 @@
 set -e
 
 echo "============================================"
-echo "  PilotSuite v7.7.2 -- Styx"
+echo "  PilotSuite v7.7.3 -- Styx"
 echo "  Die Verbindung beider Welten"
 echo "  Local AI for your Smart Home"
 echo "============================================"
