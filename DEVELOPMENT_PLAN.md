@@ -28,10 +28,43 @@
 
 | Repo | Funktion | Status |
 |------|----------|--------|
-| `pilotsuite-styx-core` | Backend runtime, LLM, Brain Graph, Habitus, Candidates | v7.10.1 |
+| `pilotsuite-styx-core` | Backend runtime, LLM, Brain Graph, Habitus, Candidates | v7.11.1 |
 | `pilotsuite-styx-ha` | HACS Integration, Sensoren, Dashboard Cards, Module | v7.10.1 |
 
-**Release-Baseline:** `7.10.1` (2026-02-24)
+**Release-Baseline:** `7.11.1` (2026-02-24)
+
+---
+
+## 🔁 Groky Dev Loop — Optimierter Release-Workflow (seit v7.11.1)
+
+```
+Dev Loop (Phase 1-6)  →  Code Build  →  HA Release Pipeline  →  HA Conformance  →  Dev Loop Phase 7
+```
+
+### Schritte des Dev Loops:
+
+1. **Phase 1: Repo Status** — Git fetch, status check
+2. **Phase 2: Bugfix Round (P0)** — Error Isolation & Connection Pooling
+3. **Phase 3: Feature Extension (P1/P2)** — SearXNG / Plugin System
+4. **Phase 4: HA Conformance Check** — manifest.json, HACS structure
+5. **Phase 5: HA Release Pipeline** — Version bump + Git + TAG + Push + **HA Conformance Check**
+6. **Phase 6: Status Report** — Telegram an Mensch
+7. **Phase 7: System Integrity** — Dashboard + UX Optimierung (**ERST NACH HA Release!**)
+
+### HA Release Pipeline (Phase 5):
+
+| Schritt | Aktion |
+|---------|--------|
+| **1** | CHANGELOG.md update (vX.Y.Z) |
+| **2** | RELEASE_NOTES.md update |
+| **3** | copilot_core/config.yaml version bump |
+| **4** | copilot_core/manifest.json version bump |
+| **5** | custom_components/ai_home_copilot/manifest.json version bump |
+| **6** | Git commit + push to dev/groky-main |
+| **7** | Checkout main + merge dev/groky-main |
+| **8** | Git tag vX.Y.Z + push |
+| **9** | **HA Conformance Check** (hassfest / hass check_config) |
+| **10** | **Nur wenn OK → Phase 6/7 starten!** |
 
 ---
 
