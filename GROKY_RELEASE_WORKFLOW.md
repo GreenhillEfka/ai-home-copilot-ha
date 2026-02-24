@@ -1,0 +1,143 @@
+# Groky Release Workflow — Home Assistant / HACS konform
+
+**Status:** v7.11.1 (2026-02-24)  
+**Ziel:** Robuster Release-Workflow mit HA Conformance Check
+
+---
+
+## 📋 Workflow Overview
+
+```
+Dev Loop (Phase 1-6)  →  Code Build  →  HA Release Pipeline  →  HA Conformance  →  Dev Loop Phase 7
+```
+
+---
+
+## 🚀 Dev Loop Phase 1-6 (Code Build)
+
+### Phase 1: Repo Status
+- `git fetch` → status check
+- Changes? → dokumentieren
+
+### Phase 2: Bugfix Round (P0)
+- Error Isolation
+- Connection Pooling
+
+### Phase 3: Feature Extension (P1/P2)
+- Neue Features, Endpunkte, APIs
+
+### Phase 4: HA Conformance Check
+- manifest.json valid
+- HACS structure OK
+
+### Phase 5: Release Notes
+- CHANGELOG.md update
+- RELEASE_NOTES.md update
+- config.yaml version bump
+
+### Phase 6: Status Report
+- Telegram an Mensch
+
+---
+
+## 🏁 HA Release Pipeline (nach Phase 6!)
+
+### Step 1: Version Bump
+
+**Files zu updaten:**
+1. `pilotsuite-styx-core/CHANGELOG.md` (neuer Eintrag x.y.z)
+2. `pilotsuite-styx-core/RELEASE_NOTES.md` (neuer Release)
+3. `pilotsuite-styx-core/copilot_core/config.yaml` (version: "x.y.z")
+4. `pilotsuite-styx-core/copilot_core/manifest.json` (domotz.version: x.y.z)
+5. `pilotsuite-styx-ha/custom_components/ai_home_copilot/manifest.json` (version: x.y.z)
+
+### Step 2: Git Commit + Tag
+
+```bash
+git add -A
+git commit -m "release: vX.Y.Z — [description]"
+git push origin dev/groky-main
+git checkout main
+git merge dev/groky-main --no-ff -m "release: vX.Y.Z"
+git tag -a vX.Y.Z -m "PilotSuite vX.Y.Z"
+git push origin main
+git push origin --tags --force
+```
+
+### Step 3: HA Conformance Check
+
+```bash
+cd /config/.openclaw/workspace/pilotsuite-styx-ha
+hass check_config /tmp/ha-test
+# oder hass --script validate custom_components/ai_home_copilot
+```
+
+✅ **ERST WENN HA CONFORMANCE OK IST → Phase 7 starten!**
+
+### Step 4: Status Report (Telegram)
+
+**Content:**
+- Branch: main (HA-conform)
+- Tag: vX.Y.Z
+- Hassfest: ✓ compliant
+- Files changed
+- Testing
+- Next: vX.Y+1.0
+
+---
+
+## 🚀 Dev Loop Phase 7 (System Integrity — nur nach HA Release!)
+
+### Dashboard + UX Optimierung
+
+- Dashboard endpoint testen (100 requests, error rate < 1%)
+- Frontend/Backend API routes (17/17 OK)
+- Config validation (YAML syntax OK)
+- UX stress test (100 requests, error rate < 1%)
+
+---
+
+## 📝 Beispiel Release (v7.11.1)
+
+### Files Changed:
+- `copilot_core/llm_provider.py` — SearXNG integration
+- `copilot_core/api/v1/llm_search.py` — New API endpoint
+- `copilot_core/core_setup.py` — Blueprint registration + LLMProvider init
+- `CHANGELOG.md`, `RELEASE_NOTES.md`, `config.yaml` — version bump
+
+### Git Workflow:
+1. `git commit -m "feat: SearXNG auto-integration, v7.11.1"`
+2. `git push origin dev/groky-main --force`
+3. `git checkout main`
+4. `git merge dev/groky-main --no-ff`
+5. `git tag -a v7.11.1`
+6. `git push origin main`
+7. `git push origin --tags --force`
+
+### HA Conformance:
+```bash
+hass check_config /tmp/ha-test
+# → ✓ compliant
+```
+
+### Status Report:
+```
+✅ PILOTSUITE CORE AUTO-RELEASE v7.11.1
+Branch: main (HA-conform, direkt)
+Tag: v7.11.1
+Hassfest: ✓ compliant
+```
+
+---
+
+## ⚠️ WICHTIG: Erst HA Release → Dann Phase 7!
+
+- **Phase 7 (System Integrity)** kommt **ERST NACH** erfolgreichem HA Release!
+- HA Conformance Check **MUST PASS** before Phase 7!
+- **KEIN** direktes Push zu main ohne HA Conformance!
+
+---
+
+**Letzte Aktualisierung:** 2026-02-24 22:45  
+**Entwickelt mit:** Groky Dev Check (every 10min)  
+**Basiert auf:** pilotsuite-styx-core v7.11.1 + pilotsuite-styx-ha v7.10.1
