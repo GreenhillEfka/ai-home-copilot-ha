@@ -145,10 +145,10 @@ class TestNotificationsFlaskIntegration:
         
         assert response.status_code == 200
         data = response.get_json()
-        assert data['success'] is True
-        assert data['data']['notifications'] == []
-        assert data['data']['unread_count'] == 0
-        assert data['data']['total_count'] == 0
+        assert data['ok'] is True
+        assert data['notifications'] == []
+        assert data['unread_count'] == 0
+        assert data['total_count'] == 0
     
     def test_get_notifications_with_data(self, client, notification_manager, monkeypatch):
         """Test getting notifications with existing data."""
@@ -176,9 +176,9 @@ class TestNotificationsFlaskIntegration:
         
         assert response.status_code == 200
         data = response.get_json()
-        assert data['success'] is True
-        assert data['data']['total_count'] == 2
-        assert len(data['data']['notifications']) == 2
+        assert data['ok'] is True
+        assert data['total_count'] == 2
+        assert len(data['notifications']) == 2
     
     def test_get_notifications_unread_only(self, client, notification_manager, monkeypatch):
         """Test getting only unread notifications."""
@@ -199,8 +199,8 @@ class TestNotificationsFlaskIntegration:
         
         assert response.status_code == 200
         data = response.get_json()
-        assert data['data']['unread_count'] == 1
-        assert len(data['data']['notifications']) == 1
+        assert data['unread_count'] == 1
+        assert len(data['notifications']) == 1
     
     def test_get_notifications_by_type(self, client, notification_manager, monkeypatch):
         """Test filtering notifications by type."""
@@ -219,8 +219,8 @@ class TestNotificationsFlaskIntegration:
         assert response.status_code == 200
         data = response.get_json()
         # Filter returns only 'info' type notifications
-        assert len(data['data']['notifications']) == 2
-        assert all(n['type'] == 'info' for n in data['data']['notifications'])
+        assert len(data['notifications']) == 2
+        assert all(n['type'] == 'info' for n in data['notifications'])
     
     def test_mark_notification_read(self, client, notification_manager, monkeypatch):
         """Test marking a notification as read."""
@@ -475,6 +475,198 @@ class TestNotificationsFlaskIntegration:
         assert response.status_code == 401
         data = response.get_json()
         assert data['error'] == 'unauthorized'
+
+
+@pytest.mark.skipif(not FLASK_AVAILABLE, reason="Flask not installed")
+@pytest.mark.skipif(not NOTIFICATIONS_AVAILABLE, reason="Notifications not available")
+class TestNotificationsErrorCases:
+    """Test error cases for notifications API."""
+    
+    def test_404_notification_not_found_read(self, client, monkeypatch):
+        """Test 404 when marking non-existent notification as read."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.post('/notifications/non-existent-id/read')
+        
+        assert response.status_code == 404
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'error' in data
+    
+    def test_404_notification_not_found_dismiss(self, client, monkeypatch):
+        """Test 404 when dismissing non-existent notification."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.delete('/notifications/non-existent-id')
+        
+        assert response.status_code == 404
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'error' in data
+    
+    def test_404_subscription_not_found_update(self, client, monkeypatch):
+        """Test 404 when updating non-existent subscription."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.put('/notifications/subscriptions/non-existent', json={
+            'enabled': True
+        })
+        
+        assert response.status_code == 404
+        data = response.get_json()
+        assert data['success'] is False
+    
+    def test_404_subscription_not_found_unsubscribe(self, client, monkeypatch):
+        """Test 404 when unsubscribing non-existent device."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.post('/notifications/unsubscribe', json={
+            'device_id': 'non-existent-device'
+        })
+        
+        assert response.status_code == 404
+        data = response.get_json()
+        assert data['success'] is False
+    
+    def test_400_send_missing_title(self, client, monkeypatch):
+        """Test 400 when sending notification without title."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.post('/notifications/send', json={
+            'message': 'Missing title'
+        })
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'Missing required field: title' in data['error']
+    
+    def test_400_send_missing_message(self, client, monkeypatch):
+        """Test 400 when sending notification without message."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.post('/notifications/send', json={
+            'title': 'Missing message'
+        })
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['success'] is False
+        assert 'Missing required field: message' in data['error']
+    
+    def test_400_send_empty_body(self, client, monkeypatch):
+        """Test 400 when sending notification with empty body."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.post('/notifications/send', json={})
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['success'] is False
+    
+    def test_400_send_no_json(self, client, monkeypatch):
+        """Test 400 when sending notification without JSON body."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.post('/notifications/send', data='not json', content_type='text/plain')
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['success'] is False
+    
+    def test_400_subscribe_missing_device_id(self, client, monkeypatch):
+        """Test 400 when subscribing without device_id."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        response = client.post('/notifications/subscribe', json={
+            'device_name': 'Test Device'
+        })
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['success'] is False
+    
+    def test_401_auth_failure_all_endpoints(self, client, monkeypatch):
+        """Test 401 authentication failure on all endpoints."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: False
+        )
+        
+        # Test GET /notifications
+        response = client.get('/notifications')
+        assert response.status_code == 401
+        assert response.get_json()['error'] == 'unauthorized'
+        
+        # Test POST /notifications/send
+        response = client.post('/notifications/send', json={'title': 'Test', 'message': 'Test'})
+        assert response.status_code == 401
+        
+        # Test GET /subscriptions
+        response = client.get('/notifications/subscriptions')
+        assert response.status_code == 401
+    
+    def test_401_missing_auth_header(self, client):
+        """Test 401 when no auth header is provided."""
+        # Don't monkeypatch - use real auth check which will fail without header
+        response = client.get('/notifications')
+        
+        assert response.status_code == 401
+        data = response.get_json()
+        assert 'error' in data or 'message' in data
+    
+    def test_500_internal_server_error(self, client, notification_manager, monkeypatch):
+        """Test 500 internal server error handling."""
+        monkeypatch.setattr(
+            'copilot_core.api.v1.notifications._validate_token',
+            lambda request: True
+        )
+        
+        # Force an exception in create_notification
+        original_create = notification_manager.create_notification
+        def raise_exception(*args, **kwargs):
+            raise Exception("Simulated internal error")
+        
+        notification_manager.create_notification = raise_exception
+        
+        try:
+            response = client.post('/notifications/send', json={
+                'title': 'Test',
+                'message': 'Test'
+            })
+            
+            assert response.status_code == 500
+            data = response.get_json()
+            assert data['success'] is False
+        finally:
+            notification_manager.create_notification = original_create
 
 
 if __name__ == '__main__':

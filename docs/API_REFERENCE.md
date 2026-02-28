@@ -1997,6 +1997,314 @@ Format: `<ip>:<token_prefix>`
 
 ---
 
+## 25. Sharing API
+
+Praefix: `/api/v1/sharing`
+
+Cross-Home Sharing fuer Entities, Scenes und Daten zwischen PilotSuite-Instanzen.
+
+### GET /api/v1/sharing
+
+Gesamtstatus des Sharing-Moduls abrufen.
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "sharing_enabled": true,
+  "home_id": "home_alice_001",
+  "home_name": "Alice's Home",
+  "peers_discovered": 2,
+  "entities_shared": 15,
+  "sync_status": "active"
+}
+```
+
+### Entity Management
+
+#### GET /api/v1/sharing/entities
+
+Alle geteilten Entities auflisten.
+
+**Query-Parameter:**
+| Parameter | Typ | Default | Beschreibung |
+|-----------|-----|---------|--------------|
+| `home_id` | String | - | Filter nach Home-ID |
+| `entity_type` | String | - | Filter nach Typ (light, switch, scene, ...) |
+| `limit` | Integer | 100 | Max. Ergebnisse |
+
+#### POST /api/v1/sharing/entities
+
+Neues Entity zum Sharing hinzufuegen.
+
+**Request:**
+
+```json
+{
+  "entity_id": "light.wohnzimmer",
+  "home_id": "home_bob_002",
+  "permissions": ["read", "control"],
+  "expires_at": "2026-12-31T23:59:59Z"
+}
+```
+
+#### GET /api/v1/sharing/entities/:entity_id
+
+Details zu einem geteilten Entity.
+
+#### PUT /api/v1/sharing/entities/:entity_id
+
+Berechtigungen aktualisieren.
+
+#### DELETE /api/v1/sharing/entities/:entity_id
+
+Entity-Sharing entfernen.
+
+#### GET /api/v1/sharing/entities/:entity_id/permissions
+
+Berechtigungen fuer ein Entity abrufen.
+
+### Sync Management
+
+#### GET /api/v1/sharing/sync/status
+
+Sync-Status abrufen.
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "sync_enabled": true,
+  "last_sync": "2026-02-28T22:45:00Z",
+  "sync_interval_seconds": 300,
+  "pending_changes": 3,
+  "conflicts": []
+}
+```
+
+#### POST /api/v1/sharing/sync/start
+
+Manuellen Sync starten.
+
+#### POST /api/v1/sharing/sync/resolve
+
+Konflikt loesen.
+
+**Request:**
+
+```json
+{
+  "conflict_id": "conflict_123",
+  "resolution": "use_remote"
+}
+```
+
+### Peer Discovery
+
+#### GET /api/v1/sharing/discovery/peers
+
+Entdeckte Peers auflisten.
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "peers": [
+    {
+      "home_id": "home_bob_002",
+      "home_name": "Bob's House",
+      "last_seen": "2026-02-28T22:50:00Z",
+      "shared_entities_count": 8
+    }
+  ]
+}
+```
+
+#### POST /api/v1/sharing/discovery/refresh
+
+Peer-Discovery neu ausfuehren.
+
+---
+
+## 26. Federated Learning API
+
+Praefix: `/api/v1/federated`
+
+Collective Intelligence durch Federated Learning zwischen PilotSuite-Instanzen.
+
+### Service Control
+
+#### GET /api/v1/federated/status
+
+Status des Federated-Learning-Service.
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "service_running": true,
+  "node_id": "node_alice_001",
+  "rounds_completed": 12,
+  "current_round": null,
+  "knowledge_items": 47,
+  "peers_connected": 3
+}
+```
+
+#### POST /api/v1/federated/start
+
+Service starten.
+
+**Request:**
+
+```json
+{
+  "round_duration_minutes": 60,
+  "aggregation_method": "weighted_average"
+}
+```
+
+#### POST /api/v1/federated/stop
+
+Service stoppen.
+
+### Node Management
+
+#### POST /api/v1/federated/register
+
+Node beim Federated-Learning-Netzwerk registrieren.
+
+**Request:**
+
+```json
+{
+  "node_id": "node_alice_001",
+  "capabilities": ["pattern_mining", "mood_prediction"],
+  "model_version": "v2.1.0"
+}
+```
+
+#### POST /api/v1/federated/update
+
+Node-Informationen aktualisieren.
+
+### Training Rounds
+
+#### POST /api/v1/federated/round
+
+Neue Trainingsrunde starten.
+
+**Request:**
+
+```json
+{
+  "round_id": "round_042",
+  "task": "pattern_mining",
+  "participants": ["node_alice_001", "node_bob_002"]
+}
+```
+
+#### POST /api/v1/federated/aggregate
+
+Model-Aggregation durchfuehren.
+
+**Request:**
+
+```json
+{
+  "round_id": "round_042",
+  "method": "federated_averaging",
+  "weights": {"node_alice_001": 0.6, "node_bob_002": 0.4}
+}
+```
+
+#### GET /api/v1/federated/rounds
+
+Alle Trainingsrunden auflisten.
+
+**Query-Parameter:**
+| Parameter | Typ | Default | Beschreibung |
+|-----------|-----|---------|--------------|
+| `status` | String | - | Filter (completed, active, pending) |
+| `limit` | Integer | 50 | Max. Ergebnisse |
+
+### Knowledge Transfer
+
+#### POST /api/v1/federated/knowledge
+
+Wissenseintrag speichern.
+
+**Request:**
+
+```json
+{
+  "knowledge_type": "pattern",
+  "data": {"pattern_id": "pattern_morgen", "confidence": 0.87},
+  "source_node": "node_alice_001"
+}
+```
+
+#### POST /api/v1/federated/knowledge/:id/transfer
+
+Wissen an anderen Node transferieren.
+
+**Request:**
+
+```json
+{
+  "target_node": "node_bob_002",
+  "encryption": true
+}
+```
+
+### Models & Statistics
+
+#### GET /api/v1/federated/models
+
+Alle verfuegbaren Modelle auflisten.
+
+#### GET /api/v1/federated/knowledge-base
+
+Wissensbasis durchsuchen.
+
+**Query-Parameter:**
+| Parameter | Typ | Default | Beschreibung |
+|-----------|-----|---------|--------------|
+| `type` | String | - | Filter nach Typ |
+| `min_confidence` | Float | 0.5 | Mindest-Konfidenz |
+
+#### GET /api/v1/federated/statistics
+
+Statistiken zum Federated Learning.
+
+**Response:**
+
+```json
+{
+  "total_rounds": 12,
+  "successful_aggregations": 11,
+  "knowledge_items_shared": 156,
+  "average_round_duration_minutes": 45,
+  "participation_rate": 0.85
+}
+```
+
+### Persistence
+
+#### POST /api/v1/federated/save
+
+Aktuellen State persistent speichern.
+
+#### POST /api/v1/federated/load
+
+Gespeicherten State laden.
+
+---
+
 ## Anhang: Schnellreferenz-Tabelle
 
 | Bereich | Praefix | Wichtigste Endpoints |
@@ -2021,3 +2329,5 @@ Format: `<ip>:<token_prefix>`
 | Dashboard Cards | `/api/v1/habitus/dashboard_cards` | GET, GET zones, GET rules |
 | Conversation | `/chat` | POST completions, GET tools, GET status |
 | Dev/Debug | `/api/v1/dev` | POST logs, GET logs |
+| Sharing | `/api/v1/sharing` | GET status, GET/POST/PUT/DELETE entities, GET/POST sync, GET discovery |
+| Federated Learning | `/api/v1/federated` | GET status, POST start/stop, POST register, POST aggregate, GET rounds |

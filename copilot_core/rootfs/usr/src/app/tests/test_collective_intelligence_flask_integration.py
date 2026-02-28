@@ -63,15 +63,28 @@ def mock_service():
     knowledge_mock = MagicMock()
     knowledge_mock.knowledge_id = 'know-123'
     knowledge_mock.knowledge_hash = 'abc123hash'
+    knowledge_mock.to_dict.return_value = {
+        'knowledge_id': 'know-123',
+        'knowledge_hash': 'abc123hash',
+        'knowledge_type': 'pattern',
+        'confidence': 0.95
+    }
     service.extract_knowledge.return_value = knowledge_mock
+    
+    # Mock update object (for submit_local_update)
+    update_mock = MagicMock()
+    update_mock.update_id = 'update-test-456'
+    update_mock.timestamp = '2024-01-01T00:00:00Z'
+    service.submit_local_update.return_value = update_mock
     
     # Mock other methods
     service.register_node.return_value = True
-    service.submit_local_update.return_value = round_mock
     service.transfer_knowledge.return_value = True
     service.get_federated_round_history.return_value = [round_mock, round_mock]
     service.get_aggregated_models.return_value = {'v1.0': round_mock}
-    service.get_knowledge_base.return_value = {'know-123': knowledge_mock}
+    # get_knowledge_base returns dict {id: knowledge_obj}, API converts to list
+    knowledge_dict = {'know-123': knowledge_mock}
+    service.get_knowledge_base.return_value = knowledge_dict
     service.get_statistics.return_value = {'total_rounds': 5, 'total_nodes': 2}
     service.save_state.return_value = True
     service.load_state.return_value = True
@@ -336,11 +349,20 @@ class TestFederatedFlaskIntegration:
         assert data['path'] == '/tmp/test_state.json'
         mock_service.load_state.assert_called_once_with('/tmp/test_state.json')
     
-    def test_service_not_initialized(self, client):
+    def test_service_not_initialized(self):
         """Test endpoints when service is not initialized."""
-        # Clear the service
-        init_federated_api(None)
+        if not FLASK_AVAILABLE:
+            pytest.skip("Flask not installed")
+        if not FEDERATED_AVAILABLE:
+            pytest.skip("Federated module not available")
         
+        # Create a fresh app without initializing the service
+        init_federated_api(None)  # Clear any existing service
+        app = Flask(__name__)
+        app.config['TESTING'] = True
+        app.register_blueprint(federated_bp)
+        
+        client = app.test_client()
         response = client.get('/api/v1/federated')
         
         assert response.status_code == 503
