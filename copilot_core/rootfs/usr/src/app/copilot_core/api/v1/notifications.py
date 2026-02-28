@@ -663,33 +663,82 @@ def send_notification() -> Tuple[Dict[str, Any], int]:
         }), 500
 
 
-@bp.route("", methods=["GET"])
-def get_notifications() -> Tuple[Dict[str, Any], int]:
-    """Get notifications.
+@bp.route("", methods=["GET", "POST"])
+def handle_notifications() -> Tuple[Dict[str, Any], int]:
+    """Handle GET/POST for notifications.
     
-    Query params:
+    GET Query params:
         unread_only: Only return unread (default false)
         type: Filter by notification type
         limit: Max results (default 20)
     
+    POST JSON body:
+        {"title": str, "message": str, "priority": str, "type": str}
+    
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response with notifications list and HTTP status code.
+        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
     """
-    unread_only = request.args.get("unread_only", "").lower() == "true"
-    notification_type = request.args.get("type")
-    limit = min(int(request.args.get("limit", "20")), 100)
-    
     manager = get_notification_manager()
-    notifications = manager.get_notifications(unread_only, notification_type, limit)
     
-    return jsonify({
-        "success": True,
-        "data": {
+    if request.method == "POST":
+        # Create notification
+        body = request.get_json(silent=True) or {}
+        title = body.get("title")
+        message = body.get("message")
+        
+        if not title or not message:
+            return jsonify({"ok": False, "error": "title and message required"}), 400
+        
+        priority = body.get("priority", "normal")
+        # Convert numeric priority to string (1=CRITICAL, 2=HIGH, 3=NORMAL, 4=LOW)
+        if isinstance(priority, int):
+            priority_map = {1: "CRITICAL", 2: "HIGH", 3: "NORMAL", 4: "LOW"}
+            priority = priority_map.get(priority, "normal")
+        
+        typ = body.get("type", "info")
+        
+        # Check for deduplication (simple title+message match within 60s)
+        from datetime import datetime, timezone, timedelta
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=60)
+        for existing in manager._notifications:
+            if (existing.title == title and existing.message == message and 
+                datetime.fromisoformat(existing.timestamp.replace('Z', '+00:00')) > cutoff):
+                return jsonify({
+                    "ok": True,
+                    "status": "deduplicated_or_rate_limited",
+                    "existing_id": existing.id
+                }), 200
+        
+        notification = manager.create_notification(
+            title=title,
+            message=message,
+            priority=priority,
+            type=typ,
+        )
+        
+        return jsonify({
+            "ok": True,
+            "id": notification.id,
+            "priority": notification.priority,
+            "type": notification.type,
+            "notification": notification.to_dict()
+        }), 201
+    
+    else:
+        # GET notifications
+        unread_only = request.args.get("unread_only", "").lower() == "true"
+        notification_type = request.args.get("type")
+        limit = min(int(request.args.get("limit", "20")), 100)
+        
+        notifications = manager.get_notifications(unread_only, notification_type, limit)
+        
+        return jsonify({
+            "ok": True,
+            "count": len(notifications),
             "notifications": [n.to_dict() for n in notifications],
             "unread_count": manager.get_unread_count(),
             "total_count": len(manager._notifications),
-        }
-    })
+        })
 
 
 @bp.route("/<notification_id>/read", methods=["POST"])
@@ -917,6 +966,123 @@ def update_subscription(device_id: str) -> Tuple[Dict[str, Any], int]:
             "success": False,
             "error": "Device not found"
         }), 404
+
+
+@bp.route("/stats", methods=["GET"])
+def get_notification_stats() -> Tuple[Dict[str, Any], int]:
+    """Get notification statistics.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response with stats and HTTP status code.
+    """
+    manager = get_notification_manager()
+    stats = manager.get_stats()
+    
+    return jsonify({
+        "ok": True,
+        **stats
+    })
+
+
+@bp.route("/pending", methods=["GET"])
+def get_pending_notifications() -> Tuple[Dict[str, Any], int]:
+    """Get pending (unread) notifications.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response with pending notifications and HTTP status code.
+    """
+    manager = get_notification_manager()
+    pending = [n for n in manager._notifications if not n.read]
+    
+    return jsonify({
+        "ok": True,
+        "count": len(pending),
+        "notifications": [n.to_dict() for n in pending]
+    })
+
+
+@bp.route("/digest", methods=["GET"])
+def get_notification_digest() -> Tuple[Dict[str, Any], int]:
+    """Get notification digest summary.
+    
+    Query params:
+        hours: Time window in hours (default 24)
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response with digest and HTTP status code.
+    """
+    hours = float(request.args.get("hours", "24"))
+    manager = get_notification_manager()
+    digest = manager.get_digest(hours=hours)
+    
+    return jsonify({
+        "ok": True,
+        "digest": digest
+    })
+
+
+# Helper methods for NotificationManager
+def _get_stats(self) -> Dict[str, Any]:
+    """Get notification statistics.
+    
+    Returns:
+        Dict[str, Any]: Statistics dictionary.
+    """
+    by_source: Dict[str, int] = {}
+    by_priority: Dict[str, int] = {}
+    by_type: Dict[str, int] = {}
+    
+    for n in self._notifications:
+        # Count by type (used as source proxy)
+        src = getattr(n, 'type', 'unknown')
+        by_source[src] = by_source.get(src, 0) + 1
+        
+        # Count by priority
+        prio = n.priority
+        by_priority[prio] = by_priority.get(prio, 0) + 1
+        
+        # Count by type
+        typ = n.type
+        by_type[typ] = by_type.get(typ, 0) + 1
+    
+    return {
+        "total_notifications": len(self._notifications),
+        "unread_count": self.get_unread_count(),
+        "by_source": by_source,
+        "by_priority": by_priority,
+        "by_type": by_type,
+    }
+
+
+def _get_digest(self, hours: float = 24.0) -> Dict[str, Any]:
+    """Get notification digest for time window.
+    
+    Args:
+        hours: Time window in hours.
+    
+    Returns:
+        Dict[str, Any]: Digest summary.
+    """
+    from datetime import datetime, timezone, timedelta
+    
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    recent = [n for n in self._notifications if datetime.fromisoformat(n.timestamp.replace('Z', '+00:00')) > cutoff]
+    
+    by_source: Dict[str, int] = {}
+    for n in recent:
+        src = getattr(n, 'type', 'unknown')
+        by_source[src] = by_source.get(src, 0) + 1
+    
+    return {
+        "period_hours": hours,
+        "total": len(recent),
+        "by_source": by_source,
+    }
+
+
+# Add methods to NotificationManager
+NotificationManager.get_stats = _get_stats  # type: ignore
+NotificationManager.get_digest = _get_digest  # type: ignore
 
 
 __all__ = ["bp", "get_notification_manager", "NotificationManager"]

@@ -15,12 +15,18 @@ except ModuleNotFoundError:
 # Try to import Flask components
 try:
     from copilot_core.app import create_app
-    from copilot_core.notifications.api import init_notifications_api, notifications_bp
+    from copilot_core.api.v1.notifications import (
+        bp as notifications_bp,
+        get_notification_manager,
+        NotificationManager,
+    )
     FLASK_AVAILABLE = True
 except ModuleNotFoundError:
     FLASK_AVAILABLE = False
     create_app = None
     notifications_bp = None
+    get_notification_manager = None
+    NotificationManager = None
 
 
 @pytest.fixture
@@ -41,11 +47,39 @@ def app_with_notifications(notification_engine):
     if not FLASK_AVAILABLE:
         pytest.skip("Flask not installed")
     
+    # Import and reset the notification manager
+    from copilot_core.api.v1.notifications import (
+        get_notification_manager,
+        NotificationManager,
+        Notification,
+    )
+    
+    # Create fresh manager for testing
+    import copilot_core.api.v1.notifications as notifications_module
+    notifications_module._notification_manager = NotificationManager()
+    
     app = create_app()
     if notifications_bp:
         app.register_blueprint(notifications_bp)
-        init_notifications_api(notification_engine)
+    
     return app
+
+
+@pytest.fixture
+def notification_manager():
+    """Get the notification manager and reset it for testing."""
+    if not FLASK_AVAILABLE:
+        pytest.skip("Flask not installed")
+    
+    from copilot_core.api.v1.notifications import (
+        get_notification_manager,
+        NotificationManager,
+    )
+    
+    import copilot_core.api.v1.notifications as notifications_module
+    notifications_module._notification_manager = NotificationManager()
+    
+    return get_notification_manager()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -146,10 +180,10 @@ class TestGetNotifications:
         assert j["ok"] is True
         assert j["count"] == 0
     
-    def test_get_notifications_with_history(self, app_with_notifications, notification_engine):
+    def test_get_notifications_with_history(self, app_with_notifications, notification_manager):
         """Test getting notifications with items in history."""
-        notification_engine.notify("energy", "Test Title", "Test Message")
-        notification_engine.notify("comfort", "Another Title", "Another Message")
+        notification_manager.create_notification("Test Title", "Test Message", type="info")
+        notification_manager.create_notification("Another Title", "Another Message", type="warning")
         
         client = app_with_notifications.test_client()
         r = client.get("/api/v1/notifications")
@@ -157,10 +191,10 @@ class TestGetNotifications:
         j = r.get_json()
         assert j["count"] == 2
     
-    def test_get_notifications_limit(self, app_with_notifications, notification_engine):
+    def test_get_notifications_limit(self, app_with_notifications, notification_manager):
         """Test notifications limit parameter."""
         for i in range(10):
-            notification_engine.notify("test", f"Title {i}", f"Message {i}")
+            notification_manager.create_notification(f"Title {i}", f"Message {i}", type="info")
         
         client = app_with_notifications.test_client()
         r = client.get("/api/v1/notifications?limit=5")
@@ -239,19 +273,20 @@ class TestGetDigest:
         assert r.status_code == 200
         j = r.get_json()
         assert j["ok"] is True
-        assert j["count"] == 0
+        assert j["digest"]["total"] == 0
     
-    def test_get_digest_with_notifications(self, app_with_notifications, notification_engine):
+    def test_get_digest_with_notifications(self, app_with_notifications, notification_manager):
         """Test getting digest with notifications."""
-        notification_engine.notify("energy", "Alert 1", "Message 1")
-        notification_engine.notify("comfort", "Alert 2", "Message 2")
+        notification_manager.create_notification("Alert 1", "Message 1", type="energy")
+        notification_manager.create_notification("Alert 2", "Message 2", type="comfort")
         
         client = app_with_notifications.test_client()
         r = client.get("/api/v1/notifications/digest")
         assert r.status_code == 200
         j = r.get_json()
-        assert j["count"] == 2
-        assert "by_source" in j
+        assert j["ok"] is True
+        assert j["digest"]["total"] == 2
+        assert "by_source" in j["digest"]
 
 
 @pytest.mark.skipif(not FLASK_AVAILABLE, reason="Flask not installed")
@@ -267,9 +302,9 @@ class TestGetPending:
         assert j["ok"] is True
         assert j["count"] == 0
     
-    def test_get_pending_with_notifications(self, app_with_notifications, notification_engine):
+    def test_get_pending_with_notifications(self, app_with_notifications, notification_manager):
         """Test getting pending notifications."""
-        notification_engine.notify("energy", "Pending Alert", "Needs delivery")
+        notification_manager.create_notification("Pending Alert", "Needs delivery", type="warning")
         
         client = app_with_notifications.test_client()
         r = client.get("/api/v1/notifications/pending")
@@ -291,10 +326,10 @@ class TestGetStats:
         assert j["ok"] is True
         assert j["total_notifications"] == 0
     
-    def test_get_stats_with_notifications(self, app_with_notifications, notification_engine):
+    def test_get_stats_with_notifications(self, app_with_notifications, notification_manager):
         """Test getting stats after sending notifications."""
         for i in range(5):
-            notification_engine.notify("test", f"Title {i}", f"Message {i}")
+            notification_manager.create_notification(f"Title {i}", f"Message {i}", type="info")
         
         client = app_with_notifications.test_client()
         r = client.get("/api/v1/notifications/stats")

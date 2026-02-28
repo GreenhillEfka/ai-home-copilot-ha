@@ -58,12 +58,19 @@ class MockRegistry:
     def get(self, entity_id):
         return self._entities.get(entity_id)
     
-    def register(self, entity_id, shared=True, home_id=None, **metadata):
+    def register(self, entity_id, shared=True, home_id=None, metadata=None, **kwargs):
+        # Merge explicit metadata dict with additional kwargs
+        merged_metadata = {}
+        if metadata:
+            merged_metadata.update(metadata)
+        if kwargs:
+            merged_metadata.update(kwargs)
+        
         entity = MockEntity(
             entity_id=entity_id,
             shared=shared,
             home_id=home_id,
-            metadata=metadata
+            metadata=merged_metadata
         )
         self._entities[entity_id] = entity
         return entity
