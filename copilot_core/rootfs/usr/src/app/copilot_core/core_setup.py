@@ -547,15 +547,17 @@ def init_services(hass=None, config: dict = None):
     return services
 
 
-def register_blueprints(app: Flask, services: dict = None) -> None:
+def _register_core_apis(app: Flask, services: dict = None) -> None:
     """
-    Register all API blueprints with the Flask app.
+    Register core infrastructure and system APIs.
+    
+    Includes: log fixer, events ingest, brain graph, dev surface, candidates,
+    habitus, mood, system health, UniFi, energy, and performance monitoring.
     
     Args:
         app: Flask application instance
-        services: Optional services dict from init_services() for global access
+        services: Optional services dict from init_services()
     """
-    # Import performance blueprint
     from copilot_core.api.performance import performance_bp
     
     app.register_blueprint(log_fixer_tx.bp)
@@ -568,9 +570,22 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     app.register_blueprint(system_health_bp)
     app.register_blueprint(unifi_bp)
     app.register_blueprint(energy_bp)
-    app.register_blueprint(performance_bp)  # Performance monitoring
+    app.register_blueprint(performance_bp)
+    _LOGGER.debug("Registered core infrastructure APIs")
 
-    # Register Conversation/LLM API (Ollama, default qwen3:0.6b)
+
+def _register_agent_apis(app: Flask, services: dict = None) -> None:
+    """
+    Register agent-related and conversation APIs.
+    
+    Includes: conversation/LLM, agent config, tag system, Telegram bot,
+    module control, and automation APIs.
+    
+    Args:
+        app: Flask application instance
+        services: Optional services dict from init_services()
+    """
+    # Conversation/LLM API
     try:
         from copilot_core.api.v1.conversation import conversation_bp, openai_compat_bp
         app.register_blueprint(conversation_bp)
@@ -579,7 +594,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register conversation blueprint")
 
-    # Register Styx Agent Config API (/api/v1/agent/*)
+    # Agent Config API
     try:
         from copilot_core.agent_config import agent_config_bp, init_agent_config
         init_agent_config(config=services.get("config", {}) if services else {})
@@ -588,32 +603,43 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register agent config API")
 
-    # Register Tag System v0.2 blueprint (Decision Matrix 2026-02-14)
-    # init_tags_api sets the global registry; the bp is already defined in tags/api.py
+    # Tag System v0.2
     if services and services.get("tag_registry"):
         setup_tag_api(services["tag_registry"])
     from copilot_core.tags.api import bp as tags_bp
     app.register_blueprint(tags_bp)
 
-    # Register Telegram Bot API
+    # Telegram Bot API
     from copilot_core.telegram.api import telegram_bp, init_telegram_api
     if services and services.get("telegram_bot"):
         init_telegram_api(services["telegram_bot"])
     app.register_blueprint(telegram_bp)
 
-    # Register Module Control API (v1.3.0)
+    # Module Control API
     from copilot_core.api.v1.module_control import module_control_bp, init_module_control_api
     if services and services.get("module_registry"):
         init_module_control_api(services["module_registry"])
     app.register_blueprint(module_control_bp)
 
-    # Register Automation API (v1.3.0)
+    # Automation API
     from copilot_core.api.v1.automation_api import automation_bp, init_automation_api
     if services and services.get("automation_creator"):
         init_automation_api(services["automation_creator"])
     app.register_blueprint(automation_bp)
 
-    # Register Explainability API (v2.1.0)
+
+def _register_intelligence_apis(app: Flask, services: dict = None) -> None:
+    """
+    Register intelligence and prediction APIs.
+    
+    Includes: explainability, prediction (timeseries + load shifting),
+    media zones, and proactive engine APIs.
+    
+    Args:
+        app: Flask application instance
+        services: Optional services dict from init_services()
+    """
+    # Explainability API
     try:
         from copilot_core.api.v1.explain import explain_bp, init_explain_api
         from copilot_core.explainability import ExplainabilityEngine
@@ -625,7 +651,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Explainability API")
 
-    # Register Prediction API (v2.2.0, extended v5.0.0 — timeseries + load shifting)
+    # Prediction API
     try:
         from copilot_core.prediction.api import prediction_bp, init_prediction_api
         from copilot_core.prediction.forecaster import ArrivalForecaster
@@ -642,7 +668,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Prediction API")
 
-    # Register Media Zones + Proactive API (v3.1.0)
+    # Media Zones + Proactive API
     try:
         from copilot_core.api.v1.media_zones import media_zones_bp, init_media_zones_api
         if services:
@@ -655,7 +681,19 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Media Zones API")
 
-    # Register Reminders API (waste + birthdays, v3.2.0)
+
+def _register_household_apis(app: Flask, services: dict = None) -> None:
+    """
+    Register household management and daily-life APIs.
+    
+    Includes: reminders (waste + birthdays), Haushalt dashboard, entity assignment,
+    presence tracking, scenes, HomeKit, calendar, shopping, and vector store.
+    
+    Args:
+        app: Flask application instance
+        services: Optional services dict from init_services()
+    """
+    # Reminders API
     try:
         from copilot_core.api.v1.reminders import reminders_bp, init_reminders_api
         if services:
@@ -668,7 +706,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Reminders API")
 
-    # Register Haushalt Dashboard API (v3.2.2)
+    # Haushalt Dashboard API
     try:
         from copilot_core.api.v1.haushalt import haushalt_bp
         app.register_blueprint(haushalt_bp)
@@ -676,7 +714,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Haushalt API")
 
-    # Register Entity Assignment Suggestions API (v3.2.2)
+    # Entity Assignment API
     try:
         from copilot_core.api.v1.entity_assignment import entity_assignment_bp
         app.register_blueprint(entity_assignment_bp)
@@ -684,7 +722,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Entity Assignment API")
 
-    # Register Presence Tracking API (v3.3.0)
+    # Presence Tracking API
     try:
         from copilot_core.api.v1.presence import presence_bp
         app.register_blueprint(presence_bp)
@@ -692,7 +730,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Presence API")
 
-    # Register Scene Management API (v3.4.0)
+    # Scene Management API
     try:
         from copilot_core.api.v1.scenes import scenes_bp
         app.register_blueprint(scenes_bp)
@@ -700,7 +738,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Scenes API")
 
-    # Register HomeKit Bridge API (v3.4.0)
+    # HomeKit Bridge API
     try:
         from copilot_core.api.v1.homekit import homekit_bp
         app.register_blueprint(homekit_bp)
@@ -708,7 +746,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register HomeKit API")
 
-    # Register Calendar API (v3.5.0)
+    # Calendar API
     try:
         from copilot_core.api.v1.calendar import calendar_bp
         app.register_blueprint(calendar_bp)
@@ -716,7 +754,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Calendar API")
 
-    # Register Shopping List & Reminders API (v3.5.0)
+    # Shopping List & Reminders API
     try:
         from copilot_core.api.v1.shopping import shopping_bp
         app.register_blueprint(shopping_bp)
@@ -724,7 +762,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Shopping/Reminders API")
 
-    # Register Vector Store API (v3.5.0)
+    # Vector Store API
     try:
         from copilot_core.api.v1.vector import bp as vector_bp
         app.register_blueprint(vector_bp, url_prefix="/api/v1")
@@ -732,7 +770,17 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Vector API")
 
-    # Register Error Status API (v7.8.10 — Error Dashboard Widget)
+
+def _register_error_apis(app: Flask, services: dict = None) -> None:
+    """
+    Register error handling and status APIs.
+    
+    Includes: error status dashboard widget.
+    
+    Args:
+        app: Flask application instance
+        services: Optional services dict from init_services()
+    """
     try:
         from copilot_core.api.v1.error_status import api_bp
         app.register_blueprint(api_bp)
@@ -740,7 +788,19 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Error Status API")
 
-    # Register Sharing API (Phase 5 — Cross-home sync & discovery)
+
+def _register_pilot_suite_apis(app: Flask, services: dict = None) -> None:
+    """
+    Register PilotSuite platform and advanced feature APIs.
+    
+    Includes: sharing (cross-home sync), Onyx bridge, notifications,
+    collective intelligence (federated learning), MCP server, and Hub API.
+    
+    Args:
+        app: Flask application instance
+        services: Optional services dict from init_services()
+    """
+    # Sharing API
     try:
         from copilot_core.sharing.api import sharing_bp
         app.register_blueprint(sharing_bp)
@@ -748,7 +808,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Sharing API")
 
-    # Register Onyx bridge API (deterministic action bridge)
+    # Onyx bridge API
     try:
         from copilot_core.api.v1.onyx_bridge import onyx_bridge_bp
         app.register_blueprint(onyx_bridge_bp)
@@ -756,7 +816,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Onyx bridge API")
 
-    # Register Notifications API (Phase 5 — Push notifications)
+    # Notifications API
     try:
         from copilot_core.api.v1.notifications import bp as notifications_bp
         app.register_blueprint(notifications_bp, url_prefix="/api/v1")
@@ -764,7 +824,7 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Notifications API")
 
-    # Register Collective Intelligence API (Phase 5 — Federated learning)
+    # Collective Intelligence API
     try:
         from copilot_core.collective_intelligence.api import federated_bp
         app.register_blueprint(federated_bp, url_prefix="/api/v1")
@@ -772,11 +832,11 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Collective Intelligence API")
 
-    # Register PilotSuite MCP Server (expose skills to external AI clients)
+    # MCP Server
     from copilot_core.mcp_server import mcp_bp
     app.register_blueprint(mcp_bp)
-    
-    # Register PilotSuite Hub API (v7.6.0 — 17 engines, 120+ endpoints)
+
+    # Hub API
     try:
         from copilot_core.hub.api import hub_bp, init_hub_api
         if services:
@@ -803,6 +863,30 @@ def register_blueprints(app: Flask, services: dict = None) -> None:
         _LOGGER.info("Registered Hub API (/api/v1/hub/* — 120+ endpoints)")
     except Exception:
         _LOGGER.exception("Failed to register Hub API")
+
+
+def register_blueprints(app: Flask, services: dict = None) -> None:
+    """
+    Register all API blueprints with the Flask app.
+    
+    Orchestrates registration by delegating to grouped helper functions:
+    - _register_core_apis: Infrastructure and system APIs
+    - _register_agent_apis: Agent, conversation, and automation APIs
+    - _register_intelligence_apis: Intelligence and prediction APIs
+    - _register_household_apis: Household management APIs
+    - _register_error_apis: Error handling APIs
+    - _register_pilot_suite_apis: PilotSuite platform APIs
+    
+    Args:
+        app: Flask application instance
+        services: Optional services dict from init_services() for global access
+    """
+    _register_core_apis(app, services)
+    _register_agent_apis(app, services)
+    _register_intelligence_apis(app, services)
+    _register_household_apis(app, services)
+    _register_error_apis(app, services)
+    _register_pilot_suite_apis(app, services)
 
     # Store services in app config for conversation context injection
     if services:
