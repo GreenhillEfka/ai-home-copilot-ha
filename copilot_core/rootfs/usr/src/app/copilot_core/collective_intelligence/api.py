@@ -1,4 +1,16 @@
-"""Collective Intelligence API - Flask blueprint for federated learning endpoints."""
+"""Collective Intelligence API - Flask blueprint for federated learning endpoints.
+
+This module provides REST API endpoints for federated learning operations:
+- Service management (start/stop/status)
+- Node registration and updates
+- Federated learning rounds and aggregation
+- Knowledge extraction and transfer
+- Statistics and state management
+
+All endpoints require API key authentication via @require_api_key decorator.
+"""
+
+from typing import Any, Dict, Optional, Tuple
 
 from flask import Blueprint, jsonify, request
 
@@ -7,17 +19,25 @@ from copilot_core.api.security import require_api_key
 federated_bp = Blueprint('federated', __name__)
 
 # Module-level service reference (set by init_federated_api)
-_service = None
+_service: Optional[Any] = None
 
 
-def init_federated_api(service):
-    """Initialize the federated API with a service instance."""
+def init_federated_api(service: Any) -> None:
+    """Initialize the federated API with a service instance.
+    
+    Args:
+        service: CollectiveIntelligence service instance.
+    """
     global _service
     _service = service
 
 
-def _get_service():
-    """Get the CollectiveIntelligence service, falling back to global."""
+def _get_service() -> Optional[Any]:
+    """Get the CollectiveIntelligence service, falling back to global.
+    
+    Returns:
+        Optional[Any]: Service instance or None if not available.
+    """
     if _service is not None:
         return _service
     from copilot_core import get_federated_service
@@ -26,8 +46,12 @@ def _get_service():
 
 @federated_bp.route('/api/v1/federated', methods=['GET'])
 @require_api_key
-def get_status():
-    """Get federated learning system status."""
+def get_status() -> Tuple[Dict[str, Any], int]:
+    """Get federated learning system status.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Status dictionary and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
@@ -38,8 +62,12 @@ def get_status():
 
 @federated_bp.route('/api/v1/federated/start', methods=['POST'])
 @require_api_key
-def start_service():
-    """Start the federated learning service."""
+def start_service() -> Tuple[Dict[str, Any], int]:
+    """Start the federated learning service.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Success response and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
@@ -50,8 +78,12 @@ def start_service():
 
 @federated_bp.route('/api/v1/federated/stop', methods=['POST'])
 @require_api_key
-def stop_service():
-    """Stop the federated learning service."""
+def stop_service() -> Tuple[Dict[str, Any], int]:
+    """Stop the federated learning service.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Success response and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
@@ -62,15 +94,25 @@ def stop_service():
 
 @federated_bp.route('/api/v1/federated/register', methods=['POST'])
 @require_api_key
-def register_node():
-    """Register a new home node for federated learning."""
+def register_node() -> Tuple[Dict[str, Any], int]:
+    """Register a new home node for federated learning.
+    
+    Request body:
+        {
+            "node_id": str,
+            "max_epsilon": float (optional, default 1.0)
+        }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Registration result and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
     
-    data = request.get_json(silent=True) or {}
-    node_id = data.get('node_id')
-    max_epsilon = data.get('max_epsilon', 1.0)
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    node_id: Optional[str] = data.get('node_id')
+    max_epsilon: float = data.get('max_epsilon', 1.0)
     
     if not node_id:
         return jsonify({'error': 'node_id required'}), 400
@@ -85,16 +127,27 @@ def register_node():
 
 @federated_bp.route('/api/v1/federated/update', methods=['POST'])
 @require_api_key
-def submit_update():
-    """Submit a local model update from a node."""
+def submit_update() -> Tuple[Dict[str, Any], int]:
+    """Submit a local model update from a node.
+    
+    Request body:
+        {
+            "node_id": str,
+            "weights": dict,
+            "metrics": dict (optional)
+        }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Update result with update_id and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
     
-    data = request.get_json(silent=True) or {}
-    node_id = data.get('node_id')
-    weights = data.get('weights')
-    metrics = data.get('metrics')
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    node_id: Optional[str] = data.get('node_id')
+    weights: Optional[Dict[str, Any]] = data.get('weights')
+    metrics: Optional[Dict[str, Any]] = data.get('metrics')
     
     if not node_id or not weights:
         return jsonify({'error': 'node_id and weights required'}), 400
@@ -113,8 +166,12 @@ def submit_update():
 
 @federated_bp.route('/api/v1/federated/round', methods=['POST'])
 @require_api_key
-def start_round():
-    """Start a new federated learning round."""
+def start_round() -> Tuple[Dict[str, Any], int]:
+    """Start a new federated learning round.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Round result with round_id and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
@@ -132,14 +189,23 @@ def start_round():
 
 @federated_bp.route('/api/v1/federated/aggregate', methods=['POST'])
 @require_api_key
-def execute_aggregation():
-    """Execute aggregation for a round."""
+def execute_aggregation() -> Tuple[Dict[str, Any], int]:
+    """Execute aggregation for a round.
+    
+    Request body:
+        {
+            "round_id": str
+        }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Aggregation result with model details and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
     
-    data = request.get_json(silent=True) or {}
-    round_id = data.get('round_id')
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    round_id: Optional[str] = data.get('round_id')
     
     if not round_id:
         return jsonify({'error': 'round_id required'}), 400
@@ -160,17 +226,29 @@ def execute_aggregation():
 
 @federated_bp.route('/api/v1/federated/knowledge', methods=['POST'])
 @require_api_key
-def extract_knowledge():
-    """Extract knowledge from a node for transfer."""
+def extract_knowledge() -> Tuple[Dict[str, Any], int]:
+    """Extract knowledge from a node for transfer.
+    
+    Request body:
+        {
+            "node_id": str,
+            "knowledge_type": str,
+            "payload": dict,
+            "confidence": float (optional, default 1.0)
+        }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Knowledge extraction result and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
     
-    data = request.get_json(silent=True) or {}
-    node_id = data.get('node_id')
-    knowledge_type = data.get('knowledge_type')
-    payload = data.get('payload')
-    confidence = data.get('confidence', 1.0)
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    node_id: Optional[str] = data.get('node_id')
+    knowledge_type: Optional[str] = data.get('knowledge_type')
+    payload: Optional[Dict[str, Any]] = data.get('payload')
+    confidence: float = data.get('confidence', 1.0)
     
     if not node_id or not knowledge_type or not payload:
         return jsonify({'error': 'node_id, knowledge_type, and payload required'}), 400
@@ -189,14 +267,26 @@ def extract_knowledge():
 
 @federated_bp.route('/api/v1/federated/knowledge/<knowledge_id>/transfer', methods=['POST'])
 @require_api_key
-def transfer_knowledge(knowledge_id: str):
-    """Transfer knowledge to another node."""
+def transfer_knowledge(knowledge_id: str) -> Tuple[Dict[str, Any], int]:
+    """Transfer knowledge to another node.
+    
+    Args:
+        knowledge_id: ID of the knowledge item to transfer.
+    
+    Request body:
+        {
+            "target_node_id": str
+        }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Transfer result and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
     
-    data = request.get_json(silent=True) or {}
-    target_node_id = data.get('target_node_id')
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    target_node_id: Optional[str] = data.get('target_node_id')
     
     if not target_node_id:
         return jsonify({'error': 'target_node_id required'}), 400
@@ -212,8 +302,12 @@ def transfer_knowledge(knowledge_id: str):
 
 @federated_bp.route('/api/v1/federated/rounds', methods=['GET'])
 @require_api_key
-def get_round_history():
-    """Get history of federated rounds."""
+def get_round_history() -> Tuple[Dict[str, Any], int]:
+    """Get history of federated rounds.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Round history list and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
@@ -228,8 +322,12 @@ def get_round_history():
 
 @federated_bp.route('/api/v1/federated/models', methods=['GET'])
 @require_api_key
-def get_aggregated_models():
-    """Get all aggregated models."""
+def get_aggregated_models() -> Tuple[Dict[str, Any], int]:
+    """Get all aggregated models.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Aggregated models dictionary and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
@@ -244,8 +342,12 @@ def get_aggregated_models():
 
 @federated_bp.route('/api/v1/federated/knowledge-base', methods=['GET'])
 @require_api_key
-def get_knowledge_base():
-    """Get the knowledge transfer base."""
+def get_knowledge_base() -> Tuple[Dict[str, Any], int]:
+    """Get the knowledge transfer base.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Knowledge base items and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
@@ -260,8 +362,12 @@ def get_knowledge_base():
 
 @federated_bp.route('/api/v1/federated/statistics', methods=['GET'])
 @require_api_key
-def get_statistics():
-    """Get comprehensive federated learning statistics."""
+def get_statistics() -> Tuple[Dict[str, Any], int]:
+    """Get comprehensive federated learning statistics.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Statistics dictionary and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
@@ -271,14 +377,23 @@ def get_statistics():
 
 @federated_bp.route('/api/v1/federated/save', methods=['POST'])
 @require_api_key
-def save_state():
-    """Save system state to file."""
+def save_state() -> Tuple[Dict[str, Any], int]:
+    """Save system state to file.
+    
+    Request body:
+        {
+            "path": str (optional, default '/config/.copilot/federated_state.json')
+        }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Save result and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
     
-    data = request.get_json(silent=True) or {}
-    path = data.get('path', '/config/.copilot/federated_state.json')
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    path: str = data.get('path', '/config/.copilot/federated_state.json')
     
     success = service.save_state(path)
     return jsonify({
@@ -289,17 +404,32 @@ def save_state():
 
 @federated_bp.route('/api/v1/federated/load', methods=['POST'])
 @require_api_key
-def load_state():
-    """Load system state from file."""
+def load_state() -> Tuple[Dict[str, Any], int]:
+    """Load system state from file.
+    
+    Request body:
+        {
+            "path": str (optional, default '/config/.copilot/federated_state.json')
+        }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Load result and HTTP status code.
+    """
     service = _get_service()
     if service is None:
         return jsonify({'error': 'Federated service not initialized'}), 503
     
-    data = request.get_json(silent=True) or {}
-    path = data.get('path', '/config/.copilot/federated_state.json')
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    path: str = data.get('path', '/config/.copilot/federated_state.json')
     
     success = service.load_state(path)
     return jsonify({
         'ok': success,
         'path': path
     })
+
+
+__all__ = ['federated_bp', 'init_federated_api', 'get_status', 'start_service', 'stop_service',
+           'register_node', 'submit_update', 'start_round', 'execute_aggregation',
+           'extract_knowledge', 'transfer_knowledge', 'get_round_history', 'get_aggregated_models',
+           'get_knowledge_base', 'get_statistics', 'save_state', 'load_state']

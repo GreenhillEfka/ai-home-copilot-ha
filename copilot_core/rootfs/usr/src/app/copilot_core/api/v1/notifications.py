@@ -24,7 +24,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Blueprint, jsonify, request
 
@@ -37,9 +37,11 @@ from copilot_core.api.security import validate_token as _validate_token
 
 
 @bp.before_request
-def _require_auth():
+def _require_auth() -> Optional[Tuple[Dict[str, str], int]]:
+    """Validate authentication token for all notification endpoints."""
     if not _validate_token(request):
         return jsonify({"error": "unauthorized", "message": "Valid X-Auth-Token or Bearer token required"}), 401
+    return None
 
 
 class NotificationPriority(Enum):
@@ -88,6 +90,11 @@ class Notification:
     tags: List[str] = field(default_factory=list)
     
     def to_dict(self) -> Dict[str, Any]:
+        """Convert notification to dictionary representation.
+        
+        Returns:
+            Dict[str, Any]: Dictionary containing all notification fields.
+        """
         return {
             "id": self.id,
             "title": self.title,
@@ -131,6 +138,11 @@ class DeviceSubscription:
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
     def to_dict(self) -> Dict[str, Any]:
+        """Convert device subscription to dictionary representation.
+        
+        Returns:
+            Dict[str, Any]: Dictionary containing subscription details (with masked push_token).
+        """
         return {
             "id": self.id,
             "device_id": self.device_id,
@@ -159,13 +171,18 @@ class NotificationManager:
     # Maximum subscriptions
     MAX_SUBSCRIPTIONS = 20
     
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize the notification manager."""
         self._notifications: List[Notification] = []
         self._subscriptions: Dict[str, DeviceSubscription] = {}
         self._ha_notify_service: Optional[str] = None
     
     def set_ha_notify_service(self, service: str) -> None:
-        """Set HA notification service name."""
+        """Set HA notification service name.
+        
+        Args:
+            service: Name of the HA notify service (e.g., 'mobile_app').
+        """
         self._ha_notify_service = service
     
     def create_notification(
@@ -180,7 +197,22 @@ class NotificationManager:
         target_users: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
     ) -> Notification:
-        """Create a new notification."""
+        """Create a new notification.
+        
+        Args:
+            title: Notification title.
+            message: Notification message body.
+            priority: Priority level (low, normal, high, urgent).
+            type: Notification type (mood_change, alert, suggestion, system, info, warning).
+            action_data: Optional action data dictionary.
+            action_url: Optional action URL.
+            target_devices: Optional list of target device IDs.
+            target_users: Optional list of target user IDs.
+            tags: Optional list of tags for categorization.
+        
+        Returns:
+            Notification: The created notification object.
+        """
         notification = Notification(
             title=title,
             message=message,
@@ -205,9 +237,17 @@ class NotificationManager:
     def send_notification(
         self,
         notification: Notification,
-        ha_hass=None,
+        ha_hass: Optional[Any] = None,
     ) -> bool:
-        """Send notification via available channels."""
+        """Send notification via available channels.
+        
+        Args:
+            notification: The notification to send.
+            ha_hass: Optional Home Assistant instance for HA notify service.
+        
+        Returns:
+            bool: True if notification was sent successfully, False otherwise.
+        """
         try:
             # Mark as sent
             notification.sent = True
@@ -222,15 +262,15 @@ class NotificationManager:
             # Send via webhook pusher if available
             try:
                 from flask import current_app
-                services = current_app.config.get("COPILOT_SERVICES", {})
-                webhook = services.get("webhook_pusher")
+                services: Dict[str, Any] = current_app.config.get("COPILOT_SERVICES", {})
+                webhook: Optional[Any] = services.get("webhook_pusher")
                 if webhook and webhook.enabled:
                     webhook.push_notification({
                         "id": notification.id,
                         "title": notification.title,
                         "message": notification.message,
                         "priority": notification.priority,
-                        "type": notification.notification_type,
+                        "type": notification.type,
                     })
             except Exception as e:
                 _LOGGER.debug("Webhook push failed (non-critical): %s", e)
@@ -267,7 +307,16 @@ class NotificationManager:
         notification_type: Optional[str] = None,
         limit: int = 20,
     ) -> List[Notification]:
-        """Get notifications with optional filters."""
+        """Get notifications with optional filters.
+        
+        Args:
+            unread_only: If True, only return unread notifications.
+            notification_type: Optional filter by notification type.
+            limit: Maximum number of notifications to return.
+        
+        Returns:
+            List[Notification]: List of notifications matching the filters.
+        """
         results = self._notifications
         
         # Filter by read status
@@ -281,7 +330,14 @@ class NotificationManager:
         return results[:limit]
     
     def mark_as_read(self, notification_id: str) -> bool:
-        """Mark notification as read."""
+        """Mark notification as read.
+        
+        Args:
+            notification_id: ID of the notification to mark as read.
+        
+        Returns:
+            bool: True if notification was found and marked, False otherwise.
+        """
         for notification in self._notifications:
             if notification.id == notification_id:
                 notification.read = True
@@ -289,7 +345,14 @@ class NotificationManager:
         return False
     
     def dismiss_notification(self, notification_id: str) -> bool:
-        """Dismiss a notification."""
+        """Dismiss a notification.
+        
+        Args:
+            notification_id: ID of the notification to dismiss.
+        
+        Returns:
+            bool: True if notification was found and dismissed, False otherwise.
+        """
         for notification in self._notifications:
             if notification.id == notification_id:
                 notification.dismissed = True
@@ -297,7 +360,14 @@ class NotificationManager:
         return False
     
     def clear_notifications(self, notification_type: Optional[str] = None) -> int:
-        """Clear notifications, optionally by type."""
+        """Clear notifications, optionally by type.
+        
+        Args:
+            notification_type: Optional type filter (clears all if None).
+        
+        Returns:
+            int: Number of notifications cleared.
+        """
         if notification_type:
             original_count = len(self._notifications)
             self._notifications = [
@@ -316,8 +386,21 @@ class NotificationManager:
         device_type: str = "mobile",
         push_token: str = "",
         ha_entity_id: str = "",
+        preferences: Optional[Dict[str, bool]] = None,
     ) -> DeviceSubscription:
-        """Subscribe a device for push notifications."""
+        """Subscribe a device for push notifications.
+        
+        Args:
+            device_id: Unique device identifier.
+            device_name: Human-readable device name.
+            device_type: Device type (mobile, tablet, watch, speaker).
+            push_token: Push notification token.
+            ha_entity_id: Home Assistant entity ID for the device.
+            preferences: Optional dictionary of notification preferences.
+        
+        Returns:
+            DeviceSubscription: The created or updated subscription.
+        """
         # Check if device already subscribed
         for sub in self._subscriptions.values():
             if sub.device_id == device_id:
@@ -325,6 +408,11 @@ class NotificationManager:
                 sub.device_name = device_name or sub.device_name
                 sub.push_token = push_token or sub.push_token
                 sub.last_seen = datetime.now(timezone.utc).isoformat()
+                if preferences:
+                    sub.notify_mood = preferences.get('notify_mood', sub.notify_mood)
+                    sub.notify_alerts = preferences.get('notify_alerts', sub.notify_alerts)
+                    sub.notify_suggestions = preferences.get('notify_suggestions', sub.notify_suggestions)
+                    sub.notify_system = preferences.get('notify_system', sub.notify_system)
                 return sub
         
         # Check max subscriptions
@@ -342,11 +430,24 @@ class NotificationManager:
             ha_entity_id=ha_entity_id,
         )
         
+        if preferences:
+            subscription.notify_mood = preferences.get('notify_mood', True)
+            subscription.notify_alerts = preferences.get('notify_alerts', True)
+            subscription.notify_suggestions = preferences.get('notify_suggestions', True)
+            subscription.notify_system = preferences.get('notify_system', True)
+        
         self._subscriptions[subscription.id] = subscription
         return subscription
     
     def unsubscribe_device(self, device_id: str) -> bool:
-        """Unsubscribe a device."""
+        """Unsubscribe a device.
+        
+        Args:
+            device_id: ID of the device to unsubscribe.
+        
+        Returns:
+            bool: True if device was found and unsubscribed, False otherwise.
+        """
         for sub_id, sub in list(self._subscriptions.items()):
             if sub.device_id == device_id:
                 del self._subscriptions[sub_id]
@@ -354,7 +455,11 @@ class NotificationManager:
         return False
     
     def get_subscriptions(self) -> List[DeviceSubscription]:
-        """Get all device subscriptions."""
+        """Get all device subscriptions.
+        
+        Returns:
+            List[DeviceSubscription]: List of all device subscriptions.
+        """
         return list(self._subscriptions.values())
     
     def update_subscription(
@@ -363,7 +468,16 @@ class NotificationManager:
         preferences: Optional[Dict[str, bool]] = None,
         enabled: Optional[bool] = None,
     ) -> Optional[DeviceSubscription]:
-        """Update subscription preferences."""
+        """Update subscription preferences.
+        
+        Args:
+            device_id: ID of the device subscription to update.
+            preferences: Optional dictionary of preference updates.
+            enabled: Optional enabled/disabled flag.
+        
+        Returns:
+            Optional[DeviceSubscription]: Updated subscription or None if not found.
+        """
         for sub in self._subscriptions.values():
             if sub.device_id == device_id:
                 if preferences:
@@ -381,7 +495,11 @@ class NotificationManager:
         return None
     
     def get_unread_count(self) -> int:
-        """Get count of unread notifications."""
+        """Get count of unread notifications.
+        
+        Returns:
+            int: Number of unread notifications.
+        """
         return sum(1 for n in self._notifications if not n.read)
     
     def notify_mood_change(
@@ -389,9 +507,19 @@ class NotificationManager:
         old_mood: str,
         new_mood: str,
         confidence: float,
-        ha_hass=None,
+        ha_hass: Optional[Any] = None,
     ) -> Optional[Notification]:
-        """Create and send mood change notification."""
+        """Create and send mood change notification.
+        
+        Args:
+            old_mood: Previous mood value.
+            new_mood: New mood value.
+            confidence: Confidence score (0.0 to 1.0).
+            ha_hass: Optional Home Assistant instance.
+        
+        Returns:
+            Optional[Notification]: Created notification or None if failed.
+        """
         mood_icons = {
             "relax": "🧘",
             "focus": "💻",
@@ -421,9 +549,19 @@ class NotificationManager:
         alert_title: str,
         alert_message: str,
         severity: str = "normal",
-        ha_hass=None,
+        ha_hass: Optional[Any] = None,
     ) -> Notification:
-        """Create and send alert notification."""
+        """Create and send alert notification.
+        
+        Args:
+            alert_title: Alert title.
+            alert_message: Alert message body.
+            severity: Alert severity (normal, high).
+            ha_hass: Optional Home Assistant instance.
+        
+        Returns:
+            Notification: Created notification object.
+        """
         priority = "high" if severity == "high" else "normal"
         
         notification = self.create_notification(
@@ -443,7 +581,11 @@ _notification_manager: Optional[NotificationManager] = None
 
 
 def get_notification_manager() -> NotificationManager:
-    """Get the singleton notification manager."""
+    """Get the singleton notification manager.
+    
+    Returns:
+        NotificationManager: The singleton notification manager instance.
+    """
     global _notification_manager
     if _notification_manager is None:
         _notification_manager = NotificationManager()
@@ -455,7 +597,7 @@ def get_notification_manager() -> NotificationManager:
 # =============================================================================
 
 @bp.route("/send", methods=["POST"])
-def send_notification():
+def send_notification() -> Tuple[Dict[str, Any], int]:
     """Send a notification.
     
     JSON body:
@@ -471,7 +613,7 @@ def send_notification():
         }
     
     Returns:
-        {"success": true, "data": {"notification_id": str}}
+        Tuple[Dict[str, Any], int]: JSON response with notification_id and HTTP status code.
     """
     try:
         body = request.get_json()
@@ -522,13 +664,16 @@ def send_notification():
 
 
 @bp.route("", methods=["GET"])
-def get_notifications():
+def get_notifications() -> Tuple[Dict[str, Any], int]:
     """Get notifications.
     
     Query params:
         unread_only: Only return unread (default false)
         type: Filter by notification type
         limit: Max results (default 20)
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response with notifications list and HTTP status code.
     """
     unread_only = request.args.get("unread_only", "").lower() == "true"
     notification_type = request.args.get("type")
@@ -548,8 +693,15 @@ def get_notifications():
 
 
 @bp.route("/<notification_id>/read", methods=["POST"])
-def mark_notification_read(notification_id: str):
-    """Mark notification as read."""
+def mark_notification_read(notification_id: str) -> Tuple[Dict[str, Any], int]:
+    """Mark notification as read.
+    
+    Args:
+        notification_id: ID of the notification to mark as read.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
+    """
     manager = get_notification_manager()
     
     if manager.mark_as_read(notification_id):
@@ -565,8 +717,15 @@ def mark_notification_read(notification_id: str):
 
 
 @bp.route("/<notification_id>", methods=["DELETE"])
-def dismiss_notification(notification_id: str):
-    """Dismiss a notification."""
+def dismiss_notification(notification_id: str) -> Tuple[Dict[str, Any], int]:
+    """Dismiss a notification.
+    
+    Args:
+        notification_id: ID of the notification to dismiss.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
+    """
     manager = get_notification_manager()
     
     if manager.dismiss_notification(notification_id):
@@ -582,14 +741,14 @@ def dismiss_notification(notification_id: str):
 
 
 @bp.route("/clear", methods=["POST"])
-def clear_notifications():
+def clear_notifications() -> Tuple[Dict[str, Any], int]:
     """Clear notifications.
     
     JSON body (optional):
         {"type": "alert"}  # Only clear alerts
     
     Returns:
-        {"success": true, "data": {"cleared_count": int}}
+        Tuple[Dict[str, Any], int]: JSON response with cleared_count and HTTP status code.
     """
     body = request.get_json(silent=True) or {}
     notification_type = body.get("type")
@@ -604,7 +763,7 @@ def clear_notifications():
 
 
 @bp.route("/subscribe", methods=["POST"])
-def subscribe_device():
+def subscribe_device() -> Tuple[Dict[str, Any], int]:
     """Subscribe a device for push notifications.
     
     JSON body:
@@ -621,6 +780,9 @@ def subscribe_device():
                 "notify_system": bool
             }
         }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response with subscription details and HTTP status code.
     """
     try:
         body = request.get_json()
@@ -660,11 +822,14 @@ def subscribe_device():
 
 
 @bp.route("/unsubscribe", methods=["POST"])
-def unsubscribe_device():
+def unsubscribe_device() -> Tuple[Dict[str, Any], int]:
     """Unsubscribe a device.
     
     JSON body:
         {"device_id": str}
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
     """
     body = request.get_json()
     if not body or "device_id" not in body:
@@ -688,8 +853,12 @@ def unsubscribe_device():
 
 
 @bp.route("/subscriptions", methods=["GET"])
-def get_subscriptions():
-    """Get all device subscriptions."""
+def get_subscriptions() -> Tuple[Dict[str, Any], int]:
+    """Get all device subscriptions.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response with subscriptions list and HTTP status code.
+    """
     manager = get_notification_manager()
     subscriptions = manager.get_subscriptions()
     
@@ -703,7 +872,7 @@ def get_subscriptions():
 
 
 @bp.route("/subscriptions/<device_id>", methods=["PUT"])
-def update_subscription(device_id: str):
+def update_subscription(device_id: str) -> Tuple[Dict[str, Any], int]:
     """Update subscription preferences.
     
     JSON body:
@@ -716,6 +885,12 @@ def update_subscription(device_id: str):
                 "notify_system": bool
             }
         }
+    
+    Args:
+        device_id: ID of the device subscription to update.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
     """
     body = request.get_json()
     if not body:
