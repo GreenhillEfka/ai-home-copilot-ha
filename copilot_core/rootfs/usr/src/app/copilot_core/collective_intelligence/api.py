@@ -395,11 +395,14 @@ def save_state() -> Tuple[Dict[str, Any], int]:
     data: Dict[str, Any] = request.get_json(silent=True) or {}
     path: str = data.get('path', '/config/.copilot/federated_state.json')
     
-    success = service.save_state(path)
-    return jsonify({
-        'ok': success,
-        'path': path
-    })
+    try:
+        success = service.save_state(path)
+        return jsonify({
+            'ok': success,
+            'path': path
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @federated_bp.route('/api/v1/federated/load', methods=['POST'])

@@ -370,5 +370,140 @@ class TestFederatedFlaskIntegration:
         assert data['error'] == 'Federated service not initialized'
 
 
+@pytest.mark.skipif(not FLASK_AVAILABLE, reason="Flask not installed")
+@pytest.mark.skipif(not FEDERATED_AVAILABLE, reason="Federated module not available")
+class TestFederatedErrorCases:
+    """Test error cases for federated learning API."""
+    
+    def test_503_service_not_initialized_all_endpoints(self, mock_service):
+        """Test 503 when service is not initialized on various endpoints."""
+        init_federated_api(None)  # Clear service
+        app = Flask(__name__)
+        app.config['TESTING'] = True
+        app.register_blueprint(federated_bp)
+        client = app.test_client()
+        
+        # Test GET /api/v1/federated
+        response = client.get('/api/v1/federated')
+        assert response.status_code == 503
+        assert response.get_json()['error'] == 'Federated service not initialized'
+        
+        # Test POST /api/v1/federated/start
+        response = client.post('/api/v1/federated/start')
+        assert response.status_code == 503
+        
+        # Test POST /api/v1/federated/stop
+        response = client.post('/api/v1/federated/stop')
+        assert response.status_code == 503
+        
+        # Test POST /api/v1/federated/register
+        response = client.post('/api/v1/federated/register', json={'node_id': 'test'})
+        assert response.status_code == 503
+        
+        # Restore service
+        init_federated_api(mock_service)
+    
+    def test_400_register_missing_node_id(self, client, mock_service):
+        """Test 400 when registering node without node_id."""
+        response = client.post('/api/v1/federated/register', json={
+            'max_epsilon': 0.5
+        })
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['error'] == 'node_id required'
+    
+    def test_400_submit_update_missing_fields(self, client, mock_service):
+        """Test 400 when submitting update without required fields."""
+        # Missing weights
+        response = client.post('/api/v1/federated/update', json={
+            'node_id': 'home-node-1'
+        })
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['error'] == 'node_id and weights required'
+        
+        # Missing node_id
+        response = client.post('/api/v1/federated/update', json={
+            'weights': {'layer1': [0.1, 0.2]}
+        })
+        
+        assert response.status_code == 400
+    
+    def test_400_aggregate_missing_round_id(self, client, mock_service):
+        """Test 400 when aggregating without round_id."""
+        response = client.post('/api/v1/federated/aggregate', json={})
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['error'] == 'round_id required'
+    
+    def test_400_extract_knowledge_missing_fields(self, client, mock_service):
+        """Test 400 when extracting knowledge without required fields."""
+        response = client.post('/api/v1/federated/knowledge', json={
+            'node_id': 'home-node-1'
+        })
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['error'] == 'node_id, knowledge_type, and payload required'
+    
+    def test_400_transfer_knowledge_missing_target(self, client, mock_service):
+        """Test 400 when transferring knowledge without target_node_id."""
+        response = client.post('/api/v1/federated/knowledge/know-123/transfer', json={})
+        
+        assert response.status_code == 400
+        data = response.get_json()
+        assert data['error'] == 'target_node_id required'
+    
+    def test_500_save_state_failure(self, client, mock_service):
+        """Test 500 when save_state fails."""
+        # Mock service to simulate failure
+        def raise_exception(*args, **kwargs):
+            raise Exception("Save failed")
+        
+        mock_service.save_state.side_effect = raise_exception
+        
+        response = client.post('/api/v1/federated/save', json={
+            'path': '/tmp/state.json'
+        })
+        
+        assert response.status_code == 500
+        
+        # Reset mock
+        mock_service.save_state.side_effect = None
+        mock_service.save_state.return_value = True
+    
+    def test_401_auth_failure_with_env_required(self, client, mock_service, monkeypatch):
+        """Test 401 authentication failure when auth is required and token is invalid."""
+        # Force auth to be required
+        monkeypatch.setenv('COPILOT_AUTH_REQUIRED', 'true')
+        monkeypatch.setenv('COPILOT_AUTH_TOKEN', 'test-secret-token')
+        
+        # Make request without valid token
+        response = client.get('/api/v1/federated')
+        
+        # Should get 401 because no valid token is provided
+        assert response.status_code == 401
+        data = response.get_json()
+        assert 'error' in data or 'message' in data
+    
+    def test_405_method_not_allowed(self, client, mock_service):
+        """Test 405 method not allowed."""
+        # GET on POST-only endpoint
+        response = client.get('/api/v1/federated/start')
+        assert response.status_code == 405
+    
+    def test_415_unsupported_media_type(self, client, mock_service):
+        """Test 415 unsupported media type."""
+        response = client.post('/api/v1/federated/register',
+                              data='node_id=test',
+                              content_type='application/x-www-form-urlencoded')
+        
+        # Flask may return 400 or 415 depending on configuration
+        assert response.status_code in [400, 415]
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

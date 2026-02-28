@@ -280,8 +280,11 @@ def stop_sharing_with_home(entity_id: str, home_id: str) -> tuple:
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
     
-    registry.stop_sharing_with(entity_id, home_id)
-    return jsonify({'ok': True, 'entity_id': entity_id, 'home_id': home_id})
+    try:
+        registry.stop_sharing_with(entity_id, home_id)
+        return jsonify({'ok': True, 'entity_id': entity_id, 'home_id': home_id})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
 
 
 @sharing_bp.route('/api/v1/sharing/entities/<entity_id>/shared-with', methods=['GET'])

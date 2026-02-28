@@ -616,7 +616,7 @@ def send_notification() -> Tuple[Dict[str, Any], int]:
         Tuple[Dict[str, Any], int]: JSON response with notification_id and HTTP status code.
     """
     try:
-        body = request.get_json()
+        body = request.get_json(silent=True)
         if not body:
             return jsonify({
                 "success": False,
