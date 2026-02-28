@@ -1,4 +1,21 @@
-"""Cross-Home Sharing API - Flask blueprint for sync and discovery endpoints."""
+"""Cross-Home Sharing API - Flask blueprint for sync and discovery endpoints.
+
+Phase 5: Cross-Home Sharing & Collective Intelligence
+Provides REST endpoints for:
+- Entity Registry: Register, share, and manage cross-home entities
+- Sync Service: WebSocket-based synchronization between homes
+- Discovery: mDNS/Bonjour discovery of peer CoPilot instances
+
+Endpoints:
+- /api/v1/sharing/* - Registry management (10 endpoints)
+- /api/v1/sharing/sync/* - Synchronization status (4 endpoints)
+- /api/v1/sharing/discovery/* - Peer discovery (2 endpoints)
+- /api/v1/sharing - Combined system status
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Set
 
 from flask import Blueprint, jsonify, request
 
@@ -7,21 +24,35 @@ from copilot_core.api.security import require_api_key
 sharing_bp = Blueprint('sharing', __name__)
 
 # Module-level service references (set by init_sharing_api)
-_sync_service = None
-_registry = None
-_discovery = None
+_sync_service: Optional[Any] = None
+_registry: Optional[Any] = None
+_discovery: Optional[Any] = None
 
 
-def init_sharing_api(sync_service=None, registry=None, discovery=None):
-    """Initialize the sharing API with service instances."""
+def init_sharing_api(
+    sync_service: Optional[Any] = None,
+    registry: Optional[Any] = None,
+    discovery: Optional[Any] = None,
+) -> None:
+    """Initialize the sharing API with service instances.
+    
+    Args:
+        sync_service: SyncProtocol instance for entity synchronization
+        registry: SharedRegistry instance for entity management
+        discovery: DiscoveryService instance for peer discovery
+    """
     global _sync_service, _registry, _discovery
     _sync_service = sync_service
     _registry = registry
     _discovery = discovery
 
 
-def _get_registry():
-    """Get the shared registry."""
+def _get_registry() -> Optional[Any]:
+    """Get the shared registry.
+    
+    Returns:
+        SharedRegistry instance or None if not initialized
+    """
     if _registry is not None:
         return _registry
     # Try to get singleton from core/sharing
@@ -32,13 +63,21 @@ def _get_registry():
         return None
 
 
-def _get_sync():
-    """Get the sync service."""
+def _get_sync() -> Optional[Any]:
+    """Get the sync service.
+    
+    Returns:
+        SyncProtocol instance or None if not initialized
+    """
     return _sync_service
 
 
-def _get_discovery():
-    """Get the discovery service."""
+def _get_discovery() -> Optional[Any]:
+    """Get the discovery service.
+    
+    Returns:
+        DiscoveryService instance or None if not initialized
+    """
     return _discovery
 
 
@@ -46,8 +85,12 @@ def _get_discovery():
 
 @sharing_bp.route('/api/v1/sharing/entities', methods=['GET'])
 @require_api_key
-def get_entities():
-    """Get all registered shared entities."""
+def get_entities() -> tuple:
+    """Get all registered shared entities.
+    
+    Returns:
+        JSON response with count and entities dict
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -61,8 +104,12 @@ def get_entities():
 
 @sharing_bp.route('/api/v1/sharing/entities/shared', methods=['GET'])
 @require_api_key
-def get_shared_entities():
-    """Get all shared entities (filtered)."""
+def get_shared_entities() -> tuple:
+    """Get all shared entities (filtered).
+    
+    Returns:
+        JSON response with count and shared entities dict
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -76,8 +123,15 @@ def get_shared_entities():
 
 @sharing_bp.route('/api/v1/sharing/entities/<entity_id>', methods=['GET'])
 @require_api_key
-def get_entity(entity_id: str):
-    """Get a specific shared entity."""
+def get_entity(entity_id: str) -> tuple:
+    """Get a specific shared entity.
+    
+    Args:
+        entity_id: The entity identifier
+        
+    Returns:
+        JSON response with entity data
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -91,8 +145,20 @@ def get_entity(entity_id: str):
 
 @sharing_bp.route('/api/v1/sharing/entities', methods=['POST'])
 @require_api_key
-def register_entity():
-    """Register an entity for sharing."""
+def register_entity() -> tuple:
+    """Register an entity for sharing.
+    
+    Request JSON:
+        {
+            "entity_id": str,
+            "shared": bool (default: true),
+            "home_id": str (optional),
+            "metadata": dict (optional)
+        }
+    
+    Returns:
+        JSON response with ok status and entity data
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -115,8 +181,21 @@ def register_entity():
 
 @sharing_bp.route('/api/v1/sharing/entities/<entity_id>', methods=['PUT'])
 @require_api_key
-def update_entity(entity_id: str):
-    """Update an entity's sharing configuration."""
+def update_entity(entity_id: str) -> tuple:
+    """Update an entity's sharing configuration.
+    
+    Args:
+        entity_id: The entity identifier
+        
+    Request JSON:
+        {
+            "shared": bool (optional),
+            ...additional metadata fields
+        }
+    
+    Returns:
+        JSON response with ok status and updated entity
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -137,8 +216,15 @@ def update_entity(entity_id: str):
 
 @sharing_bp.route('/api/v1/sharing/entities/<entity_id>', methods=['DELETE'])
 @require_api_key
-def unregister_entity(entity_id: str):
-    """Unregister an entity from sharing."""
+def unregister_entity(entity_id: str) -> tuple:
+    """Unregister an entity from sharing.
+    
+    Args:
+        entity_id: The entity identifier
+        
+    Returns:
+        JSON response with ok status
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -149,8 +235,18 @@ def unregister_entity(entity_id: str):
 
 @sharing_bp.route('/api/v1/sharing/entities/<entity_id>/share-with', methods=['POST'])
 @require_api_key
-def share_with_home(entity_id: str):
-    """Share an entity with another home."""
+def share_with_home(entity_id: str) -> tuple:
+    """Share an entity with another home.
+    
+    Args:
+        entity_id: The entity identifier
+        
+    Request JSON:
+        {"home_id": str}
+    
+    Returns:
+        JSON response with ok status
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -170,8 +266,16 @@ def share_with_home(entity_id: str):
 
 @sharing_bp.route('/api/v1/sharing/entities/<entity_id>/stop-sharing/<home_id>', methods=['POST'])
 @require_api_key
-def stop_sharing_with_home(entity_id: str, home_id: str):
-    """Stop sharing an entity with a specific home."""
+def stop_sharing_with_home(entity_id: str, home_id: str) -> tuple:
+    """Stop sharing an entity with a specific home.
+    
+    Args:
+        entity_id: The entity identifier
+        home_id: The home to stop sharing with
+        
+    Returns:
+        JSON response with ok status
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -182,8 +286,15 @@ def stop_sharing_with_home(entity_id: str, home_id: str):
 
 @sharing_bp.route('/api/v1/sharing/entities/<entity_id>/shared-with', methods=['GET'])
 @require_api_key
-def get_shared_with(entity_id: str):
-    """Get list of homes this entity is shared with."""
+def get_shared_with(entity_id: str) -> tuple:
+    """Get list of homes this entity is shared with.
+    
+    Args:
+        entity_id: The entity identifier
+        
+    Returns:
+        JSON response with list of home IDs
+    """
     registry = _get_registry()
     if registry is None:
         return jsonify({'error': 'Sharing registry not initialized'}), 503
@@ -200,8 +311,12 @@ def get_shared_with(entity_id: str):
 
 @sharing_bp.route('/api/v1/sharing/sync/status', methods=['GET'])
 @require_api_key
-def get_sync_status():
-    """Get sync service status."""
+def get_sync_status() -> tuple:
+    """Get sync service status.
+    
+    Returns:
+        JSON response with sync service status
+    """
     sync = _get_sync()
     if sync is None:
         return jsonify({'error': 'Sync service not initialized', 'active': False}), 503
@@ -217,8 +332,12 @@ def get_sync_status():
 
 @sharing_bp.route('/api/v1/sharing/sync/entities', methods=['GET'])
 @require_api_key
-def get_synced_entities():
-    """Get all synchronized entities from sync service."""
+def get_synced_entities() -> tuple:
+    """Get all synchronized entities from sync service.
+    
+    Returns:
+        JSON response with synced entities
+    """
     sync = _get_sync()
     if sync is None:
         return jsonify({'error': 'Sync service not initialized'}), 503
@@ -232,8 +351,15 @@ def get_synced_entities():
 
 @sharing_bp.route('/api/v1/sharing/sync/entities/<entity_id>', methods=['GET'])
 @require_api_key
-def get_synced_entity(entity_id: str):
-    """Get a specific synchronized entity."""
+def get_synced_entity(entity_id: str) -> tuple:
+    """Get a specific synchronized entity.
+    
+    Args:
+        entity_id: The entity identifier
+        
+    Returns:
+        JSON response with entity data
+    """
     sync = _get_sync()
     if sync is None:
         return jsonify({'error': 'Sync service not initialized'}), 503
@@ -247,8 +373,12 @@ def get_synced_entity(entity_id: str):
 
 @sharing_bp.route('/api/v1/sharing/sync/peers', methods=['GET'])
 @require_api_key
-def get_sync_peers():
-    """Get list of synchronized peers."""
+def get_sync_peers() -> tuple:
+    """Get list of synchronized peers.
+    
+    Returns:
+        JSON response with peer list
+    """
     sync = _get_sync()
     if sync is None:
         return jsonify({'error': 'Sync service not initialized'}), 503
@@ -263,8 +393,12 @@ def get_sync_peers():
 
 @sharing_bp.route('/api/v1/sharing/discovery/peers', methods=['GET'])
 @require_api_key
-def get_discovered_peers():
-    """Get discovered CoPilot peers."""
+def get_discovered_peers() -> tuple:
+    """Get discovered CoPilot peers.
+    
+    Returns:
+        JSON response with discovered peers
+    """
     discovery = _get_discovery()
     if discovery is None:
         return jsonify({'error': 'Discovery service not initialized'}), 503
@@ -278,8 +412,12 @@ def get_discovered_peers():
 
 @sharing_bp.route('/api/v1/sharing/discovery/local', methods=['GET'])
 @require_api_key
-def get_local_peer_info():
-    """Get local peer information."""
+def get_local_peer_info() -> tuple:
+    """Get local peer information.
+    
+    Returns:
+        JSON response with local peer info
+    """
     discovery = _get_discovery()
     if discovery is None:
         return jsonify({'error': 'Discovery service not initialized'}), 503
@@ -291,13 +429,17 @@ def get_local_peer_info():
 
 @sharing_bp.route('/api/v1/sharing', methods=['GET'])
 @require_api_key
-def get_sharing_status():
-    """Get overall sharing system status."""
+def get_sharing_status() -> tuple:
+    """Get overall sharing system status.
+    
+    Returns:
+        JSON response with registry, sync, and discovery status
+    """
     registry = _get_registry()
     sync = _get_sync()
     discovery = _get_discovery()
     
-    status = {
+    status: Dict[str, Any] = {
         'registry': {
             'initialized': registry is not None,
             'entity_count': len(registry.get_all()) if registry else 0,

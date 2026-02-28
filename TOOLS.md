@@ -37,4 +37,12 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 
 ---
 
+## Meine Setup-Notizen
+
+### WhatsApp Berichte
+- **Standard-Berichtsnummer:** +4917623565849
+- Alle Agenten-Berichte (@groky, @styx, etc.) gehen standardmäßig hierhin
+
+---
+
 Add whatever helps you do your job. This is your cheat sheet.
