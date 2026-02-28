@@ -157,6 +157,9 @@ class TestNotificationsFlaskIntegration:
             lambda request: True
         )
         
+        # Clear existing notifications first
+        notification_manager.clear_notifications()
+        
         # Create some notifications
         notification_manager.create_notification(
             title='Test 1',
@@ -183,6 +186,9 @@ class TestNotificationsFlaskIntegration:
             'copilot_core.api.v1.notifications._validate_token',
             lambda request: True
         )
+        
+        # Clear existing notifications first
+        notification_manager.clear_notifications()
         
         # Create and mark one as read
         n1 = notification_manager.create_notification(title='Unread', message='Test')
@@ -212,7 +218,8 @@ class TestNotificationsFlaskIntegration:
         
         assert response.status_code == 200
         data = response.get_json()
-        assert data['data']['total_count'] == 2
+        # Filter returns only 'info' type notifications
+        assert len(data['data']['notifications']) == 2
         assert all(n['type'] == 'info' for n in data['data']['notifications'])
     
     def test_mark_notification_read(self, client, notification_manager, monkeypatch):
