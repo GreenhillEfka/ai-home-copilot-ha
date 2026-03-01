@@ -3,8 +3,8 @@
 ## v7.12.5 (2026-03-01)
 
 ### Version Sync Fix
-- **config.yaml:** Version updated from 7.10.2 to 7.12.4 to match release
-- **manifest.json:** Version synchronized to 7.12.4
+- **config.yaml:** Version updated from 7.12.4 to 7.12.5 (critical fix)
+- **manifest.json:** Version synchronized to 7.12.5
 - **build.yaml:** Verified - no version field present (builds from base images)
 
 ### Test Coverage
