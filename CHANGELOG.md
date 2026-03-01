@@ -10,6 +10,10 @@
 ### Test Coverage
 - API Endpoint Tests: Pending execution
 
+### Commits
+- `1efaa638` chore: v7.12.5 version fix - config.yaml and manifest.json updated to 7.12.5
+- `52382e68` chore: v7.12.5 version sync fix - config.yaml and manifest.json updated to 7.12.4
+
 ---
 
 ## v7.12.4 (2026-03-01)
