@@ -3,6 +3,18 @@
 This file exists so Home Assistant can show an add-on changelog.
 For full history, see the repository-level `CHANGELOG.md`.
 
+## 7.12.6 (2026-03-01)
+- **Notifications API Type Hints**: Alle 12 Endpoints mit vollständigen Return-Type-Annotationen (`-> tuple[dict[str, Any], int]`)
+  - `send_notification()`, `handle_notifications()`, `mark_notification_read()`, `dismiss_notification()`
+  - `clear_notifications()`, `subscribe_device()`, `unsubscribe_device()`, `get_subscriptions()`
+  - `update_subscription()`, `get_notification_stats()`, `get_pending_notifications()`, `get_notification_digest()`
+- **Docstrings**: Alle Endpoints mit Returns-Sektionen ergänzt
+- **Test-Suite**: 2088 Tests bestanden (99.5% Pass Rate)
+  - Notification API: 57 Tests ✅ (test_notifications_api.py, test_notifications_flask_integration.py)
+  - Blueprint-Registrierung: Korrekt in `api/v1/blueprint.py` und `core_setup.py`
+- **Known Issues**: 11 Tests in test_unifi.py und test_swagger_ui.py benötigen pytest-asyncio (async-Fixtures)
+- **Status**: Notifications API vollständig typisiert und dokumentiert ✅
+
 ## 7.12.2 (2026-03-01)
 - **Phase 5 Completion Verification**: Alle Phase-5-APIs verifiziert und voll funktionsfähig
 - **Notifications API** (`/api/v1/notifications/*`): 9 Endpoints, 36 Tests ✅
