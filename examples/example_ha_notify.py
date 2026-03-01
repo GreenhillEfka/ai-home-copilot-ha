@@ -29,9 +29,9 @@ def example_basic_setup(hass):
     adapter = HANotifyAdapter(hass)
     
     # Test connection
-    result = adapter.test_connection()
-    print(f"\nConnection: {'✓ Connected' if result['connected'] else '✗ Disconnected'}")
-    print(f"Available notify services: {', '.join(result.get('notify_services', []))}")
+    result = adapter.test_ha_connection()
+    print(f"\nConnection: {'✓ Connected' if result['success'] else '✗ Disconnected'}")
+    print(f"Available notify services: {', '.join(result.get('services', []))}")
     
     return adapter
 
@@ -73,7 +73,7 @@ def example_device_registration(adapter, user_id: str = "demo_user"):
     print(f"✓ Registered WhatsApp device: {whatsapp_device.id}")
     
     # Show all devices for user
-    devices = adapter.get_devices_for_user(user_id)
+    devices = adapter.get_ha_devices(user_id)
     print(f"\nTotal devices for {user_id}: {len(devices)}")
     
     return devices
@@ -198,7 +198,7 @@ def example_multi_user(adapter):
     
     # Send to all users
     for user in users:
-        devices = adapter.get_devices_for_user(user)
+        devices = adapter.get_ha_devices(user)
         for device in devices:
             adapter.send_to_ha_service(
                 device_id=device.id,
@@ -210,28 +210,10 @@ def example_multi_user(adapter):
             print(f"  ✓ Sent to {device.device_name}")
 
 
-def example_direct_entity(adapter):
-    """Example: Send directly to HA entity."""
-    print("\n" + "="*60)
-    print("EXAMPLE 8: Direct Entity Notification")
-    print("="*60)
-    
-    # Send to specific entity without device registration
-    success = adapter.send_to_entity(
-        entity_id="notify.telegram",
-        title="System Report",
-        message="Daily summary: 15 automations triggered, 3 suggestions created",
-        priority="low"
-    )
-    
-    print(f"Direct entity notification: {'✓ Success' if success else '✗ Failed'}")
-    return success
-
-
 def example_error_handling(adapter):
     """Example: Error handling and fallbacks."""
     print("\n" + "="*60)
-    print("EXAMPLE 9: Error Handling")
+    print("EXAMPLE 8: Error Handling")
     print("="*60)
     
     # Try to send to non-existent device
@@ -246,8 +228,8 @@ def example_error_handling(adapter):
         print(f"Exception caught: {type(e).__name__}: {e}")
     
     # Check connection before sending
-    result = adapter.test_connection()
-    if not result["connected"]:
+    result = adapter.test_ha_connection()
+    if not result["success"]:
         print("⚠ HA not connected - using fallback notification method")
         # Implement fallback logic here
 
@@ -258,7 +240,7 @@ def example_remove_device(adapter, device_id: str):
     print("EXAMPLE 10: Remove Device")
     print("="*60)
     
-    success = adapter.remove_device(device_id)
+    success = adapter.unregister_ha_device(device_id)
     print(f"Device removed: {'✓ Success' if success else '✗ Failed'}")
     
     return success
@@ -310,7 +292,6 @@ def main():
             example_custom_payload(adapter, device_id)
         
         example_multi_user(adapter)
-        example_direct_entity(adapter)
         example_error_handling(adapter)
         
         print("\n" + "="*60)

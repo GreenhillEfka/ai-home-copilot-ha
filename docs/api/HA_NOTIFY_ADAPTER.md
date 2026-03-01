@@ -177,79 +177,58 @@ success = adapter.send_to_ha_service(
 
 ---
 
-#### Method: `send_to_entity()`
 
-Send notification directly to a HA notify entity.
-
-```python
-def send_to_entity(
-    self,
-    entity_id: str,
-    title: str,
-    message: str,
-    priority: str = "normal",
-    category: str = None,
-    data: dict = None
-) -> bool
-```
-
-**Example:**
-```python
-adapter.send_to_entity(
-    entity_id="notify.telegram",
-    title="System Alert",
-    message="Backup completed successfully",
-    priority="high"
-)
-```
 
 ---
 
-#### Method: `get_devices_for_user()`
+#### Method: `get_ha_devices()`
 
 Get all registered devices for a user.
 
 ```python
-def get_devices_for_user(self, user_id: str) -> list[HADevice]
+def get_ha_devices(self, user_id: str) -> list[HADevice]
 ```
 
 **Example:**
 ```python
-devices = adapter.get_devices_for_user("user_123")
+devices = adapter.get_ha_devices("user_123")
 for device in devices:
     print(f"{device.device_name}: {device.ha_entity_id}")
 ```
 
 ---
 
-#### Method: `remove_device()`
+#### Method: `unregister_ha_device()`
 
 Remove a registered device.
 
 ```python
-def remove_device(self, device_id: str) -> bool
+def unregister_ha_device(self, device_id: str) -> bool
 ```
 
 **Example:**
 ```python
-removed = adapter.remove_device("device_abc123")
+removed = adapter.unregister_ha_device("device_abc123")
 ```
 
 ---
 
-#### Method: `test_connection()`
+#### Method: `test_ha_connection()`
 
 Test connection to HomeAssistant and notify services.
 
 ```python
-def test_connection(self) -> dict
+def test_ha_connection(self) -> dict
 ```
 
 **Returns:**
 ```python
 {
-    "connected": True,
-    "notify_services": ["mobile_app_iphone", "telegram", "whatsapp"],
+    "success": True,
+    "hass_connected": True,
+    "notify_services_available": True,
+    "services_count": 3,
+    "services": ["mobile_app_iphone", "telegram", "whatsapp"],
     "error": None
 }
 ```
@@ -399,7 +378,7 @@ adapter.send_to_ha_service(
 
 ```python
 # Send to all devices for a user
-devices = adapter.get_devices_for_user("alice")
+devices = adapter.get_ha_devices("alice")
 for device in devices:
     adapter.send_to_ha_service(
         device_id=device.id,
@@ -416,12 +395,19 @@ def send_alert(message: str, is_critical: bool = False):
     priority = "urgent" if is_critical else "normal"
     category = "alert" if is_critical else "info"
     
-    adapter.send_to_entity(
-        entity_id="notify.mobile_app_iphone",
+    # Register device first if not already registered
+    device = adapter.register_ha_device(
+        user_id="user_123",
+        ha_entity_id="notify.mobile_app_iphone",
+        device_name="User iPhone"
+    )
+    
+    adapter.send_to_ha_service(
+        device_id=device.id,
         title="Security Alert" if is_critical else "Home Update",
         message=message,
         priority=priority,
-        category=category
+        notification_type=category
     )
 ```
 
@@ -464,11 +450,11 @@ except Exception as e:
 
 ```python
 # Check available services
-result = adapter.test_connection()
-if not result["connected"]:
+result = adapter.test_ha_connection()
+if not result["success"]:
     logger.warning("HA connection not available")
     
-available = result["notify_services"]
+available = result["services"]
 if "telegram" not in available:
     logger.warning("Telegram notify service not configured")
 ```
