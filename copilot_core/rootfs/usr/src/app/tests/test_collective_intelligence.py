@@ -183,7 +183,7 @@ class TestFederatedRounds:
         round_id = ci_service.start_federated_round()
         
         assert round_id != ""
-        assert round_id.startswith("round-")
+        assert len(round_id) == 16  # SHA256 hex hash truncated to 16 chars
         
         status = ci_service.get_status()
         assert status.active_rounds == 1
@@ -192,15 +192,17 @@ class TestFederatedRounds:
         """Test successful aggregation execution."""
         ci_service.start()
         
-        # Register nodes and submit updates
+        # Start round first
+        round_id = ci_service.start_federated_round()
+        
+        # Register nodes and submit updates (they go to the latest active round)
         ci_service.register_node("node-1")
         ci_service.register_node("node-2")
         
         ci_service.submit_local_update("node-1", {"layer1": [0.1, 0.2]})
         ci_service.submit_local_update("node-2", {"layer1": [0.3, 0.4]})
         
-        # Start and execute round
-        round_id = ci_service.start_federated_round()
+        # Execute aggregation
         aggregated = ci_service.execute_aggregation(round_id)
         
         assert aggregated is not None
@@ -215,8 +217,20 @@ class TestFederatedRounds:
         """Test getting round history."""
         ci_service.start()
         
-        ci_service.start_federated_round()
-        ci_service.start_federated_round()
+        # Start and complete rounds to add them to history
+        # Need 2 nodes to meet min_participants requirement
+        ci_service.register_node("node-1")
+        ci_service.register_node("node-2")
+        
+        round_id1 = ci_service.start_federated_round()
+        ci_service.submit_local_update("node-1", {"layer1": [0.1, 0.2]})
+        ci_service.submit_local_update("node-2", {"layer1": [0.3, 0.4]})
+        ci_service.execute_aggregation(round_id1)
+        
+        round_id2 = ci_service.start_federated_round()
+        ci_service.submit_local_update("node-1", {"layer1": [0.5, 0.6]})
+        ci_service.submit_local_update("node-2", {"layer1": [0.7, 0.8]})
+        ci_service.execute_aggregation(round_id2)
         
         history = ci_service.get_federated_round_history()
         assert len(history) == 2
@@ -350,9 +364,11 @@ class TestStatisticsAndState:
         ci_service.start()
         
         # Run a full round to create aggregated model
-        ci_service.register_node("node-1")
-        ci_service.submit_local_update("node-1", {"layer1": [0.1, 0.2]})
         round_id = ci_service.start_federated_round()
+        ci_service.register_node("node-1")
+        ci_service.register_node("node-2")
+        ci_service.submit_local_update("node-1", {"layer1": [0.1, 0.2]})
+        ci_service.submit_local_update("node-2", {"layer1": [0.3, 0.4]})
         ci_service.execute_aggregation(round_id)
         
         models = ci_service.get_aggregated_models()

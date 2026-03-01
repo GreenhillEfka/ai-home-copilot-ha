@@ -78,6 +78,7 @@
 | Sharing API | `sharing/api.py` | ✅ Complete | — |
 | Collective Intelligence API | `collective_intelligence/api.py` | ✅ Complete | — |
 | Blueprint Registration | `core_setup.py` | ✅ **COMPLETE** | `531af5b` |
+| Test Coverage | `tests/test_*_api.py` | ✅ **COMPLETE** | v7.12.1 |
 
 ## Summary (2026-02-23)
 **31 Endpoints** durch 3 API-Blueprints registriert:
@@ -87,7 +88,21 @@
 
 **Status**: Phase 5 API-Integration ✅ COMPLETE
 
+## Test Coverage (2026-03-01)
+- **Notifications API Tests**: 22 Tests ✅
+- **Sharing API Tests**: 28 Tests ✅
+- **Collective Intelligence Tests**: 25 Tests ✅
+- **Flask Integration Tests**: 67 Tests ✅
+- **Gesamt: 142 Tests** ✅
+
 ## Commits (2026-02-23)
 - `4fc8aef` — Phase 5: register Notifications, Sharing, Collective Intelligence blueprints
 - `531af5b` — fix: remove duplicate Sharing API registration
 - Tag: `v5.1.0-phase5-2026-02-23`
+
+## Updates (2026-03-01)
+- ✅ Issue #91 (Core Bug - merge conflict in core_setup.py) resolved
+- ✅ Test-Assertions für Collective Intelligence angepasst
+- ✅ `get_aggregated_models()` Implementation korrigiert
+- ✅ CHANGELOG.md mit v7.12.1 aktualisiert
+- ✅ Alle 142 Tests laufen grün

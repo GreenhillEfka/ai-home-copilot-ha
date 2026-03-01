@@ -180,8 +180,13 @@ class CollectiveIntelligenceService:
         return self.learner.get_round_history()
 
     def get_aggregated_models(self) -> Dict[str, AggregatedModel]:
-        """Get all aggregated models."""
-        return self.aggregator.aggregated_models
+        """Get all aggregated models from completed rounds."""
+        # Extract aggregated models from completed rounds
+        models = {}
+        for round_obj in self.learner.rounds:
+            if round_obj.aggregated_model:
+                models[round_obj.aggregated_model.model_version] = round_obj.aggregated_model
+        return models
 
     def get_knowledge_base(self) -> Dict[str, KnowledgeItem]:
         """Get knowledge transfer base."""
