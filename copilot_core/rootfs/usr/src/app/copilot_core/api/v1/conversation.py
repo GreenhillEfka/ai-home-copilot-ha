@@ -2017,7 +2017,13 @@ def _stream_response(response: dict):
 
 
 def register_routes(app):
-    """Register conversation routes with Flask app."""
+    """Register conversation routes with Flask app.
+
+    DEPRECATED: Blueprints are now registered centrally in core_setup.py.
+    This function is kept for backward compatibility but only registers
+    conversation_bp. The openai_compat_bp is registered in core_setup.py
+    to avoid double registration conflicts.
+    """
     app.register_blueprint(conversation_bp)
-    app.register_blueprint(openai_compat_bp)
-    logger.info("Registered conversation API at /chat/* and /v1/*")
+    # openai_compat_bp is now registered in core_setup.py only
+    logger.info("Registered conversation API at /chat/*")

@@ -3,6 +3,22 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def reset_all_before_test():
+    """Reset all global registries before each test.
+
+    This ensures complete isolation between tests, especially when
+    different test modules create their own Flask apps and register
+    blueprints independently.
+
+    Runs automatically before EVERY test (autouse=True).
+    """
+    _reset_all_registries()
+    yield
+    # Optional cleanup after test
+    _reset_all_registries()
+
+
+@pytest.fixture(autouse=True)
 def reset_auth_token_cache():
     """Reset the auth token cache before each test.
 
@@ -163,5 +179,29 @@ def _reset_all_registries():
         import copilot_core as core
         core._system_health_service = None
         core._unifi_service = None
+    except (ImportError, AttributeError):
+        pass
+
+    # Phase 5: Sharing API (Cross-Home Sync)
+    try:
+        import copilot_core.sharing.api as sharing_api
+        sharing_api._sync_service = None
+        sharing_api._registry = None
+        sharing_api._discovery = None
+    except (ImportError, AttributeError):
+        pass
+
+    # Phase 5: Collective Intelligence API (Federated Learning)
+    try:
+        import copilot_core.collective_intelligence.api as fed_api
+        fed_api._service = None
+    except (ImportError, AttributeError):
+        pass
+
+    # Conversation API (LLM Provider)
+    try:
+        import copilot_core.api.v1.conversation as conv_api
+        conv_api._llm_provider = None
+        conv_api._mcp_tools = None
     except (ImportError, AttributeError):
         pass
