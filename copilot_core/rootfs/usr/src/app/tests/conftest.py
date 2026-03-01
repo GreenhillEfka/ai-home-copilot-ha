@@ -205,3 +205,10 @@ def _reset_all_registries():
         conv_api._mcp_tools = None
     except (ImportError, AttributeError):
         pass
+
+    # Zone Editor API
+    try:
+        import copilot_core.api.v1.zone_editor as zone_api
+        zone_api._zone_engine = None
+    except (ImportError, AttributeError):
+        pass

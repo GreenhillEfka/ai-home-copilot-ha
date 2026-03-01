@@ -93,8 +93,13 @@ def mock_service():
 
 
 @pytest.fixture
-def test_app(mock_service):
-    """Create test Flask app with federated blueprint."""
+def test_app(mock_service, isolated_blueprint_test):
+    """Create test Flask app with federated blueprint.
+    
+    Uses isolated_blueprint_test fixture to ensure blueprint registry
+    is reset before and after this test, preventing conflicts with
+    other tests that may register the same blueprint.
+    """
     if not FLASK_AVAILABLE:
         pytest.skip("Flask not installed")
     if not FEDERATED_AVAILABLE:
