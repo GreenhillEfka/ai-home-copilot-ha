@@ -1,27 +1,44 @@
-# PilotSuite Styx Core API Reference
+#!/usr/bin/env python3
+"""
+API Reference Generator for PilotSuite Styx Core.
 
-**Version:** 12.5.0  
-**Generated:** 2026-03-01 22:12:23  
+Generates comprehensive Markdown API reference documentation from the OpenAPI spec
+or directly from API module definitions.
+
+Usage:
+    python api_reference.py --output API_REFERENCE.md
+"""
+
+import argparse
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import yaml
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+OUTPUT_DIR = Path(__file__).parent.parent / "docs"
+
+# =============================================================================
+# API Reference Template
+# =============================================================================
+
+API_REFERENCE_TEMPLATE = """# PilotSuite Styx Core API Reference
+
+**Version:** {version}  
+**Generated:** {generated}  
 **Base URL:** `http://localhost:8909`
 
 ---
 
 ## Table of Contents
 
-- [System Health](#system-health)
-- [Brain Graph](#brain-graph)
-- [Habitus](#habitus)
-- [Candidates](#candidates)
-- [Mood](#mood)
-- [Notifications](#notifications)
-- [Sharing](#sharing)
-- [Collective Intelligence](#collective-intelligence)
-- [Energy](#energy)
-- [UniFi](#unifi)
-- [Tags](#tags)
-- [Dev Surface](#dev-surface)
-- [Telegram](#telegram)
-- [Hub](#hub)
+{toc}
 
 ---
 
@@ -68,26 +85,26 @@ All responses follow a consistent JSON structure:
 
 **Success Response:**
 ```json
-{
+{{
   "status": "success",
-  "data": { ... },
-  "metadata": {
+  "data": {{ ... }},
+  "metadata": {{
     "timestamp": "2026-03-01T10:00:00Z",
     "version": "v1"
-  }
-}
+  }}
+}}
 ```
 
 **Error Response:**
 ```json
-{
+{{
   "status": "error",
-  "error": {
+  "error": {{
     "code": "ERROR_CODE",
     "message": "Human-readable error message",
-    "details": { ... }
-  }
-}
+    "details": {{ ... }}
+  }}
+}}
 ```
 
 ### Rate Limiting
@@ -106,7 +123,63 @@ Rate limit headers are included in responses:
 
 ## API Modules
 
+{modules}
 
+---
+
+## Schemas
+
+{schemas}
+
+---
+
+## Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `UNAUTHORIZED` | 401 | Missing or invalid authentication |
+| `FORBIDDEN` | 403 | Insufficient permissions |
+| `NOT_FOUND` | 404 | Resource not found |
+| `BAD_REQUEST` | 400 | Invalid request parameters |
+| `CONFLICT` | 409 | Resource conflict |
+| `RATE_LIMITED` | 429 | Rate limit exceeded |
+| `INTERNAL_ERROR` | 500 | Internal server error |
+| `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable |
+
+---
+
+## Changelog
+
+### v12.5.0 (2026-03-01)
+- Added comprehensive OpenAPI 3.0 specification
+- Documented all Hub API endpoints (120+)
+- Added federated learning API documentation
+- Enhanced error response documentation
+
+### v12.0.0 (2026-02-01)
+- Phase 5: Cross-Home Sharing API
+- Phase 5: Notifications API (21 endpoints)
+- Phase 5: Collective Intelligence API (15 endpoints)
+- Phase 6: Complete type hints
+
+### v11.0.0 (2026-01-01)
+- Initial stable API release
+- Brain Graph API
+- Habitus pattern mining
+- Mood scoring system
+
+---
+
+*Generated automatically by `api_reference.py`*
+"""
+
+
+# =============================================================================
+# Module Documentation
+# =============================================================================
+
+MODULE_DOCS = {
+    "System Health": """
 ## System Health API
 
 Monitor system resources, diagnostics, and service health.
@@ -122,7 +195,7 @@ Get complete system health status.
 
 **Example Request:**
 ```bash
-curl -H "X-API-Key: your-key" \
+curl -H "X-API-Key: your-key" \\
   http://localhost:8909/api/v1/system_health
 ```
 
@@ -173,11 +246,9 @@ Get Z-Wave mesh health.
 
 **Authentication:** API Key  
 **Response:** Z-Wave network health including node status and routing.
+""",
 
-
----
-
-
+    "Brain Graph": """
 ## Brain Graph API
 
 Knowledge graph for event storage, pattern mining, and neural visualization.
@@ -199,7 +270,7 @@ Get current graph state as JSON.
 
 **Example Request:**
 ```bash
-curl -H "X-API-Key: your-key" \
+curl -H "X-API-Key: your-key" \\
   "http://localhost:8909/api/v1/graph/state?kind=event&limitNodes=50"
 ```
 
@@ -263,11 +334,9 @@ Execute graph query.
   "parameters": {{}}
 }}
 ```
+""",
 
-
----
-
-
+    "Habitus": """
 ## Habitus API
 
 Pattern mining and habitus learning for automation discovery.
@@ -323,11 +392,9 @@ Get recent patterns.
 **Authentication:** API Key  
 **Parameters:**
 - `limit` (integer, default: 50): Maximum patterns to return
+""",
 
-
----
-
-
+    "Candidates": """
 ## Candidates API
 
 Automation candidate management lifecycle.
@@ -346,7 +413,7 @@ List automation candidates.
 
 **Example Request:**
 ```bash
-curl -H "X-API-Key: your-key" \
+curl -H "X-API-Key: your-key" \\
   "http://localhost:8909/api/v1/candidates?state=pending&limit=20"
 ```
 
@@ -360,7 +427,7 @@ curl -H "X-API-Key: your-key" \
       "state": "pending",
       "title": "Evening Lighting Automation",
       "description": "Automatically turn on living room lights at sunset",
-      "automation_yaml": "automation:\n  - alias: ...",
+      "automation_yaml": "automation:\\n  - alias: ...",
       "confidence": 0.92,
       "created_at": "2026-03-01T09:00:00Z"
     }}
@@ -382,7 +449,7 @@ Create candidate.
   "pattern_id": "pat_456",
   "title": "Evening Lighting Automation",
   "description": "Automatically turn on living room lights at sunset",
-  "automation_yaml": "automation:\n  - alias: ...",
+  "automation_yaml": "automation:\\n  - alias: ...",
   "confidence": 0.92
 }}
 ```
@@ -436,11 +503,9 @@ Get storage statistics.
   "storage_used_mb": 12.5
 }}
 ```
+""",
 
-
----
-
-
+    "Mood": """
 ## Mood API
 
 Zone mood scoring and ambient context.
@@ -536,11 +601,9 @@ Check energy-saving suppression.
   "reason": "High mood score, comfort priority"
 }}
 ```
+""",
 
-
----
-
-
+    "Notifications": """
 ## Notifications API
 
 Notification engine with multi-channel delivery.
@@ -560,7 +623,7 @@ Get notification history.
 
 **Example Request:**
 ```bash
-curl -H "Authorization: Bearer your-token" \
+curl -H "Authorization: Bearer your-token" \\
   "http://localhost:8909/api/v1/notifications?unread_only=true&limit=20"
 ```
 
@@ -634,11 +697,9 @@ Get notification statistics.
   "delivery_rate": 0.98
 }}
 ```
+""",
 
-
----
-
-
+    "Sharing": """
 ## Sharing API
 
 Cross-home entity sharing and synchronization.
@@ -715,11 +776,9 @@ List discovered peers.
   ]
 }}
 ```
+""",
 
-
----
-
-
+    "Collective Intelligence": """
 ## Collective Intelligence API
 
 Federated learning across multiple homes.
@@ -835,11 +894,9 @@ Get comprehensive statistics.
   "best_model_version": "v2.3.1"
 }}
 ```
+""",
 
-
----
-
-
+    "Energy": """
 ## Energy API
 
 Energy monitoring and optimization.
@@ -886,11 +943,9 @@ Get energy Sankey diagram.
 
 **Authentication:** API Key  
 **Response:** Sankey diagram data for visualization.
+""",
 
-
----
-
-
+    "UniFi": """
 ## UniFi API
 
 UniFi network monitoring.
@@ -919,11 +974,9 @@ Get UniFi network snapshot.
   "baselines": {{...}}
 }}
 ```
+""",
 
-
----
-
-
+    "Tags": """
 ## Tags API
 
 Tag system for entity organization.
@@ -951,11 +1004,9 @@ Create tag.
 Delete tag.
 
 **Authentication:** Bearer Token  
+""",
 
-
----
-
-
+    "Dev Surface": """
 ## Dev Surface API
 
 Development observability and diagnostics.
@@ -989,11 +1040,9 @@ Get error summary.
   "recent_errors": [...]
 }}
 ```
+""",
 
-
----
-
-
+    "Telegram": """
 ## Telegram API
 
 Telegram bot integration.
@@ -1027,11 +1076,9 @@ Send Telegram message.
   "text": "Hello from PilotSuite!"
 }}
 ```
+""",
 
-
----
-
-
+    "Hub": """
 ## Hub API
 
 PilotSuite Hub - Central management interface with 120+ endpoints.
@@ -1099,51 +1146,122 @@ List modes.
   ]
 }}
 ```
+"""
+}
 
 
----
+# =============================================================================
+# Generator Functions
+# =============================================================================
 
-## Schemas
+def generate_toc(modules: List[str]) -> str:
+    """Generate table of contents."""
+    toc_lines = []
+    for module in modules:
+        anchor = module.lower().replace(" ", "-").replace(".", "")
+        toc_lines.append(f"- [{module}](#{anchor})")
+    return "\n".join(toc_lines)
 
-Schema documentation pending...
 
----
+def generate_modules_section(modules: List[str]) -> str:
+    """Generate modules documentation section."""
+    sections = []
+    for module in modules:
+        doc = MODULE_DOCS.get(module, f"\n## {module}\n\nDocumentation pending...")
+        sections.append(doc)
+    return "\n\n---\n\n".join(sections)
 
-## Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `UNAUTHORIZED` | 401 | Missing or invalid authentication |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `NOT_FOUND` | 404 | Resource not found |
-| `BAD_REQUEST` | 400 | Invalid request parameters |
-| `CONFLICT` | 409 | Resource conflict |
-| `RATE_LIMITED` | 429 | Rate limit exceeded |
-| `INTERNAL_ERROR` | 500 | Internal server error |
-| `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable |
+def generate_schemas_section(schemas: Dict[str, Any]) -> str:
+    """Generate schemas documentation section."""
+    if not schemas:
+        return "Schema documentation pending..."
+    
+    sections = []
+    for schema_name, schema_def in schemas.items():
+        section = f"### {schema_name}\n\n"
+        section += "```json\n"
+        section += json.dumps(schema_def, indent=2)
+        section += "\n```\n"
+        sections.append(section)
+    
+    return "\n\n---\n\n".join(sections)
 
----
 
-## Changelog
+def generate_api_reference(
+    version: str = "12.5.0",
+    modules: Optional[List[str]] = None,
+    schemas: Optional[Dict[str, Any]] = None
+) -> str:
+    """Generate complete API reference documentation."""
+    
+    if modules is None:
+        modules = list(MODULE_DOCS.keys())
+    
+    # Generate components
+    toc = generate_toc(modules)
+    modules_section = generate_modules_section(modules)
+    schemas_section = generate_schemas_section(schemas or {})
+    
+    # Format template
+    doc = API_REFERENCE_TEMPLATE.format(
+        version=version,
+        generated=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        toc=toc,
+        modules=modules_section,
+        schemas=schemas_section
+    )
+    
+    return doc
 
-### v12.5.0 (2026-03-01)
-- Added comprehensive OpenAPI 3.0 specification
-- Documented all Hub API endpoints (120+)
-- Added federated learning API documentation
-- Enhanced error response documentation
 
-### v12.0.0 (2026-02-01)
-- Phase 5: Cross-Home Sharing API
-- Phase 5: Notifications API (21 endpoints)
-- Phase 5: Collective Intelligence API (15 endpoints)
-- Phase 6: Complete type hints
+def main():
+    """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="Generate API reference documentation for PilotSuite Styx Core"
+    )
+    parser.add_argument(
+        "--output", "-o",
+        type=str,
+        default="API_REFERENCE.md",
+        help="Output file path (default: API_REFERENCE.md)"
+    )
+    parser.add_argument(
+        "--output-dir", "-d",
+        type=Path,
+        default=OUTPUT_DIR,
+        help=f"Output directory (default: {OUTPUT_DIR})"
+    )
+    parser.add_argument(
+        "--version", "-v",
+        type=str,
+        default="12.5.0",
+        help="API version (default: 12.5.0)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Generate reference
+    print("Generating API reference documentation...")
+    reference = generate_api_reference(version=args.version)
+    
+    # Determine output path
+    output_path = args.output_dir / args.output
+    if not output_path.suffix:
+        output_path = output_path.with_suffix(".md")
+    
+    # Save reference
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(reference)
+    
+    print(f"✓ API reference saved to: {output_path}")
+    print(f"\n📊 Documentation Summary:")
+    print(f"   - Modules documented: {len(MODULE_DOCS)}")
+    print(f"   - Version: {args.version}")
+    
+    return 0
 
-### v11.0.0 (2026-01-01)
-- Initial stable API release
-- Brain Graph API
-- Habitus pattern mining
-- Mood scoring system
 
----
-
-*Generated automatically by `api_reference.py`*
+if __name__ == "__main__":
+    sys.exit(main())

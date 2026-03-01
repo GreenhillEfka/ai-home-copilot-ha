@@ -152,6 +152,22 @@ def create_app() -> Flask:
     except Exception:
         logging.getLogger(__name__).exception("Failed to register Onyx bridge blueprint")
 
+    # Anomaly Detection API endpoints (/api/v1/anomaly/*)
+    try:
+        from copilot_core.api.v1.anomaly import anomaly_bp
+        app.register_blueprint(anomaly_bp, url_prefix="/api/v1")
+        logging.getLogger(__name__).info("Anomaly Detection API registered")
+    except Exception:
+        logging.getLogger(__name__).exception("Failed to register Anomaly Detection API blueprint")
+
+    # Multi-Home Synchronization API endpoints (/api/v1/multihome/*)
+    try:
+        from copilot_core.api.v1.multihome import bp as multihome_bp
+        app.register_blueprint(multihome_bp, url_prefix="/api/v1")
+        logging.getLogger(__name__).info("Multi-Home Synchronization API registered")
+    except Exception:
+        logging.getLogger(__name__).exception("Failed to register Multi-Home Synchronization API blueprint")
+
     # Initialize Tags API v2 (FIX: Flask Blueprint rewrite)
     from copilot_core.tags.api import init_tags_api
     from copilot_core.tags import TagRegistry
@@ -272,6 +288,57 @@ def create_app() -> Flask:
                         "description": "Voice assistant integration for mood-based context",
                         "endpoints": [
                             "/api/v1/voice_context"
+                        ]
+                    },
+                    "anomaly_detection": {
+                        "enabled": True,
+                        "version": "1.0.0",
+                        "description": "ML-based anomaly detection for sensor patterns using Isolation Forest",
+                        "endpoints": [
+                            "/api/v1/anomaly/detect",
+                            "/api/v1/anomaly/history",
+                            "/api/v1/anomaly/sensor/:sensor_id/health",
+                            "/api/v1/anomaly/train",
+                            "/api/v1/anomaly/model/status",
+                            "/api/v1/anomaly/model/save",
+                            "/api/v1/anomaly/model/load",
+                            "/api/v1/anomaly/model/versions",
+                            "/api/v1/anomaly/compare",
+                            "/api/v1/anomaly/store/stats"
+                        ],
+                        "features": [
+                            "Isolation Forest anomaly detection",
+                            "Incremental learning (partial_fit)",
+                            "Per-sensor anomaly scoring",
+                            "Critical alert integration",
+                            "Model persistence and versioning"
+                        ]
+                    },
+                    "multihome": {
+                        "enabled": True,
+                        "version": "1.0.0",
+                        "description": "Multi-home synchronization for multiple locations (Hauptwohnung, Ferienhaus, Büro)",
+                        "endpoints": [
+                            "/api/v1/multihome/homes",
+                            "/api/v1/multihome/homes/<home_id>",
+                            "/api/v1/multihome/config/diff/<source>/<target>",
+                            "/api/v1/multihome/config/sync",
+                            "/api/v1/multihome/state/diff/<home1>/<home2>",
+                            "/api/v1/multihome/state/sync",
+                            "/api/v1/multihome/location/sync",
+                            "/api/v1/multihome/climate/preheat",
+                            "/api/v1/multihome/conflicts",
+                            "/api/v1/multihome/conflicts/<id>/resolve",
+                            "/api/v1/multihome/status",
+                            "/api/v1/multihome/operations"
+                        ],
+                        "features": [
+                            "Secure synchronization between multiple homes",
+                            "Location-aware automations (e.g., Ferienhaus vorheizen)",
+                            "Encrypted communication between instances",
+                            "Conflict resolution (last_write_wins, primary_wins, merge, manual)",
+                            "Configuration and state synchronization",
+                            "Climate and lighting scene sync"
                         ]
                     },
                 },

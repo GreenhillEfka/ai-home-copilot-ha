@@ -681,6 +681,14 @@ def _register_intelligence_apis(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Media Zones API")
 
+    # Voice API (v12.4.0)
+    try:
+        from copilot_core.api.v1.voice import init_voice_api
+        init_voice_api(app)
+        _LOGGER.info("Registered Voice API (/api/v1/voice/*)")
+    except Exception:
+        _LOGGER.exception("Failed to register Voice API")
+
 
 def _register_household_apis(app: Flask, services: dict = None) -> None:
     """
