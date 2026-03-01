@@ -4,6 +4,47 @@ Alle wesentlichen Änderungen am PilotSuite Styx Core Backend.
 
 ## [Unreleased]
 
+## [12.0.2] - 2026-03-01
+
+### Fixed
+- **RAG Blueprint Registration** - RAG Hybrid Search API jetzt korrekt in `core_setup.py` registriert
+  - Blueprint-Pfad von `/api/rag` auf `/api/v1/rag` aktualisiert für Konsistenz
+  - `init_rag_api()` Funktion hinzugefügt für Test-Isolation
+  - Behebt 404-Fehler bei RAG-Endpoints in Test-Suite
+  
+- **Test Isolation** - Verbesserte Test-Isolation für Flask Blueprints
+  - `tests/test_rag_hybrid_search.py` - Korrekte API-Pfade (`/api/v1/rag/*`)
+  - `tests/test_rag_hybrid_api.py` - Korrekte API-Pfade (`/api/v1/rag/*`)
+  - Fixture-Updates für saubere State-Resets zwischen Tests
+  - Behebt Test-Pollution bei Suite-Durchläufen
+
+### Changed
+- **RAG Blueprint** (`copilot_core/api/v1/rag.py`):
+  - URL-Prefix von `/api/rag` auf `/api/v1/rag` für API-Konsistenz
+  - `init_rag_api()` Helper-Funktion für Test-Reset
+  
+- **Core Setup** (`copilot_core/core_setup.py`):
+  - RAG Blueprint-Registrierung hinzugefügt
+  - Import für `rag_bp` ergänzt
+
+### Test Results
+- **Core API Tests**: 209 passed, 1 skipped (RAG, Zone Editor, Notifications, Sharing)
+- **RAG Hybrid Search**: 36/36 Tests passing
+- **RAG Hybrid API**: 40/40 Tests passing  
+- **Zone Editor**: 59/59 Tests passing
+- **Notifications API**: 23/23 Tests passing
+- **Sharing API**: 28/28 Tests passing
+
+### Files Changed
+- `copilot_core/api/v1/rag.py` - Blueprint-Prefix + init_rag_api()
+- `copilot_core/core_setup.py` - RAG Blueprint-Registrierung
+- `tests/test_rag_hybrid_search.py` - API-Pfad-Korrekturen
+- `tests/test_rag_hybrid_api.py` - API-Pfad-Korrekturen
+
+---
+
+## [Zone Dashboard] - 2026-03-01
+
 ### Added
 - **Zone Dashboard API** (`/api/v1/zone/dashboard`) - Neue API für Zone-Übersicht mit Status, Mood und Quick-Actions
   - `GET /api/v1/zone/dashboard` - Komplette Dashboard-Daten aller Zonen

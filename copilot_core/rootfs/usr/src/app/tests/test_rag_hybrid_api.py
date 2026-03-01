@@ -1,12 +1,12 @@
 """Tests for RAG Hybrid Search API (Flask Blueprint).
 
 Covers all 6 endpoints:
-  POST /api/rag/search          – Hybrid Search
-  POST /api/rag/search/bm25     – BM25-only
-  POST /api/rag/search/semantic  – Semantic-only
-  POST /api/rag/rerank          – RRF Reranking
-  GET  /api/rag/stats           – Index Stats
-  POST /api/rag/index           – Document Indexing
+  POST /api/v1/rag/search          – Hybrid Search
+  POST /api/v1/rag/search/bm25     – BM25-only
+  POST /api/v1/rag/search/semantic  – Semantic-only
+  POST /api/v1/rag/rerank          – RRF Reranking
+  GET  /api/v1/rag/stats           – Index Stats
+  POST /api/v1/rag/index           – Document Indexing
 """
 
 from __future__ import annotations
@@ -67,13 +67,13 @@ def _index_sample_docs(client, namespace: str = "default") -> Any:
         {"id": "doc5", "text": "Home Assistant automates your smart home"},
     ]
     resp = client.post(
-        "/api/rag/index",
+        "/api/v1/rag/index",
         json={"namespace": namespace, "documents": docs, "index_semantic": False},
     )
     return resp
 
 
-# ── Endpoint 6: POST /api/rag/index ────────────────────────────────────
+# ── Endpoint 6: POST /api/v1/rag/index ────────────────────────────────────
 
 class TestRagIndex:
     def test_index_documents_success(self, client):
@@ -85,13 +85,13 @@ class TestRagIndex:
         assert isinstance(data["took_ms"], (int, float))
 
     def test_index_empty_documents_returns_400(self, client):
-        resp = client.post("/api/rag/index", json={"documents": []})
+        resp = client.post("/api/v1/rag/index", json={"documents": []})
         assert resp.status_code == 400
         assert "documents required" in resp.get_json()["error"]
 
     def test_index_missing_doc_id_returns_400(self, client):
         resp = client.post(
-            "/api/rag/index",
+            "/api/v1/rag/index",
             json={"documents": [{"text": "some text"}]},
         )
         assert resp.status_code == 400
@@ -99,7 +99,7 @@ class TestRagIndex:
 
     def test_index_missing_text_returns_400(self, client):
         resp = client.post(
-            "/api/rag/index",
+            "/api/v1/rag/index",
             json={"documents": [{"id": "d1", "text": ""}]},
         )
         assert resp.status_code == 400
@@ -107,13 +107,13 @@ class TestRagIndex:
 
     def test_index_too_many_documents_returns_400(self, client):
         docs = [{"id": f"d{i}", "text": f"text {i}"} for i in range(2001)]
-        resp = client.post("/api/rag/index", json={"documents": docs})
+        resp = client.post("/api/v1/rag/index", json={"documents": docs})
         assert resp.status_code == 400
         assert "max" in resp.get_json()["error"].lower()
 
     def test_index_custom_namespace(self, client):
         resp = client.post(
-            "/api/rag/index",
+            "/api/v1/rag/index",
             json={
                 "namespace": "test_ns",
                 "documents": [{"id": "d1", "text": "Hello world"}],
@@ -125,7 +125,7 @@ class TestRagIndex:
 
     def test_index_with_metadata(self, client):
         resp = client.post(
-            "/api/rag/index",
+            "/api/v1/rag/index",
             json={
                 "documents": [{"id": "m1", "text": "metadata test", "metadata": {"key": "value"}}],
                 "index_semantic": False,
@@ -135,11 +135,11 @@ class TestRagIndex:
         assert resp.get_json()["bm25_indexed"] == 1
 
 
-# ── Endpoint 5: GET /api/rag/stats ─────────────────────────────────────
+# ── Endpoint 5: GET /api/v1/rag/stats ─────────────────────────────────────
 
 class TestRagStats:
     def test_stats_empty_index(self, client):
-        resp = client.get("/api/rag/stats")
+        resp = client.get("/api/v1/rag/stats")
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["doc_count"] == 0
@@ -148,19 +148,19 @@ class TestRagStats:
 
     def test_stats_after_indexing(self, client):
         _index_sample_docs(client)
-        resp = client.get("/api/rag/stats")
+        resp = client.get("/api/v1/rag/stats")
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["doc_count"] == 5
         assert data["term_count"] > 0
 
     def test_stats_custom_namespace(self, client):
-        resp = client.get("/api/rag/stats?namespace=nonexistent")
+        resp = client.get("/api/v1/rag/stats?namespace=nonexistent")
         assert resp.status_code == 200
         assert resp.get_json()["doc_count"] == 0
 
     def test_stats_includes_metrics(self, client):
-        resp = client.get("/api/rag/stats")
+        resp = client.get("/api/v1/rag/stats")
         data = resp.get_json()
         metrics = data["metrics"]
         assert "search_requests" in metrics
@@ -169,18 +169,18 @@ class TestRagStats:
         assert "errors" in metrics
 
 
-# ── Endpoint 1: POST /api/rag/search (Hybrid) ──────────────────────────
+# ── Endpoint 1: POST /api/v1/rag/search (Hybrid) ──────────────────────────
 
 class TestRagHybridSearch:
     def test_search_missing_query_returns_400(self, client):
-        resp = client.post("/api/rag/search", json={})
+        resp = client.post("/api/v1/rag/search", json={})
         assert resp.status_code == 400
         assert "query required" in resp.get_json()["error"]
 
     def test_search_bm25_only_mode(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search",
+            "/api/v1/rag/search",
             json={"query": "Python", "use_semantic": False},
         )
         assert resp.status_code == 200
@@ -193,7 +193,7 @@ class TestRagHybridSearch:
         """Without semantic backend, hybrid falls back to BM25-only results with warnings."""
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search",
+            "/api/v1/rag/search",
             json={"query": "Python", "use_lexical": True, "use_semantic": True},
         )
         assert resp.status_code == 200
@@ -204,7 +204,7 @@ class TestRagHybridSearch:
 
     def test_search_neither_mode_returns_400(self, client):
         resp = client.post(
-            "/api/rag/search",
+            "/api/v1/rag/search",
             json={"query": "test", "use_lexical": False, "use_semantic": False},
         )
         assert resp.status_code == 400
@@ -212,7 +212,7 @@ class TestRagHybridSearch:
     def test_search_includes_text_and_metadata(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search",
+            "/api/v1/rag/search",
             json={"query": "Python", "use_semantic": False, "include_text": True, "include_metadata": True},
         )
         data = resp.get_json()
@@ -224,7 +224,7 @@ class TestRagHybridSearch:
     def test_search_excludes_text_when_disabled(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search",
+            "/api/v1/rag/search",
             json={"query": "Python", "use_semantic": False, "include_text": False, "include_metadata": False},
         )
         data = resp.get_json()
@@ -235,7 +235,7 @@ class TestRagHybridSearch:
     def test_search_top_k_limits_results(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search",
+            "/api/v1/rag/search",
             json={"query": "Python", "use_semantic": False, "top_k": 2},
         )
         data = resp.get_json()
@@ -244,7 +244,7 @@ class TestRagHybridSearch:
     def test_search_returns_took_ms(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search",
+            "/api/v1/rag/search",
             json={"query": "Python", "use_semantic": False},
         )
         data = resp.get_json()
@@ -254,19 +254,19 @@ class TestRagHybridSearch:
     def test_search_no_results_for_unknown_term(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search",
+            "/api/v1/rag/search",
             json={"query": "xyznonexistent", "use_semantic": False},
         )
         data = resp.get_json()
         assert data["result_count"] == 0
 
 
-# ── Endpoint 2: POST /api/rag/search/bm25 ──────────────────────────────
+# ── Endpoint 2: POST /api/v1/rag/search/bm25 ──────────────────────────────
 
 class TestRagBM25Search:
     def test_bm25_search_basic(self, client):
         _index_sample_docs(client)
-        resp = client.post("/api/rag/search/bm25", json={"query": "Flask"})
+        resp = client.post("/api/v1/rag/search/bm25", json={"query": "Flask"})
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["mode"] == "bm25"
@@ -274,12 +274,12 @@ class TestRagBM25Search:
         assert data["results"][0]["id"] == "doc2"
 
     def test_bm25_search_missing_query(self, client):
-        resp = client.post("/api/rag/search/bm25", json={"query": ""})
+        resp = client.post("/api/v1/rag/search/bm25", json={"query": ""})
         assert resp.status_code == 400
 
     def test_bm25_search_with_namespace(self, client):
         client.post(
-            "/api/rag/index",
+            "/api/v1/rag/index",
             json={
                 "namespace": "ns1",
                 "documents": [{"id": "x1", "text": "unique namespace doc"}],
@@ -287,7 +287,7 @@ class TestRagBM25Search:
             },
         )
         resp = client.post(
-            "/api/rag/search/bm25",
+            "/api/v1/rag/search/bm25",
             json={"query": "unique", "namespace": "ns1"},
         )
         data = resp.get_json()
@@ -297,7 +297,7 @@ class TestRagBM25Search:
     def test_bm25_search_ranking_order(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search/bm25",
+            "/api/v1/rag/search/bm25",
             json={"query": "Python programming"},
         )
         data = resp.get_json()
@@ -308,13 +308,13 @@ class TestRagBM25Search:
         assert scores == sorted(scores, reverse=True)
 
 
-# ── Endpoint 3: POST /api/rag/search/semantic ──────────────────────────
+# ── Endpoint 3: POST /api/v1/rag/search/semantic ──────────────────────────
 
 class TestRagSemanticSearch:
     def test_semantic_search_no_backend(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search/semantic",
+            "/api/v1/rag/search/semantic",
             json={"query": "Python"},
         )
         assert resp.status_code == 200
@@ -324,16 +324,16 @@ class TestRagSemanticSearch:
         assert len(data["warnings"]) > 0
 
     def test_semantic_search_missing_query(self, client):
-        resp = client.post("/api/rag/search/semantic", json={})
+        resp = client.post("/api/v1/rag/search/semantic", json={})
         assert resp.status_code == 400
 
 
-# ── Endpoint 4: POST /api/rag/rerank ───────────────────────────────────
+# ── Endpoint 4: POST /api/v1/rag/rerank ───────────────────────────────────
 
 class TestRagRerank:
     def test_rerank_basic(self, client):
         resp = client.post(
-            "/api/rag/rerank",
+            "/api/v1/rag/rerank",
             json={
                 "lexical_hits": [
                     {"id": "a", "score": 5.0, "rank": 1},
@@ -358,14 +358,14 @@ class TestRagRerank:
 
     def test_rerank_empty_lists_returns_400(self, client):
         resp = client.post(
-            "/api/rag/rerank",
+            "/api/v1/rag/rerank",
             json={"lexical_hits": [], "semantic_hits": []},
         )
         assert resp.status_code == 400
 
     def test_rerank_single_list(self, client):
         resp = client.post(
-            "/api/rag/rerank",
+            "/api/v1/rag/rerank",
             json={
                 "lexical_hits": [
                     {"id": "x", "score": 1.0, "rank": 1},
@@ -380,7 +380,7 @@ class TestRagRerank:
 
     def test_rerank_respects_weights(self, client):
         resp = client.post(
-            "/api/rag/rerank",
+            "/api/v1/rag/rerank",
             json={
                 "lexical_hits": [
                     {"id": "a", "score": 5.0, "rank": 1},
@@ -399,7 +399,7 @@ class TestRagRerank:
 
     def test_rerank_includes_fusion_metadata(self, client):
         resp = client.post(
-            "/api/rag/rerank",
+            "/api/v1/rag/rerank",
             json={
                 "lexical_hits": [{"id": "a", "score": 5.0, "rank": 1}],
                 "semantic_hits": [{"id": "a", "score": 0.9, "rank": 1}],
@@ -415,7 +415,7 @@ class TestRagRerank:
 
     def test_rerank_took_ms(self, client):
         resp = client.post(
-            "/api/rag/rerank",
+            "/api/v1/rag/rerank",
             json={
                 "lexical_hits": [{"id": "a", "score": 1.0, "rank": 1}],
                 "semantic_hits": [],
@@ -453,7 +453,7 @@ class TestRagAuth:
             # Reset security cache
             sec_mod._token_cache = ("", 0.0)
 
-            resp = c.get("/api/rag/stats")
+            resp = c.get("/api/v1/rag/stats")
             assert resp.status_code == 401
 
     def test_auth_passes_with_valid_token(self, tmp_path):
@@ -479,7 +479,7 @@ class TestRagAuth:
             sec_mod._token_cache = ("", 0.0)
 
             resp = c.get(
-                "/api/rag/stats",
+                "/api/v1/rag/stats",
                 headers={"X-Auth-Token": "secret-token-123"},
             )
             assert resp.status_code == 200
@@ -490,29 +490,29 @@ class TestRagAuth:
 class TestMetrics:
     def test_metrics_track_search_requests(self, client):
         _index_sample_docs(client)
-        client.post("/api/rag/search/bm25", json={"query": "Python"})
-        client.post("/api/rag/search/bm25", json={"query": "Flask"})
+        client.post("/api/v1/rag/search/bm25", json={"query": "Python"})
+        client.post("/api/v1/rag/search/bm25", json={"query": "Flask"})
 
-        resp = client.get("/api/rag/stats")
+        resp = client.get("/api/v1/rag/stats")
         data = resp.get_json()
         # 2 BM25 searches
         assert data["metrics"]["search_requests"] == 2
 
     def test_metrics_track_index_requests(self, client):
         _index_sample_docs(client)
-        resp = client.get("/api/rag/stats")
+        resp = client.get("/api/v1/rag/stats")
         data = resp.get_json()
         assert data["metrics"]["index_requests"] == 1
 
     def test_metrics_track_rerank_requests(self, client):
         client.post(
-            "/api/rag/rerank",
+            "/api/v1/rag/rerank",
             json={
                 "lexical_hits": [{"id": "a", "score": 1.0, "rank": 1}],
                 "semantic_hits": [],
             },
         )
-        resp = client.get("/api/rag/stats")
+        resp = client.get("/api/v1/rag/stats")
         data = resp.get_json()
         assert data["metrics"]["rerank_requests"] == 1
 
@@ -521,25 +521,25 @@ class TestMetrics:
 
 class TestEdgeCases:
     def test_no_json_body_returns_400(self, client):
-        resp = client.post("/api/rag/search", data="not json", content_type="text/plain")
+        resp = client.post("/api/v1/rag/search", data="not json", content_type="text/plain")
         assert resp.status_code == 400
 
     def test_upsert_updates_existing_doc(self, client):
         client.post(
-            "/api/rag/index",
+            "/api/v1/rag/index",
             json={
                 "documents": [{"id": "u1", "text": "original text"}],
                 "index_semantic": False,
             },
         )
         client.post(
-            "/api/rag/index",
+            "/api/v1/rag/index",
             json={
                 "documents": [{"id": "u1", "text": "updated content with new terms"}],
                 "index_semantic": False,
             },
         )
-        resp = client.post("/api/rag/search/bm25", json={"query": "updated"})
+        resp = client.post("/api/v1/rag/search/bm25", json={"query": "updated"})
         data = resp.get_json()
         assert data["result_count"] == 1
         assert data["results"][0]["id"] == "u1"
@@ -547,7 +547,7 @@ class TestEdgeCases:
     def test_large_top_k_clamped(self, client):
         _index_sample_docs(client)
         resp = client.post(
-            "/api/rag/search/bm25",
+            "/api/v1/rag/search/bm25",
             json={"query": "Python", "top_k": 99999},
         )
         # Should succeed (clamped to _MAX_TOP_K)

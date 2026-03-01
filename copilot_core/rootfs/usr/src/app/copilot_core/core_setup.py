@@ -408,6 +408,7 @@ def register_blueprints(app: Flask, services: dict) -> None:
     from copilot_core.api.v1.voice import voice_bp
     from copilot_core.api.v1.vector import vector_bp
     from copilot_core.api.v1.swagger_ui import swagger_ui_bp
+    from copilot_core.api.v1.rag import bp as rag_bp
     
     # Register blueprints
     app.register_blueprint(log_fixer_bp, url_prefix="/api/v1")
@@ -431,6 +432,7 @@ def register_blueprints(app: Flask, services: dict) -> None:
     app.register_blueprint(voice_bp, url_prefix="/api/v1")
     app.register_blueprint(vector_bp, url_prefix="/api/v1")
     app.register_blueprint(swagger_ui_bp, url_prefix="/api/v1")
+    app.register_blueprint(rag_bp)  # Already has /api/v1/rag prefix
     
     # Register PilotSuite Phase 5 APIs
     from copilot_core.sharing.api import sharing_bp

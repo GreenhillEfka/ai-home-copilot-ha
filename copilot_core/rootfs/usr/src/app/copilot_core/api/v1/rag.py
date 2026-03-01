@@ -32,7 +32,7 @@ from copilot_core.rag.query_router import classify_query, QueryType
 
 logger = logging.getLogger(__name__)
 
-bp = Blueprint("rag", __name__, url_prefix="/api/rag")
+bp = Blueprint("rag", __name__, url_prefix="/api/v1/rag")
 
 _DEFAULT_DB_PATH = os.getenv("COPILOT_CORE_RAG_DB_PATH", "/data/copilot_core_rag.sqlite3")
 _SEMANTIC_BACKEND_MODULE = os.getenv("COPILOT_CORE_RAG_SEMANTIC_BACKEND", "").strip()
@@ -124,6 +124,19 @@ _bm25_index: Optional[BM25SqliteIndex] = None
 
 _semantic_lock = threading.Lock()
 _semantic_backend: Optional[_SemanticBackend] = None
+
+
+def init_rag_api() -> None:
+    """Reset RAG API state for test isolation.
+    
+    Call this before each test to ensure clean state.
+    Resets metrics, BM25 index, and semantic backend singletons.
+    """
+    global _metrics, _bm25_index, _semantic_backend
+    _metrics = _Metrics()
+    _bm25_index = None
+    _semantic_backend = None
+    logger.debug("RAG API state reset for test isolation")
 
 
 def _get_bm25() -> BM25SqliteIndex:
