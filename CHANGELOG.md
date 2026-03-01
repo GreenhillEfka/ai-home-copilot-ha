@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## v7.12.4 (2026-03-01)
+
+### Phase 6 Type Hints Completion
+- **Notifications API** (`api/v1/notifications.py`): Vollständige Typisierung aller 14 Funktionen mit moderner Python Type-Syntax (`dict[str, Any]`, `tuple[...]`)
+- **Collective Intelligence API** (`collective_intelligence/api.py`): Alle 16 Federated-Learning-Endpoints mit Return-Type-Annotations (`Tuple[Response, int] | Response`)
+- **Sharing API** (`sharing/api.py`): Comprehensive type hints für 11/17 Funktionen (64.7% Coverage)
+- **Type-Syntax:** PEP 585 Compliance, `from __future__ import annotations`, TYPE_CHECKING Imports
+
+### Test Coverage
+- **Gesamt-Test-Suite:** 2088/2099 bestanden (99.47% Pass-Rate)
+- **Phase 5/6 API-Tests:** 76/76 bestanden (100%)
+- **Neue Edge-Case Tests:** 18 Tests für Notifications, Sharing, Collective Intelligence
+- **Flask Integration:** Alle Integration-Tests aktiviert (Flask v3.1.3, NumPy v2.4.2)
+
+### Documentation
+- **ROADMAP.md:** Phase 6 als abgeschlossen markiert
+- **PHASE6_COMPLETION_SUMMARY.md:** Umfassender Abschlussbericht
+- **Review-Bericht:** groky-20260301-0512.md mit GO-Empfehlung
+
+### Known Issues (nicht blockierend)
+- 11 Test-Failures (Swagger-UI: 2, UniFi: 9) — nicht Phase 5/6-relevant
+- Sharing API Type Hints: 6 Endpoints ohne Return-Typen (geplant für v7.13.0)
+
+### Commits
+- `ea23e9d8` docs: complete Phase 6 type hints and update roadmap for v7.12.4
+- `99a27e81` feat: Phase 6 Type Hints — Notifications API complete
+- `6ae8fdd8` chore: v7.12.3 - Phase 6 Type Hints complete
+
+---
+
+## v7.12.3 (2026-03-01)
+
+### Type Hint Migration
+- Initiale Type Hint Implementation für Notifications und Collective Intelligence APIs
+- Migration von `Dict/List/Optional` zu `dict/list/Optional` mit moderner Syntax
+
+---
+
 ## v7.12.2 (2026-03-01)
 
 ### Phase 5 Completion Verification
