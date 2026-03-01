@@ -770,6 +770,34 @@ def _register_household_apis(app: Flask, services: dict = None) -> None:
     except Exception:
         _LOGGER.exception("Failed to register Vector API")
 
+    # Habitus Zones API (sync from HA)
+    try:
+        from copilot_core.api.v1.habitus_zones import habitus_zones_bp, init_habitus_zones_api
+        event_bus = services.get("event_bus") if services else None
+        init_habitus_zones_api(event_bus)
+        app.register_blueprint(habitus_zones_bp)
+        _LOGGER.info("Registered Habitus Zones API (/api/v1/habitus/zones/*)")
+    except Exception:
+        _LOGGER.exception("Failed to register Habitus Zones API")
+
+    # Zone Editor API (CRUD operations)
+    try:
+        from copilot_core.api.v1.zone_editor import zone_editor_bp, init_zone_editor_api
+        init_zone_editor_api()
+        app.register_blueprint(zone_editor_bp)
+        _LOGGER.info("Registered Zone Editor API (/api/v1/zones/*)")
+    except Exception:
+        _LOGGER.exception("Failed to register Zone Editor API")
+
+    # Zone Dashboard API (overview with mood & quick actions)
+    try:
+        from copilot_core.api.v1.zone_dashboard import zone_dashboard_bp, init_zone_dashboard_api
+        init_zone_dashboard_api()
+        app.register_blueprint(zone_dashboard_bp)
+        _LOGGER.info("Registered Zone Dashboard API (/api/v1/zone/dashboard/*)")
+    except Exception:
+        _LOGGER.exception("Failed to register Zone Dashboard API")
+
 
 def _register_error_apis(app: Flask, services: dict = None) -> None:
     """

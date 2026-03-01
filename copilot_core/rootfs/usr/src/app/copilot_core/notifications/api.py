@@ -1,4 +1,21 @@
-"""Notification API endpoints (v5.8.0)."""
+"""Notification API endpoints - Flask blueprint for notification management.
+
+Phase 5: Notifications API
+Provides REST endpoints for notification creation, retrieval, digest, and statistics.
+
+Endpoints:
+- GET /api/v1/notifications - Get notification history
+- POST /api/v1/notifications - Create a new notification
+- GET /api/v1/notifications/digest - Get notification digest summary
+- GET /api/v1/notifications/pending - Get pending notifications for delivery
+- GET /api/v1/notifications/stats - Get engine statistics
+
+All endpoints require API key authentication via @require_api_key decorator.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Blueprint, jsonify, request
 
@@ -7,23 +24,30 @@ from .engine import NotificationEngine, Priority
 
 notifications_bp = Blueprint("notifications", __name__)
 
-_engine: NotificationEngine | None = None
+_engine: Optional[NotificationEngine] = None
 
 
 def init_notifications_api(engine: NotificationEngine) -> None:
-    """Initialize with engine instance."""
+    """Initialize the notifications API with an engine instance.
+    
+    Args:
+        engine: NotificationEngine instance for managing notifications.
+    """
     global _engine
     _engine = engine
 
 
 @notifications_bp.route("/api/v1/notifications", methods=["GET"])
 @require_api_key
-def get_notifications():
+def get_notifications() -> Tuple[Dict[str, Any], int]:
     """Get notification history.
 
     Query params:
         limit: Max items (default 50)
         source: Filter by source module
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: JSON response with count and notifications list.
     """
     if not _engine:
         return jsonify({"error": "Notification engine not initialized"}), 503
@@ -37,10 +61,21 @@ def get_notifications():
 
 @notifications_bp.route("/api/v1/notifications", methods=["POST"])
 @require_api_key
-def create_notification():
+def create_notification() -> Tuple[Dict[str, Any], int]:
     """Submit a notification.
 
-    Body: {"source", "title", "message", "priority"(1-4), "channel", "data"}
+    Request body:
+        {
+            "source": str (optional, default "api"),
+            "title": str (required),
+            "message": str (required),
+            "priority": int (optional, 1-4, default 3),
+            "channel": str (optional, default "default"),
+            "data": dict (optional)
+        }
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Creation result with notification ID or status.
     """
     if not _engine:
         return jsonify({"error": "Notification engine not initialized"}), 503
@@ -79,11 +114,14 @@ def create_notification():
 
 @notifications_bp.route("/api/v1/notifications/digest", methods=["GET"])
 @require_api_key
-def get_digest():
+def get_digest() -> Tuple[Dict[str, Any], int]:
     """Get notification digest.
 
     Query params:
         hours: Look-back period (default 24)
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Digest summary with period, counts, and items.
     """
     if not _engine:
         return jsonify({"error": "Notification engine not initialized"}), 503
@@ -104,8 +142,12 @@ def get_digest():
 
 @notifications_bp.route("/api/v1/notifications/pending", methods=["GET"])
 @require_api_key
-def get_pending():
-    """Flush and return pending notifications for delivery."""
+def get_pending() -> Tuple[Dict[str, Any], int]:
+    """Flush and return pending notifications for delivery.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: List of pending notifications with full details.
+    """
     if not _engine:
         return jsonify({"error": "Notification engine not initialized"}), 503
 
@@ -130,8 +172,12 @@ def get_pending():
 
 @notifications_bp.route("/api/v1/notifications/stats", methods=["GET"])
 @require_api_key
-def get_stats():
-    """Get notification engine statistics."""
+def get_stats() -> Tuple[Dict[str, Any], int]:
+    """Get notification engine statistics.
+    
+    Returns:
+        Tuple[Dict[str, Any], int]: Statistics dictionary with counts and metrics.
+    """
     if not _engine:
         return jsonify({"error": "Notification engine not initialized"}), 503
 
