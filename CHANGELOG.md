@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v11.9.1 (2026-03-01)
+
+### 🐛 Fixed
+- Zone Editor API Tests repariert (17/17 Tests grün)
+- HabitusZoneEngine Singleton Pattern korrekt initialisiert
+- RuntimeError → 503 SERVICE UNAVAILABLE für uninitialized Engine
+- Room-Assertion Fix (room_id statt plain strings in Test)
+
+### 🧪 Tests
+- Zone Editor API: 17/17 tests passing
+- Gesamt: 2151+ Tests passing
+
+---
+
 ## v12.0.0 (2026-03-01) — Phase 5/6 Complete
 
 ### 🎉 KILLER FEATURES

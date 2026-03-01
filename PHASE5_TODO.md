@@ -106,3 +106,12 @@
 - ✅ `get_aggregated_models()` Implementation korrigiert
 - ✅ CHANGELOG.md mit v7.12.1 aktualisiert
 - ✅ Alle 142 Tests laufen grün
+
+## Iteration 2026-03-01 (v11.9.1)
+- ✅ Zone Editor API Tests repariert
+- ✅ HabitusZoneEngine Singleton Pattern korrekt implementiert
+- ✅ RuntimeError → 503 SERVICE UNAVAILABLE für uninitialized Engine
+- ✅ Room-Assertion Fix (room_id statt plain strings)
+- ✅ CHANGELOG.md mit v11.9.1 aktualisiert
+- ✅ Alle Zone Editor Tests (17/17) laufen grün
+- ✅ Gesamt: 2151+ Tests grün
