@@ -26,6 +26,8 @@ _LOGGER = logging.getLogger(__name__)
 bp = Blueprint("neurons", __name__, url_prefix="/neurons")
 
 from copilot_core.api.security import validate_token as _validate_token
+from copilot_core.api.v1 import neuron_graph as neuron_graph_module
+from copilot_core.api.v1.websocket_neuron import get_neuron_ws_handler
 
 
 @bp.before_request
@@ -400,6 +402,149 @@ def get_suggestions():
         })
     except Exception as e:
         _LOGGER.error("Error getting suggestions: %s", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+# =============================================================================
+# Neuron Graph Endpoints (NEW)
+# =============================================================================
+
+@bp.route("/graph", methods=["GET"])
+def get_neuron_graph_endpoint():
+    """Get complete neuron graph (nodes + edges).
+    
+    Returns:
+        {
+            "success": true,
+            "data": {
+                "nodes": [...],
+                "edges": [...],
+                "metadata": {...}
+            }
+        }
+    """
+    try:
+        graph = neuron_graph_module.get_neuron_graph()
+        
+        return jsonify({
+            "success": True,
+            "data": graph.to_dict()
+        })
+    except Exception as e:
+        _LOGGER.error("Error getting neuron graph: %s", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@bp.route("/<neuron_id>/stats", methods=["GET"])
+def get_neuron_stats(neuron_id: str):
+    """Get neuron statistics (fire-rate, confidence, metrics).
+    
+    Args:
+        neuron_id: Neuron ID (e.g., "context.presence", "mood.focus")
+    
+    Returns:
+        {
+            "success": true,
+            "data": {
+                "neuron_id": str,
+                "name": str,
+                "type": str,
+                "layer": int,
+                "active": bool,
+                "value": float,
+                "metrics": {
+                    "fire_rate": float,
+                    "confidence": float,
+                    "avg_value": float,
+                    "trend": str,
+                    "last_fire_time": str
+                },
+                "connections": {
+                    "incoming": int,
+                    "outgoing": int
+                }
+            }
+        }
+    """
+    try:
+        graph = neuron_graph_module.get_neuron_graph()
+        node = graph.get_node(neuron_id)
+        
+        if not node:
+            # Try without prefix
+            for prefix in ["context", "state", "mood"]:
+                full_id = f"{prefix}.{neuron_id}"
+                node = graph.get_node(full_id)
+                if node:
+                    neuron_id = full_id
+                    break
+        
+        if not node:
+            return jsonify({
+                "success": False,
+                "error": f"Neuron not found: {neuron_id}"
+            }), 404
+        
+        # Get connection counts
+        incoming = len(graph.get_incoming_edges(neuron_id))
+        outgoing = len(graph.get_outgoing_edges(neuron_id))
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "neuron_id": neuron_id,
+                "name": node.name,
+                "type": node.neuron_type,
+                "layer": node.layer,
+                "active": node.active,
+                "value": round(node.value, 3),
+                "metrics": node.metrics.to_dict(),
+                "connections": {
+                    "incoming": incoming,
+                    "outgoing": outgoing
+                }
+            }
+        })
+    except Exception as e:
+        _LOGGER.error("Error getting neuron stats for %s: %s", neuron_id, e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@bp.route("/graph/stats", methods=["GET"])
+def get_graph_stats():
+    """Get overall graph statistics.
+    
+    Returns:
+        {
+            "success": true,
+            "data": {
+                "total_nodes": int,
+                "active_nodes": int,
+                "total_edges": int,
+                "avg_fire_rate": float,
+                "avg_confidence": float,
+                "layers": {...}
+            }
+        }
+    """
+    try:
+        graph = neuron_graph_module.get_neuron_graph()
+        
+        return jsonify({
+            "success": True,
+            "data": graph.get_stats()
+        })
+    except Exception as e:
+        _LOGGER.error("Error getting graph stats: %s", e)
         return jsonify({
             "success": False,
             "error": str(e)

@@ -158,17 +158,28 @@ Authorization: Bearer <token>
 
 ## Dokumentation
 
+### Core Documentation
+
 | Dokument | Inhalt |
 |----------|--------|
 | [API_REFERENCE](docs/API_REFERENCE.md) | Alle Endpoints, Auth, Request/Response |
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Services, Datenfluss, Persistenz |
 | [ONYX_INTEGRATION](docs/ONYX_INTEGRATION.md) | Onyx + Styx Zielarchitektur, Security, Setup |
 | [onyx_styx_actions.openapi](docs/integrations/onyx_styx_actions.openapi.yaml) | OpenAPI Actions fuer Onyx |
-| [RAG Hybrid Search API](docs/api/RAG_HYBRID_SEARCH.md) | RAG API Docs, Examples, Best Practices (neu) |
-| [HA Notify Adapter](docs/api/HA_NOTIFY_ADAPTER.md) | Notify Adapter Docs, Examples (neu) |
 | [ROADMAP](docs/ROADMAP.md) | Phase 5-6, Zukunftsplaene |
 | [CHANGELOG](CHANGELOG.md) | Release-Historie |
 | [HACS Integration](https://github.com/GreenhillEfka/pilotsuite-styx-ha) | Sensoren, Module, Dashboard |
+
+### Phase 6 API Documentation
+
+| API | Endpoints | Beschreibung |
+|-----|-----------|--------------|
+| [RAG Hybrid Search](docs/RAG_HYBRID_SEARCH.md) | 6 | BM25 + Vector Search mit RRF Fusion |
+| [Push Notifications](docs/PUSH_NOTIFICATIONS.md) | 8 | Multi-Channel Notifications, Templates, Scheduling |
+| [Collective Intelligence](docs/COLLECTIVE_INTELLIGENCE.md) | 15 | Federated Learning, Knowledge Sharing |
+| [Zone Editor](docs/ZONE_EDITOR.md) | 5 | Bidirektionaler Zonen-Sync HA ↔ Core |
+
+**Total Phase 6 Endpoints:** 34 neue API-Endpoints
 
 ## Lizenz
 

@@ -11,6 +11,7 @@ from copilot_core.api.v1.habitus_dashboard_cards import bp as dashboard_cards_bp
 from copilot_core.api.v1.graph_ops import bp as graph_ops_bp
 from copilot_core.api.v1.vector import bp as vector_bp
 from copilot_core.api.v1.neurons import bp as neurons_bp
+from copilot_core.api.v1.neurons_visualization import bp as neurons_viz_bp
 from copilot_core.api.v1.weather import bp as weather_bp
 from copilot_core.api.v1.voice_context_bp import bp as voice_context_bp
 from copilot_core.api.v1.swagger_ui import bp as swagger_ui_bp
@@ -42,6 +43,7 @@ api_v1.register_blueprint(dashboard_cards_bp)
 api_v1.register_blueprint(graph_ops_bp)
 api_v1.register_blueprint(vector_bp)
 api_v1.register_blueprint(neurons_bp)
+api_v1.register_blueprint(neurons_viz_bp)
 api_v1.register_blueprint(weather_bp)
 api_v1.register_blueprint(voice_context_bp)
 api_v1.register_blueprint(swagger_ui_bp)
