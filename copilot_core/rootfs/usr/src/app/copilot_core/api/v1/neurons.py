@@ -25,7 +25,7 @@ _LOGGER = logging.getLogger(__name__)
 # Create blueprint
 bp = Blueprint("neurons", __name__, url_prefix="/neurons")
 
-from copilot_core.api.security import validate_token as _validate_token
+from copilot_core.api.security import validate_token as _validate_token, require_admin_token
 from copilot_core.api.v1 import neuron_graph as neuron_graph_module
 from copilot_core.api.v1.websocket_neuron import get_neuron_ws_handler
 
@@ -126,6 +126,8 @@ def evaluate_neurons():
             "trigger": "manual"     # Trigger source
         }
     
+    State/context overrides require admin-level authentication.
+    
     Returns:
         {
             "success": true,
@@ -146,12 +148,22 @@ def evaluate_neurons():
         # Get optional overrides from request body
         body = request.get_json(silent=True) or {}
         
-        # Apply state overrides
+        # Apply state overrides - requires admin token for state manipulation
         if "states" in body:
+            if not require_admin_token(request):
+                return jsonify({
+                    "success": False,
+                    "error": "Admin token required for state overrides"
+                }), 403
             manager.update_states(body["states"])
         
-        # Apply context overrides
+        # Apply context overrides - requires admin token
         if "context" in body:
+            if not require_admin_token(request):
+                return jsonify({
+                    "success": False,
+                    "error": "Admin token required for context overrides"
+                }), 403
             manager.set_context(body["context"])
         
         # Run evaluation
@@ -182,6 +194,8 @@ def evaluate_neurons():
 def update_neuron_states():
     """Update HA states without full evaluation.
     
+    Requires admin-level authentication for state manipulation.
+    
     JSON body:
         {
             "states": {...}  # Entity ID -> state dict
@@ -191,6 +205,13 @@ def update_neuron_states():
         {"success": true, "data": {"updated": int}}
     """
     try:
+        # Require admin-level authentication for state manipulation
+        if not require_admin_token(request):
+            return jsonify({
+                "success": False,
+                "error": "Admin token required for state updates"
+            }), 403
+        
         body = request.get_json()
         if not body:
             return jsonify({

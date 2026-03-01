@@ -97,9 +97,33 @@ class WebSocketHandler:
             return
         
         @self.socketio.on('connect')
-        def handle_connect():
-            """Handle client connection."""
+        def handle_connect(auth=None):
+            """Handle client connection with authentication.
+            
+            Args:
+                auth: Optional auth dict containing 'token' for validation
+            """
+            from copilot_core.api.security import validate_token
+            
             sid = request.sid if hasattr(request, 'sid') else 'unknown'
+            
+            # Validate authentication token if provided
+            if auth and 'token' in auth:
+                # Create mock request for token validation
+                class MockRequest:
+                    headers = {'X-Auth-Token': auth['token']}
+                mock_req = MockRequest()
+                if not validate_token(mock_req):
+                    _LOGGER.warning("WebSocket auth failed for %s", sid)
+                    emit('error', {'message': 'Authentication failed'})
+                    return False
+            else:
+                # Check for token in query params or headers (alternative methods)
+                token = request.args.get('token') if hasattr(request, 'args') else None
+                if not token:
+                    # Allow connection but log warning (backward compatibility)
+                    _LOGGER.warning("WebSocket connection without auth token: %s", sid)
+            
             self._connections.add(sid)
             _LOGGER.info("WebSocket client connected: %s (total=%d)", sid, len(self._connections))
             

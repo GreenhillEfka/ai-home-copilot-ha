@@ -129,3 +129,48 @@ def optional_token(f: Callable) -> Callable:
 
 # Alias for backward compatibility
 require_api_key = require_token
+
+
+def require_admin_token(request) -> bool:
+    """Validate that a valid admin token is present.
+    
+    Unlike validate_token(), this ALWAYS requires a token,
+    even if auth is disabled globally (for sensitive operations).
+    
+    Returns True if a valid token is provided.
+    Returns False if no token or invalid token.
+    """
+    token = get_auth_token()
+    if not token:
+        # No token configured at all - cannot validate
+        return False
+
+    header_token = (request.headers.get("X-Auth-Token") or "").strip()
+    if header_token and hmac.compare_digest(header_token, token):
+        return True
+
+    auth_header = (request.headers.get("Authorization") or "").strip()
+    if auth_header.startswith("Bearer "):
+        candidate = auth_header.split(" ", 1)[1].strip()
+        if candidate and hmac.compare_digest(candidate, token):
+            return True
+
+    return False
+
+
+def require_admin(f: Callable) -> Callable:
+    """Decorator to require valid admin token for sensitive operations.
+    
+    Unlike require_token, this ALWAYS requires authentication,
+    even if auth is disabled globally.
+    """
+    @wraps(f)
+    def decorated_function(*args: Any, **kwargs: Any) -> Any:
+        if not require_admin_token(flask_request):
+            return jsonify({
+                "ok": False,
+                "error": "Admin authentication required",
+                "message": "Valid X-Auth-Token header or Bearer token required for this operation"
+            }), 403
+        return f(*args, **kwargs)
+    return decorated_function
