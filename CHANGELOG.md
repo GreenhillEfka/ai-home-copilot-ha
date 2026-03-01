@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v7.12.2 (2026-03-01)
+
+### Phase 5 Completion Verification
+- **Alle 3 API-Blueprints verifiziert** (Notifications, Sharing, Collective Intelligence)
+- **31 Endpoints** voll funktionsfähig und getestet
+- **142 Tests** insgesamt (0 failures)
+- **Blueprint Registration** in core_setup.py bestätigt
+- **Review-Bericht** erstellt (groky-iteration-20260301-0222.md)
+
+### Release Notes
+- Phase 5 MVP: Cross-Home Sharing & Push Notifications ✅ COMPLETE
+- Ready for Phase 6 (Advanced ML: On-Device Inference, Anomaly Detection, Zeitreihen-Prognosen)
+
+---
+
 ## v7.12.1 (2026-03-01)
 
 ### Phase 5 Test Fixes & Improvements
