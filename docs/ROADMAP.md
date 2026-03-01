@@ -1,6 +1,6 @@
 # PilotSuite Roadmap
 
-> Zuletzt aktualisiert: Februar 2026
+> Zuletzt aktualisiert: März 2026
 
 PilotSuite ist ein Ein-Entwickler-Projekt mit ambitionierten Zielen. Diese Roadmap beschreibt den bisherigen Weg, die aktuelle Entwicklung und die geplante Zukunft. Alle Zeitangaben sind Richtwerte -- Prioritaeten koennen sich je nach Community-Feedback und technischer Machbarkeit verschieben.
 
@@ -63,7 +63,7 @@ Der Schritt zur offiziellen Veroeffentlichung:
 
 ## Phase 5 -- Cross-Home Sharing (abgeschlossen)
 
-> Status: Implementiert & Getestet (v5.0.0+)
+> Status: ✅ Abgeschlossen (v7.12.2)
 
 ### Vision
 
@@ -118,9 +118,15 @@ Haushalte sollen voneinander lernen koennen, ohne private Daten preiszugeben. We
 
 ---
 
-## Phase 6 -- Advanced ML (geplant)
+## Phase 6 -- Advanced ML & Type Hints (in Arbeit)
 
-> Status: Recherche / Proof-of-Concept
+> Status: 🔄 Type Hints in Progress (v7.13.0)
+
+### Type Hints Vervollständigung ✅ (v7.13.0)
+- **Notifications API** -- Vollständige Typisierung aller Methoden, Dataclasses und Endpunkte
+- **Collective Intelligence API** -- Durchgängige Type Hints für Federated Learning Endpunkte
+- **Moderne Syntax** -- Migration von `Dict/List/Optional` zu `dict/list/Optional` mit `|` Union-Syntax
+- **TYPE_CHECKING Imports** -- Lazy Imports für HomeAssistant und Service-Klassen zur Vermeidung zirkulärer Abhängigkeiten
 
 ### On-Device Inference
 

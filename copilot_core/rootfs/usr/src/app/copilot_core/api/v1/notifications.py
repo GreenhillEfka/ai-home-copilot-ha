@@ -22,11 +22,14 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Request, jsonify, request
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,11 +92,11 @@ class Notification:
     source: str = "copilot"
     tags: List[str] = field(default_factory=list)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert notification to dictionary representation.
         
         Returns:
-            Dict[str, Any]: Dictionary containing all notification fields.
+            dict[str, Any]: Dictionary containing all notification fields.
         """
         return {
             "id": self.id,
@@ -137,11 +140,11 @@ class DeviceSubscription:
     last_seen: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert device subscription to dictionary representation.
         
         Returns:
-            Dict[str, Any]: Dictionary containing subscription details (with masked push_token).
+            dict[str, Any]: Dictionary containing subscription details (with masked push_token).
         """
         return {
             "id": self.id,
@@ -173,9 +176,9 @@ class NotificationManager:
     
     def __init__(self) -> None:
         """Initialize the notification manager."""
-        self._notifications: List[Notification] = []
-        self._subscriptions: Dict[str, DeviceSubscription] = {}
-        self._ha_notify_service: Optional[str] = None
+        self._notifications: list[Notification] = []
+        self._subscriptions: dict[str, DeviceSubscription] = {}
+        self._ha_notify_service: str | None = None
     
     def set_ha_notify_service(self, service: str) -> None:
         """Set HA notification service name.
@@ -191,11 +194,11 @@ class NotificationManager:
         message: str,
         priority: str = "normal",
         type: str = "info",
-        action_data: Optional[Dict[str, Any]] = None,
+        action_data: dict[str, Any] | None = None,
         action_url: str = "",
-        target_devices: Optional[List[str]] = None,
-        target_users: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
+        target_devices: list[str] | None = None,
+        target_users: list[str] | None = None,
+        tags: list[str] | None = None,
     ) -> Notification:
         """Create a new notification.
         
@@ -237,7 +240,7 @@ class NotificationManager:
     def send_notification(
         self,
         notification: Notification,
-        ha_hass: Optional[Any] = None,
+        ha_hass: HomeAssistant | None = None,
     ) -> bool:
         """Send notification via available channels.
         
@@ -304,9 +307,9 @@ class NotificationManager:
     def get_notifications(
         self,
         unread_only: bool = False,
-        notification_type: Optional[str] = None,
+        notification_type: str | None = None,
         limit: int = 20,
-    ) -> List[Notification]:
+    ) -> list[Notification]:
         """Get notifications with optional filters.
         
         Args:
@@ -386,7 +389,7 @@ class NotificationManager:
         device_type: str = "mobile",
         push_token: str = "",
         ha_entity_id: str = "",
-        preferences: Optional[Dict[str, bool]] = None,
+        preferences: dict[str, bool] | None = None,
     ) -> DeviceSubscription:
         """Subscribe a device for push notifications.
         
@@ -454,20 +457,20 @@ class NotificationManager:
                 return True
         return False
     
-    def get_subscriptions(self) -> List[DeviceSubscription]:
+    def get_subscriptions(self) -> list[DeviceSubscription]:
         """Get all device subscriptions.
         
         Returns:
-            List[DeviceSubscription]: List of all device subscriptions.
+            list[DeviceSubscription]: List of all device subscriptions.
         """
         return list(self._subscriptions.values())
     
     def update_subscription(
         self,
         device_id: str,
-        preferences: Optional[Dict[str, bool]] = None,
-        enabled: Optional[bool] = None,
-    ) -> Optional[DeviceSubscription]:
+        preferences: dict[str, bool] | None = None,
+        enabled: bool | None = None,
+    ) -> DeviceSubscription | None:
         """Update subscription preferences.
         
         Args:
@@ -507,8 +510,8 @@ class NotificationManager:
         old_mood: str,
         new_mood: str,
         confidence: float,
-        ha_hass: Optional[Any] = None,
-    ) -> Optional[Notification]:
+        ha_hass: HomeAssistant | None = None,
+    ) -> Notification | None:
         """Create and send mood change notification.
         
         Args:
@@ -549,7 +552,7 @@ class NotificationManager:
         alert_title: str,
         alert_message: str,
         severity: str = "normal",
-        ha_hass: Optional[Any] = None,
+        ha_hass: HomeAssistant | None = None,
     ) -> Notification:
         """Create and send alert notification.
         
@@ -1022,15 +1025,15 @@ def get_notification_digest() -> Tuple[Dict[str, Any], int]:
 
 
 # Helper methods for NotificationManager
-def _get_stats(self) -> Dict[str, Any]:
+def _get_stats(self) -> dict[str, Any]:
     """Get notification statistics.
     
     Returns:
-        Dict[str, Any]: Statistics dictionary.
+        dict[str, Any]: Statistics dictionary.
     """
-    by_source: Dict[str, int] = {}
-    by_priority: Dict[str, int] = {}
-    by_type: Dict[str, int] = {}
+    by_source: dict[str, int] = {}
+    by_priority: dict[str, int] = {}
+    by_type: dict[str, int] = {}
     
     for n in self._notifications:
         # Count by type (used as source proxy)
@@ -1054,21 +1057,22 @@ def _get_stats(self) -> Dict[str, Any]:
     }
 
 
-def _get_digest(self, hours: float = 24.0) -> Dict[str, Any]:
+def _get_digest(self, hours: float = 24.0) -> dict[str, Any]:
     """Get notification digest for time window.
     
     Args:
         hours: Time window in hours.
     
     Returns:
-        Dict[str, Any]: Digest summary.
+        dict[str, Any]: Digest summary.
     """
-    from datetime import datetime, timezone, timedelta
+    cutoff: datetime = datetime.now(timezone.utc) - timedelta(hours=hours)
+    recent: list[Notification] = [
+        n for n in self._notifications
+        if datetime.fromisoformat(n.timestamp.replace('Z', '+00:00')) > cutoff
+    ]
     
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
-    recent = [n for n in self._notifications if datetime.fromisoformat(n.timestamp.replace('Z', '+00:00')) > cutoff]
-    
-    by_source: Dict[str, int] = {}
+    by_source: dict[str, int] = {}
     for n in recent:
         src = getattr(n, 'type', 'unknown')
         by_source[src] = by_source.get(src, 0) + 1
