@@ -15,6 +15,8 @@ def app():
     """
     app = Flask(__name__)
     app.config["TESTING"] = True
+    # Initialize zone editor API (clears internal _zones_store)
+    init_zone_editor_api()
     app.register_blueprint(zone_editor_bp)
     return app
 
@@ -56,7 +58,9 @@ def engine():
 @pytest.fixture
 def client_with_engine(app, engine):
     """Create test client with initialized engine."""
-    init_zone_editor_api(engine)
+    # Engine is already initialized via HabitusZoneEngine singleton
+    # init_zone_editor_api() doesn't take arguments - it uses the singleton
+    init_zone_editor_api()
     return app.test_client()
 
 
