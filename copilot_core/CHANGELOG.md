@@ -3,6 +3,28 @@
 This file exists so Home Assistant can show an add-on changelog.
 For full history, see the repository-level `CHANGELOG.md`.
 
+## 7.12.2 (2026-03-01)
+- **Phase 5 Completion Verification**: Alle Phase-5-APIs verifiziert und voll funktionsfähig
+- **Notifications API** (`/api/v1/notifications/*`): 9 Endpoints, 36 Tests ✅
+  - Send, list, mark read, dismiss, clear notifications
+  - Device subscription management with preferences
+  - Full error handling (400/401/404/500)
+- **Sharing API** (`/api/v1/sharing/*`): 7 Endpoints, 28 Tests ✅
+  - Entity registry for cross-home sharing
+  - Sync service with peer management
+  - mDNS discovery for local peers
+- **Collective Intelligence API** (`/api/v1/federated/*`): 15 Endpoints, 30 Tests ✅
+  - Federated learning round management
+  - Knowledge extraction and transfer
+  - Model aggregation and statistics
+- **Test Coverage**: 94 Integrationstests laufen grün (1.22s)
+  - `test_notifications_flask_integration.py`: 36 passed
+  - `test_collective_intelligence_flask_integration.py`: 30 passed
+  - `test_sharing_api.py`: 28 passed
+- **Blueprint Registration**: Alle 3 APIs korrekt in `core_setup.py` registriert
+- **Type Hints**: Comprehensive type annotations in notifications.py und collective_intelligence/api.py
+- **Status**: Phase 5 ✅ COMPLETE — Ready for Phase 6 (Advanced ML)
+
 ## 7.8.8
 - LLM-Routing erweitert: Primary/Secondary Provider (`offline`/`cloud`) mit robustem Fallback.
 - Neue API-Endpunkte fuer Routing/Katalog:
