@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## v11.9.1 (2026-03-01)
+## v12.0.1 (2026-03-01)
 
 ### 🐛 Fixed
 - Zone Editor API Tests repariert (17/17 Tests grün)
