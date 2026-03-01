@@ -3,6 +3,13 @@
 This file exists so Home Assistant can show an add-on changelog.
 For full history, see the repository-level `CHANGELOG.md`.
 
+## 12.8.0 (2026-03-02)
+- **HomeAssistant Auto-Discovery**: Neues Modul fuer automatische Entity-Erkennung und Zone-Mapping
+- **Habitus Dashboard**: 10-Tab Dashboard mit Echtzeit Zone-Daten und WebSocket-Integration
+- **Zone Matching**: Intelligentes Entity-zu-Zone-Mapping basierend auf Attributen
+- **aiohttp Dependency**: Async HTTP Client fuer HA Supervisor API
+- **Versionskonsistenz**: Alle Versions-Dateien synchronisiert auf 12.8.0
+
 ## 7.12.6 (2026-03-01)
 - **Notifications API Type Hints**: Alle 12 Endpoints mit vollständigen Return-Type-Annotationen (`-> tuple[dict[str, Any], int]`)
   - `send_notification()`, `handle_notifications()`, `mark_notification_read()`, `dismiss_notification()`

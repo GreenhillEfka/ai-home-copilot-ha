@@ -60,6 +60,7 @@ from widgets.chat_widget import chat_widget_bp, register_socketio_events as regi
 from widgets.sensor_overview import sensor_overview_bp, register_socketio_events as register_sensor_events, broadcast_updates as broadcast_sensor_status
 from widgets.optimization import performance_tracker, get_all_metrics as get_widget_performance_metrics
 from api.v1.performance import performance_bp, update_websocket_metrics, track_performance
+from api.v1.dashboard import dashboard_bp
 
 # Register widget blueprints
 app.register_blueprint(system_status_bp)
@@ -67,6 +68,7 @@ app.register_blueprint(brain_graph_bp)
 app.register_blueprint(chat_widget_bp)
 app.register_blueprint(sensor_overview_bp)
 app.register_blueprint(performance_bp)
+app.register_blueprint(dashboard_bp)
 
 # Register widget Socket.IO events
 register_system_status_events(socketio)
@@ -80,12 +82,17 @@ def index():
     """Main dashboard page"""
     return render_template('index.html')
 
+@app.route('/dashboard')
+def dashboard_habitus():
+    """Habitus Dashboard mit 10 Tabs"""
+    return render_template('dashboard.html')
+
 @app.route('/api/status')
 def get_status():
     """Get dashboard status"""
     return jsonify({
         'status': 'running',
-        'version': '12.7.0',
+        'version': '12.8.0',
         'port': app.config['PORT'],
         'rag_api': app.config['RAG_API_URL'],
         'widgets': ['system_status', 'brain_graph', 'chat', 'sensor_overview'],
@@ -168,6 +175,29 @@ def handle_performance_ping(data):
     })
     performance_metrics['messages_received'] += 1
     performance_metrics['messages_sent'] += 1
+
+@socketio.on('request_zone_data')
+def handle_request_zone_data(data):
+    """Handle zone data requests from dashboard client"""
+    zones = data.get('zones', [])
+    print(f'[Dashboard] Zone data requested for: {zones}')
+    
+    # Return current zone data from store
+    from api.v1.dashboard import zone_data_store, DEFAULT_ZONES_CONFIG
+    
+    for zone_id in zones:
+        zone_data = zone_data_store.get(zone_id, {})
+        emit('zone_update', {
+            'zoneId': zone_id,
+            'data': zone_data
+        })
+
+@socketio.on('ha_discovery_complete')
+def handle_ha_discovery_complete(data):
+    """Handle HA discovery completion notification"""
+    print('[Dashboard] HA Discovery complete notification received')
+    # Broadcast to all connected clients
+    emit('ha_discovery_complete', {'status': 'complete'}, broadcast=True)
 
 def queue_update(namespace, event_type, data):
     """Queue an update for batched broadcasting (500ms interval)"""

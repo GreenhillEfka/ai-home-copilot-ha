@@ -150,6 +150,11 @@ Rate limit headers are included in responses:
 
 ## Changelog
 
+### v12.8.0 (2026-03-02)
+- Added HomeAssistant Discovery API documentation
+- Added Zone Matching API documentation
+- Added Habitus Dashboard API documentation
+
 ### v12.5.0 (2026-03-01)
 - Added comprehensive OpenAPI 3.0 specification
 - Documented all Hub API endpoints (120+)
@@ -1093,7 +1098,7 @@ Get Hub status.
 **Response:**
 ```json
 {{
-  "version": "12.5.0",
+  "version": "12.8.0",
   "engines": {{
     "zones": "running",
     "modes": "running",
@@ -1189,7 +1194,7 @@ def generate_schemas_section(schemas: Dict[str, Any]) -> str:
 
 
 def generate_api_reference(
-    version: str = "12.5.0",
+    version: str = "12.8.0",
     modules: Optional[List[str]] = None,
     schemas: Optional[Dict[str, Any]] = None
 ) -> str:
@@ -1235,8 +1240,8 @@ def main():
     parser.add_argument(
         "--version", "-v",
         type=str,
-        default="12.5.0",
-        help="API version (default: 12.5.0)"
+        default="12.8.0",
+        help="API version (default: 12.8.0)"
     )
     
     args = parser.parse_args()

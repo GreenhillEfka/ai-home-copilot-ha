@@ -32,6 +32,9 @@ from copilot_core.collective_intelligence.api import federated_bp
 # Rate Limiting API
 from copilot_core.api.v1.rate_limit import rate_limit_bp
 
+# HomeAssistant Discovery API
+from copilot_core.homeassistant.api import ha_discovery_bp
+
 api_v1 = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
 # Register sub-blueprints with relative url_prefix (e.g. /neurons, /kg)
@@ -69,6 +72,9 @@ api_v1.register_blueprint(federated_bp)
 
 # Register Rate Limiting API
 api_v1.register_blueprint(rate_limit_bp)
+
+# Register HomeAssistant Discovery API
+api_v1.register_blueprint(ha_discovery_bp)
 
 # Note: Standalone blueprints with absolute prefixes (/api/v1/...)
 # are registered directly on the app via core_setup.register_blueprints():

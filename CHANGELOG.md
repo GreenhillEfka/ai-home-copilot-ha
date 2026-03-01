@@ -2,6 +2,38 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx Core werden in dieser Datei dokumentiert.
 
+## [v12.8.0] - 2026-03-02
+
+### Neue Features
+
+#### HomeAssistant Auto-Discovery
+- **Automatische Entity-Erkennung** aus Home Assistant via Supervisor API
+- `HomeAssistantClient` fuer HA Supervisor API Kommunikation
+- `EntityMapper` fuer automatisches Entity-zu-Zone-Mapping
+- `ZoneMatcher` fuer intelligentes Zone Matching basierend auf Entity-Attributen
+- `AutoDiscovery` Service fuer vollautomatische Entity-Discovery
+- Neuer Blueprint `ha_discovery_bp` unter `/api/v1/ha-discovery`
+- Habitus-Zonen-Konfiguration (`habitus_zones.py`)
+
+#### Habitus Dashboard
+- **10-Tab Habitus Dashboard** mit Echtzeit-Zone-Daten
+- Dashboard-Route `/dashboard` mit eigenem Template
+- Dashboard API Blueprint unter `/api/v1/dashboard`
+- WebSocket-Events: `request_zone_data`, `ha_discovery_complete`, `zone_update`
+- Eigene CSS- und JS-Assets (`dashboard.css`, `dashboard.js`)
+
+#### Zone Matching API
+- Zones API Blueprint fuer Zone-basierte Abfragen
+- Zone Matching Tests (`test_zone_matching.py`)
+
+### Dependency Updates
+- `aiohttp>=3.9.0` zu requirements.txt hinzugefuegt (fuer async HA API Calls)
+
+### Versionskonsistenz
+- Alle Versions-Dateien auf 12.8.0 synchronisiert (config.yaml, manifest.json, VERSION, openapi, docs)
+
+---
+
 ## [v12.7.0] - 2026-03-01
 
 ### 🚀 Performance-Optimierungen

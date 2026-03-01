@@ -103,7 +103,7 @@ Error responses include:
 }
 ```
 """,
-        "version": "12.5.0",
+        "version": "12.8.0",
         "contact": {
             "name": "PilotSuite",
             "url": "https://github.com/pilotsuite/pilotsuite-styx-core"
