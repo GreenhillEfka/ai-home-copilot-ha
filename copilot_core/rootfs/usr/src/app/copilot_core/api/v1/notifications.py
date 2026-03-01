@@ -24,7 +24,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from flask import Blueprint, Request, jsonify, request
 
@@ -1089,4 +1089,352 @@ NotificationManager.get_stats = _get_stats  # type: ignore
 NotificationManager.get_digest = _get_digest  # type: ignore
 
 
-__all__ = ["bp", "get_notification_manager", "NotificationManager"]
+# =============================================================================
+# HomeAssistant Notify Integration Endpoints
+# =============================================================================
+
+def _get_ha_adapter() -> "HANotifyAdapter":
+    """Get or create HA Notify adapter.
+    
+    Returns:
+        HANotifyAdapter: The HA notify adapter instance.
+    """
+    from copilot_core.notifications.ha_notify_adapter import get_ha_notify_adapter
+    return get_ha_notify_adapter()
+
+
+@bp.route("/ha/register", methods=["POST"])
+def register_ha_device() -> tuple[dict[str, Any], int]:
+    """Register a HomeAssistant notify device.
+    
+    JSON body:
+        {
+            "user_id": str,
+            "ha_entity_id": str,  # e.g., "notify.mobile_app_iphone"
+            "device_name": str,   # optional, defaults to entity_id
+            "device_type": str    # optional: mobile, telegram, whatsapp, etc.
+        }
+    
+    Returns:
+        tuple[dict[str, Any], int]: JSON response with device details and HTTP status code.
+    """
+    try:
+        body = request.get_json()
+        if not body:
+            return jsonify({
+                "success": False,
+                "error": "No JSON body provided"
+            }), 400
+        
+        # Validate required fields
+        user_id = body.get("user_id")
+        ha_entity_id = body.get("ha_entity_id")
+        
+        if not user_id:
+            return jsonify({
+                "success": False,
+                "error": "user_id is required"
+            }), 400
+        
+        if not ha_entity_id:
+            return jsonify({
+                "success": False,
+                "error": "ha_entity_id is required"
+            }), 400
+        
+        # Validate entity_id format
+        if not ha_entity_id.startswith("notify."):
+            return jsonify({
+                "success": False,
+                "error": "ha_entity_id must start with 'notify.' (e.g., notify.mobile_app_iphone)"
+            }), 400
+        
+        adapter = _get_ha_adapter()
+        
+        device = adapter.register_ha_device(
+            user_id=user_id,
+            ha_entity_id=ha_entity_id,
+            device_name=body.get("device_name", ""),
+            device_type=body.get("device_type", ""),
+        )
+        
+        return jsonify({
+            "success": True,
+            "data": device.to_dict()
+        }), 201
+        
+    except ValueError as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 400
+    except Exception as e:
+        _LOGGER.error("Error registering HA device: %s", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@bp.route("/ha/devices", methods=["GET"])
+def get_ha_devices() -> tuple[dict[str, Any], int]:
+    """Get registered HomeAssistant devices.
+    
+    Query params:
+        user_id: Filter by user ID (optional, returns all if omitted)
+    
+    Returns:
+        tuple[dict[str, Any], int]: JSON response with devices list and HTTP status code.
+    """
+    try:
+        user_id = request.args.get("user_id")
+        adapter = _get_ha_adapter()
+        
+        if user_id:
+            devices = adapter.get_ha_devices(user_id)
+        else:
+            devices = adapter.get_all_devices()
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "devices": [d.to_dict() for d in devices],
+                "count": len(devices),
+            }
+        })
+        
+    except Exception as e:
+        _LOGGER.error("Error getting HA devices: %s", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@bp.route("/ha/devices/<device_id>", methods=["DELETE"])
+def unregister_ha_device(device_id: str) -> tuple[dict[str, Any], int]:
+    """Unregister a HomeAssistant device.
+    
+    Args:
+        device_id: ID of the device to unregister.
+    
+    Returns:
+        tuple[dict[str, Any], int]: JSON response and HTTP status code.
+    """
+    try:
+        adapter = _get_ha_adapter()
+        
+        if adapter.unregister_ha_device(device_id):
+            return jsonify({
+                "success": True,
+                "data": {"device_id": device_id}
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Device not found"
+            }), 404
+            
+    except Exception as e:
+        _LOGGER.error("Error unregistering HA device: %s", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@bp.route("/ha/devices/<device_id>/enable", methods=["POST"])
+def enable_ha_device(device_id: str) -> tuple[dict[str, Any], int]:
+    """Enable a HomeAssistant device.
+    
+    Args:
+        device_id: ID of the device to enable.
+    
+    Returns:
+        tuple[dict[str, Any], int]: JSON response and HTTP status code.
+    """
+    adapter = _get_ha_adapter()
+    
+    if adapter.enable_device(device_id):
+        return jsonify({
+            "success": True,
+            "data": {"device_id": device_id, "enabled": True}
+        })
+    else:
+        return jsonify({
+            "success": False,
+            "error": "Device not found"
+        }), 404
+
+
+@bp.route("/ha/devices/<device_id>/disable", methods=["POST"])
+def disable_ha_device(device_id: str) -> tuple[dict[str, Any], int]:
+    """Disable a HomeAssistant device.
+    
+    Args:
+        device_id: ID of the device to disable.
+    
+    Returns:
+        tuple[dict[str, Any], int]: JSON response and HTTP status code.
+    """
+    adapter = _get_ha_adapter()
+    
+    if adapter.disable_device(device_id):
+        return jsonify({
+            "success": True,
+            "data": {"device_id": device_id, "enabled": False}
+        })
+    else:
+        return jsonify({
+            "success": False,
+            "error": "Device not found"
+        }), 404
+
+
+@bp.route("/send/ha", methods=["POST"])
+def send_ha_notification() -> tuple[dict[str, Any], int]:
+    """Send notification via HomeAssistant notify service.
+    
+    JSON body:
+        {
+            "device_id": str,         # Registered device ID
+            "message": str,           # Notification message (required)
+            "title": str,             # Optional title
+            "priority": str,          # low, normal, high, urgent (default: normal)
+            "type": str,              # mood_change, alert, suggestion, etc. (default: info)
+            "data": {...}             # Optional additional data payload
+        }
+    
+    Returns:
+        tuple[dict[str, Any], int]: JSON response with send status and HTTP status code.
+    """
+    try:
+        body = request.get_json()
+        if not body:
+            return jsonify({
+                "success": False,
+                "error": "No JSON body provided"
+            }), 400
+        
+        # Validate required fields
+        device_id = body.get("device_id")
+        message = body.get("message")
+        
+        if not device_id:
+            return jsonify({
+                "success": False,
+                "error": "device_id is required"
+            }), 400
+        
+        if not message:
+            return jsonify({
+                "success": False,
+                "error": "message is required"
+            }), 400
+        
+        adapter = _get_ha_adapter()
+        
+        # Send notification
+        success = adapter.send_to_ha_service(
+            device_id=device_id,
+            message=message,
+            priority=body.get("priority", "normal"),
+            title=body.get("title", ""),
+            notification_type=body.get("type", "info"),
+            data=body.get("data"),
+        )
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "data": {
+                    "device_id": device_id,
+                    "message": message[:50] + "..." if len(message) > 50 else message,
+                }
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to send notification. Device may be disabled or service unavailable."
+            }), 500
+        
+    except ValueError as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 400
+    except RuntimeError as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 503
+    except Exception as e:
+        _LOGGER.error("Error sending HA notification: %s", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@bp.route("/ha/test", methods=["GET"])
+def test_ha_connection() -> tuple[dict[str, Any], int]:
+    """Test HomeAssistant connection and notify service availability.
+    
+    Returns:
+        tuple[dict[str, Any], int]: JSON response with connection test results.
+    """
+    try:
+        adapter = _get_ha_adapter()
+        result = adapter.test_ha_connection()
+        
+        status_code = 200 if result["success"] else 503
+        
+        return jsonify({
+            "success": result["success"],
+            "data": result
+        }), status_code
+        
+    except Exception as e:
+        _LOGGER.error("Error testing HA connection: %s", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+@bp.route("/ha/services", methods=["GET"])
+def get_ha_notify_services() -> tuple[dict[str, Any], int]:
+    """Get available HomeAssistant notify services.
+    
+    Returns:
+        tuple[dict[str, Any], int]: JSON response with services list.
+    """
+    try:
+        adapter = _get_ha_adapter()
+        services = adapter.get_available_notify_services()
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "services": services,
+                "count": len(services),
+            }
+        })
+        
+    except Exception as e:
+        _LOGGER.error("Error getting HA notify services: %s", e)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+
+__all__ = [
+    "bp",
+    "get_notification_manager",
+    "NotificationManager",
+    "register_ha_device",
+    "get_ha_devices",
+    "send_ha_notification",
+    "test_ha_connection",
+]
