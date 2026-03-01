@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## v7.12.0 (2026-03-01)
+
+### Phase 6 Completion & Test Coverage
+- **Flask Integration Tests** für Phase 6 APIs vervollständigt:
+  - Collective Intelligence API: 22 Tests (100% grün)
+  - Notifications API: 22 Tests erweitert und stabilisiert
+  - **Gesamt: 55 Tests bestanden** ✅
+- **Test-Isolation** verbessert:
+  - `clear_notifications()` Calls in Test-Fixtures hinzugefügt
+  - Exception-Handling für Test-Initialisierung optimiert
+  - Event Store Test-Fix: N3 spec format normalization korrigiert
+
+### Code Quality
+- Alle 55 Integration Tests laufen grün (0 failures)
+- Test-Abdeckung für Phase 5 & 6 APIs vollständig
+- CI/CD-ready für Production-Deployment
+
+---
+
 ## v7.11.1 (2026-02-28)
 
 ### Test Coverage Completion
