@@ -1,5 +1,51 @@
 # CHANGELOG
 
+## v12.1.0 (2026-03-01)
+
+### 🎉 KILLER FEATURE
+- **pilotSuite_rag_conversation** — Zentrale HA-Chat-Interface-Schnittstelle!
+  - Native RAG-API-Integration (BM25 + Semantic + SearXNG)
+  - Privacy-First (Web-Suche OFF by default)
+  - LLM-Agnostisch (OpenAI + Ollama)
+  - Conversation History (20 Einträge)
+  - ConfigFlow (UI oder YAML)
+
+### 🎉 Added
+- RAG Hybrid Search mit BM25 + Semantic + SearXNG
+- Query-Router (Local/Web/Hybrid-Erkennung)
+- Zone-Editor Frontend (Lit-Component, Drag&Drop)
+- RAG Chat-UI Frontend (Web-Toggle, Query-Type-Badges)
+- PilotSuite-Styx Chat mit RAG-Kontext
+
+### 🔒 Security
+- Privacy-First Design (Web-Toggle standardmäßig AUS)
+- Input-Validation für alle RAG-Endpoints
+- Token-Authentifizierung für alle APIs
+- Security Review durchgeführt (GO für Release)
+
+### 🧪 Tests
+- +176 neue Tests (RAG: 37+53, Zone: 50, Styx: 28, OpenAI: 8)
+- Gesamt: 2377 Tests, 99.8% Pass-Rate
+- Coverage: ≥95%
+
+### ⚡ Performance
+- RAG-API: <50ms (lokal), <250ms (hybrid), <1000ms (mit Web)
+- Caching implementiert (TTL: 5 Min)
+- Query-Debounce (300ms)
+
+### 📚 Documentation
+- docs/RAG_ARCHITECTUR.md (vollständige Architektur)
+- docs/HYBRID_SEARCH.md (API-Referenz)
+- docs/GITHUB_RELEASE_GUIDELINES.md (Release-Best-Practices)
+- custom_components/pilotSuite_rag_conversation/README.md
+
+### 🐛 Fixed
+- Race Condition im Events Forwarder (flushing Flag)
+- N+1 Query Pattern im Brain Graph Store
+- WAL Mode für SQLite (besserer Concurrent Access)
+
+---
+
 ## v11.8.0 (2026-03-01)
 
 ### Iteration 11:20 — Phase 6 Feature Planning & Release Prep

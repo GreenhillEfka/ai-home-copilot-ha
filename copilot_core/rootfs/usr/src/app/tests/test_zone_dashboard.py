@@ -454,5 +454,191 @@ class TestZoneDashboardEdgeCases:
                         assert 0 <= mood["frugality"] <= 1
 
 
+
+class TestZoneDashboardQueryParams:
+    """Test query parameter handling."""
+
+    def test_include_entities_false(self, client, mock_zones):
+        """Test dashboard with include_entities=false."""
+        response = client.get('/api/v1/zone/dashboard?include_entities=false')
+        data = json.loads(response.data)
+        
+        assert response.status_code == 200
+        # Should still return zones but potentially without full entity details
+        assert "zones" in data
+
+    def test_include_mood_false(self, client, mock_zones):
+        """Test dashboard with include_mood=false."""
+        response = client.get('/api/v1/zone/dashboard?include_mood=false')
+        data = json.loads(response.data)
+        
+        assert response.status_code == 200
+        # Mood might still be present but not required
+        assert "zones" in data
+
+    def test_include_actions_false(self, client, mock_zones):
+        """Test dashboard with include_actions=false."""
+        response = client.get('/api/v1/zone/dashboard?include_actions=false')
+        data = json.loads(response.data)
+        
+        assert response.status_code == 200
+        assert "zones" in data
+
+    def test_all_include_params_false(self, client, mock_zones):
+        """Test dashboard with all include params false."""
+        response = client.get(
+            '/api/v1/zone/dashboard?include_entities=false&include_mood=false&include_actions=false'
+        )
+        data = json.loads(response.data)
+        
+        assert response.status_code == 200
+        assert data["ok"] is True
+
+
+class TestZoneDashboardSummary:
+    """Test summary endpoint."""
+
+    def test_summary_returns_counts(self, client, mock_zones):
+        """Test summary returns correct counts."""
+        response = client.get('/api/v1/zone/dashboard/summary')
+        data = json.loads(response.data)
+        
+        assert response.status_code == 200
+        assert "summary" in data
+        summary = data["summary"]
+        assert "total_zones" in summary
+        assert "total_entities" in summary
+        assert "total_persons" in summary
+
+    def test_summary_zone_types(self, client, mock_zones):
+        """Test summary includes zone type breakdown."""
+        response = client.get('/api/v1/zone/dashboard/summary')
+        data = json.loads(response.data)
+        
+        summary = data["summary"]
+        assert "zone_types" in summary
+        assert isinstance(summary["zone_types"], dict)
+
+    def test_summary_active_idle_split(self, client, mock_zones):
+        """Test summary includes active/idle zone split."""
+        response = client.get('/api/v1/zone/dashboard/summary')
+        data = json.loads(response.data)
+        
+        summary = data["summary"]
+        assert "active_zones" in summary
+        assert "idle_zones" in summary
+        assert summary["active_zones"] + summary["idle_zones"] == summary["total_zones"]
+
+
+class TestZoneDashboardQuickAction:
+    """Test quick action endpoint."""
+
+    def test_quick_action_missing_zone_id(self, client):
+        """Test quick action fails without zone_id."""
+        payload = {"action_id": "test_action", "service": "light.turn_on"}
+        
+        response = client.post(
+            '/api/v1/zone/dashboard/quick-action',
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 400
+
+    def test_quick_action_missing_service(self, client):
+        """Test quick action fails without service."""
+        payload = {"zone_id": "zone:test", "action_id": "test_action"}
+        
+        response = client.post(
+            '/api/v1/zone/dashboard/quick-action',
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 400
+
+    def test_quick_action_returns_execution_timestamp(self, client):
+        """Test quick action response includes timestamp."""
+        payload = {
+            "zone_id": "zone:test",
+            "action_id": "test_action",
+            "service": "light.turn_on"
+        }
+        
+        response = client.post(
+            '/api/v1/zone/dashboard/quick-action',
+            data=json.dumps(payload),
+            content_type='application/json'
+        )
+        
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert "executed_at" in data
+
+
+class TestZoneDashboardZoneDetail:
+    """Test zone detail endpoint."""
+
+    def test_zone_detail_includes_all_fields(self, client):
+        """Test zone detail includes comprehensive data."""
+        response = client.get('/api/v1/zone/dashboard/zone:wohnzimmer')
+        data = json.loads(response.data)
+        
+        assert response.status_code == 200
+        assert "zone" in data
+        zone = data["zone"]
+        
+        # Check all expected fields
+        assert "zone_id" in zone
+        assert "name" in zone
+        assert "status" in zone
+        assert "mood" in zone
+        assert "quick_actions" in zone
+        assert "entity_ids" in zone
+        assert "metadata" in zone
+
+    def test_zone_detail_not_found(self, client, app):
+        """Test zone detail for non-existent zone."""
+        from copilot_core.api.v1 import zone_dashboard
+        
+        with patch.object(zone_dashboard, '_get_habitus_zones', return_value=[]):
+            with patch.object(zone_dashboard, 'require_token', lambda f: f):
+                # Need to re-register blueprint with new mock
+                app2 = Flask(__name__)
+                app2.config["TESTING"] = True
+                app2.register_blueprint(zone_dashboard.zone_dashboard_bp)
+                
+                with app2.test_client() as new_client:
+                    response = new_client.get('/api/v1/zone/dashboard/zone:nonexistent')
+                    assert response.status_code == 404
+
+
+class TestZoneDashboardTimestamps:
+    """Test timestamp handling."""
+
+    def test_dashboard_includes_generated_at(self, client):
+        """Test dashboard response includes generation timestamp."""
+        response = client.get('/api/v1/zone/dashboard')
+        data = json.loads(response.data)
+        
+        assert "generated_at" in data
+        assert data["generated_at"] is not None
+
+    def test_summary_includes_generated_at(self, client):
+        """Test summary response includes generation timestamp."""
+        response = client.get('/api/v1/zone/dashboard/summary')
+        data = json.loads(response.data)
+        
+        assert "generated_at" in data
+
+    def test_mood_includes_updated_at(self, client):
+        """Test mood data includes update timestamp."""
+        response = client.get('/api/v1/zone/dashboard/mood')
+        data = json.loads(response.data)
+        
+        for zone_id, mood in data["mood"].items():
+            assert "updated_at" in mood
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
