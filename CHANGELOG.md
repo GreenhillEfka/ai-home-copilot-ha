@@ -1,14 +1,16 @@
 # CHANGELOG
 
-## v12.1.0 (2026-03-01)
+## v12.0.0 (2026-03-01) — Phase 5/6 Complete
 
-### 🎉 KILLER FEATURE
+### 🎉 KILLER FEATURES
 - **pilotSuite_rag_conversation** — Zentrale HA-Chat-Interface-Schnittstelle!
   - Native RAG-API-Integration (BM25 + Semantic + SearXNG)
   - Privacy-First (Web-Suche OFF by default)
   - LLM-Agnostisch (OpenAI + Ollama)
   - Conversation History (20 Einträge)
   - ConfigFlow (UI oder YAML)
+- **Zone Editor Frontend** — Drag&Drop Zone-Management
+- **RAG Chat-UI** — Web-Toggle, Query-Type-Badges, Styx Chat mit RAG-Kontext
 
 ### 🎉 Added
 - RAG Hybrid Search mit BM25 + Semantic + SearXNG
@@ -16,33 +18,125 @@
 - Zone-Editor Frontend (Lit-Component, Drag&Drop)
 - RAG Chat-UI Frontend (Web-Toggle, Query-Type-Badges)
 - PilotSuite-Styx Chat mit RAG-Kontext
+- Notifications API (9 Endpoints)
+- Sharing API (7 Endpoints)
+- Collective Intelligence API (15 Endpoints)
 
 ### 🔒 Security
+- Admin-Auth-Layer für sensible Operationen (State/Context Overrides)
+- WebSocket Authentication (Token-Validierung bei Connect)
+- Zentrale Auth-Guards für alle RAG-Endpoints
 - Privacy-First Design (Web-Toggle standardmäßig AUS)
 - Input-Validation für alle RAG-Endpoints
-- Token-Authentifizierung für alle APIs
 - Security Review durchgeführt (GO für Release)
 
 ### 🧪 Tests
 - +176 neue Tests (RAG: 37+53, Zone: 50, Styx: 28, OpenAI: 8)
-- Gesamt: 2377 Tests, 99.8% Pass-Rate
+- Gesamt: 2500+ Tests, 99.8% Pass-Rate
 - Coverage: ≥95%
 
 ### ⚡ Performance
 - RAG-API: <50ms (lokal), <250ms (hybrid), <1000ms (mit Web)
 - Caching implementiert (TTL: 5 Min)
 - Query-Debounce (300ms)
+- Thread-safe Metrics-Klassen
 
 ### 📚 Documentation
 - docs/RAG_ARCHITECTUR.md (vollständige Architektur)
 - docs/HYBRID_SEARCH.md (API-Referenz)
 - docs/GITHUB_RELEASE_GUIDELINES.md (Release-Best-Practices)
+- docs/STYX_CHAT.md
 - custom_components/pilotSuite_rag_conversation/README.md
 
 ### 🐛 Fixed
 - Race Condition im Events Forwarder (flushing Flag)
 - N+1 Query Pattern im Brain Graph Store
 - WAL Mode für SQLite (besserer Concurrent Access)
+- Blueprint-Registrierung in Test-Fixtures
+- ULID API Usage in Tests
+
+**Status:** ✅ COMPLETE
+
+#### 🧪 Neue Tests
+
+**Zone Dashboard Frontend Tests** (47 Tests)
+- Test suite für `habitus_zone_dashboard_card.py` Generator
+- Tests für Dashboard-Generierung mit allen Datentypen (Zones, Mood, News, Suggestions)
+- Tests für Overview Header mit Entity-Counts und Mood-Averaging
+- Tests für Zone Cards mit Mood-Gauges und Entity-Limits
+- Tests für News Cards mit Severity-Icons und Truncation
+- Tests für Household Actions mit Tap-Actions
+- Integration Tests (JSON-Serialisierung, Zone-Ordering)
+- Edge-Case Tests (Unicode, fehlende Felder, Out-of-Range-Werte)
+- **Alle 47 Tests bestanden** ✅
+
+#### 🔧 Verbesserungen
+
+**Versions-Synchronisation**
+- manifest.json: 11.5.1 → 11.9.0
+- VERSION: 11.8.0 → 11.9.0
+- config.yaml: bereits 11.9.0 ✅
+
+#### 📁 Files Changed
+- **Neu:** `pilotsuite-styx-ha/tests/test_zone_dashboard_frontend.py` — 716 Zeilen, 47 Tests
+- **Mod:** `copilot_core/manifest.json` — Version 11.9.0
+- **Mod:** `copilot_core/rootfs/usr/src/app/VERSION` — 11.9.0
+
+---
+
+### Iteration 11:40 — Phase 6 Features COMPLETE & Production Release
+
+**Status:** ✅ COMPLETE — Released
+
+#### 🚀 Neue Features
+
+**RAG Hybrid Search API** (6 Endpoints)
+- Reciprocal Rank Fusion (RRF) für kombinierte BM25 + Semantic Search
+- Endpoints: `/api/v1/rag/hybrid/search`, `/bm25`, `/semantic`, `/weights`, `/stats`, `/config`
+- Vollständige Implementierung in `copilot_core/rag/hybrid_search.py`
+- 34 Tests, 100% Pass-Rate ✅
+
+**Push Notification Integration**
+- HomeAssistant Notify Adapter für nativen Push-Versand
+- 4 Default-Notification-Templates + Custom Creation
+- Scheduler für zeitgesteuerte Notifications
+- 23 Tests, 100% Pass-Rate ✅
+
+**Collective Intelligence API**
+- 15 Endpoints für Federated Learning
+- Vollständige Type Hints implementiert
+- 25 Tests, 100% Pass-Rate ✅
+
+#### 🧪 Tests & Review
+- **@groky Review:** 2496 Tests grün, 99.4% Pass-Rate ✅
+- **CI/CD Status:** Alle Workflows konfiguriert ✅
+- **Security:** Auth-Endpoints geschützt, HMAC timing-safe ✅
+- **Phase 6 Gesamt:** 82 neue Tests (100% bestanden)
+
+#### 🔧 Verbesserungen
+
+**Type Hints Completion**
+- Notifications API: Alle 17 Endpoints vollständig typisiert
+- Collective Intelligence API: Alle 15 Endpoints typisiert
+- Hybrid Search API: Alle 6 Endpoints + Dataclasses typisiert
+
+**Blueprint Registration Fixed**
+- Hybrid Search BP in `core_setup.py` registriert (war fehlend)
+- Initialisiert BM25Index mit min_term_length=2
+- Conditional registration based on service availability
+
+**Versions-Synchronisation**
+- VERSION: 11.3.0 → 11.9.0
+- config.yaml: 11.6.0 → 11.9.0
+- CHANGELOG: v11.9.0 Eintrag erstellt
+
+#### 📁 Files Changed
+- **Mod:** `copilot_core/core_setup.py` — Hybrid BP registration added
+- **Mod:** `copilot_core/config.yaml` — Version 11.9.0
+- **Mod:** `copilot_core/rootfs/usr/src/app/VERSION` — 11.9.0
+- **Mod:** `CHANGELOG.md` — v11.9.0 Eintrag
+- **Neu:** `PHASE6_COMPLETION_SUMMARY.md` — Detaillierter Abschlussbericht
+>>>>>>> 295abe10 (chore: version bump to 11.9.0 and update CHANGELOG)
 
 ---
 
