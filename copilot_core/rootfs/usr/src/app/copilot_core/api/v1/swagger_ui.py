@@ -1,31 +1,38 @@
 """
 Swagger UI Blueprint - Interactive API Documentation
 
-Provides Swagger UI at /api/v1/docs for interactive API exploration.
-Serves the OpenAPI spec from docs/openapi.yaml.
+Provides Swagger UI at /docs for interactive API exploration.
+Serves the OpenAPI spec from /api/v1/openapi.json endpoint.
 """
 
 import os
-from flask import Blueprint, jsonify, Response
+from flask import Blueprint, jsonify, Response, redirect
 
 bp = Blueprint("swagger_ui", __name__, url_prefix="/docs")
 
-OPENAPI_PATH = "/usr/src/app/docs/openapi.yaml"
+# Separate blueprint for /api/v1/openapi.json endpoint
+openapi_bp = Blueprint("openapi_spec", __name__, url_prefix="/api/v1")
+
+OPENAPI_PATHS = [
+    "/usr/src/app/docs/openapi.yaml",
+    "/usr/src/app/copilot_core/docs/openapi.yaml",
+    "/data/openapi.yaml",
+]
 
 
 def _get_openapi_spec() -> str:
     """Load OpenAPI spec from file."""
     try:
-        # Try multiple possible locations
-        paths = [
-            OPENAPI_PATH,
-            "/data/openapi.yaml",
-            os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "docs", "openapi.yaml"),
-        ]
-        for path in paths:
+        for path in OPENAPI_PATHS:
             if os.path.exists(path):
                 with open(path, "r", encoding="utf-8") as f:
                     return f.read()
+        
+        # Try relative path from this file
+        rel_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "docs", "openapi.yaml")
+        if os.path.exists(rel_path):
+            with open(rel_path, "r", encoding="utf-8") as f:
+                return f.read()
     except Exception:
         pass
     return ""
@@ -54,7 +61,7 @@ def swagger_ui():
 <script>
 window.onload = function() {
     SwaggerUIBundle({
-        url: "/api/v1/docs/openapi.yaml",
+        url: "/docs/openapi.json",
         dom_id: '#swagger-ui',
         presets: [
             SwaggerUIBundle.presets.apis,
@@ -71,7 +78,9 @@ window.onload = function() {
         syntaxHighlight: {
             activate: true,
             theme: "monokai"
-        }
+        },
+        validatorUrl: null,
+        tryItOutEnabled: true
     })
 }
 </script>
@@ -152,3 +161,30 @@ def validate_spec():
             "ok": False,
             "error": str(e)
         })
+
+
+# ============================================================================
+# OpenAPI Spec Endpoints (for /api/v1/openapi.json and /api/v1/openapi.yaml)
+# ============================================================================
+
+@openapi_bp.get("/openapi.json")
+def openapi_json_endpoint():
+    """Serve OpenAPI JSON spec at /api/v1/openapi.json."""
+    import yaml
+    spec = _get_openapi_spec()
+    if not spec:
+        spec = _generate_inline_spec()
+    try:
+        spec_dict = yaml.safe_load(spec)
+        return jsonify(spec_dict)
+    except Exception:
+        return Response(spec, mimetype="application/json")
+
+
+@openapi_bp.get("/openapi.yaml")
+def openapi_yaml_endpoint():
+    """Serve OpenAPI YAML spec at /api/v1/openapi.yaml."""
+    spec = _get_openapi_spec()
+    if not spec:
+        spec = _generate_inline_spec()
+    return Response(spec, mimetype="text/yaml")

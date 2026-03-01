@@ -59,8 +59,23 @@ def client(app, mock_zones):
         engine_instance = MagicMock()
         engine_instance.get_all_zones.return_value = list(mock_zones.values())
         engine_instance.get_zone.side_effect = lambda zid: mock_zones.get(zid)
+        # Mock get_overview for legacy list endpoint
+        engine_instance.get_overview.return_value = MagicMock(
+            zones=[{"zone_id": zid} for zid in mock_zones.keys()]
+        )
         # Make create_zone return the zone data that was passed in
-        engine_instance.create_zone.side_effect = lambda data: data
+        # Signature: create_zone(zone_id, name, room_ids, icon)
+        def mock_create_zone(zone_id, name, room_ids, icon):
+            return {
+                "zone_id": zone_id,
+                "name": name,
+                "rooms": room_ids,
+                "icon": icon,
+                "mode": "active",
+                "enabled": True,
+                "priority": 0,
+            }
+        engine_instance.create_zone.side_effect = mock_create_zone
         engine_instance.update_zone.return_value = True
         engine_instance.delete_zone.return_value = True
         engine_instance.add_room_to_zone.return_value = True
@@ -70,7 +85,9 @@ def client(app, mock_zones):
         from copilot_core.api.v1 import zone_editor
         
         with patch('copilot_core.api.security.validate_token', return_value=True):
+            # Register both blueprints - legacy for /zone/editor/* routes
             app.register_blueprint(zone_editor.zone_editor_bp)
+            app.register_blueprint(zone_editor.zone_editor_legacy_bp)
             with app.test_client() as test_client:
                 yield test_client
 
@@ -431,7 +448,8 @@ class TestZoneEditorEdgeCases:
         from copilot_core.api.v1 import zone_editor
         
         with patch('copilot_core.api.security.validate_token', return_value=False):
-            app.register_blueprint(zone_editor.zone_editor_bp)
+            # Register legacy blueprint which has /zone/editor/* routes
+            app.register_blueprint(zone_editor.zone_editor_legacy_bp)
             with app.test_client() as test_client:
                 response = test_client.get('/api/v1/zone/editor/list')
                 

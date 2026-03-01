@@ -450,6 +450,80 @@ def get_dev_logs():
     })
 
 
+def create_app(config: dict | None = None) -> Flask:
+    """Factory function to create a Flask app instance.
+    
+    Used primarily for testing to allow custom configuration.
+    For production, use the global `app` instance directly.
+    
+    Args:
+        config: Optional configuration dict to override defaults.
+        
+    Returns:
+        Configured Flask application instance.
+    """
+    # For testing, we create a fresh app instance
+    test_app = Flask(__name__)
+    
+    # Apply compression
+    Compress(test_app)
+    test_app.config['COMPRESS_MIMETYPES'] = ['application/json', 'text/html']
+    test_app.config['COMPRESS_LEVEL'] = 6
+    test_app.config['COMPRESS_MIN_SIZE'] = 500
+    test_app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+    
+    # Apply custom config if provided
+    if config:
+        test_app.config.update(config)
+    
+    # Apply request timing middleware
+    @test_app.before_request
+    def _before_request():
+        g.start_time = time.time()
+        g.request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
+        g.api_version = parse_accept_version(request.headers.get("Accept-Version"))
+
+    @test_app.after_request
+    def _after_request(response):
+        duration = time.time() - getattr(g, "start_time", time.time())
+        req_id = getattr(g, "request_id", "-")
+        response.headers["X-Request-ID"] = req_id
+        response.headers["X-Response-Time"] = f"{duration:.3f}s"
+        response.headers["X-API-Version"] = getattr(g, "api_version", API_VERSION)
+        return response
+    
+    # For testing: register only essential blueprints without full service init
+    if config and config.get('TESTING'):
+        try:
+            from copilot_core.api.v1.zone_editor import zone_editor_bp, zone_editor_legacy_bp
+            from copilot_core.api.v1.zone_dashboard import zone_dashboard_bp
+            # Blueprints already have their url_prefix defined, don't add another
+            test_app.register_blueprint(zone_editor_bp)
+            test_app.register_blueprint(zone_editor_legacy_bp)
+            test_app.register_blueprint(zone_dashboard_bp)
+        except ImportError as e:
+            _main_logger.warning("Could not register test blueprints: %s", e)
+        
+        # Add basic routes
+        @test_app.get("/")
+        def index():
+            return jsonify({"ok": True, "testing": True})
+        
+        @test_app.get("/health")
+        def health():
+            return jsonify({"ok": True, "time": _now_iso()})
+    else:
+        # Production: full initialization
+        try:
+            options = _load_options_json()
+            services = init_services(config=options)
+            register_blueprints(test_app, services)
+        except Exception:
+            _main_logger.exception("Service initialization failed")
+    
+    return test_app
+
+
 if __name__ == "__main__":
     host = "0.0.0.0"
     port = int(os.environ.get("PORT", "8909"))

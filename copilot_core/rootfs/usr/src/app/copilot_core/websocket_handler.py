@@ -99,34 +99,50 @@ class WebSocketHandler:
         @self.socketio.on('connect')
         def handle_connect(auth=None):
             """Handle client connection with authentication.
-            
-            Args:
-                auth: Optional auth dict containing 'token' for validation
+
+            Token is resolved from (in order):
+            1. SocketIO native ``auth`` dict (``{'token': '...'}``).
+            2. Query parameter ``?token=xxx``.
+            3. ``X-Auth-Token`` header.
+
+            Connections without a valid token are **rejected**.
             """
-            from copilot_core.api.security import validate_token
-            
+            from copilot_core.api.security import validate_websocket_token, get_auth_token
+            import hmac as _hmac
+
             sid = request.sid if hasattr(request, 'sid') else 'unknown'
-            
-            # Validate authentication token if provided
-            if auth and 'token' in auth:
-                # Create mock request for token validation
-                class MockRequest:
-                    headers = {'X-Auth-Token': auth['token']}
-                mock_req = MockRequest()
-                if not validate_token(mock_req):
-                    _LOGGER.warning("WebSocket auth failed for %s", sid)
-                    emit('error', {'message': 'Authentication failed'})
-                    return False
-            else:
-                # Check for token in query params or headers (alternative methods)
-                token = request.args.get('token') if hasattr(request, 'args') else None
-                if not token:
-                    # Allow connection but log warning (backward compatibility)
-                    _LOGGER.warning("WebSocket connection without auth token: %s", sid)
-            
+
+            # --- authenticate ---------------------------------------------------
+            authenticated = False
+            configured_token = get_auth_token()
+
+            if not configured_token:
+                # No token configured – reject (secure default)
+                _LOGGER.warning(
+                    "WebSocket connection rejected (no token configured): %s", sid
+                )
+                return False
+
+            # 1. SocketIO auth dict
+            if auth and isinstance(auth, dict) and 'token' in auth:
+                candidate = str(auth['token']).strip()
+                if candidate and _hmac.compare_digest(candidate, configured_token):
+                    authenticated = True
+
+            # 2+3. Query param / X-Auth-Token header (via helper)
+            if not authenticated:
+                authenticated = validate_websocket_token(request)
+
+            if not authenticated:
+                _LOGGER.warning(
+                    "WebSocket authentication failed – connection rejected: %s", sid
+                )
+                return False
+            # -----------------------------------------------------------------
+
             self._connections.add(sid)
             _LOGGER.info("WebSocket client connected: %s (total=%d)", sid, len(self._connections))
-            
+
             # Send welcome message
             emit('system_status', {
                 'status': 'connected',

@@ -68,6 +68,12 @@ def set_zone_engine(engine: HabitusZoneEngine) -> None:
     _zone_engine = engine
 
 
+def reset_zone_engine() -> None:
+    """Reset the zone engine instance (for testing)."""
+    global _zone_engine
+    _zone_engine = None
+
+
 # =============================================================================
 # NEW API ENDPOINTS (/api/v1/zone-editor)
 # =============================================================================

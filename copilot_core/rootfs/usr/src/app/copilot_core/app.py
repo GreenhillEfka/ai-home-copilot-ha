@@ -9,6 +9,7 @@ from flask import Flask, jsonify, request
 
 from copilot_core.api.v1.blueprint import api_v1
 from copilot_core.api.security import validate_token, is_auth_required
+from copilot_core.api.middleware.security import init_security_middleware
 from copilot_core.versioning import get_runtime_version
 
 
@@ -142,6 +143,9 @@ def create_app() -> Flask:
     # Attach config to app (simple, explicit)
     app.config["COPILOT_CFG"] = cfg
 
+    # Initialize security middleware (rate limiting, security headers, logging)
+    init_security_middleware(app)
+
     # Register API modules
     app.register_blueprint(api_v1)
 
@@ -167,6 +171,17 @@ def create_app() -> Flask:
         logging.getLogger(__name__).info("Multi-Home Synchronization API registered")
     except Exception:
         logging.getLogger(__name__).exception("Failed to register Multi-Home Synchronization API blueprint")
+
+    # Security Configuration API endpoints (/api/v1/security/*)
+    try:
+        from copilot_core.api.v1.security import bp as security_bp
+        app.register_blueprint(security_bp)
+        logging.getLogger(__name__).info("Security Configuration API registered")
+    except Exception:
+        logging.getLogger(__name__).exception("Failed to register Security Configuration API blueprint")
+
+    # Rate Limit Configuration API is registered via api_v1 blueprint
+    # Endpoints: /api/v1/rate-limit/*
 
     # Initialize Tags API v2 (FIX: Flask Blueprint rewrite)
     from copilot_core.tags.api import init_tags_api

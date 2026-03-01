@@ -59,18 +59,60 @@ class NeuronWebSocketHandler:
             return
         
         @self.socketio.on("connect")
-        def handle_connect():
-            """Handle client connection."""
+        def handle_connect(auth=None):
+            """Handle client connection with authentication.
+
+            Token is resolved from (in order):
+            1. SocketIO native ``auth`` dict (``{'token': '...'}``).
+            2. Query parameter ``?token=xxx``.
+            3. ``X-Auth-Token`` header.
+
+            Connections without a valid token are **rejected**.
+            """
             if request is None:
-                return
+                return False
+
+            from copilot_core.api.security import validate_websocket_token, get_auth_token
+            import hmac as _hmac
+
             client_id = request.sid
+
+            # --- authenticate ---------------------------------------------------
+            authenticated = False
+            configured_token = get_auth_token()
+
+            if not configured_token:
+                _LOGGER.warning(
+                    "Neuron WS connection rejected (no token configured): %s",
+                    client_id,
+                )
+                return False
+
+            # 1. SocketIO auth dict
+            if auth and isinstance(auth, dict) and "token" in auth:
+                candidate = str(auth["token"]).strip()
+                if candidate and _hmac.compare_digest(candidate, configured_token):
+                    authenticated = True
+
+            # 2+3. Query param / X-Auth-Token header
+            if not authenticated:
+                authenticated = validate_websocket_token(request)
+
+            if not authenticated:
+                _LOGGER.warning(
+                    "Neuron WS authentication failed – connection rejected: %s",
+                    client_id,
+                )
+                return False
+            # -----------------------------------------------------------------
+
             self.connected_clients.add(client_id)
             _LOGGER.info("Client connected: %s", client_id)
-            
+
             # Auto-join default room
             join_room("neurons")
             self.client_rooms[client_id] = "neurons"
-            
+
             # Send welcome message
             emit("connected", {
                 "client_id": client_id,

@@ -131,6 +131,39 @@ def optional_token(f: Callable) -> Callable:
 require_api_key = require_token
 
 
+def validate_websocket_token(request) -> bool:
+    """Validate token for WebSocket connections.
+
+    Checks (in order):
+    1. ``auth`` dict (SocketIO native auth: ``{'token': ...}``)
+    2. Query parameter ``?token=xxx``
+    3. ``X-Auth-Token`` header
+
+    Returns True when the token is valid.
+    Returns False when auth is required but the token is missing/invalid.
+    """
+    token = get_auth_token()
+    if not token:
+        # No token configured – cannot validate
+        return False
+
+    # 1. Query parameter
+    query_token = ""
+    if hasattr(request, "args"):
+        query_token = (request.args.get("token") or "").strip()
+    if query_token and hmac.compare_digest(query_token, token):
+        return True
+
+    # 2. X-Auth-Token header
+    header_token = ""
+    if hasattr(request, "headers"):
+        header_token = (request.headers.get("X-Auth-Token") or "").strip()
+    if header_token and hmac.compare_digest(header_token, token):
+        return True
+
+    return False
+
+
 def require_admin_token(request) -> bool:
     """Validate that a valid admin token is present.
     

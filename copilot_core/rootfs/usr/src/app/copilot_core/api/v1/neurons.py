@@ -150,16 +150,20 @@ def evaluate_neurons():
         
         # Apply state overrides - requires admin token for state manipulation
         if "states" in body:
+            _LOGGER.info("Evaluate state override attempted from %s", request.remote_addr)
             if not require_admin_token(request):
+                _LOGGER.warning("Unauthorized evaluate state override attempt from %s", request.remote_addr)
                 return jsonify({
                     "success": False,
                     "error": "Admin token required for state overrides"
                 }), 403
             manager.update_states(body["states"])
-        
+
         # Apply context overrides - requires admin token
         if "context" in body:
+            _LOGGER.info("Evaluate context override attempted from %s", request.remote_addr)
             if not require_admin_token(request):
+                _LOGGER.warning("Unauthorized evaluate context override attempt from %s", request.remote_addr)
                 return jsonify({
                     "success": False,
                     "error": "Admin token required for context overrides"
@@ -206,7 +210,9 @@ def update_neuron_states():
     """
     try:
         # Require admin-level authentication for state manipulation
+        _LOGGER.info("Neuron state update attempted from %s", request.remote_addr)
         if not require_admin_token(request):
+            _LOGGER.warning("Unauthorized neuron state update attempt from %s", request.remote_addr)
             return jsonify({
                 "success": False,
                 "error": "Admin token required for state updates"
@@ -322,24 +328,43 @@ def get_mood():
 @bp.route("/mood/evaluate", methods=["POST"])
 def evaluate_mood():
     """Force mood evaluation.
-    
+
     Optional JSON body:
         {
             "states": {...},
             "context": {...}
         }
-    
+
+    State/context overrides require admin-level authentication.
+
     Returns:
         Full evaluation result with dominant mood
     """
     try:
         manager = get_neuron_manager()
-        
+
         body = request.get_json(silent=True) or {}
-        
+
+        # Apply state overrides - requires admin token for state manipulation
         if "states" in body:
+            _LOGGER.info("Mood evaluate state override attempted from %s", request.remote_addr)
+            if not require_admin_token(request):
+                _LOGGER.warning("Unauthorized mood state override attempt from %s", request.remote_addr)
+                return jsonify({
+                    "success": False,
+                    "error": "Admin token required for state overrides"
+                }), 403
             manager.update_states(body["states"])
+
+        # Apply context overrides - requires admin token
         if "context" in body:
+            _LOGGER.info("Mood evaluate context override attempted from %s", request.remote_addr)
+            if not require_admin_token(request):
+                _LOGGER.warning("Unauthorized mood context override attempt from %s", request.remote_addr)
+                return jsonify({
+                    "success": False,
+                    "error": "Admin token required for context overrides"
+                }), 403
             manager.set_context(body["context"])
         
         result = manager.evaluate()
