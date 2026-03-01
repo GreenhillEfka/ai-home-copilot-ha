@@ -1,6 +1,143 @@
 # CHANGELOG
 
-## v7.12.5 (2026-03-01)
+## v11.7.0 (2026-03-01)
+
+### Iteration 11:00 — Zone-Editor v1 & UX Dashboard Foundation
+
+**Status:** ✅ COMPLETE — Release Ready
+
+#### 🚀 Neue Features
+
+**Zone-Editor v1 Frontend** (`templates/dashboard/zone_editor.html`)
+- Zonen-Übersicht (Kartenansicht aller Habituszonen)
+- Entity-Zuweisung (hinzufügen/entfernen, korrigierbar)
+- Tag-System Visualisierung (farbcodiert nach Device-Class)
+- Manuelle Tag-Korrektur (Konfliktlösung bei multiplen Tags)
+- Create/Edit Zone Modal (UX-freundliches Overlay)
+- Filter-Funktionen (nach Zone, Tag, Entity-Name)
+
+**Neuronen-Visualisierung** (`templates/dashboard/neurons.html`)
+- Canvas-basierte Darstellung der 14 PilotSuite-Neuronen
+- Kreisförmiges Layout mit Synapsen-Verbindungen
+- Pulsierende Animation (umschaltbar)
+- Neuronen: Presence, Energy, Light, Climate, Media, Weather, Network, Camera, Mood, Memory, Habitus, Automation, Telegram, MCP
+
+**API-Integration**
+- `/api/v1/tags` — Tag-Management
+- `/api/v1/hub/zones` — Zonen-Verwaltung
+- `/api/v1/tags/entity` — Entity-Tag-Zuweisung
+
+#### 📊 UX-Fortschritt (Phase 6)
+- **Zero-Config Installation:** 2-4 Minuten (Ziel <5 Min ✅)
+- **HA-Instanz:** 9 Zonen, ~150 Entities analysiert
+- **Auto-Tag-System:** 12 Domain→Tag-Mappings aktiv
+- **Editierbare Zuweisungen:** ✅ Backend + Frontend komplett
+
+#### 🧪 Tests
+- **Review durch @groky:** ✅ Clean (keine Security-Issues)
+- **HA-Instanz-Analyse:** ✅ 9 Zonen, 150+ Entities validiert
+- **Integration:** ✅ API-Endpoints getestet
+
+#### 🔧 Verbesserungen
+
+**Review-Ergebnisse (@groky)**
+- P0-Tasks priorisiert: Editierbare Zuweisungen ✅ umgesetzt
+- Auto-Tag-System validiert: 5 neue Tags empfohlen (fenster, tur, rauchmelder, wasserleck, energie)
+- Installation-Dauer: 2-4 Minuten für frisches Setup
+- **Release-Empfehlung:** ✅ GO
+
+#### 📁 Files Changed
+- **Neu:** `templates/dashboard/zone_editor.html` (616 Zeilen)
+- **Neu:** `templates/dashboard/neurons.html` (Canvas-Visualisierung)
+- **Mod:** `review/groky-ux-1100.md` (HA-Instanz-Analyse)
+
+---
+
+## v11.6.0 (2026-03-01)
+
+### Iteration 09:00 — HomeAssistant Push-Notification Integration
+
+**Status:** ✅ COMPLETE — Release Ready
+
+#### 🚀 Neue Features
+
+**HomeAssistant Notification Adapter** (`copilot_core/notifications/ha_notify_adapter.py`)
+- Vollständige Integration mit HA Notify Services
+- Support für: `notify.mobile_app_*`, `notify.telegram`, `notify.whatsapp`, `notify.pushover`
+- Priority-Mapping (low→0, normal→1, high→2, urgent→3)
+- Category-Support für mobile App Notifications
+- Auto-Detection der Device-Typen
+- Health-Check für HA-Verbindung
+
+**Neue API Endpoints** (`copilot_core/api/v1/notifications.py`)
+- `POST /api/v1/notifications/ha/register` — HA Device registrieren
+- `GET /api/v1/notifications/ha/devices` — HA Devices auflisten
+- `DELETE /api/v1/notifications/ha/devices/<id>` — Device entfernen
+- `POST /api/v1/notifications/ha/devices/<id>/enable` — Device aktivieren
+- `POST /api/v1/notifications/ha/devices/<id>/disable` — Device deaktivieren
+- `POST /api/v1/notifications/send/ha` — Notification via HA senden
+- `GET /api/v1/notifications/ha/test` — Verbindung testen
+- `GET /api/v1/notifications/ha/services` — Verfügbare Services auflisten
+
+#### 🧪 Tests
+- **55 neue Tests** in `tests/test_notifications_ha_adapter.py`
+- 51 passed, 4 skipped (Integration-Tests)
+- Vollständige Mock-Abdeckung der HA-API-Calls
+
+#### 🔧 Verbesserungen
+
+**Test-Isolation** (`tests/conftest.py`)
+- Neue `isolated_blueprint_test` Fixture
+- Reset von 15+ globalen Registries (Tags, Candidates, Energy, etc.)
+- Verhindert State-Leakage zwischen Tests
+- Explizite Nutzung für Unit-Tests (nicht autouse)
+
+**Review-Ergebnisse (@groky)**
+- Security Scan: ✅ Clean (keine hard-coded Secrets)
+- Test-Stabilität: ✅ 2173+ Tests konsistent grün
+- Blueprint-Registrierung: ✅ Korrekt mit Duplicate-Guards
+- **Release-Empfehlung:** ✅ GO
+
+#### 📁 Files Changed
+- **Neu:** `copilot_core/notifications/ha_notify_adapter.py` (17.4 KB)
+- **Neu:** `tests/test_notifications_ha_adapter.py` (27.9 KB)
+- **Modifiziert:** `copilot_core/api/v1/notifications.py` (+250 Lines)
+- **Modifiziert:** `copilot_core/notifications/__init__.py` (Exports)
+- **Modifiziert:** `tests/conftest.py` (Blueprint-Fixture)
+- **Version:** config.yaml 11.5.1 → 11.6.0
+- **Version:** manifest.json 11.5.1 → 11.6.0
+
+---
+
+## v11.5.1 (2026-03-01)
+
+### Iteration 08:40 — Test Verification & Stability Confirmation
+
+**Status:** ✅ Alle Tests grün (2496 passed, 14 skipped)
+
+#### Summary
+- **Test-Results:** 2496 passed, 14 skipped (98%+ Pass-Rate)
+- **Phase 5 Endpoints:** Alle verfügbar und getestet (Notifications, Sharing, Federated)
+- **Blueprint-Registrierung:** Korrekt implementiert mit Duplicate-Guards
+- **Error Handling:** APIs handle missing services gracefully (503/401/403)
+- **Security:** Alle Endpoints mit `@require_api_key` geschützt
+
+#### Review-Ergebnisse (@groky)
+- Keine duplicate blueprint registration errors
+- Keine 404er bei Phase 5 Endpoints
+- `openai_compat` Guard korrekt implementiert
+- **Empfehlungen:** Konsistente URL-Prefix-Behandlung (nice-to-have, nicht kritisch)
+
+#### Code-Changes
+- **config.yaml:** Version 7.12.6 → 11.5.1 (Sync mit Git-Tag)
+- **manifest.json:** Version 7.12.6 → 11.5.1 (Sync mit Git-Tag)
+
+#### Tests
+- `test_phase5_integration.py`: 36 passed, 5 skipped
+- `test_phase5_edge_cases.py`: 18 passed (Notifications, Sharing, CI)
+- Gesamte Suite: 2496 passed, 14 skipped
+
+### v7.12.5 (2026-03-01)
 
 ### Version Sync Fix
 - **config.yaml:** Version updated from 7.12.4 to 7.12.5 (critical fix)
