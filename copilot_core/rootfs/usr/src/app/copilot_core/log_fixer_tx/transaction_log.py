@@ -70,7 +70,7 @@ class TransactionLog:
         Returns:
             txId (ULID string)
         """
-        tx_id = str(ulid.ULID())
+        tx_id = str(ulid.ulid())
         return tx_id
         
     def append_intent(
