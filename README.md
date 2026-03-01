@@ -139,9 +139,10 @@ Authorization: Bearer <token>
 | **Search** | `/api/v1/search/*` | Entity Search, Index |
 | **Knowledge Graph** | `/api/v1/kg/*` | Nodes, Edges, Query |
 | **Vector Store** | `/api/v1/vector/*` | Store, Search, Stats |
+| **RAG Hybrid Search** | `/api/v1/rag/*` | BM25 + Vector Search mit RRF (neu) |
 | **Weather** | `/api/v1/weather/*` | Wetterdaten |
 | **Energy** | `/api/v1/energy/*` | Energiemonitoring |
-| **Notifications** | `/api/v1/notifications/*` | Push System |
+| **Notifications** | `/api/v1/notifications/*` | Push System + HA Notify Adapter (neu) |
 | **Media Zones** | `/api/v1/media-zones/*` | Media-Zonen Verwaltung |
 | **Telegram** | `/telegram/webhook` | Telegram Bot |
 | **MCP** | `/mcp/*` | Model Context Protocol |
@@ -163,6 +164,8 @@ Authorization: Bearer <token>
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Services, Datenfluss, Persistenz |
 | [ONYX_INTEGRATION](docs/ONYX_INTEGRATION.md) | Onyx + Styx Zielarchitektur, Security, Setup |
 | [onyx_styx_actions.openapi](docs/integrations/onyx_styx_actions.openapi.yaml) | OpenAPI Actions fuer Onyx |
+| [RAG Hybrid Search API](docs/api/RAG_HYBRID_SEARCH.md) | RAG API Docs, Examples, Best Practices (neu) |
+| [HA Notify Adapter](docs/api/HA_NOTIFY_ADAPTER.md) | Notify Adapter Docs, Examples (neu) |
 | [ROADMAP](docs/ROADMAP.md) | Phase 5-6, Zukunftsplaene |
 | [CHANGELOG](CHANGELOG.md) | Release-Historie |
 | [HACS Integration](https://github.com/GreenhillEfka/pilotsuite-styx-ha) | Sensoren, Module, Dashboard |
