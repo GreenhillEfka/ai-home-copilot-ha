@@ -30,3 +30,7 @@ htmlcov/
 *.p12
 secrets.yaml
 credentials.json
+
+# Large backups
+backups/
+*.bundle
