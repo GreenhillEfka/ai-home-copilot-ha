@@ -18,21 +18,21 @@
 
 ### **Core-Team (bestehend):**
 
-| Agent | Rolle | Werkzeug |
-|-------|-------|----------|
-| @styx | Koordination & Integration | OpenClaw coding-agent |
-| @groky | Lead Review | Claude Code CLI |
-| @cowdya | Lead Development | Codex CLI |
-| @clawdya | Final Review & Release | Claude Code CLI + Orchestrator |
+| Agent | Rolle | Werkzeug | Reasoning |
+|-------|-------|----------|-----------|
+| @styx | Koordination & Integration | **Claude Code CLI** (pty:true) | **high** |
+| @groky | Lead Review | **Claude Code CLI** (pty:true) | **high** |
+| @cowdya | Lead Development | **Claude Code CLI** (pty:true) | **high** |
+| @clawdya | Final Review & Release | **Claude Code CLI** (pty:true) + Orchestrator | **high** |
 
 ### **Neu: Coding-Squad (4 zusätzliche Agenten):**
 
-| Agent | Rolle | Werkzeug | Fokus |
-|-------|-------|----------|-------|
-| **@coder-1** | Frontend Developer | Codex CLI | Dashboard, Zone-Editor, Neuronen-Visualisierung |
-| **@coder-2** | Backend Developer | Codex CLI | API-Endpoints, Database, RAG Integration |
-| **@coder-3** | Test Engineer | Claude Code CLI | Test-Coverage, CI/CD, Integration-Tests |
-| **@coder-4** | Documentation | Claude Code CLI | API-Docs, Code-Examples, README |
+| Agent | Rolle | Werkzeug | Reasoning | Fokus |
+|-------|-------|----------|-----------|-------|
+| **@coder-1** | Frontend Developer | **Claude Code CLI** (pty:true) | **high** | Dashboard, Zone-Editor, Neuronen-Visualisierung |
+| **@coder-2** | Backend Developer | **Claude Code CLI** (pty:true) | **high** | API-Endpoints, Database, RAG Integration |
+| **@coder-3** | Test Engineer | **Claude Code CLI** (pty:true) | **high** | Test-Coverage, CI/CD, Integration-Tests |
+| **@coder-4** | Documentation | **Claude Code CLI** (pty:true) | **high** | API-Docs, Code-Examples, README |
 
 ---
 
@@ -111,8 +111,9 @@
 - Research nur als Teil von Implementation
 - "Analyse" → "Analyse + Implementation"
 
-### **2. Parallele Execution:**
-- Alle 6 Subagents gleichzeitig spawnen
+### **2. Parallele Execution mit Claude Code CLI:**
+- **Alle 6+ Subagents gleichzeitig spawnen**
+- **Jeder mit `pty:true` und `--effort high`** (maximales Reasoning!)
 - Keine sequentiellen Abhängigkeiten (wo möglich)
 - Bei Blockaden: Task umverteilen
 
@@ -131,6 +132,15 @@
 - CHANGELOG aktuell halten
 - WhatsApp-Summary nach jedem Release
 
+### **6. Claude Code CLI Best Practices:**
+- **Immer `pty:true`** (interaktives Terminal!)
+- **Immer `--effort high`** (maximales Reasoning)
+- **Immer `workdir:` setzen** (fokussierter Kontext)
+- **`--permission-mode acceptEdits`** für Coding
+- **`--permission-mode plan`** für Reviews
+- **Background-Mode** für längere Tasks
+- **Auto-Notify** bei Completion (`openclaw system event`)
+
 ---
 
 ## 📊 Erfolgskriterien
@@ -147,20 +157,29 @@
 
 ## 🛠️ Tool-Nutzung (Pflicht!)
 
-| Agent | Werkzeug | Pflicht |
-|-------|----------|---------|
-| @cowdya | Codex CLI | ✅ Ja |
-| @coder-1 | Codex CLI | ✅ Ja |
-| @coder-2 | Codex CLI | ✅ Ja |
-| @coder-3 | Claude Code CLI | ✅ Ja |
-| @coder-4 | Claude Code CLI | ✅ Ja |
-| @groky | Claude Code CLI | ✅ Ja |
-| @clawdya | Claude Code CLI | ✅ Ja |
+**ALLE Agents nutzen Claude Code CLI mit PTY und maximalem Reasoning!**
+
+| Agent | Werkzeug | PTY | Reasoning | Permission | Pflicht |
+|-------|----------|-----|-----------|------------|---------|
+| @styx | Claude Code CLI | ✅ Ja | `high` | acceptEdits | ✅ |
+| @cowdya | Claude Code CLI | ✅ Ja | `high` | acceptEdits | ✅ |
+| @coder-1 | Claude Code CLI | ✅ Ja | `high` | acceptEdits | ✅ |
+| @coder-2 | Claude Code CLI | ✅ Ja | `high` | acceptEdits | ✅ |
+| @coder-3 | Claude Code CLI | ✅ Ja | `high` | acceptEdits | ✅ |
+| @coder-4 | Claude Code CLI | ✅ Ja | `high` | acceptEdits | ✅ |
+| @groky | Claude Code CLI | ✅ Ja | `high` | plan (Review) | ✅ |
+| @clawdya | Claude Code CLI | ✅ Ja | `high` | plan (Review) | ✅ |
 
 **Auth-Check vor Iterations-Start:**
 ```bash
-codex --version  # Muss funktionieren
 claude --version  # Muss funktionieren
+claude auth status  # Muss OAuth zeigen
+```
+
+**Standard-Command für alle Agents:**
+```bash
+bash pty:true workdir:/config/.openclaw/workspace background:true \
+  command:"claude --effort high --permission-mode acceptEdits '<TASK>'"
 ```
 
 ---

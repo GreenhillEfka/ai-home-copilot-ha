@@ -38,6 +38,115 @@ Siehe: [pilotsuite-styx-ha Installation](https://github.com/GreenhillEfka/pilots
 
 ## Features
 
+### Chat Pipeline (HA-Assist Integration)
+
+**Natürliche Sprachsteuerung für dein Smart Home** — PilotSuite integriert sich nahtlos in Home Assistant Assist und bringt kontextbewusste Konversation mit automatischem LLM-Fallback.
+
+```yaml
+# configuration.yaml (MINIMAL — nur 3 Zeilen!)
+conversation:
+  - platform: pilotSuite_rag_conversation
+    ha_token: !secret openclaw_ha_token
+    # RAG-API wird automatisch auf localhost:8765 entdeckt
+    # LLM-Fallback: OpenAI (optional) → Ollama → Ollama Tiny
+```
+
+#### LLM-Provider (mit automatischer Fallback-Chain)
+
+| Provider | Modell | Beschreibung | Fallback-Level |
+|----------|--------|--------------|----------------|
+| **OpenAI** | `gpt-4` | Beste Qualität, Cloud | Primary |
+| **Ollama** | `qwen3.5:397b-cloud` | Lokal, privacy-first | Fallback 1 |
+| **Ollama Tiny** | `qwen2.5:1.5b` | Klein, robust, immer da! | Fallback 2 |
+| **OpenClaw** | `Clawdya` | Optional, wenn installiert | Optional |
+
+**So funktioniert die Fallback-Chain:**
+1. **OpenAI** wird zuerst versucht (wenn API-Key konfiguriert)
+2. Bei Timeout/Error → **Ollama** (lokal auf Port 11434)
+3. Bei Timeout/Error → **Ollama Tiny** (immer verfügbar!)
+4. Optional → **OpenClaw** (wenn installiert)
+
+```yaml
+# configuration.yaml (VOLLSTÄNDIG)
+conversation:
+  - platform: pilotSuite_rag_conversation
+    
+    # HA Token (ERFORDERLICH)
+    ha_token: !secret openclaw_ha_token
+    
+    # RAG-API (optional, Default: localhost:8765)
+    rag_api_url: http://localhost:8765
+    
+    # Primary LLM-Provider (optional, Default: OpenAI)
+    provider: openai
+    openai_api_key: !secret openai_api_key
+    model: gpt-4
+    
+    # Fallback-Kette (optional, Default: [openai, ollama, ollama_tiny])
+    fallback_enabled: true
+    fallback_order:
+      - openai
+      - ollama
+      - ollama_tiny
+    
+    # Ollama-Config (Fallback 1)
+    ollama_url: http://localhost:11434
+    ollama_model: qwen3.5:397b-cloud
+    
+    # Ollama Tiny (Fallback 2)
+    ollama_tiny_model: qwen2.5:1.5b
+    
+    # Privacy (optional, Default: false)
+    use_web_search: false
+```
+
+#### Zero-Config Setup-Guide
+
+**Schritt 1: Long-Life HA Token erstellen (einmalig)**
+1. Home Assistant → Klick auf dein **Profil** (unten links)
+2. Tab **Long-Lived Access Token**
+3. **Create Token** → Name: "PilotSuite"
+4. Token kopieren
+
+**Schritt 2: Token in secrets.yaml speichern**
+```yaml
+# secrets.yaml
+openclaw_ha_token: YOUR_LONG_LIFE_TOKEN_HERE
+```
+
+**Schritt 3: Minimal-Konfiguration in configuration.yaml**
+```yaml
+# configuration.yaml
+conversation:
+  - platform: pilotSuite_rag_conversation
+    ha_token: !secret openclaw_ha_token
+```
+
+**Schritt 4: Home Assistant neustarten**
+```bash
+# HA → Settings → System → Restart
+```
+
+**Fertig!** 🎉 PilotSuite ist jetzt betriebsbereit mit:
+- ✅ Auto-Discovery der RAG-API (localhost:8765)
+- ✅ Ollama-Fallback (lokal, privacy)
+- ✅ Ollama Tiny als letztes Fallback (immer online!)
+
+**Optional: OpenAI für bessere Qualität**
+```yaml
+# secrets.yaml
+openai_api_key: sk-your-openai-api-key
+
+# configuration.yaml
+conversation:
+  - platform: pilotSuite_rag_conversation
+    ha_token: !secret openclaw_ha_token
+    provider: openai
+    openai_api_key: !secret openai_api_key
+    model: gpt-4
+    fallback_enabled: true
+```
+
 ### LLM (Ollama bundled)
 
 - Standard-Modell: `qwen3:0.6b` (schnell, low-RAM, Tool-Calling)

@@ -16,10 +16,11 @@ Automatisierte, iterative Entwicklung der PilotSuite-Plattform durch koordiniert
 
 | Agent | Rolle | Werkzeug | Zuständigkeit |
 |-------|-------|----------|---------------|
-| **@styx** | **Koordination & Integration** | OpenClaw coding-agent (beide Backends) | Sammelt Zuarbeit, prüft, implementiert ins Gesamtprojekt, macht Release fertig |
-| **@groky** | **Caretaker & Review** | Claude Code CLI | Bewertet Code, CI/CD Checks, Release-Prüfung, Qualitätssicherung |
-| **@cowdya** | **Development** | Codex CLI (GPT-5.3-Codex) | Reine Coding-Arbeit, Feature-Implementation, Bugfixes |
-| **@clawdya** | **Final Review & Freigabe** | Orchestrator | Review, Bugfix-Freigabe, offizielles GitHub Release, WhatsApp-Summary |
+| **@styx** | **Koordination & Integration** | **Claude Code CLI** (pty:true) | Sammelt Zuarbeit, prüft, implementiert ins Gesamtprojekt, macht Release fertig |
+| **@groky** | **Caretaker & Review** | **Claude Code CLI** (pty:true) | Bewertet Code, CI/CD Checks, Release-Prüfung, Qualitätssicherung |
+| **@cowdya** | **Lead Development** | **Claude Code CLI** (pty:true) | Reine Coding-Arbeit, Feature-Implementation, Bugfixes |
+| **@clawdya** | **Final Review & Freigabe** | **Claude Code CLI** (pty:true) + Orchestrator | Review, Bugfix-Freigabe, offizielles GitHub Release, WhatsApp-Summary |
+| **@coder-1..4** | **Coding-Squad** | **Claude Code CLI** (pty:true) | Parallele Feature-Implementation, Tests, Docs |
 
 ---
 
@@ -100,9 +101,11 @@ sessions_spawn task:"Implementiere RAG Hybrid Search" label:cowdya-feature
 
 ---
 
-### Phase 2: Parallele Entwicklung (Groky & Cowdya)
+### Phase 2: Parallele Entwicklung (Alle Agents mit Claude Code CLI)
 
 **Dauer:** ~12 Minuten
+
+**ALLE Agents nutzen Claude Code CLI mit `pty:true` und `--effort high` für maximales Reasoning!**
 
 #### @groky (Claude Code CLI)
 
@@ -115,8 +118,8 @@ sessions_spawn task:"Implementiere RAG Hybrid Search" label:cowdya-feature
 
 **Werkzeug:**
 ```bash
-# Claude Code CLI
-claude "Review this PR for performance issues and security concerns"
+# Claude Code CLI mit PTY und maximalem Reasoning
+bash pty:true workdir:/config/.openclaw/workspace command:"claude --effort high --permission-mode plan 'Review this PR for performance issues and security concerns'"
 ```
 
 **Output:**
@@ -126,7 +129,7 @@ claude "Review this PR for performance issues and security concerns"
 
 ---
 
-#### @cowdya (Codex CLI)
+#### @cowdya (Claude Code CLI)
 
 **Aufgaben:**
 - Feature-Implementation
@@ -136,14 +139,35 @@ claude "Review this PR for performance issues and security concerns"
 
 **Werkzeug:**
 ```bash
-# Codex CLI
-codex exec "Implement hybrid search with multi-vector support"
+# Claude Code CLI mit PTY, maximalem Reasoning und Auto-Edit
+bash pty:true workdir:/config/.openclaw/workspace background:true command:"claude --effort high --permission-mode acceptEdits 'Implement hybrid search with multi-vector support'"
 ```
 
 **Output:**
 - Code-Changes (Git-Commits)
 - Test-Results
 - Change-Log-Einträge
+
+---
+
+#### @coder-1..4 (Claude Code CLI Squad)
+
+**Aufgaben:**
+- Parallele Feature-Implementation
+- Frontend/Backend-Spezialisierung
+- Test-Coverage erhöhen
+- Dokumentation schreiben
+
+**Werkzeug:**
+```bash
+# Parallel für jedes Squad-Mitglied
+bash pty:true workdir:/config/.openclaw/workspace background:true command:"claude --effort high --permission-mode acceptEdits '<spezifische Task>'"
+```
+
+**Output:**
+- Code-Changes (Git-Commits)
+- Tests
+- Docs
 
 ---
 
@@ -264,10 +288,11 @@ codex exec "Implement hybrid search with multi-vector support"
 
 | Agent | Primär-Tool | Sekundär-Tool | Skills |
 |-------|-------------|---------------|--------|
-| **Styx** | OpenClaw coding-agent | GitHub CLI | github, coding-agent, sessions_spawn |
-| **Groky** | Claude Code CLI | GitHub CLI | claude-code, github, healthcheck |
-| **Cowdya** | Codex CLI | GitHub CLI | coding-agent, github |
-| **Clawdya** | OpenClaw Orchestrator | WhatsApp CLI | message, github, sessions_spawn |
+| **Styx** | **Claude Code CLI** (pty:true) | GitHub CLI | claude-code, github, sessions_spawn |
+| **Groky** | **Claude Code CLI** (pty:true) | GitHub CLI | claude-code, github, healthcheck |
+| **Cowdya** | **Claude Code CLI** (pty:true) | GitHub CLI | claude-code, github |
+| **Coder-1..4** | **Claude Code CLI** (pty:true) | GitHub CLI | claude-code, github |
+| **Clawdya** | **Claude Code CLI** (pty:true) | WhatsApp CLI | claude-code, github, message, sessions_spawn |
 
 ---
 

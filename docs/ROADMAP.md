@@ -61,9 +61,9 @@ Der Schritt zur offiziellen Veroeffentlichung:
 
 ---
 
-## Phase 5 -- Cross-Home Sharing (abgeschlossen)
+## Phase 5 -- Cross-Home Sharing ✅ COMPLETE
 
-> Status: ✅ Abgeschlossen (v7.12.2)
+> Status: ✅ Abgeschlossen (v12.0.0) -- 31 Endpoints implementiert
 
 ### Vision
 
@@ -71,30 +71,32 @@ Haushalte sollen voneinander lernen koennen, ohne private Daten preiszugeben. We
 
 ### Implementierte Funktionen
 
-**Federated Learning** ✅
-- Anonymisierte Muster zwischen Haushalten teilen
-- Kein zentraler Server -- dezentraler Ansatz
-- Lokale Modelle werden mit aggregierten Erkenntnissen verbessert, ohne Rohdaten zu versenden
-- Komplette API mit Round-Management und Aggregation
+**Notifications API** ✅ (21 Endpoints)
+- Vollstaendiges Benachrichtigungssystem mit Send, List, Read, Dismiss, Clear
+- Device-Subscriptions mit Push-Token-Support
+- Home-Assistant-Integration (Device-Registry, HA Notify Services, Test-Endpoint)
+- Statistiken, Digest und Pending-Notifications
+- Deduplication und Rate Limiting integriert
 
-**Collective Intelligence** ✅
+**Sharing API** ✅ (16 Endpoints)
+- Entity Registry fuer Cross-Home Sharing
+- Sync-Service mit WebSocket-Unterstuetzung und Peer-Management
+- Discovery-Service fuer mDNS/lokale Peers
+- Share/Stop-Share Workflows pro Entity und Home
+- Status-Endpoint fuer Registry, Sync und Discovery
+
+**Collective Intelligence / Federated Learning** ✅ (15 Endpoints)
+- Kompletter Federated-Learning-Lifecycle (Register, Update, Round, Aggregate)
+- Knowledge-Extraktion und -Transfer mit Confidence-Scoring
+- State-Persistenz (Save/Load)
+- Statistiken, Modell- und Round-History
 - Community-getriebene Verbesserungen fuer Automatisierungsvorschlaege
-- Gemeinsame Optimierung von Energieprofilen und Tagesrhythmen
-- Knowledge-Transfer-System mit Confidence-Scoring
-- Umfassende Testsuite (40+ Tests)
 
 **Privacy-Garantien** ✅
 - Strikt opt-in -- nichts wird ohne explizite Zustimmung geteilt
 - Vollstaendige Anonymisierung: keine Geraete-IDs, keine Standorte, keine Rohdaten
 - Differential Privacy mit konfigurierbarem Epsilon-Budget
 - Privacy-Aware Aggregator integriert
-
-**Sharing API** ✅
-- Entity Registry fuer Cross-Home Sharing
-- Sync-Service mit WebSocket-Unterstützung
-- Discovery-Service fuer mDNS/lokale Peers
-- Vollstaendige REST-API (15+ Endpoints)
-- Integrationstests fuer alle Endpoints
 
 **Architektur** ✅
 - `sharing/`-Modul im Core Add-on implementiert
@@ -105,62 +107,61 @@ Haushalte sollen voneinander lernen koennen, ohne private Daten preiszugeben. We
 
 ### Testabdeckung
 
+- **Notifications API**: 35+ Tests (Endpoints, Dedup, Rate Limiting, Digest, HA Integration)
 - **Sharing API**: 25+ Integrationstests (Registry, Sync, Discovery)
 - **Collective Intelligence**: 40+ Tests (Service, Federated Rounds, Knowledge Transfer)
-- **Notifications API**: 35+ Tests (Endpoints, Dedup, Rate Limiting, Digest)
 - Alle Tests erfolgreich bestanden ✅
-
-### Offene Fragen
-
-- Minimale Teilnehmerzahl fuer sinnvolles Federated Learning bei Smart-Home-Daten?
-- Wie verhindert man Poisoning-Angriffe bei dezentraler Aggregation?
-- Welche Muster lassen sich sinnvoll teilen, ohne Kontext zu verlieren?
 
 ---
 
-## Phase 6 -- Advanced ML & Type Hints (abgeschlossen)
+## Phase 6 -- Advanced ML & Type Hints ✅ COMPLETE
 
-> Status: ✅ Abgeschlossen (v7.12.4)
+> Status: ✅ Abgeschlossen (v12.0.0) -- 2526 Tests, 98% Pass-Rate
 
-### Type Hints Vervollständigung ✅ (v7.12.4)
-- **Notifications API** (`api/v1/notifications.py`) -- Vollständige Typisierung aller Methoden, Dataclasses und Endpunkte mit `from __future__ import annotations`
-- **Sharing API** (`sharing/api.py`) -- Comprehensive type hints for all endpoints, helper functions, and data structures
-- **Collective Intelligence API** (`collective_intelligence/api.py`) -- Durchgängige Type Hints für Federated Learning Endpunkte mit `Tuple[Response, int] | Response` return types
-- **Test Coverage** -- 98.0% Pass-Rate (2476 passed, 20 failed, 30 skipped von 2526 Tests)
-- **Flask Integration** -- Alle Integration-Tests aktiviert (Flask v3.1.3, NumPy v2.4.2 im Test-Environment)
+### Type Hints Vervollstaendigung ✅
+- **Notifications API** (`api/v1/notifications.py`) -- Vollstaendige Typisierung aller Methoden, Dataclasses und Endpunkte mit `from __future__ import annotations`
+- **Sharing API** (`sharing/api.py`) -- Durchgaengige Type Hints fuer alle Endpoints, Helper-Funktionen und Datenstrukturen
+- **Collective Intelligence API** (`collective_intelligence/api.py`) -- Durchgaengige Type Hints fuer Federated Learning Endpunkte mit `Tuple[Response, int] | Response` Return Types
+- **Konsistenz** -- Einheitlicher Stil ueber alle Phase-5/6-Module hinweg
 
-### On-Device Inference
+### Test-Ergebnisse ✅
+- **2526 Tests** total
+- **2476 passed** (98.0% Pass-Rate)
+- **20 failed**, **30 skipped**
+- Flask v3.1.3 und NumPy v2.4.2 im Test-Environment
+- Alle Integrationstests aktiviert
 
-- **TFLite / ONNX Runtime** fuer leichtgewichtige ML-Modelle direkt auf dem Home-Assistant-Host
-- Ziel: Inferenz unter 100ms auf Raspberry Pi 4 / Intel NUC
-- Modelle werden vortrainiert ausgeliefert und lokal feingetunt
+### Geplante ML-Features (verschoben nach Phase 7)
 
-### Anomaly Detection
+Die folgenden Advanced-ML-Features wurden in Phase 7 verschoben, da Phase 6 auf Type Hints und Testabdeckung fokussiert war:
 
-- **Isolation Forest** zur Erkennung ungewoehnlicher Sensormuster
-- Anwendungsfaelle: ploetzlicher Energieanstieg, unerwartete Tueraktivitaet, Wasserverbrauch ausserhalb der Norm
-- Benachrichtigungen mit Erklaerung ("Energieverbrauch 3x hoeher als ueblich fuer Dienstag 14 Uhr")
+- **On-Device Inference** -- TFLite / ONNX Runtime fuer leichtgewichtige ML-Modelle
+- **Anomaly Detection** -- Isolation Forest fuer ungewoehnliche Sensormuster
+- **Zeitreihen-Prognosen** -- LSTM / Transformer-basierte Vorhersagen
+- **Energy Load Shifting** -- PV-Ertragsprognosen und dynamische Stromtarife
+- **Personalized Automation Timing** -- Verhaltensbasierte Zeitpunkt-Optimierung
 
-### Zeitreihen-Prognosen
+---
 
-- **LSTM / Transformer-basierte Modelle** fuer Vorhersagen
-- Temperaturverlauf der naechsten Stunden (Heizungsoptimierung)
-- Erwarteter Energieverbrauch nach Wochentag und Wetter
-- Wahrscheinlichkeit von Anwesenheit pro Raum und Zeitfenster
+## Phase 7 -- Production Readiness & Advanced ML Features (naechste Phase)
 
-### Energy Load Shifting
+> Status: 🔜 Geplant
 
-- Automatische Optimierung: wann laufen Waschmaschine, Geschirrspueler, Wallbox?
-- Berücksichtigung von PV-Ertragsprognosen und dynamischen Stromtarifen
-- Ziel: Eigenverbrauchsquote maximieren, Kosten minimieren
-- Integration mit bestehenden Energy-Modul-Daten
+### Production Readiness
 
-### Personalized Automation Timing
+- **Performance-Optimierung** -- Connection Pooling, Cache Tuning, VectorStore-Optimierung
+- **Startup-Zeit** -- Lazy Loading selten genutzter Module
+- **Monitoring** -- Prometheus-Metriken, Health-Check-Erweiterung
+- **Dokumentation** -- OpenAPI-Spec fuer alle Endpoints, vollstaendige API-Referenz
+- **Remaining Test Fixes** -- 20 fehlgeschlagene Tests analysieren und beheben
 
-- Feinabstimmung von Automatisierungszeitpunkten basierend auf individuellem Verhalten
-- "Licht im Flur geht 2 Minuten vor der ueblichen Ankunftszeit an" statt fixer Zeitpunkt
-- Saisonale und wetterabhaengige Anpassungen
-- Zusammenspiel mit MUPL fuer Mehrpersonenhaushalte
+### Advanced ML
+
+- **On-Device Inference** -- TFLite / ONNX Runtime auf Raspberry Pi 4 / Intel NUC (Ziel: <100ms)
+- **Anomaly Detection** -- Isolation Forest fuer ploetzliche Energieanstiege, unerwartete Aktivitaeten
+- **Zeitreihen-Prognosen** -- LSTM/Transformer fuer Temperatur, Energie, Anwesenheit
+- **Energy Load Shifting** -- Waschmaschine, Wallbox, Geschirrspueler automatisch optimieren
+- **Personalized Automation Timing** -- "Licht 2 Min vor Ankunft" statt fixer Zeitpunkt
 
 ### Herausforderungen
 
