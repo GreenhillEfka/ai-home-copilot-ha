@@ -1,0 +1,55 @@
+# Auto-label configuration for PRs
+# See: https://github.com/actions/labeler
+
+bug:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/test_*.py'
+          - '**/fix_*.py'
+          - '**/*fix*.py'
+
+feature:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'copilot_core/**/api*.py'
+          - 'copilot_core/**/service*.py'
+          - 'copilot_core/**/*.py'
+          - '!**/test_*.py'
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - '**/*.rst'
+          - 'docs/**/*'
+
+test:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/**/*'
+          - '**/test_*.py'
+          - '**/conftest.py'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**/*'
+          - '**/*.yml'
+          - '**/*.yaml'
+
+core:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'copilot_core/**/*'
+
+dashboard:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'dashboard/**/*'
+          - '**/templates/**/*'
+          - '**/static/**/*'
+
+integration:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/integration/**/*'
