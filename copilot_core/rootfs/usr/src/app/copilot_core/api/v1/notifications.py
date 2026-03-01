@@ -24,7 +24,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional
 
 from flask import Blueprint, Request, jsonify, request
 
@@ -40,7 +40,7 @@ from copilot_core.api.security import validate_token as _validate_token
 
 
 @bp.before_request
-def _require_auth() -> Optional[Tuple[Dict[str, str], int]]:
+def _require_auth() -> Optional[tuple[dict[str, str], int]]:
     """Validate authentication token for all notification endpoints."""
     if not _validate_token(request):
         return jsonify({"error": "unauthorized", "message": "Valid X-Auth-Token or Bearer token required"}), 401
@@ -600,7 +600,7 @@ def get_notification_manager() -> NotificationManager:
 # =============================================================================
 
 @bp.route("/send", methods=["POST"])
-def send_notification() -> Tuple[Dict[str, Any], int]:
+def send_notification() -> tuple[dict[str, Any], int]:
     """Send a notification.
     
     JSON body:
@@ -616,7 +616,7 @@ def send_notification() -> Tuple[Dict[str, Any], int]:
         }
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response with notification_id and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response with notification_id and HTTP status code.
     """
     try:
         body = request.get_json(silent=True)
@@ -667,7 +667,7 @@ def send_notification() -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("", methods=["GET", "POST"])
-def handle_notifications() -> Tuple[Dict[str, Any], int]:
+def handle_notifications() -> tuple[dict[str, Any], int]:
     """Handle GET/POST for notifications.
     
     GET Query params:
@@ -679,7 +679,7 @@ def handle_notifications() -> Tuple[Dict[str, Any], int]:
         {"title": str, "message": str, "priority": str, "type": str}
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response and HTTP status code.
     """
     manager = get_notification_manager()
     
@@ -745,14 +745,14 @@ def handle_notifications() -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/<notification_id>/read", methods=["POST"])
-def mark_notification_read(notification_id: str) -> Tuple[Dict[str, Any], int]:
+def mark_notification_read(notification_id: str) -> tuple[dict[str, Any], int]:
     """Mark notification as read.
     
     Args:
         notification_id: ID of the notification to mark as read.
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response and HTTP status code.
     """
     manager = get_notification_manager()
     
@@ -769,14 +769,14 @@ def mark_notification_read(notification_id: str) -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/<notification_id>", methods=["DELETE"])
-def dismiss_notification(notification_id: str) -> Tuple[Dict[str, Any], int]:
+def dismiss_notification(notification_id: str) -> tuple[dict[str, Any], int]:
     """Dismiss a notification.
     
     Args:
         notification_id: ID of the notification to dismiss.
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response and HTTP status code.
     """
     manager = get_notification_manager()
     
@@ -793,14 +793,14 @@ def dismiss_notification(notification_id: str) -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/clear", methods=["POST"])
-def clear_notifications() -> Tuple[Dict[str, Any], int]:
+def clear_notifications() -> tuple[dict[str, Any], int]:
     """Clear notifications.
     
     JSON body (optional):
         {"type": "alert"}  # Only clear alerts
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response with cleared_count and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response with cleared_count and HTTP status code.
     """
     body = request.get_json(silent=True) or {}
     notification_type = body.get("type")
@@ -815,7 +815,7 @@ def clear_notifications() -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/subscribe", methods=["POST"])
-def subscribe_device() -> Tuple[Dict[str, Any], int]:
+def subscribe_device() -> tuple[dict[str, Any], int]:
     """Subscribe a device for push notifications.
     
     JSON body:
@@ -834,7 +834,7 @@ def subscribe_device() -> Tuple[Dict[str, Any], int]:
         }
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response with subscription details and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response with subscription details and HTTP status code.
     """
     try:
         body = request.get_json()
@@ -874,14 +874,14 @@ def subscribe_device() -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/unsubscribe", methods=["POST"])
-def unsubscribe_device() -> Tuple[Dict[str, Any], int]:
+def unsubscribe_device() -> tuple[dict[str, Any], int]:
     """Unsubscribe a device.
     
     JSON body:
         {"device_id": str}
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response and HTTP status code.
     """
     body = request.get_json()
     if not body or "device_id" not in body:
@@ -905,11 +905,11 @@ def unsubscribe_device() -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/subscriptions", methods=["GET"])
-def get_subscriptions() -> Tuple[Dict[str, Any], int]:
+def get_subscriptions() -> tuple[dict[str, Any], int]:
     """Get all device subscriptions.
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response with subscriptions list and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response with subscriptions list and HTTP status code.
     """
     manager = get_notification_manager()
     subscriptions = manager.get_subscriptions()
@@ -924,7 +924,7 @@ def get_subscriptions() -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/subscriptions/<device_id>", methods=["PUT"])
-def update_subscription(device_id: str) -> Tuple[Dict[str, Any], int]:
+def update_subscription(device_id: str) -> tuple[dict[str, Any], int]:
     """Update subscription preferences.
     
     JSON body:
@@ -942,7 +942,7 @@ def update_subscription(device_id: str) -> Tuple[Dict[str, Any], int]:
         device_id: ID of the device subscription to update.
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response and HTTP status code.
     """
     body = request.get_json()
     if not body:
@@ -972,11 +972,11 @@ def update_subscription(device_id: str) -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/stats", methods=["GET"])
-def get_notification_stats() -> Tuple[Dict[str, Any], int]:
+def get_notification_stats() -> tuple[dict[str, Any], int]:
     """Get notification statistics.
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response with stats and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response with stats and HTTP status code.
     """
     manager = get_notification_manager()
     stats = manager.get_stats()
@@ -988,11 +988,11 @@ def get_notification_stats() -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/pending", methods=["GET"])
-def get_pending_notifications() -> Tuple[Dict[str, Any], int]:
+def get_pending_notifications() -> tuple[dict[str, Any], int]:
     """Get pending (unread) notifications.
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response with pending notifications and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response with pending notifications and HTTP status code.
     """
     manager = get_notification_manager()
     pending = [n for n in manager._notifications if not n.read]
@@ -1005,14 +1005,14 @@ def get_pending_notifications() -> Tuple[Dict[str, Any], int]:
 
 
 @bp.route("/digest", methods=["GET"])
-def get_notification_digest() -> Tuple[Dict[str, Any], int]:
+def get_notification_digest() -> tuple[dict[str, Any], int]:
     """Get notification digest summary.
     
     Query params:
         hours: Time window in hours (default 24)
     
     Returns:
-        Tuple[Dict[str, Any], int]: JSON response with digest and HTTP status code.
+        tuple[dict[str, Any], int]: JSON response with digest and HTTP status code.
     """
     hours = float(request.args.get("hours", "24"))
     manager = get_notification_manager()
