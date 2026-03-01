@@ -1,0 +1,11 @@
+flask>=3.0.2
+flask-compress>=1.14
+waitress>=3.0.0
+python-ulid>=2.7.0
+pyyaml>=6.0.1
+psutil>=6.1.0
+neo4j>=5.26.0
+pydantic>=2.12.5
+requests>=2.31.0
+qrcode>=8.0
+numpy
