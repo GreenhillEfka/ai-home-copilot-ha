@@ -1,8 +1,8 @@
 # Offene Issues — PilotSuite v12 (Iteration 1440)
 
-**Stand:** 2026-03-01  
+**Stand:** 2026-03-02  
 **Review:** Security API Review  
-**Gesamtanzahl:** 15 Issues (0 P0, 2 P1, 5 P2, 8 P3)
+**Gesamtanzahl:** 13 Issues (0 P0, 0 P1, 5 P2, 8 P3)
 
 ---
 
@@ -14,88 +14,58 @@
 
 ## P1 — High Severity (Must Fix Before Release) 🔴
 
+**Alle P1 Issues behoben!** ✅
+
 ### P1-01: WebSocket Authentication Missing
-**Status:** ⚠️ OPEN  
+**Status:** ✅ **COMPLETE** (2026-03-02)  
 **Component:** WebSocket Handler  
 **Files:** 
 - `copilot_core/websocket_handler.py`
 - `copilot_core/api/v1/websocket_neuron.py`
+- `copilot_core/api/security.py`
 
-**Beschreibung:**
-WebSocket connections accept clients without authentication. Anyone can connect and subscribe to real-time neuron updates, mood changes, and system events.
+**Implementierung:**
+- Token-Validierung in `handle_connect()` implementiert
+- Token wird akzeptiert via:
+  1. SocketIO auth dict: `{'token': '...'}`
+  2. Query-Parameter: `?token=xxx`
+  3. Header: `X-Auth-Token`
+- Ungültige/fehlende Tokens werden abgelehnt (`return False`)
+- Failed connection attempts werden geloggt
+- Alle 11 WebSocket-Auth-Tests bestehen ✅
 
-**Risk:**
-- Unauthorized monitoring of system state
-- Information disclosure of neuron activations
-- Potential for event injection if write support added
-
-**Fix:**
-```python
-@socketio.on('connect')
-def handle_connect():
-    # Validate auth token from query params or headers
-    token = request.args.get('token') or request.headers.get('X-Auth-Token')
-    if not token or not validate_token(token):
-        _LOGGER.warning("Rejected unauthenticated WebSocket connection from %s", request.remote_addr)
-        return False  # Reject connection
-    # ... rest of connection logic
-```
-
-**Acceptance Criteria:**
-- [ ] WebSocket connections require valid auth token
-- [ ] Token accepted via query param `?token=xxx` or header `X-Auth-Token`
-- [ ] Invalid/missing tokens rejected with connection refused
-- [ ] Failed connection attempts logged with IP address
-- [ ] Tests verify unauthenticated connections rejected
-
-**Estimate:** 2-3 hours  
-**Assignee:** [TBD]
+**Tests:**
+- `tests/security/test_websocket_auth.py`: 11/11 Tests ✅
+- Token validation from query param ✅
+- Token validation from header ✅
+- Rejects missing token ✅
+- Rejects invalid token ✅
+- Admin token requirements ✅
 
 ---
 
 ### P1-02: Neuron State Override Without Authorization
-**Status:** ⚠️ OPEN  
+**Status:** ✅ **COMPLETE** (2026-03-02)  
 **Component:** Neuron API  
 **File:** `copilot_core/api/v1/neurons.py`
 
-**Beschreibung:**
-The `evaluate_neurons()` and `update_neuron_states()` endpoints allow clients to override neuron states and context via POST body without additional authorization. This could be used to manipulate system behavior.
+**Implementierung:**
+- `require_admin_token()` in `copilot_core/api/security.py` implementiert
+- State/Context Overrides erfordern Admin-Token
+- Standard-Evaluation funktioniert mit normalem Token
+- 403 für nicht-autorisierte Override-Versuche
+- Override-Versuche werden geloggt
 
-**Risk:**
-- Manipulation of neuron evaluation results
-- Bypassing intended automation logic
-- Potential for triggering unintended actions
+**Code-Stellen:**
+- Zeile 184-194: State Override Protection
+- Zeile 195-205: Context Override Protection
+- Zeile 244: Update Neuron States Protection
+- Zeile 381-392: Additional Override Points
 
-**Fix:**
-```python
-# Add admin token validation for overrides
-@bp.route("/evaluate", methods=["POST"])
-def evaluate_neurons():
-    body = request.get_json(silent=True) or {}
-    
-    # Check if override requested
-    has_override = "states" in body or "context" in body
-    
-    if has_override:
-        # Require elevated/admin token for overrides
-        if not _validate_admin_token(request):
-            return jsonify({
-                "success": False,
-                "error": "Admin token required for state overrides"
-            }), 403
-    
-    # ... rest of evaluation logic
-```
-
-**Acceptance Criteria:**
-- [ ] State/context overrides require admin-level token
-- [ ] Standard evaluation (no overrides) works with regular token
-- [ ] 403 returned for unauthorized override attempts
-- [ ] Override attempts logged with client info
-- [ ] Tests verify both auth levels work correctly
-
-**Estimate:** 3-4 hours  
-**Assignee:** [TBD]
+**Tests:**
+- `tests/security/test_websocket_auth.py::TestAdminTokenRequirement`: 5/5 Tests ✅
+- `tests/security/test_input_validation.py`: 13/13 Tests ✅
+- Gesamt: 24/24 Security-Tests ✅
 
 ---
 

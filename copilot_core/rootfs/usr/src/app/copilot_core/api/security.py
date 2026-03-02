@@ -3,12 +3,15 @@ from __future__ import annotations
 
 import hmac
 import json
+import logging
 import os
 import time
 from functools import wraps
 from typing import Any, Callable
 
 from flask import g, request as flask_request, jsonify
+
+_LOGGER = logging.getLogger(__name__)
 
 OPTIONS_PATH = "/data/options.json"
 
