@@ -44,12 +44,26 @@ Dev Loop (Phase 1-6)  →  Code Build  →  HA Release Pipeline  →  HA Conform
 
 ### Step 1: Version Bump
 
+**CRITICAL: Duplicate Config Check!**
+- ⚠️ **NEVER** place config.yaml or build.yaml in root directory of Core repo!
+- ⚠️ Root-level config files cause HA to show add-on TWICE!
+- ✅ All add-on metadata belongs in `copilot_core/` subdirectory only
+
 **Files zu updaten:**
 1. `pilotsuite-styx-core/CHANGELOG.md` (neuer Eintrag x.y.z)
 2. `pilotsuite-styx-core/RELEASE_NOTES.md` (neuer Release)
-3. `pilotsuite-styx-core/copilot_core/config.yaml` (version: "x.y.z")
-4. `pilotsuite-styx-core/copilot_core/manifest.json` (domotz.version: x.y.z)
-5. `pilotsuite-styx-ha/custom_components/ai_home_copilot/manifest.json` (version: x.y.z)
+3. `pilotsuite-styx-core/VERSION` (vX.Y.Z)
+4. `pilotsuite-styx-core/copilot_core/VERSION` (X.Y.Z)
+5. `pilotsuite-styx-core/copilot_core/config.yaml` (version: "X.Y.Z")
+6. `pilotsuite-styx-core/copilot_core/manifest.json` (domotz.version: X.Y.Z)
+7. `pilotsuite-styx-ha/custom_components/copilot_ha/manifest.json` (version: X.Y.Z)
+
+**Pre-Release Sync Script:**
+```bash
+# Auto-sync all version files before release (run in Core repo)
+./scripts/sync-ha-core-versions.sh --dry-run  # preview changes
+./scripts/sync-ha-core-versions.sh --force    # apply sync
+```
 
 ### Step 2: Git Commit + Tag
 
@@ -138,6 +152,22 @@ Hassfest: ✓ compliant
 
 ---
 
-**Letzte Aktualisierung:** 2026-02-24 22:45  
+## 🔧 Version Sync Checklist (PRE-RELEASE)
+
+Vor jedem Release-Tag MUSS folgendes synchronisiert sein:
+
+- [ ] `pilotsuite-styx-core/VERSION` (vX.Y.Z)
+- [ ] `pilotsuite-styx-core/copilot_core/VERSION` (X.Y.Z)
+- [ ] `pilotsuite-styx-core/copilot_core/config.yaml` (version: X.Y.Z)
+- [ ] `pilotsuite-styx-core/copilot_core/manifest.json` (version: X.Y.Z)
+- [ ] `custom_components/copilot_ha/manifest.json` (version: X.Y.Z)
+
+**Script:** `../pilotsuite-styx-core/scripts/sync-ha-core-versions.sh` (auto-sync vor release)
+
+**Warnung:** Duplicate config.yaml Dateien im Core-Root führen zu 2x Add-on in HA!
+
+---
+
+**Letzte Aktualisierung:** 2026-03-03 00:30 (Path Audit Fix)  
 **Entwickelt mit:** Groky Dev Check (every 10min)  
-**Basiert auf:** pilotsuite-styx-core v7.11.1 + pilotsuite-styx-ha v7.10.1
+**Basiert auf:** pilotsuite-styx-core v13.0.0 + pilotsuite-styx-ha v13.0.0
