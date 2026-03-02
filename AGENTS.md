@@ -1,14 +1,15 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This repository contains the PilotSuite Styx Core add-on and API backend.
+This repository contains the PilotSuite Styx HA integration (HACS).
 
-- Add-on metadata: `copilot_core/config.yaml`, `copilot_core/build.yaml`
-- Runtime app: `copilot_core/rootfs/usr/src/app/`
-- API and services: `copilot_core/rootfs/usr/src/app/copilot_core/`
-- Dashboard template/static: `copilot_core/rootfs/usr/src/app/templates/`, `.../static/`
-- Startup scripts: `copilot_core/rootfs/usr/src/app/start_dual.sh`
-- Tests: `copilot_core/rootfs/usr/src/app/tests/`
+**Note:** The Core add-on files live in the sibling repo `pilotsuite-styx-core`. Add-on metadata is in `copilot_core/config.yaml` and `copilot_core/build.yaml` (inside the copilot_core/ subdirectory of the Core repo).
+
+- Integration domain: `custom_components/copilot_ha/`
+- Config flow: `custom_components/copilot_ha/config_flow.py`
+- Sensors & entities: `custom_components/copilot_ha/sensor.py`
+- Dashboard files: `dashboard/` (primary: `pilotsuite-styx/`, legacy: `copilot_ha/`)
+- Tests: `tests/`
 
 This repo is tightly coupled with `pilotsuite-styx-ha`; endpoint, payload, and auth changes must stay integration-compatible.
 
