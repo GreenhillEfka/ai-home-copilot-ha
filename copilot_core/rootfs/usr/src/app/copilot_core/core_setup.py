@@ -35,7 +35,7 @@ def _safe_float(value, default: float, minimum: float = 0.0, maximum: float = 1e
         return default
 
 
-def init_services(hass=None, config: dict = None):
+async def init_services(hass=None, config: dict = None):
     """
     Initialize all core services with lazy loading support.
 
@@ -51,6 +51,18 @@ def init_services(hass=None, config: dict = None):
     """
     config = config or {}
     start_time = time.perf_counter()
+    
+    # Initialize connection pooling FIRST (before any service that makes HTTP calls)
+    try:
+        from copilot_core.connection_pool import get_pool_manager
+        pool = await get_pool_manager()
+        _LOGGER.info(
+            "Connection pooling initialized (max_connections=%d, timeout=%ds)",
+            pool.max_connections,
+            pool.timeout,
+        )
+    except Exception:
+        _LOGGER.exception("Failed to init ConnectionPoolManager")
     
     # Check if lazy loading is enabled
     lazy_load_enabled = config.get("lazy_load_enabled", True)
@@ -370,9 +382,16 @@ def init_services(hass=None, config: dict = None):
     # Calculate startup time
     services["startup_time_ms"] = (time.perf_counter() - start_time) * 1000
     
+    # Add connection pool metrics to services
+    try:
+        from copilot_core.connection_pool import get_pool_metrics
+        services["connection_pool_metrics"] = get_pool_metrics()
+    except Exception:
+        services["connection_pool_metrics"] = {"error": "Pool not initialized"}
+    
     _LOGGER.info(
         f"Core services initialized in {services['startup_time_ms']:.2f}ms "
-        f"(lazy_load_enabled={lazy_load_enabled})"
+        f"(lazy_load_enabled={lazy_load_enabled}, connection_pooling=active)"
     )
     
     return services
@@ -442,6 +461,34 @@ def register_blueprints(app: Flask, services: dict) -> None:
     app.register_blueprint(federated_bp, url_prefix="/api/v1")
     
     _LOGGER.info("API blueprints registered")
+
+
+async def cleanup_services(services: dict) -> None:
+    """
+    Cleanup all services and connection pools on shutdown.
+    
+    Args:
+        services: Dictionary of initialized services
+    """
+    _LOGGER.info("Cleaning up services...")
+    
+    # Close connection pools FIRST (before closing services that may use them)
+    try:
+        from copilot_core.connection_pool import close_pool
+        await close_pool()
+        _LOGGER.info("Connection pools closed")
+    except Exception:
+        _LOGGER.exception("Failed to close connection pools")
+    
+    # Close high-level connections
+    try:
+        from copilot_core.connections import close_all_connections
+        await close_all_connections()
+        _LOGGER.info("All connections closed")
+    except Exception:
+        _LOGGER.exception("Failed to close connections")
+    
+    _LOGGER.info("Service cleanup complete")
 
 
 # Import required modules at module level (these are lightweight)
