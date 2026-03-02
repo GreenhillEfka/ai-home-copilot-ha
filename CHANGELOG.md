@@ -27,7 +27,36 @@ Alle wesentlichen Änderungen am PilotSuite Styx Core werden in dieser Datei dok
 - Proper logging of failed authentication attempts
 
 ### Tests
-- 42 security tests added/updated (test_auth_security.py)
+- **test_websocket_auth.py**: 25+ Tests für WebSocket-Authentifizierung
+  - Token-Validierung via Query-Param, Header, SocketIO Auth-Dict
+  - Fehlende/ungültige Tokens → Rejection + Logging
+  - Connection-Tracking, Room-Management, Room-Name-Validation
+  - Edge-Cases: Whitespace, Case-Sensitivity, leere Tokens
+  
+- **test_neuron_auth.py**: 30+ Tests für Neuron-State-Authorization
+  - Alle Override-Endpoints (`evaluate`, `update`, `mood/evaluate`)
+  - Admin-Token-Validierung (`require_admin_token`)
+  - 401 vs 403 Response-Codes
+  - Read-only Endpoints (Basis-Auth)
+  - Edge-Cases: malformed Bearer, Basic-Auth-Rejection, Case-Sensitivity
+
+- **test_auth_security.py**: 42 bestehende Security-Tests aktualisiert
+
+### 📊 Security Status nach v12.10.0
+- **P0 Issues**: 0/0 (100%) ✅
+- **P1 Issues**: 4/4 (100%) ✅✅ (P1-01 + P1-02 vollständig implementiert)
+- **P2 Issues**: 5/5 (100%) ✅
+- **P3 Issues**: 1/8 (12.5%) - Weitere P3-Fixes geplant für v12.11.0
+
+### 📝 Breaking Changes
+- **WebSocket-Verbindungen ohne Token werden abgelehnt** (secure default)
+- **State/Context-Overrides erfordern Admin-Token** (403 statt zuvor 200)
+- **Alle Neuron-API-Endpoints erfordern Authentifizierung** (401 ohne Token)
+
+### 🔧 Migration Guide
+1. **WebSocket-Clients**: Token via `?token=xxx` oder `X-Auth-Token` Header senden
+2. **API-Clients**: `X-Auth-Token` oder `Authorization: Bearer xxx` für alle Requests
+3. **State-Overrides**: Admin-Token erforderlich (gleicher Token wie Basis-Auth)
 - WebSocket authentication tests (9 tests)
 - Neuron state override authorization tests (7 tests)
 - OWASP Top 10 coverage (test_owasp.py)

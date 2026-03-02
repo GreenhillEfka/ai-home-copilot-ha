@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Callable
 from dataclasses import dataclass, field
@@ -27,6 +28,24 @@ from copilot_core.mood.live_engine import LiveMoodState, MoodScore3D, get_live_m
 from copilot_core.neurons.manager import get_neuron_manager
 
 _LOGGER = logging.getLogger(__name__)
+
+# Room name validation: alphanumeric, underscore, hyphen only, max 50 chars
+ROOM_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
+ROOM_NAME_MAX_LENGTH = 50
+
+
+def validate_room_name(room_name: str) -> bool:
+    """Validate room name format.
+    
+    Args:
+        room_name: Room name to validate
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    if not room_name or len(room_name) > ROOM_NAME_MAX_LENGTH:
+        return False
+    return bool(ROOM_NAME_PATTERN.match(room_name))
 
 
 class EventType(str, Enum):
@@ -161,6 +180,13 @@ class WebSocketHandler:
         def handle_join(data):
             """Handle room join request."""
             room = data.get('room', 'general')
+            
+            # Validate room name
+            if not validate_room_name(room):
+                _LOGGER.warning("Invalid room name rejected: %s", room)
+                emit('error', {'message': f'Invalid room name: {room}'})
+                return
+            
             join_room(room)
             
             if room not in self._rooms:
