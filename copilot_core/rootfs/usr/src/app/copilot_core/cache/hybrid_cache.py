@@ -1,13 +1,15 @@
 """Hybrid Cache Manager with Redis + Local LRU.
 
-Features:
-- Async-safe with asyncio.Lock
-- Two-tier caching: Redis (shared) + Local LRU (fast)
-- TTL-based expiration
-- LRU eviction on memory pressure
-- Cache hit/miss metrics with >80% hit rate target
-- Configurable: cache_enabled, default_ttl, max_size
-- Optimized for frequent requests (sensor data, RAG results)
+Two-tier caching architecture for high-performance caching:
+- Local LRU Cache: Ultra-fast in-memory cache for hot data
+- Redis Cache: Shared, persistent cache for distributed systems
+
+Optimized for:
+- Sensor data (high-frequency reads, moderate writes)
+- RAG search results (expensive to compute, frequently accessed)
+- API responses (reduce redundant computations)
+
+Target: >80% cache hit rate
 """
 
 from __future__ import annotations
@@ -90,59 +92,6 @@ class HybridCacheConfig:
     local_cache_size: int = 500  # Local LRU cache size
     write_through: bool = True  # Write to both Redis and local cache
     read_through_local_first: bool = True  # Check local cache before Redis
-
-
-@dataclass
-class CacheConfig:
-    """Configuration for cache manager (legacy, kept for compatibility)."""
-    
-    cache_enabled: bool = True
-    default_ttl: int = 300  # 5 minutes
-    max_size: int = 1000
-    cleanup_interval: int = 60  # seconds
-
-
-class CacheManager:
-    """Thread-safe in-memory cache with LRU eviction.
-    
-    Features:
-    - asyncio.Lock for async safety
-    - TTL-based automatic expiration
-    - LRU eviction when max_size is reached
-    - Per-key TTL override
-    - Hit/miss metrics tracking
-    - Background cleanup task
-    
-    Usage:
-        cache = CacheManager(max_size=1000, default_ttl=300)
-        await cache.set("key", value, ttl=600)
-        value = await cache.get("key")
-        await cache.delete("key")
-    """
-    
-    def __init__(
-        self,
-        cache_enabled: bool = True,
-        default_ttl: int = 300,
-        max_size: int = 1000,
-        cleanup_interval: int = 60,
-    ):
-        self._cache: OrderedDict[str, CacheEntry[Any]] = OrderedDict()
-        self._lock = asyncio.Lock()
-        self._metrics = CacheMetrics()
-        self._config = CacheConfig(
-            cache_enabled=cache_enabled,
-            default_ttl=default_ttl,
-            max_size=max_size,
-            cleanup_interval=cleanup_interval,
-        )
-        self._cleanup_task: Optional[asyncio.Task] = None
-        self._running = False
-        
-        _LOGGER.info(
-            "CacheManager initialized: enabled=%s, max_size=%d, default_ttl=%ds",
-            cache_enabled, max_size, default_ttl
-        )
 
 
 class HybridCacheManager:
@@ -230,25 +179,6 @@ class HybridCacheManager:
             "HybridCacheManager initialized: local_size=%d, redis=%s:%d, ttl=%ds",
             local_cache_size, redis_host, redis_port, default_ttl
         )
-    
-    async def start(self) -> None:
-        """Start background cleanup task."""
-        if self._config.cache_enabled and not self._running:
-            self._running = True
-            self._cleanup_task = asyncio.create_task(self._cleanup_loop())
-            _LOGGER.info("CacheManager cleanup task started")
-    
-    async def stop(self) -> None:
-        """Stop background cleanup task."""
-        self._running = False
-        if self._cleanup_task:
-            self._cleanup_task.cancel()
-            try:
-                await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
-            self._cleanup_task = None
-            _LOGGER.info("CacheManager cleanup task stopped")
     
     async def _init_redis(self) -> bool:
         """Initialize Redis connection."""
@@ -343,18 +273,18 @@ class HybridCacheManager:
                 _LOGGER.error("Cache cleanup error: %s", e)
     
     async def _cleanup_expired(self) -> int:
-        """Remove expired entries. Returns count of removed entries."""
+        """Remove expired entries from local cache. Returns count of removed entries."""
         now = time.time()
         expired_keys = []
         
         async with self._lock:
-            for key, entry in self._cache.items():
+            for key, entry in self._local_cache.items():
                 if now > entry.expires_at:
                     expired_keys.append(key)
             
             for key in expired_keys:
-                del self._cache[key]
-                self._metrics.expirations += 1
+                del self._local_cache[key]
+                self._local_metrics.expirations += 1
         
         if expired_keys:
             _LOGGER.debug("Cleaned up %d expired cache entries", len(expired_keys))
@@ -701,189 +631,6 @@ class HybridCacheManager:
         )
         
         return {"warmed": warmed, "failed": failed}
-    
-    async def _evict_if_needed(self) -> None:
-        """Evict oldest entries if cache exceeds max_size."""
-        # Evict until we have room for one more item
-        while len(self._cache) >= self._config.max_size:
-            # Remove oldest (first) item - LRU eviction
-            oldest_key = next(iter(self._cache))
-            del self._cache[oldest_key]
-            self._metrics.evictions += 1
-            _LOGGER.debug("Evicted cache entry: %s", oldest_key)
-    
-    async def get(self, key: str, default: Any = None) -> Optional[Any]:
-        """Get value from cache.
-        
-        Args:
-            key: Cache key
-            default: Default value if key not found or expired
-            
-        Returns:
-            Cached value or default
-        """
-        if not self._config.cache_enabled:
-            self._metrics.misses += 1
-            self._metrics.total_requests += 1
-            return default
-        
-        now = time.time()
-        
-        async with self._lock:
-            if key not in self._cache:
-                self._metrics.misses += 1
-                self._metrics.total_requests += 1
-                return default
-            
-            entry = self._cache[key]
-            
-            # Check expiration
-            if now > entry.expires_at:
-                del self._cache[key]
-                self._metrics.expirations += 1
-                self._metrics.misses += 1
-                self._metrics.total_requests += 1
-                return default
-            
-            # Update access tracking (move to end for LRU)
-            entry.last_accessed = now
-            entry.access_count += 1
-            self._cache.move_to_end(key)
-            
-            self._metrics.hits += 1
-            self._metrics.total_requests += 1
-            
-            _LOGGER.debug("Cache hit: %s (access_count=%d)", key, entry.access_count)
-            return entry.value
-    
-    async def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: Optional[int] = None,
-    ) -> None:
-        """Set value in cache.
-        
-        Args:
-            key: Cache key
-            value: Value to cache
-            ttl: Time-to-live in seconds (overrides default_ttl)
-        """
-        if not self._config.cache_enabled:
-            return
-        
-        now = time.time()
-        effective_ttl = ttl if ttl is not None else self._config.default_ttl
-        expires_at = now + effective_ttl
-        
-        async with self._lock:
-            # If key exists, remove it first (will re-add at end)
-            if key in self._cache:
-                del self._cache[key]
-            
-            # Evict if needed before adding
-            await self._evict_if_needed()
-            
-            entry = CacheEntry(
-                value=value,
-                created_at=now,
-                expires_at=expires_at,
-                last_accessed=now,
-                access_count=0,
-            )
-            self._cache[key] = entry
-            
-            _LOGGER.debug("Cache set: %s (ttl=%ds)", key, effective_ttl)
-    
-    async def delete(self, key: str) -> bool:
-        """Delete key from cache.
-        
-        Returns:
-            True if key was deleted, False if not found
-        """
-        async with self._lock:
-            if key in self._cache:
-                del self._cache[key]
-                _LOGGER.debug("Cache delete: %s", key)
-                return True
-            return False
-    
-    async def clear(self) -> None:
-        """Clear all cache entries."""
-        async with self._lock:
-            self._cache.clear()
-            _LOGGER.info("Cache cleared")
-    
-    async def exists(self, key: str) -> bool:
-        """Check if key exists and is not expired."""
-        if not self._config.cache_enabled:
-            return False
-        
-        now = time.time()
-        
-        async with self._lock:
-            if key not in self._cache:
-                return False
-            
-            entry = self._cache[key]
-            if now > entry.expires_at:
-                del self._cache[key]
-                self._metrics.expirations += 1
-                return False
-            
-            return True
-    
-    async def get_or_set(
-        self,
-        key: str,
-        factory: Any,
-        ttl: Optional[int] = None,
-    ) -> Any:
-        """Get value from cache or compute and cache it.
-        
-        Args:
-            key: Cache key
-            factory: Async callable to compute value if not cached
-            ttl: Time-to-live in seconds
-            
-        Returns:
-            Cached or computed value
-        """
-        value = await self.get(key)
-        if value is not None:
-            return value
-        
-        # Compute value
-        if asyncio.iscoroutinefunction(factory):
-            value = await factory()
-        else:
-            value = factory()
-        
-        # Cache it
-        await self.set(key, value, ttl=ttl)
-        return value
-    
-    def get_metrics(self) -> CacheMetrics:
-        """Get cache metrics."""
-        return self._metrics
-    
-    async def get_stats(self) -> Dict[str, Any]:
-        """Get cache statistics."""
-        async with self._lock:
-            now = time.time()
-            expired_count = sum(
-                1 for entry in self._cache.values()
-                if now > entry.expires_at
-            )
-            
-            return {
-                "size": len(self._cache),
-                "max_size": self._config.max_size,
-                "enabled": self._config.cache_enabled,
-                "default_ttl": self._config.default_ttl,
-                "expired_entries": expired_count,
-                "metrics": self._metrics.to_dict(),
-            }
 
 
 # Global cache instances for different use cases (Hybrid)
@@ -967,7 +714,3 @@ async def shutdown_all_caches() -> None:
     """Stop all hybrid cache managers."""
     for cache in [get_sensor_cache(), get_habitus_cache(), get_rag_cache()]:
         await cache.stop()
-
-
-# Legacy compatibility aliases
-LegacyCacheManager = CacheManager

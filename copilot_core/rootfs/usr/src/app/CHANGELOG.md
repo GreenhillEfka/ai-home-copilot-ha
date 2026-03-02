@@ -2,6 +2,146 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx Core Backend.
 
+## [12.0.8] - 2026-03-02
+
+### Added
+- **Hybrid Cache Optimization** (`copilot_core/cache/hybrid_cache.py`)
+  - **Redis + Local LRU Hybrid Architecture** - Zwei-Ebenen-Caching für maximale Performance
+    - **Local LRU Cache**: Ultra-schneller In-Memory-Cache für heiße Daten (500-1000 Einträge)
+    - **Redis Cache**: Geteilter, persistenter Cache für verteilte Systeme
+    - **Write-Through Policy**: Schreibt in beide Ebenen gleichzeitig
+    - **Read-Through Policy**: Prüft lokal zuerst, dann Redis (Fast Path)
+  
+  - **Optimiert für häufige Anfragen**:
+    - **Sensor-Daten**: Hohe Lesefrequenz, moderate Schreibfrequenz (TTL: 5 Min)
+    - **RAG-Ergebnisse**: Teuer zu berechnen, häufig abgerufen (TTL: 10 Min)
+    - **Habitus-Zonen**: Mittlere Zugriffshäufigkeit (TTL: 15 Min)
+  
+  - **Cache-Hit-Rate Optimierung**:
+    - **Target: >80% Hit-Rate** durch intelligentes Prefetching
+    - LRU-Eviction verhindert Memory-Bloat
+    - Automatische Metriken-Erfassung (Hits, Misses, Evictions, Expirations)
+    - Graceful Degradation bei Redis-Ausfall (Local Cache als Fallback)
+  
+  - **Cache Warming**:
+    - `warm_cache()` Methode zum Vorab-Füllen des Caches
+    - Unterstützt asynchrone Loader-Funktionen
+    - Fehler-tolerant (einzelne Fehler brechen nicht ab)
+  
+  - **Comprehensive Metrics**:
+    - Getrennte Metriken für Local, Redis und Hybrid-Layer
+    - Hit-Rate-Berechnung in Echtzeit
+    - Verfügbar via `get_metrics()` / `get_stats()`
+
+- **Global Cache Instances** (Singleton-Pattern):
+  - `get_sensor_cache()` - 500 Einträge, 5 Min TTL, Target: >85% Hit-Rate
+  - `get_habitus_cache()` - 200 Einträge, 15 Min TTL, Target: >80% Hit-Rate
+  - `get_rag_cache()` - 1000 Einträge, 10 Min TTL, Target: >90% Hit-Rate
+  - `init_all_caches()` / `shutdown_all_caches()` - Lifecycle-Management
+
+- **Test Coverage** (`tests/test_hybrid_cache.py`):
+  - **23 umfassende Tests** für HybridCacheManager:
+    - Basic Operations (set, get, delete, clear, exists)
+    - TTL-Expiration
+    - LRU-Eviction
+    - Get-or-Set Pattern (sync + async)
+    - Metrics Tracking
+    - **Hit-Rate Simulation** (>80% Target verifiziert)
+    - Sensor Cache Hit-Rate Test
+    - RAG Cache Hit-Rate Test
+    - Global Instances (Singleton)
+    - Cache Warming
+    - Concurrency Tests (Read, Write, Mixed)
+
+### Changed
+- **Cache Architecture**:
+  - Von einfachem In-Memory-Cache zu Hybrid-Architektur erweitert
+  - Redis-Integration mit `redis.asyncio` (automatische Fallback-Logik)
+  - Namespace-Prefix für Redis-Keys: `pilotsuite:hybrid:`
+
+### Technical Details
+- **HybridCacheManager Features**:
+  - Async-safe mit `asyncio.Lock`
+  - Hintergrund-Tasks für Cleanup und Redis-Sync
+  - Konfigurierbare Parameter (TTL, Size, Redis-Settings)
+  - Vollständige Typ-Hints (Python 3.11+)
+
+- **Performance-Optimierungen**:
+  - Local Cache: O(1) Lookup via OrderedDict
+  - LRU-Eviction: Automatisch bei Size-Überschreitung
+  - Redis: Connection-Pooling durch `redis.asyncio`
+  - Minimaler Overhead bei Local-Cache-Hits
+
+### Test Results
+- **Hybrid Cache Tests**: 23/23 Tests ✅
+  - Hit-Rate Simulation: **>80% achieved** ✅
+  - Sensor Cache: **>85% hit rate** ✅
+  - RAG Cache: **>90% hit rate** ✅
+  - Concurrency: Alle Tests bestanden ✅
+
+### Files Changed
+- `copilot_core/cache/hybrid_cache.py` (NEW) - 650+ Zeilen
+- `tests/test_hybrid_cache.py` (NEW) - 23 Tests
+- `copilot_core/cache.py` (UPDATED) - Legacy-Code beibehalten
+
+### Migration Guide
+```python
+# Alt (einfacher Cache)
+from copilot_core.cache import CacheManager
+cache = CacheManager(default_ttl=300)
+
+# Neu (Hybrid Cache mit Redis)
+from copilot_core.cache.hybrid_cache import HybridCacheManager
+cache = HybridCacheManager(
+    redis_host="localhost",
+    redis_port=6379,
+    local_cache_size=500,
+    default_ttl=300,
+)
+await cache.start()
+
+# Nutzung (API identisch)
+await cache.set("key", value, ttl=300)
+value = await cache.get("key")
+metrics = await cache.get_metrics()
+```
+
+### Usage Examples
+```python
+# Sensor-Daten cachen (hohe Frequenz)
+from copilot_core.cache.hybrid_cache import get_sensor_cache
+
+sensor_cache = get_sensor_cache()
+await sensor_cache.start()
+
+# Sensor-Wert cachen
+await sensor_cache.set("sensor:temp:1", {"value": 23.5, "unit": "°C"})
+
+# Sensor-Wert lesen (Local Cache First)
+data = await sensor_cache.get("sensor:temp:1")
+
+# Metriken prüfen
+metrics = await sensor_cache.get_metrics()
+print(f"Hit-Rate: {metrics['hybrid']['metrics']['hit_rate']:.2%}")
+
+# RAG-Ergebnisse cachen (teure Berechnung)
+from copilot_core.cache.hybrid_cache import get_rag_cache
+
+rag_cache = get_rag_cache()
+await rag_cache.start()
+
+# Teure Berechnung cachen
+async def expensive_search(query):
+    # ... RAG-Suche ...
+    return results
+
+results = await rag_cache.get_or_set(
+    f"rag:{query}",
+    expensive_search,
+    ttl=600  # 10 Minuten
+)
+```
+
 ## [12.0.7] - 2026-03-02
 
 ### Added

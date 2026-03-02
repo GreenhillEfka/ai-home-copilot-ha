@@ -3,6 +3,23 @@
 This file exists so Home Assistant can show an add-on changelog.
 For full history, see the repository-level `CHANGELOG.md`.
 
+## 12.8.1 (2026-03-02)
+- **Connection Pooling für HA-Supervisor und Ollama**: Wiederverwendbare aiohttp.ClientSession-Connections statt Neuverbindung pro Request
+  - `copilot_core/connection_pool.py`: Zentraler ConnectionPoolManager mit konfigurierbarer Pool-Größe (default: 10 Connections)
+  - `copilot_core/connections.py`: High-Level Connection Wrapper (HAConnection, OllamaConnection) mit bequemer API
+  - **Performance**: >90% Connection-Pool-Effizienz (Last-Test: 1000 Requests mit 100% Reuse-Rate)
+  - **Features**: Session-Reuse, Health-Checks, Timeout-Handling, automatische Cleanup on Shutdown
+  - **APIs**: 
+    - Low-Level: `get_ha_session()`, `get_ollama_session()` als Context-Manager
+    - High-Level: `get_ha_connection()`, `get_ollama_connection()` mit Connect/Get/Post-Methoden
+  - **Metriken**: Echtzeit-Monitoring via `get_pool_metrics()`, `get_connection_metrics()` (Requests total, Reuse-Rate, Health-Status)
+  - **Tests**: 51 Tests bestanden (22 Unit-Tests connections + 23 Unit-Tests pool + 6 Last-Tests)
+    - test_connections.py: 22 Tests ✅
+    - test_connection_pool.py: 23 Tests ✅
+    - test_connection_pool_load.py: 6 Last-Tests ✅ (1000 Requests, 100% Reuse-Rate)
+  - **Migration**: Bestehende Code-Stellen können direkt auf Pooling umstellen (siehe examples/connection_pooling_examples.py)
+  - **Dokumentation**: CONNECTION_POOLING_SUMMARY.md, POOL_PERFORMANCE.md
+
 ## 12.8.0 (2026-03-02)
 - **HomeAssistant Auto-Discovery**: Neues Modul fuer automatische Entity-Erkennung und Zone-Mapping
 - **Habitus Dashboard**: 10-Tab Dashboard mit Echtzeit Zone-Daten und WebSocket-Integration
