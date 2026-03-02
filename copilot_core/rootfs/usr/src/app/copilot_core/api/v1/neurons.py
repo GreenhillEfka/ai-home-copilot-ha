@@ -13,6 +13,7 @@ Endpoints:
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
@@ -28,6 +29,28 @@ bp = Blueprint("neurons", __name__, url_prefix="/neurons")
 from copilot_core.api.security import validate_token as _validate_token, require_admin_token
 from copilot_core.api.v1 import neuron_graph as neuron_graph_module
 from copilot_core.api.v1.websocket_neuron import get_neuron_ws_handler
+
+# Neuron ID validation: lowercase letters, underscores, dots only
+# Format: prefix.name (e.g., "context.presence", "mood.focus")
+NEURON_ID_PATTERN = re.compile(r'^[a-z_]+(\.[a-z_]+)?$')
+NEURON_ID_MAX_LENGTH = 100
+
+# Server-side cap for mood history queries
+MOOD_HISTORY_MAX_LIMIT = 100
+
+
+def validate_neuron_id(neuron_id: str) -> bool:
+    """Validate neuron ID format.
+    
+    Args:
+        neuron_id: Neuron identifier to validate
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    if not neuron_id or len(neuron_id) > NEURON_ID_MAX_LENGTH:
+        return False
+    return bool(NEURON_ID_PATTERN.match(neuron_id))
 
 
 @bp.before_request
@@ -89,6 +112,13 @@ def get_neuron(neuron_id: str):
             }
         }
     """
+    # Validate neuron ID format
+    if not validate_neuron_id(neuron_id):
+        return jsonify({
+            "success": False,
+            "error": "Invalid neuron_id format. Must be lowercase letters, underscores, or dots."
+        }), 400
+    
     try:
         manager = get_neuron_manager()
         
@@ -392,7 +422,7 @@ def get_mood_history():
     """Get mood history.
     
     Query params:
-        limit: Number of entries (default 10)
+        limit: Number of entries (default 10, max 100)
     
     Returns:
         {
@@ -405,7 +435,8 @@ def get_mood_history():
     """
     try:
         manager = get_neuron_manager()
-        limit = int(request.args.get("limit", "10"))
+        # Server-side cap to prevent DoS
+        limit = min(int(request.args.get("limit", "10")), MOOD_HISTORY_MAX_LIMIT)
         
         history = manager._mood_history[-limit:]
         
@@ -518,6 +549,13 @@ def get_neuron_stats(neuron_id: str):
             }
         }
     """
+    # Validate neuron ID format
+    if not validate_neuron_id(neuron_id):
+        return jsonify({
+            "success": False,
+            "error": "Invalid neuron_id format. Must be lowercase letters, underscores, or dots."
+        }), 400
+    
     try:
         graph = neuron_graph_module.get_neuron_graph()
         node = graph.get_node(neuron_id)

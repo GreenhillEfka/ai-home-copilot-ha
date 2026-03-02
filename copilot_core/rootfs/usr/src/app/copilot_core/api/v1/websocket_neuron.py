@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import json
+import re
 from typing import Any, Dict, Set, Optional
 from datetime import datetime, timezone
 
@@ -29,6 +30,24 @@ EVENT_NEURON_FIRE = "neuron_fire"
 EVENT_GRAPH_UPDATE = "graph_update"
 EVENT_MOOD_CHANGE = "mood_change"
 EVENT_SUGGESTION = "suggestion"
+
+# Room name validation: alphanumeric, underscore, hyphen only, max 50 chars
+ROOM_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
+ROOM_NAME_MAX_LENGTH = 50
+
+
+def validate_room_name(room_name: str) -> bool:
+    """Validate room name format.
+    
+    Args:
+        room_name: Room name to validate
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    if not room_name or len(room_name) > ROOM_NAME_MAX_LENGTH:
+        return False
+    return bool(ROOM_NAME_PATTERN.match(room_name))
 
 
 class NeuronWebSocketHandler:
@@ -142,6 +161,12 @@ class NeuronWebSocketHandler:
                 return
             client_id = request.sid
             room = data.get("room", "neurons")
+            
+            # Validate room name
+            if not validate_room_name(room):
+                _LOGGER.warning("Client %s attempted to join invalid room: %s", client_id, room)
+                emit("error", {"message": "Invalid room name format"})
+                return
             
             # Leave current room
             if client_id in self.client_rooms:

@@ -98,6 +98,13 @@ def validate_token(request) -> bool:
         if candidate and hmac.compare_digest(candidate, token):
             return True
 
+    # Log failed authentication attempt
+    _LOGGER.warning(
+        "Failed authentication attempt from %s (path=%s, method=%s)",
+        request.remote_addr or "unknown",
+        request.path or "unknown",
+        request.method or "unknown"
+    )
     return False
 
 
