@@ -177,7 +177,7 @@ curl -s https://api.github.com/repos/GreenhillEfka/pilotsuite-styx-core/releases
 ```bash
 # HACS erkennt neue Version?
 # Check: Manifest version matches released tag
-jq '.version' /path/to/pilotsuite-styx-ha/custom_components/ai_home_copilot/manifest.json
+jq '.version' /path/to/pilotsuite-styx-ha/custom_components/copilot_ha/manifest.json
 
 # Expected: "0.4.6"
 ```

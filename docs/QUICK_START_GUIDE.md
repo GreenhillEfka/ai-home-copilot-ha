@@ -14,7 +14,7 @@ PilotSuite ist ein **intelligentes Heimautomatisierungs-System**, das dein Home 
 
 ### Komponenten
 
-1. **HA Integration** (`ai_home_copilot`) - Sammelt Daten, zeigt Empfehlungen
+1. **HA Integration** (`copilot_ha`) - Sammelt Daten, zeigt Empfehlungen
 2. **Core Add-on** (`ha-copilot-core`) - KI-Engine für Analyse und Kandidaten-Generierung
 3. **Brain Graph** - Visualisiert Gerät-Verbindungen und Aktivitätsmuster
 
@@ -147,7 +147,7 @@ Lösung:
 ## Support
 
 ### Logs sammeln
-1. **HA Integration**: Einstellungen → System → Logs → `custom_components.ai_home_copilot`
+1. **HA Integration**: Einstellungen → System → Logs → `custom_components.copilot_ha`
 2. **Core Add-on**: Add-ons → PilotSuite Core → Log-Tab
 
 ### GitHub Issues

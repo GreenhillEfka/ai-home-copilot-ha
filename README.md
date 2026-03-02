@@ -48,7 +48,7 @@ PilotSuite ist eine **vollständige Home Assistant Integration** mit:
 
 1. **Files kopieren**
    ```bash
-   cp -r custom_components/ai_home_copilot /config/custom_components/
+   cp -r custom_components/copilot_ha /config/custom_components/
    ```
 
 2. **Home Assistant neu starten**
@@ -120,11 +120,11 @@ PilotSuite stellt folgende Services bereit:
 
 | Service | Beschreibung |
 |---------|-------------|
-| `ai_home_copilot.evaluate_zone` | Bewertet eine Habituszone |
-| `ai_home_copilot.trigger_automation` | Löst Automation aus |
-| `ai_home_copilot.query_brain_graph` | Fragt Brain Graph ab |
-| `ai_home_copilot.update_mood` | Aktualisiert Stimmung |
-| `ai_home_copilot.sync_core` | Sync mit Core Backend |
+| `copilot_ha.evaluate_zone` | Bewertet eine Habituszone |
+| `copilot_ha.trigger_automation` | Löst Automation aus |
+| `copilot_ha.query_brain_graph` | Fragt Brain Graph ab |
+| `copilot_ha.update_mood` | Aktualisiert Stimmung |
+| `copilot_ha.sync_core` | Sync mit Core Backend |
 
 ---
 
@@ -132,7 +132,7 @@ PilotSuite stellt folgende Services bereit:
 
 ```
 Home Assistant
-├── PilotSuite HACS Integration (ai_home_copilot)
+├── PilotSuite HACS Integration (copilot_ha)
 │   ├── 94+ Sensoren
 │   ├── 15+ Dashboard Cards
 │   ├── 23 Core Module

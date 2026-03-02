@@ -402,7 +402,7 @@ docker logs copilot_core
 ### Entities Not Appearing
 
 1. Check **Developer Tools** → **States**
-2. Look for `ai_home_copilot.*` entities
+2. Look for `copilot_ha.*` entities
 3. Restart HA Integration
 
 ### Brain Graph Empty
