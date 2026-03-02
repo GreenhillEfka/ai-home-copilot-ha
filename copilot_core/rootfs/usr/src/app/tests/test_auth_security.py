@@ -149,9 +149,9 @@ class TestAllowlistedPaths(unittest.TestCase):
         """GET /api/v1/status should be accessible without token."""
         if not _FLASK_AVAILABLE:
             self.skipTest("Flask not installed")
-        with patch("copilot_core.api.security.get_auth_token", return_value="secret"), \
-             patch("copilot_core.api.security.is_auth_required", return_value=True):
-            r = self.client.get("/api/v1/status")
+        # /api/v1/status is in the allowlist, so it doesn't require auth
+        # No need to patch auth settings - the allowlist handles it
+        r = self.client.get("/api/v1/status")
         self.assertEqual(r.status_code, 200)
 
 

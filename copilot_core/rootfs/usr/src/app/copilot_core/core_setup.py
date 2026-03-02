@@ -389,25 +389,25 @@ def register_blueprints(app: Flask, services: dict) -> None:
     # Import blueprints
     from copilot_core.api.v1.log_fixer_tx import bp as log_fixer_bp
     from copilot_core.api.v1.events_ingest import bp as events_ingest_bp
-    from copilot_core.api.v1.sensors import sensors_bp
+    from copilot_core.api.v1.sensors import bp as sensors_bp
     from copilot_core.api.v1.homekit import homekit_bp
     from copilot_core.api.v1.anomaly import anomaly_bp
     from copilot_core.api.v1.metrics import metrics_bp
     from copilot_core.api.v1.calendar import calendar_bp
     from copilot_core.api.v1.energy_forecast import energy_forecast_bp
-    from copilot_core.api.v1.habitus import habitus_bp
-    from copilot_core.api.v1.mood import mood_bp
+    from copilot_core.api.v1.habitus import bp as habitus_bp
+    from copilot_core.api.v1.mood import bp as mood_bp
     from copilot_core.api.v1.zone_editor import zone_editor_bp
     from copilot_core.api.v1.media_zones import media_zones_bp
-    from copilot_core.api.v1.tag_system import tag_bp
+    from copilot_core.api.v1.tag_system import bp as tag_bp
     from copilot_core.api.v1.notifications import bp as notifications_bp
-    from copilot_core.api.v1.blueprint import blueprint_bp
-    from copilot_core.api.v1.multihome import multihome_bp
+    from copilot_core.api.v1.blueprint import api_v1 as blueprint_bp
+    from copilot_core.api.v1.multihome import bp as multihome_bp
     from copilot_core.api.v1.module_control import module_control_bp
-    from copilot_core.api.v1.user_preferences import user_preferences_bp
-    from copilot_core.api.v1.voice import voice_bp
-    from copilot_core.api.v1.vector import vector_bp
-    from copilot_core.api.v1.swagger_ui import swagger_ui_bp
+    from copilot_core.api.v1.user_preferences import bp as user_preferences_bp
+    from copilot_core.api.v1.voice import bp as voice_bp
+    from copilot_core.api.v1.vector import bp as vector_bp
+    from copilot_core.api.v1.swagger_ui import bp as swagger_ui_bp
     from copilot_core.api.v1.rag import bp as rag_bp
     
     # Register blueprints
