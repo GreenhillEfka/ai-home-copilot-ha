@@ -2,6 +2,43 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx Core werden in dieser Datei dokumentiert.
 
+## [v12.10.0] - 2026-03-02
+
+### Security Fixes (P1 - Critical)
+
+#### WebSocket Authentication (P1-01)
+- WebSocket connections now require valid authentication token
+- Token accepted via SocketIO auth dict, query parameter, or X-Auth-Token header
+- Unauthenticated connections rejected with warning log
+- Room name validation added (alphanumeric, underscore, hyphen only, max 50 chars)
+- Files: `copilot_core/websocket_handler.py`, `copilot_core/api/security.py`
+
+#### Neuron State Override Protection (P1-02)
+- `/neurons/evaluate` state/context overrides require admin token
+- `/neurons/update` endpoint requires admin token  
+- `/neurons/mood/evaluate` overrides require admin token
+- New `require_admin_token()` function for sensitive operations
+- 403 returned for unauthorized override attempts
+- Files: `copilot_core/api/v1/neurons.py`, `copilot_core/api/security.py`
+
+### Security Module Enhancements
+- `require_admin_token()` — Always requires token (even if global auth disabled)
+- `require_admin` decorator — For sensitive state manipulation
+- Proper logging of failed authentication attempts
+
+### Tests
+- 42 security tests added/updated (test_auth_security.py)
+- WebSocket authentication tests (9 tests)
+- Neuron state override authorization tests (7 tests)
+- OWASP Top 10 coverage (test_owasp.py)
+- All security tests passing ✅
+
+### Breaking Changes
+- **WebSocket clients must now authenticate** (token required)
+- **State override operations require admin token**
+
+---
+
 ## [v12.8.2] - 2026-03-02
 
 ### Bug Fixes
