@@ -230,7 +230,7 @@ class TestNotificationSecurityIntegration:
         assert rate_limited.status_code == 429
     
     @pytest.mark.skip(reason="Notification API endpoints not yet implemented")
-    def test_notification_quota(self test_client, valid_auth_token):
+    def test_notification_quota(self, test_client, valid_auth_token):
         """Test notification quota enforcement."""
         headers = {'Authorization': f"Bearer {valid_auth_token}"}
         
