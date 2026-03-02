@@ -8,7 +8,7 @@ import fcntl
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-import ulid
+from ulid import ULID
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class TransactionLog:
         Returns:
             txId (ULID string)
         """
-        tx_id = str(ulid.ulid())
+        tx_id = str(ULID())
         return tx_id
         
     def append_intent(
