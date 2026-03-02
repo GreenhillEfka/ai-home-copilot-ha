@@ -310,7 +310,18 @@ class HabitusDashboard {
         
         // Beispielhafte Darstellung (wird durch echte HA-Daten ersetzt)
         grid.innerHTML = `
-            <div class="zone-card">
+            <div class="zone-card widget-container" data-widget-id="temp-${zoneId}" data-x="0" data-y="0">
+                <div class="drag-handle" title="Zum Verschieben ziehen">
+                    <i class="mdi mdi-drag"></i>
+                </div>
+                <div class="position-controls">
+                    <button class="position-btn" onclick="dragDropManager.undo()" title="Rückgängig (Strg+Z)">
+                        <i class="mdi mdi-undo"></i>
+                    </button>
+                    <button class="position-btn" onclick="dragDropManager.redo()" title="Wiederherstellen (Strg+Y)">
+                        <i class="mdi mdi-redo"></i>
+                    </button>
+                </div>
                 <div class="zone-card-header">
                     <div class="zone-card-icon">
                         <i class="mdi mdi-thermometer"></i>
@@ -334,7 +345,18 @@ class HabitusDashboard {
                 </div>
             </div>
             
-            <div class="zone-card">
+            <div class="zone-card widget-container" data-widget-id="humidity-${zoneId}" data-x="0" data-y="0">
+                <div class="drag-handle" title="Zum Verschieben ziehen">
+                    <i class="mdi mdi-drag"></i>
+                </div>
+                <div class="position-controls">
+                    <button class="position-btn" onclick="dragDropManager.undo()" title="Rückgängig (Strg+Z)">
+                        <i class="mdi mdi-undo"></i>
+                    </button>
+                    <button class="position-btn" onclick="dragDropManager.redo()" title="Wiederherstellen (Strg+Y)">
+                        <i class="mdi mdi-redo"></i>
+                    </button>
+                </div>
                 <div class="zone-card-header">
                     <div class="zone-card-icon">
                         <i class="mdi mdi-water-percent"></i>
@@ -358,7 +380,18 @@ class HabitusDashboard {
                 </div>
             </div>
             
-            <div class="zone-card">
+            <div class="zone-card widget-container" data-widget-id="lights-${zoneId}" data-x="0" data-y="0">
+                <div class="drag-handle" title="Zum Verschieben ziehen">
+                    <i class="mdi mdi-drag"></i>
+                </div>
+                <div class="position-controls">
+                    <button class="position-btn" onclick="dragDropManager.undo()" title="Rückgängig (Strg+Z)">
+                        <i class="mdi mdi-undo"></i>
+                    </button>
+                    <button class="position-btn" onclick="dragDropManager.redo()" title="Wiederherstellen (Strg+Y)">
+                        <i class="mdi mdi-redo"></i>
+                    </button>
+                </div>
                 <div class="zone-card-header">
                     <div class="zone-card-icon">
                         <i class="mdi mdi-lightbulb"></i>
@@ -382,6 +415,11 @@ class HabitusDashboard {
                 </div>
             </div>
         `;
+        
+        // Drag & Drop für neue Cards aktivieren
+        if (window.dragDropManager) {
+            window.dragDropManager.enableDrag(`#grid-${zoneId} .widget-container`);
+        }
     }
     
     loadZoneData() {

@@ -180,6 +180,14 @@ def create_app() -> Flask:
     except Exception:
         logging.getLogger(__name__).exception("Failed to register Security Configuration API blueprint")
 
+    # Predictive Automation API endpoints (/api/v1/predictive/*)
+    try:
+        from copilot_core.api.v1.predictive import predictive_bp
+        app.register_blueprint(predictive_bp)
+        logging.getLogger(__name__).info("Predictive Automation API registered")
+    except Exception:
+        logging.getLogger(__name__).exception("Failed to register Predictive Automation API blueprint")
+
     # Rate Limit Configuration API is registered via api_v1 blueprint
     # Endpoints: /api/v1/rate-limit/*
 

@@ -58,23 +58,28 @@ from widgets.system_status import system_status_bp, register_socketio_events as 
 from widgets.brain_graph import brain_graph_bp, register_socketio_events as register_brain_graph_events
 from widgets.chat_widget import chat_widget_bp, register_socketio_events as register_chat_events
 from widgets.sensor_overview import sensor_overview_bp, register_socketio_events as register_sensor_events, broadcast_updates as broadcast_sensor_status
+from widgets.zone_summary import zone_summary_bp, register_socketio_events as register_zone_summary_events, broadcast_updates as broadcast_zone_status, start_zone_simulation
 from widgets.optimization import performance_tracker, get_all_metrics as get_widget_performance_metrics
 from api.v1.performance import performance_bp, update_websocket_metrics, track_performance
 from api.v1.dashboard import dashboard_bp
+from api.v1.widget_positions import widget_positions_bp
 
 # Register widget blueprints
 app.register_blueprint(system_status_bp)
 app.register_blueprint(brain_graph_bp)
 app.register_blueprint(chat_widget_bp)
 app.register_blueprint(sensor_overview_bp)
+app.register_blueprint(zone_summary_bp)
 app.register_blueprint(performance_bp)
 app.register_blueprint(dashboard_bp)
+app.register_blueprint(widget_positions_bp)
 
 # Register widget Socket.IO events
 register_system_status_events(socketio)
 register_brain_graph_events(socketio)
 register_chat_events(socketio, app.config)
 register_sensor_events(socketio)
+register_zone_summary_events(socketio)
 
 # Routes
 @app.route('/')
@@ -311,6 +316,10 @@ def start_dashboard():
     broadcast_thread = threading.Thread(target=broadcast_loop, daemon=True)
     broadcast_thread.start()
     print("Live update broadcast started")
+    
+    # Start zone simulation (5s updates for zone cards)
+    zone_simulation_thread = start_zone_simulation(socketio)
+    print("Zone simulation started (5s updates)")
     
     socketio.run(
         app,
