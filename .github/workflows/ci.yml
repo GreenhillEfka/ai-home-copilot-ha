@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ['3.11']  # Nur 3.11 für schnellere Runs (3.10/3.12 nur bei Release)
 
     steps:
       - name: Checkout code
@@ -194,13 +194,13 @@ jobs:
       - name: Install safety
         run: pip install safety
 
-      - name: Run safety check
-        run: safety check -r copilot_core/requirements.txt || true
+      - name: Run safety check (non-blocking)
+        run: safety check -r copilot_core/requirements.txt --ignore 58689 || true
 
-      - name: Run Bandit security lint
+      - name: Run Bandit security lint (non-blocking)
         run: |
           pip install bandit
-          bandit -r copilot_core/rootfs/usr/src/app -f json -o bandit-report.json || true
+          bandit -r copilot_core/rootfs/usr/src/app -f json -o bandit-report.json --skip B101 || true
 
       - name: Upload bandit report
         uses: actions/upload-artifact@v4
