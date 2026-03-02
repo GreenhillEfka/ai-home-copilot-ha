@@ -2,6 +2,32 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx Core werden in dieser Datei dokumentiert.
 
+## [v12.8.2] - 2026-03-02
+
+### Bug Fixes
+
+#### CacheManager API + Service Validation (P0/P1)
+- **Fix**: `get_sensor_cache()` in `api_cache.py` verwendete ungültigen `ttl` Parameter
+- `APICache.__init__()` akzeptiert nur `redis_client` Parameter
+- Sensor Cache verwendet jetzt `TTL_ENTITY=300` (5 Min) als Default
+- **Validiert**: `WasteCollectionService` und `BirthdayService` initialisieren korrekt
+- **Validiert**: `HabitusZoneEngine` initialisiert ohne Fehler
+- Zone Editor API Tests bestehen (34+41+10 = 85 Tests)
+
+### Tests
+- `test_cache.py`: 10/10 Tests bestanden ✅
+- `test_cache_manager.py`: 13/13 Tests bestanden ✅
+- `test_zone_editor.py`: 34/34 Tests bestanden ✅
+- `test_zone_editor_api.py`: 41/41 Tests bestanden ✅
+- `test_zone_dashboard.py`: 10/10 Tests bestanden ✅
+- `test_api_endpoints.py`: 19/19 Tests bestanden ✅
+- `test_dashboard_endpoints.py`: 22/22 Tests bestanden ✅
+- `test_llm_provider_fallback.py`: 11/11 Tests bestanden ✅
+
+**Gesamt: 160+ Tests grün**
+
+---
+
 ## [v12.8.1] - 2026-03-02
 
 ### Bug Fixes
