@@ -284,3 +284,18 @@ async def setup_cache_invalidation(websocket_handler):
         websocket_handler.register_listener("entity_added", on_entity_added)
     
     logger.info("Cache invalidation listeners registered")
+
+
+# Sensor-specific cache helper
+_sensor_cache_instance: Optional[APICache] = None
+
+def get_sensor_cache() -> APICache:
+    """Get or create sensor-specific cache instance.
+    
+    Returns:
+        APICache instance for sensor data (TTL: 300 seconds)
+    """
+    global _sensor_cache_instance
+    if _sensor_cache_instance is None:
+        _sensor_cache_instance = APICache(ttl=300)  # 5 min TTL for sensors
+    return _sensor_cache_instance

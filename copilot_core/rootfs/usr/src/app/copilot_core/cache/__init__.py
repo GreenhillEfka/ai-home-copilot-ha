@@ -4,7 +4,7 @@ Provides Redis-based caching with in-memory fallback for API responses.
 """
 
 from .redis_client import RedisClient, get_redis_client, init_redis_client
-from .api_cache import APICache, get_api_cache, cached, CacheMetrics
+from .api_cache import APICache, get_api_cache, cached, CacheMetrics, get_sensor_cache
 
 __all__ = [
     "RedisClient",
@@ -14,4 +14,5 @@ __all__ = [
     "get_api_cache",
     "cached",
     "CacheMetrics",
+    "get_sensor_cache",
 ]

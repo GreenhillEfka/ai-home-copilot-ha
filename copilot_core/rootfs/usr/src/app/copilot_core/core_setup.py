@@ -356,14 +356,14 @@ def init_services(hass=None, config: dict = None):
     # Initialize Waste Service
     try:
         waste_config = config.get("waste", {}) if config else {}
-        services["waste_service"] = WasteCollectionService(waste_config)
+        services["waste_service"] = WasteCollectionService()
     except Exception:
         _LOGGER.exception("Failed to init WasteCollectionService")
 
     # Initialize Birthday Service
     try:
         birthday_config = config.get("birthdays", {}) if config else {}
-        services["birthday_service"] = BirthdayService(birthday_config)
+        services["birthday_service"] = BirthdayService()
     except Exception:
         _LOGGER.exception("Failed to init BirthdayService")
 
