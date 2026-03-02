@@ -2,6 +2,59 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx Core Backend.
 
+## [12.0.7] - 2026-03-02
+
+### Added
+- **API Performance Optimization**
+  - `CacheManager` (`copilot_core/api/cache_manager.py`) - Redis-basiertes Caching mit lokalem Fallback
+  - `QueryOptimizer` (`copilot_core/api/query_optimizer.py`) - Query-Timing, Index-Suggestions, langsame Query-Erkennung
+  - `lazy_load()` Helper für paginierte Responses
+  - `@cached` Decorator für API-Endpoints mit automatischem Caching
+
+- **Predictive Automation** (`copilot_core/predictive_automation.py`)
+  - ML-basierte Vorhersage von Nutzeraktionen (RandomForest)
+  - Automatische Automation-Vorschläge basierend auf Verhalten
+  - Verhaltensmuster-Analyse und -Speicherung
+  - Integration mit BrainGraphService für kontextuelle Vorhersagen
+
+- **Test Coverage**
+  - `test_phase5_integration.py` - 22 Integration Tests für:
+    - Notifications API (5 Tests)
+    - Sharing API / Cross-Home-Sharing (4 Tests)
+    - Collective Intelligence API (5 Tests)
+    - Federated Learning Edge Cases (8 Tests)
+  - `test_cache.py` - 10 Tests für CacheManager (LRU, TTL, Patterns)
+  - `test_cache_manager.py` - 13 Tests für Cache & QueryOptimizer
+  - `test_predictive_automation.py` - 15 Tests für Predictive Automation
+
+### Changed
+- **Test Improvements**
+  - Fixed test_cache.py to match actual CacheManager API
+  - Removed tests for non-existent functions
+  - Added tests for invalidate_pattern() and stats()
+
+### Technical Details
+- CacheManager unterstützt Redis + lokalen In-Memory Cache
+- Automatische Fallback-Logik bei Redis-Ausfall
+- LRU-Eviction bei vollem Cache
+- QueryOptimizer trackt langsame Queries und schlägt Indexes vor
+- Predictive Automation lernt aus Nutzerverhalten (Zeit, Zone, Entity, Action)
+
+### Test Results
+- **Phase 5 Integration**: 22/22 Tests ✅
+- **Cache Manager**: 23/23 Tests ✅ (test_cache.py + test_cache_manager.py)
+- **Predictive Automation**: 15/15 Tests ✅
+- **Total New Tests**: 60 Tests added, all passing
+
+### Files Changed
+- `copilot_core/api/cache_manager.py` (NEW)
+- `copilot_core/api/query_optimizer.py` (NEW)
+- `copilot_core/predictive_automation.py` (NEW)
+- `tests/test_phase5_integration.py` (NEW)
+- `tests/test_cache.py` (UPDATED)
+- `tests/test_cache_manager.py` (NEW)
+- `tests/test_predictive_automation.py` (NEW)
+
 ## [Unreleased]
 
 ## [12.0.2] - 2026-03-01
