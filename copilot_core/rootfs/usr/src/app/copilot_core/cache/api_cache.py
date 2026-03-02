@@ -297,5 +297,5 @@ def get_sensor_cache() -> APICache:
     """
     global _sensor_cache_instance
     if _sensor_cache_instance is None:
-        _sensor_cache_instance = APICache(ttl=300)  # 5 min TTL for sensors
+        _sensor_cache_instance = APICache()  # Uses default TTLs (TTL_ENTITY=300)
     return _sensor_cache_instance
