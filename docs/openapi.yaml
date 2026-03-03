@@ -26,7 +26,7 @@ info:
   version: 13.0.4
   contact:
     name: PilotSuite
-    url: https://github.com/pilotsuite/pilotsuite-styx-core
+    url: https://github.com/GreenhillEfka/pilotsuite-styx-core
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT

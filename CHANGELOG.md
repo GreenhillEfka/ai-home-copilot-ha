@@ -2,6 +2,28 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [v13.0.4] - 2026-03-03
+
+### Version Sync & Documentation Fixes
+
+- **VERSION Sync**: `custom_components/copilot_ha/VERSION` auf 13.0.4 synchronisiert (war 13.0.3)
+- **OpenAPI Version**: `docs/openapi.yaml` Version auf 13.0.4 aktualisiert
+- **GitHub URLs**: Falsche URLs `github.com/pilotsuite/` korrigiert zu `github.com/GreenhillEfka/`
+- **Masterplan**: Konsolidierter Projektplan `PILOTSUITE_MASTERPLAN_2026-03-03.md` hinzugefuegt
+- **Sync mit Core**: Alle Versionsdateien zwischen Core und HA synchronisiert
+
+---
+
+## [v13.0.3] - 2026-03-03
+
+### Module Registry & Test Coverage
+
+- **Module Registry**: Dynamic module discovery and registration (synced from Core)
+- **Test Coverage**: 100% auf Module Registry
+- **Version Sync**: Synchronisiert mit Core v13.0.3
+
+---
+
 ## [v13.0.2] - 2026-03-02
 
 ### Security Hardening — RAG API P0-Fixes ✅ COMPLETE
