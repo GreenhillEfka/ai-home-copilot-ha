@@ -168,6 +168,6 @@ Vor jedem Release-Tag MUSS folgendes synchronisiert sein:
 
 ---
 
-**Letzte Aktualisierung:** 2026-03-03 00:30 (Path Audit Fix)  
+**Letzte Aktualisierung:** 2026-03-03 01:25 (Path Fix Master Report)  
 **Entwickelt mit:** Groky Dev Check (every 10min)  
-**Basiert auf:** pilotsuite-styx-core v13.0.0 + pilotsuite-styx-ha v13.0.0
+**Basiert auf:** pilotsuite-styx-core v13.0.3 + pilotsuite-styx-ha v13.0.3
