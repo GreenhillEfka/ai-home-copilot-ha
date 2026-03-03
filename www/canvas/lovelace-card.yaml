@@ -1,0 +1,22 @@
+# Canvas Dashboard Lovelace Card Configuration
+# Location: /config/.openclaw/www/canvas/lovelace-card.yaml
+#
+# Usage in Home Assistant:
+# 1. Copy HTML files to /config/www/canvas/
+# 2. Include this YAML in your Lovelace dashboard
+# 3. Restart Home Assistant or reload resources
+
+type: iframe
+url: /local/canvas/pilotsuite_canvas_dashboard.html
+aspect_ratio: 100%
+style:
+  .: |
+    ha-card {
+      background: transparent;
+      box-shadow: none;
+    }
+    iframe {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--card-border-color, #3a3a3a);
+    }

@@ -1,0 +1,835 @@
+<!-- pilotsuite_functions.html - HA Dashboard Template -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PilotSuite Zone Dashboard</title>
+    <style>
+        /* Canvas-Style für Zone-Dashboard - Final Version */
+        :root {
+            --bg-primary: #0b0f14;
+            --bg-secondary: #151a23;
+            --text-primary: #e5e7eb;
+            --text-secondary: #9ca3af;
+            --accent-green: #4CAF50;
+            --accent-orange: #FF5722;
+            --accent-blue: #2196F3;
+            --accent-purple: #9C27B0;
+            --border-color: #2d3748;
+            --glass-bg: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .dashboard-header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .dashboard-header p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            opacity: 0.8;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--glass-bg);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            border: 1px solid var(--glass-border);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse-dot 3s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
+        }
+
+        .zone-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+        }
+
+        .zone-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .zone-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .zone-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            border-color: var(--accent-blue);
+        }
+
+        .zone-card:hover::before {
+            opacity: 1;
+        }
+
+        .zone-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .zone-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .zone-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-ok {
+            background: rgba(76, 175, 80, 0.2);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+        }
+
+        .status-warning {
+            background: rgba(255, 87, 34, 0.2);
+            color: var(--accent-orange);
+            border: 1px solid var(--accent-orange);
+        }
+
+        .status-error {
+            background: rgba(244, 67, 54, 0.2);
+            color: var(--accent-blue);
+            border: 1px solid var(--accent-blue);
+        }
+
+        .zone-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .metric-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+        }
+
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .zone-footer {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .device-count {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .device-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        .device-dot.online { background: var(--accent-green); }
+        .device-dot.offline { background: var(--accent-orange); }
+
+        /* Canvas Zone Editor Styles */
+        .zone-editor {
+            margin-top: 30px;
+            padding: 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+        }
+
+        .zone-editor h2 {
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .editor-canvas {
+            width: 100%;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            cursor: crosshair;
+        }
+
+        .editor-controls {
+            margin-top: 16px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--accent-blue);
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1976D2;
+            border-color: #1976D2;
+        }
+
+        /* Mood Gauge Styles */
+        .mood-section {
+            margin-top: 40px;
+        }
+
+        .mood-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .mood-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .mood-card h3 {
+            font-size: 1rem;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        .mood-gauge {
+            position: relative;
+            width: 160px;
+            height: 80px;
+            margin: 0 auto;
+        }
+
+        .mood-gauge canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .mood-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 20px 16px;
+            }
+
+            .dashboard-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .zone-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .zone-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>🌍 PilotSuite Zone Dashboard</h1>
+            <p>Real-time Status & Control for All Zones</p>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>System Online</span>
+            </div>
+        </div>
+
+        <div class="zone-grid">
+            <!-- Zone A - Status OK -->
+            <div class="zone-card">
+                <div class="zone-header">
+                    <div class="zone-title">Zone A</div>
+                    <div class="zone-status status-ok">
+                        <span class="status-indicator"></span>
+                        OK
+                    </div>
+                </div>
+                <div class="zone-content">
+                    <div class="metric-group">
+                        <div>
+                            <div class="metric-label">Temperatur</div>
+                            <div class="metric-value">22°C</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Luftfeuchtigkeit</div>
+                            <div class="metric-value">45%</div>
+                        </div>
+                    </div>
+                    <div class="metric-group">
+                        <div>
+                            <div class="metric-label">Geräte</div>
+                            <div class="metric-value">8/8</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Energie</div>
+                            <div class="metric-value">Low</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="zone-footer">
+                    <span class="device-count">
+                        <span class="device-dot online"></span>8 Online
+                    </span>
+                    <button class="btn">Details</button>
+                </div>
+            </div>
+
+            <!-- Zone B - Status Warning -->
+            <div class="zone-card">
+                <div class="zone-header">
+                    <div class="zone-title">Zone B</div>
+                    <div class="zone-status status-warning">
+                        <span class="status-indicator"></span>
+                        Warning
+                    </div>
+                </div>
+                <div class="zone-content">
+                    <div class="metric-group">
+                        <div>
+                            <div class="metric-label">Temperatur</div>
+                            <div class="metric-value">25°C</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Luftfeuchtigkeit</div>
+                            <div class="metric-value">60%</div>
+                        </div>
+                    </div>
+                    <div class="metric-group">
+                        <div>
+                            <div class="metric-label">Geräte</div>
+                            <div class="metric-value">7/8</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Energie</div>
+                            <div class="metric-value">Medium</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="zone-footer">
+                    <span class="device-count">
+                        <span class="device-dot online"></span>7 Online<br>
+                        <span class="device-dot offline"></span>1 Offline
+                    </span>
+                    <button class="btn">Details</button>
+                </div>
+            </div>
+
+            <!-- Zone C - Status Error -->
+            <div class="zone-card">
+                <div class="zone-header">
+                    <div class="zone-title">Zone C</div>
+                    <div class="zone-status status-error">
+                        <span class="status-indicator"></span>
+                        Error
+                    </div>
+                </div>
+                <div class="zone-content">
+                    <div class="metric-group">
+                        <div>
+                            <div class="metric-label">Temperatur</div>
+                            <div class="metric-value">18°C</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Luftfeuchtigkeit</div>
+                            <div class="metric-value">30%</div>
+                        </div>
+                    </div>
+                    <div class="metric-group">
+                        <div>
+                            <div class="metric-label">Geräte</div>
+                            <div class="metric-value">5/8</div>
+                        </div>
+                        <div>
+                            <div class="metric-label">Energie</div>
+                            <div class="metric-value">High</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="zone-footer">
+                    <span class="device-count">
+                        <span class="device-dot online"></span>5 Online<br>
+                        <span class="device-dot offline"></span>3 Offline
+                    </span>
+                    <button class="btn">Details</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Zone Editor -->
+        <div class="zone-editor">
+            <h2>🎨 Zone Editor (Canvas)</h2>
+            <canvas id="zoneEditorCanvas" class="editor-canvas"></canvas>
+            <div class="editor-controls">
+                <button class="btn btn-primary">Save Zone Layout</button>
+                <button class="btn">Add Zone</button>
+                <button class="btn">Delete Zone</button>
+                <button class="btn">Export Layout</button>
+            </div>
+        </div>
+
+        <!-- Mood Gauge Components -->
+        <div class="mood-section">
+            <h2 style="font-size: 1.5rem; margin-bottom: 24px; color: var(--text-primary);">🧠 Mood Gauge System</h2>
+            <div class="mood-grid">
+                <div class="mood-card">
+                    <h3>System Mood</h3>
+                    <div class="mood-gauge" id="systemMoodGauge"></div>
+                </div>
+                <div class="mood-card">
+                    <h3>User Mood</h3>
+                    <div class="mood-gauge" id="userMoodGauge"></div>
+                </div>
+                <div class="mood-card">
+                    <h3>Network Mood</h3>
+                    <div class="mood-gauge" id="networkMoodGauge"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * PilotSuite Dashboard - Canvas Integration & Mood Gauges
+         * Final Version with Live Updates
+         */
+
+        'use strict';
+
+        // ============================================
+        // Zone Editor Canvas
+        // ============================================
+        class ZoneEditor {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                if (!this.canvas) {
+                    console.error('[ZoneEditor] Canvas not found');
+                    return;
+                }
+
+                this.ctx = this.canvas.getContext('2d');
+                this.zones = [];
+                this.draggedZone = null;
+                this.selectedZone = null;
+
+                this._init();
+            }
+
+            _init() {
+                this._resize();
+                this._createSampleZones();
+                this._setupEvents();
+                this._draw();
+                window.addEventListener('resize', () => {
+                    this._resize();
+                    this._draw();
+                });
+            }
+
+            _resize() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                this.canvas.width = rect.width * dpr;
+                this.canvas.height = rect.height * dpr;
+                this.canvas.style.width = `${rect.width}px`;
+                this.canvas.style.height = `${rect.height}px`;
+                this.ctx.scale(dpr, dpr);
+                this.width = rect.width;
+                this.height = rect.height;
+            }
+
+            _createSampleZones() {
+                this.zones = [
+                    { id: 1, name: 'Zone A', x: 100, y: 100, width: 120, height: 80, color: '#4CAF50', devices: 8 },
+                    { id: 2, name: 'Zone B', x: 300, y: 100, width: 120, height: 80, color: '#FF9800', devices: 7 },
+                    { id: 3, name: 'Zone C', x: 500, y: 100, width: 120, height: 80, color: '#F44336', devices: 5 }
+                ];
+            }
+
+            _setupEvents() {
+                this.canvas.addEventListener('mousedown', (e) => this._handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this._handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this._handleMouseUp(e));
+                this.canvas.addEventListener('click', (e) => this._handleClick(e));
+            }
+
+            _handleMouseDown(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                this.draggedZone = this.zones.find(zone => 
+                    x >= zone.x && x <= zone.x + zone.width &&
+                    y >= zone.y && y <= zone.y + zone.height
+                );
+
+                if (this.draggedZone) {
+                    this.selectedZone = this.draggedZone;
+                    this.dragOffset = { x: x - this.draggedZone.x, y: y - this.draggedZone.y };
+                }
+            }
+
+            _handleMouseMove(e) {
+                if (!this.draggedZone) return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                this.draggedZone.x = x - this.dragOffset.x;
+                this.draggedZone.y = y - this.dragOffset.y;
+
+                this._draw();
+            }
+
+            _handleMouseUp(e) {
+                this.draggedZone = null;
+            }
+
+            _handleClick(e) {
+                if (!this.draggedZone) {
+                    this.selectedZone = null;
+                    this._draw();
+                }
+            }
+
+            _draw() {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+
+                // Grid background
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                this.ctx.lineWidth = 1;
+                for (let x = 0; x < this.width; x += 40) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.height);
+                    this.ctx.stroke();
+                }
+                for (let y = 0; y < this.height; y += 40) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.width, y);
+                    this.ctx.stroke();
+                }
+
+                // Draw zones
+                this.zones.forEach(zone => {
+                    this.ctx.fillStyle = zone.color;
+                    this.ctx.strokeStyle = this.selectedZone === zone ? '#2196F3' : 'rgba(255,255,255,0.3)';
+                    this.ctx.lineWidth = this.selectedZone === zone ? 3 : 1;
+
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(zone.x, zone.y, zone.width, zone.height, 8);
+                    this.ctx.fill();
+                    this.ctx.stroke();
+
+                    // Zone label
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.font = '14px sans-serif';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(zone.name, zone.x + zone.width / 2, zone.y + zone.height / 2);
+
+                    // Device count
+                    this.ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                    this.ctx.font = '12px sans-serif';
+                    this.ctx.fillText(`${zone.devices} devices`, zone.x + zone.width / 2, zone.y + zone.height - 15);
+                });
+            }
+
+            getLayout() {
+                return this.zones;
+            }
+
+            addZone(name, x, y, width, height, color) {
+                const newZone = {
+                    id: this.zones.length + 1,
+                    name,
+                    x,
+                    y,
+                    width,
+                    height,
+                    color,
+                    devices: 0
+                };
+                this.zones.push(newZone);
+                this._draw();
+                return newZone;
+            }
+
+            deleteZone(id) {
+                this.zones = this.zones.filter(zone => zone.id !== id);
+                this.selectedZone = null;
+                this._draw();
+            }
+        }
+
+        // ============================================
+        // Mood Gauge Component
+        // ============================================
+        class MoodGauge {
+            constructor(containerId, options = {}) {
+                this.container = document.getElementById(containerId);
+                if (!this.container) return;
+
+                this.value = options.value || 50;
+                this.min = options.min || 0;
+                this.max = options.max || 100;
+                this.colors = options.colors || [
+                    { pos: 0, color: '#F44336' },   // Red
+                    { pos: 50, color: '#FF9800' }, // Orange
+                    { pos: 100, color: '#4CAF50' } // Green
+                ];
+
+                this._init();
+            }
+
+            _init() {
+                this.width = 160;
+                this.height = 80;
+                this.radius = this.height - 20;
+
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+                this.ctx = this.canvas.getContext('2d');
+
+                this.valueEl = document.createElement('div');
+                this.valueEl.className = 'mood-value';
+                this.valueEl.textContent = this.value;
+
+                this.container.appendChild(this.canvas);
+                this.container.appendChild(this.valueEl);
+
+                this._draw();
+            }
+
+            setValue(value) {
+                this.value = Math.max(this.min, Math.min(this.max, value));
+                this.valueEl.textContent = Math.round(this.value);
+                this._draw();
+            }
+
+            _getColor(value) {
+                for (let i = this.colors.length - 1; i >= 0; i--) {
+                    if (value >= this.colors[i].pos) {
+                        return this.colors[i].color;
+                    }
+                }
+                return this.colors[0].color;
+            }
+
+            _draw() {
+                const cx = this.width / 2;
+                const cy = this.height;
+                const startAngle = Math.PI;
+                const endAngle = 0;
+
+                // Clear
+                this.ctx.clearRect(0, 0, this.width, this.height);
+
+                // Background arc
+                this.ctx.beginPath();
+                this.ctx.arc(cx, cy, this.radius, startAngle, endAngle);
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                this.ctx.lineWidth = 15;
+                this.ctx.lineCap = 'round';
+                this.ctx.stroke();
+
+                // Value arc
+                const progress = (this.value - this.min) / (this.max - this.min);
+                const currentAngle = startAngle + (endAngle - startAngle) * progress;
+
+                this.ctx.beginPath();
+                this.ctx.arc(cx, cy, this.radius, startAngle, currentAngle);
+                this.ctx.strokeStyle = this._getColor(this.value);
+                this.ctx.lineWidth = 15;
+                this.ctx.lineCap = 'round';
+                this.ctx.shadowColor = this._getColor(this.value);
+                this.ctx.shadowBlur = 10;
+                this.ctx.stroke();
+                this.ctx.shadowBlur = 0;
+
+                // Center dot
+                const centerX = cx + Math.cos(currentAngle) * this.radius;
+                const centerY = cy + Math.sin(currentAngle) * this.radius;
+
+                this.ctx.beginPath();
+                this.ctx.arc(centerX, centerY, 8, 0, Math.PI * 2);
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fill();
+            }
+
+            update(options = {}) {
+                if (options.value !== undefined) this.setValue(options.value);
+            }
+        }
+
+        // ============================================
+        // Dashboard Initialization
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('[PilotSuite] Dashboard initializing...');
+
+            // Initialize Zone Editor
+            const zoneEditor = new ZoneEditor('zoneEditorCanvas');
+
+            // Initialize Mood Gauges
+            const systemMood = new MoodGauge('systemMoodGauge', { value: 75 });
+            const userMood = new MoodGauge('userMoodGauge', { value: 60 });
+            const networkMood = new MoodGauge('networkMoodGauge', { value: 45 });
+
+            // Demo: Update gauges randomly
+            setInterval(() => {
+                systemMood.setValue(Math.random() * 100);
+            }, 3000);
+
+            // Export layout button
+            document.querySelectorAll('.btn').forEach(btn => {
+                if (btn.textContent === 'Export Layout') {
+                    btn.addEventListener('click', () => {
+                        const layout = zoneEditor.getLayout();
+                        const blob = new Blob([JSON.stringify(layout, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'zone-layout.json';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    });
+                }
+            });
+
+            console.log('[PilotSuite] Dashboard initialized');
+        });
+
+        // Expose for debugging
+        window.zoneEditor = zoneEditor;
+        window.moodGauges = { systemMood, userMood, networkMood };
+    </script>
+</body>
+</html>
