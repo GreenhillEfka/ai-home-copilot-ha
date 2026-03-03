@@ -18,7 +18,7 @@ info:
     - Notifications API: Bearer Token
     - Sharing API: API Key (X-API-Key Header)
     - Collective Intelligence API: API Key (X-API-Key Header)
-  version: 13.0.3
+  version: 13.0.4
   contact:
     name: PilotSuite
     url: https://github.com/pilotsuite
