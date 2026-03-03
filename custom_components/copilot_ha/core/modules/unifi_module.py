@@ -111,7 +111,7 @@ class UniFiModule:
         if self._entry_id not in ctx.hass.data[DOMAIN]:
             ctx.hass.data[DOMAIN][self._entry_id] = {}
 
-        entry_data = hass.data[DOMAIN][self._entry_id]
+        entry_data = ctx.hass.data[DOMAIN][self._entry_id]
         entry_data["unifi_module"] = {
             "config": self._create_default_config(ctx.entry),
             "baseline_data": {},

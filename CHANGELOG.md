@@ -2,6 +2,39 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [v13.1.0] - 2026-03-03
+
+### Production Readiness Release — Bug Fixes, Hub Integration & RAG Pipeline
+
+#### Critical Bug Fixes ✅
+
+- **UniFi Module NameError**: `hass` → `ctx.hass` in `unifi_module.py:114` — Module konnte nicht initialisieren
+- **37 Broken API Routes**: Double-prefix `/api/v1/api/v1/...` in Sharing (16 Routes), Federated Learning (15 Routes), HA Discovery (7 Routes), OpenAPI Spec (2 Routes) korrigiert
+- **RAG Chat Pipeline**: ChatHandler komplett umgeschrieben — nutzt jetzt interne RAG Pipeline statt fehlgeschlagenem HTTP-Call zu `localhost:8765`
+- **82 Test Failures**: Alle behoben (12 Core Cache/Alert Tests + 70 HA PROJECT_ROOT Tests)
+
+#### Hub Module Integration ✅ NEW
+
+- **17 Hub Engines** aktiviert und mit API verbunden:
+  - Dashboard, Plugin Manager, Multi-Home, Predictive Maintenance
+  - Anomaly Detection, Habitus Zones, Light Intelligence, Zone Modes
+  - Media Follow, Energy Advisor, Automation Templates, Scene Intelligence
+  - Presence Intelligence, Notification Intelligence, System Integration
+  - Brain Architecture, Brain Activity
+- **100+ API Routes** unter `/api/v1/hub/*` jetzt erreichbar
+
+#### Version Synchronization ✅
+
+- Alle VERSION-Dateien, manifest.json, config.yaml, OpenAPI Specs auf v13.1.0 synchronisiert
+- Sync zwischen Core und HA Repos verifiziert
+
+#### Test Coverage
+
+- **Core**: 295 Tests passed (241 + 54 Monitoring)
+- **HA**: 239 Tests passed, 41 skipped, 0 failed
+
+---
+
 ## [v13.0.4] - 2026-03-03
 
 ### Version Sync & Documentation Fixes
