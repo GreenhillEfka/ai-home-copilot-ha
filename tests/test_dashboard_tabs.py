@@ -1,6 +1,10 @@
-"""Tests for Dashboard Tab Navigation (v12.8.0).
+"""Tests for Dashboard 3-Tab Navigation (v13.0.4).
 
-Tests dashboard tab navigation, WebSocket updates, and UI interactions.
+Tests dashboard tab navigation for the restored 3-Tab layout:
+- Tab 1: Habitus (Mood/Zonen)
+- Tab 2: Hausverwaltung (Energie, Präsenz, Automationen)
+- Tab 3: Styx (Neural Dashboard, Brain Graph)
+
 Uses mock Flask app - no real browser required for core tests.
 """
 
@@ -14,52 +18,40 @@ import time
 # ── Mock Dashboard App ───────────────────────────────────────────────────
 
 class MockDashboardApp:
-    """Mock Flask dashboard app for testing."""
+    """Mock Flask dashboard app for testing 3-Tab layout."""
 
     def __init__(self):
+        # 3-Tab Layout (restored from recovery)
         self.tabs = {
-            "overview": {
-                "id": "overview",
-                "name": "Übersicht",
-                "icon": "mdi:view-dashboard",
-                "route": "/dashboard/overview",
-                "widgets": ["system_status", "brain_graph", "sensor_overview"],
-                "active": True,
-            },
             "habitus": {
                 "id": "habitus",
                 "name": "Habitus",
-                "icon": "mdi:brain",
+                "icon": "mdi-heart-pulse",
+                "description": "Mood & Zonen Status",
                 "route": "/dashboard/habitus",
-                "widgets": ["habitus_zones", "habitus_rules", "habitus_miner"],
+                "widgets": ["mood_gauges", "zone_overview"],
+                "active": True,
+            },
+            "hausverwaltung": {
+                "id": "hausverwaltung",
+                "name": "Hausverwaltung",
+                "icon": "mdi-home-city",
+                "description": "Energie, Präsenz & Automationen",
+                "route": "/dashboard/hausverwaltung",
+                "widgets": ["energy_overview", "praesenz", "automationen"],
                 "active": False,
             },
-            "automationen": {
-                "id": "automationen",
-                "name": "Automationen",
-                "icon": "mdi:robot",
-                "route": "/dashboard/automationen",
-                "widgets": ["automation_list", "automation_editor"],
-                "active": False,
-            },
-            "energie": {
-                "id": "energie",
-                "name": "Energie",
-                "icon": "mdi:lightning-bolt",
-                "route": "/dashboard/energie",
-                "widgets": ["energy_overview", "energy_forecast"],
-                "active": False,
-            },
-            "system": {
-                "id": "system",
-                "name": "System",
-                "icon": "mdi:cog",
-                "route": "/dashboard/system",
-                "widgets": ["system_health", "logs", "settings"],
+            "styx": {
+                "id": "styx",
+                "name": "Styx",
+                "icon": "mdi-brain",
+                "description": "Neural Dashboard & Brain Graph",
+                "route": "/dashboard/styx",
+                "widgets": ["brain_graph", "neural_dashboard"],
                 "active": False,
             },
         }
-        self.active_tab = "overview"
+        self.active_tab = "habitus"
         self.websocket_clients = []
 
     def get_tabs(self) -> List[Dict[str, Any]]:
@@ -208,7 +200,7 @@ class DashboardTabController:
 # ── Tests ─────────────────────────────────────────────────────────────────
 
 class TestDashboardTabs:
-    """Basic dashboard tab tests."""
+    """Basic dashboard tab tests for 3-Tab layout."""
 
     @pytest.fixture
     def app(self):
@@ -218,17 +210,31 @@ class TestDashboardTabs:
     def test_get_all_tabs(self, app):
         """Test getting all tabs."""
         tabs = app.get_tabs()
-        assert len(tabs) == 5
+        assert len(tabs) == 3
 
         tab_ids = {t["id"] for t in tabs}
-        assert tab_ids == {"overview", "habitus", "automationen", "energie", "system"}
+        assert tab_ids == {"habitus", "hausverwaltung", "styx"}
 
     def test_get_specific_tab(self, app):
         """Test getting specific tab."""
         tab = app.get_tab("habitus")
         assert tab is not None
         assert tab["name"] == "Habitus"
-        assert tab["icon"] == "mdi:brain"
+        assert tab["icon"] == "mdi-heart-pulse"
+
+    def test_get_hausverwaltung_tab(self, app):
+        """Test getting hausverwaltung tab."""
+        tab = app.get_tab("hausverwaltung")
+        assert tab is not None
+        assert tab["name"] == "Hausverwaltung"
+        assert tab["icon"] == "mdi-home-city"
+
+    def test_get_styx_tab(self, app):
+        """Test getting styx tab."""
+        tab = app.get_tab("styx")
+        assert tab is not None
+        assert tab["name"] == "Styx"
+        assert tab["icon"] == "mdi-brain"
 
     def test_get_nonexistent_tab(self, app):
         """Test getting nonexistent tab."""
@@ -236,9 +242,9 @@ class TestDashboardTabs:
         assert tab is None
 
     def test_default_active_tab(self, app):
-        """Test default active tab is overview."""
+        """Test default active tab is habitus."""
         active = app.get_active_tab()
-        assert active["id"] == "overview"
+        assert active["id"] == "habitus"
         assert active["active"] is True
 
     def test_tab_structure(self, app):
@@ -247,6 +253,7 @@ class TestDashboardTabs:
             assert "id" in tab
             assert "name" in tab
             assert "icon" in tab
+            assert "description" in tab
             assert "route" in tab
             assert "widgets" in tab
             assert "active" in tab
@@ -273,26 +280,25 @@ class TestTabNavigation:
         active = controller.get_active_tab()
         assert active["id"] == "habitus"
 
-    def test_switch_to_automationen_tab(self, controller):
-        """Test switching to automationen tab."""
-        result = controller.switch_tab("client1", "automationen")
+    def test_switch_to_hausverwaltung_tab(self, controller):
+        """Test switching to hausverwaltung tab."""
+        result = controller.switch_tab("client1", "hausverwaltung")
 
         assert result["success"] is True
-        assert result["tab"]["id"] == "automationen"
+        assert result["tab"]["id"] == "hausverwaltung"
 
-    def test_switch_to_energie_tab(self, controller):
-        """Test switching to energie tab."""
-        result = controller.switch_tab("client1", "energie")
+        active = controller.get_active_tab()
+        assert active["id"] == "hausverwaltung"
 
-        assert result["success"] is True
-        assert result["tab"]["id"] == "energie"
-
-    def test_switch_to_system_tab(self, controller):
-        """Test switching to system tab."""
-        result = controller.switch_tab("client1", "system")
+    def test_switch_to_styx_tab(self, controller):
+        """Test switching to styx tab."""
+        result = controller.switch_tab("client1", "styx")
 
         assert result["success"] is True
-        assert result["tab"]["id"] == "system"
+        assert result["tab"]["id"] == "styx"
+
+        active = controller.get_active_tab()
+        assert active["id"] == "styx"
 
     def test_switch_to_invalid_tab(self, controller):
         """Test switching to invalid tab fails."""
@@ -303,30 +309,29 @@ class TestTabNavigation:
 
     def test_tab_deactivation_on_switch(self, controller):
         """Test that previous tab is deactivated on switch."""
-        # Start with overview active
-        assert controller.app.tabs["overview"]["active"] is True
-        assert controller.app.tabs["habitus"]["active"] is False
+        # Start with habitus active
+        assert controller.app.tabs["habitus"]["active"] is True
+        assert controller.app.tabs["hausverwaltung"]["active"] is False
 
-        # Switch to habitus
-        controller.switch_tab("client1", "habitus")
+        # Switch to hausverwaltung
+        controller.switch_tab("client1", "hausverwaltung")
 
         # Verify deactivation
-        assert controller.app.tabs["overview"]["active"] is False
-        assert controller.app.tabs["habitus"]["active"] is True
+        assert controller.app.tabs["habitus"]["active"] is False
+        assert controller.app.tabs["hausverwaltung"]["active"] is True
 
     def test_tab_navigation_history(self, controller):
         """Test tab navigation history tracking."""
-        controller.switch_tab("client1", "habitus")
-        controller.switch_tab("client1", "energie")
-        controller.switch_tab("client1", "system")
+        controller.switch_tab("client1", "hausverwaltung")
+        controller.switch_tab("client1", "styx")
 
         history = controller.get_tab_history()
-        assert len(history) == 3
-        assert history == ["habitus", "energie", "system"]
+        assert len(history) == 2
+        assert history == ["hausverwaltung", "styx"]
 
-    def test_all_5_tabs_navigable(self, controller):
-        """Test that all 5 tabs are navigable."""
-        tab_ids = ["overview", "habitus", "automationen", "energie", "system"]
+    def test_all_3_tabs_navigable(self, controller):
+        """Test that all 3 tabs are navigable."""
+        tab_ids = ["habitus", "hausverwaltung", "styx"]
 
         for tab_id in tab_ids:
             result = controller.switch_tab("client1", tab_id)
@@ -353,7 +358,7 @@ class TestWebSocketTabUpdates:
         """Test that tab change is broadcast via WebSocket."""
         controller, socketio, client = setup_websocket
 
-        controller.switch_tab("client1", "habitus")
+        controller.switch_tab("client1", "hausverwaltung")
 
         # Check client received tab_changed event
         assert len(client.messages_received) >= 2  # connected + tab_changed
@@ -365,21 +370,21 @@ class TestWebSocketTabUpdates:
                 break
 
         assert tab_change_msg is not None
-        assert tab_change_msg["data"]["tab_id"] == "habitus"
-        assert tab_change_msg["data"]["tab_name"] == "Habitus"
+        assert tab_change_msg["data"]["tab_id"] == "hausverwaltung"
+        assert tab_change_msg["data"]["tab_name"] == "Hausverwaltung"
 
     def test_widget_list_broadcast(self, setup_websocket):
         """Test that widget list is broadcast on tab change."""
         controller, socketio, client = setup_websocket
 
-        controller.switch_tab("client1", "habitus")
+        controller.switch_tab("client1", "styx")
 
         # Find tab_changed message
         for msg in client.messages_received:
             if msg["event"] == "tab_changed":
                 widgets = msg["data"]["widgets"]
-                assert "habitus_zones" in widgets
-                assert "habitus_rules" in widgets
+                assert "brain_graph" in widgets
+                assert "neural_dashboard" in widgets
                 break
 
     def test_multiple_clients_receive_updates(self, setup_websocket):
@@ -389,17 +394,17 @@ class TestWebSocketTabUpdates:
         # Connect second client
         client2 = socketio.connect_client("client2")
 
-        controller.switch_tab("client1", "energie")
+        controller.switch_tab("client1", "styx")
 
         # Both clients should receive update
         for msg in client1.messages_received:
             if msg["event"] == "tab_changed":
-                assert msg["data"]["tab_id"] == "energie"
+                assert msg["data"]["tab_id"] == "styx"
                 break
 
         for msg in client2.messages_received:
             if msg["event"] == "tab_changed":
-                assert msg["data"]["tab_id"] == "energie"
+                assert msg["data"]["tab_id"] == "styx"
                 break
 
 
@@ -410,47 +415,37 @@ class TestWidgetLoading:
     def app(self):
         return MockDashboardApp()
 
-    def test_overview_widgets(self, app):
-        """Test overview tab widgets."""
-        widgets = app.tabs["overview"]["widgets"]
-        assert "system_status" in widgets
-        assert "brain_graph" in widgets
-        assert "sensor_overview" in widgets
-
     def test_habitus_widgets(self, app):
         """Test habitus tab widgets."""
         widgets = app.tabs["habitus"]["widgets"]
-        assert "habitus_zones" in widgets
-        assert "habitus_rules" in widgets
-        assert "habitus_miner" in widgets
+        assert "mood_gauges" in widgets
+        assert "zone_overview" in widgets
 
-    def test_automationen_widgets(self, app):
-        """Test automationen tab widgets."""
-        widgets = app.tabs["automationen"]["widgets"]
-        assert "automation_list" in widgets
-        assert "automation_editor" in widgets
-
-    def test_energie_widgets(self, app):
-        """Test energie tab widgets."""
-        widgets = app.tabs["energie"]["widgets"]
+    def test_hausverwaltung_widgets(self, app):
+        """Test hausverwaltung tab widgets."""
+        widgets = app.tabs["hausverwaltung"]["widgets"]
         assert "energy_overview" in widgets
-        assert "energy_forecast" in widgets
+        assert "praesenz" in widgets
+        assert "automationen" in widgets
 
-    def test_system_widgets(self, app):
-        """Test system tab widgets."""
-        widgets = app.tabs["system"]["widgets"]
-        assert "system_health" in widgets
-        assert "logs" in widgets
-        assert "settings" in widgets
+    def test_styx_widgets(self, app):
+        """Test styx tab widgets."""
+        widgets = app.tabs["styx"]["widgets"]
+        assert "brain_graph" in widgets
+        assert "neural_dashboard" in widgets
 
     def test_get_active_widgets(self, app):
         """Test getting widgets for active tab."""
         widgets = app.get_active_widgets()
-        assert widgets == ["system_status", "brain_graph", "sensor_overview"]
+        assert widgets == ["mood_gauges", "zone_overview"]
 
-        app.switch_tab("habitus")
+        app.switch_tab("hausverwaltung")
         widgets = app.get_active_widgets()
-        assert widgets == ["habitus_zones", "habitus_rules", "habitus_miner"]
+        assert widgets == ["energy_overview", "praesenz", "automationen"]
+
+        app.switch_tab("styx")
+        widgets = app.get_active_widgets()
+        assert widgets == ["brain_graph", "neural_dashboard"]
 
 
 class TestTabRoutes:
@@ -460,25 +455,17 @@ class TestTabRoutes:
     def app(self):
         return MockDashboardApp()
 
-    def test_overview_route(self, app):
-        """Test overview tab route."""
-        assert app.tabs["overview"]["route"] == "/dashboard/overview"
-
     def test_habitus_route(self, app):
         """Test habitus tab route."""
         assert app.tabs["habitus"]["route"] == "/dashboard/habitus"
 
-    def test_automationen_route(self, app):
-        """Test automationen tab route."""
-        assert app.tabs["automationen"]["route"] == "/dashboard/automationen"
+    def test_hausverwaltung_route(self, app):
+        """Test hausverwaltung tab route."""
+        assert app.tabs["hausverwaltung"]["route"] == "/dashboard/hausverwaltung"
 
-    def test_energie_route(self, app):
-        """Test energie tab route."""
-        assert app.tabs["energie"]["route"] == "/dashboard/energie"
-
-    def test_system_route(self, app):
-        """Test system tab route."""
-        assert app.tabs["system"]["route"] == "/dashboard/system"
+    def test_styx_route(self, app):
+        """Test styx tab route."""
+        assert app.tabs["styx"]["route"] == "/dashboard/styx"
 
 
 class TestTabIcons:
@@ -488,25 +475,37 @@ class TestTabIcons:
     def app(self):
         return MockDashboardApp()
 
-    def test_overview_icon(self, app):
-        """Test overview tab icon."""
-        assert app.tabs["overview"]["icon"] == "mdi:view-dashboard"
-
     def test_habitus_icon(self, app):
         """Test habitus tab icon."""
-        assert app.tabs["habitus"]["icon"] == "mdi:brain"
+        assert app.tabs["habitus"]["icon"] == "mdi-heart-pulse"
 
-    def test_automationen_icon(self, app):
-        """Test automationen tab icon."""
-        assert app.tabs["automationen"]["icon"] == "mdi:robot"
+    def test_hausverwaltung_icon(self, app):
+        """Test hausverwaltung tab icon."""
+        assert app.tabs["hausverwaltung"]["icon"] == "mdi-home-city"
 
-    def test_energie_icon(self, app):
-        """Test energie tab icon."""
-        assert app.tabs["energie"]["icon"] == "mdi:lightning-bolt"
+    def test_styx_icon(self, app):
+        """Test styx tab icon."""
+        assert app.tabs["styx"]["icon"] == "mdi-brain"
 
-    def test_system_icon(self, app):
-        """Test system tab icon."""
-        assert app.tabs["system"]["icon"] == "mdi:cog"
+
+class TestTabDescriptions:
+    """Tests for tab descriptions."""
+
+    @pytest.fixture
+    def app(self):
+        return MockDashboardApp()
+
+    def test_habitus_description(self, app):
+        """Test habitus tab description."""
+        assert app.tabs["habitus"]["description"] == "Mood & Zonen Status"
+
+    def test_hausverwaltung_description(self, app):
+        """Test hausverwaltung tab description."""
+        assert app.tabs["hausverwaltung"]["description"] == "Energie, Präsenz & Automationen"
+
+    def test_styx_description(self, app):
+        """Test styx tab description."""
+        assert app.tabs["styx"]["description"] == "Neural Dashboard & Brain Graph"
 
 
 class TestTabStatePersistence:
@@ -520,20 +519,20 @@ class TestTabStatePersistence:
 
     def test_tab_state_after_switch(self, controller):
         """Test tab state is maintained after switch."""
-        controller.switch_tab("client1", "habitus")
-        controller.switch_tab("client1", "energie")
+        controller.switch_tab("client1", "hausverwaltung")
+        controller.switch_tab("client1", "styx")
 
-        # Go back to habitus
-        controller.switch_tab("client1", "habitus")
+        # Go back to hausverwaltung
+        controller.switch_tab("client1", "hausverwaltung")
 
         active = controller.get_active_tab()
-        assert active["id"] == "habitus"
+        assert active["id"] == "hausverwaltung"
         assert active["active"] is True
 
     def test_tab_history_persistence(self, controller):
         """Test tab history is maintained."""
-        controller.switch_tab("client1", "habitus")
-        controller.switch_tab("client1", "energie")
+        controller.switch_tab("client1", "hausverwaltung")
+        controller.switch_tab("client1", "styx")
 
         history = controller.get_tab_history()
         assert len(history) == 2
@@ -558,7 +557,7 @@ class TestDashboardTabIntegration:
         client = socketio.connect_client("client_123")
 
         # Navigate through all tabs
-        tabs_to_visit = ["habitus", "automationen", "energie", "system"]
+        tabs_to_visit = ["hausverwaltung", "styx"]
 
         for tab_id in tabs_to_visit:
             result = controller.switch_tab("client_123", tab_id)
@@ -573,8 +572,8 @@ class TestDashboardTabIntegration:
                     assert app.tabs[prev_tab]["active"] is False
 
         # Verify final state
-        assert controller.get_active_tab()["id"] == "system"
-        assert len(controller.get_tab_history()) == 4
+        assert controller.get_active_tab()["id"] == "styx"
+        assert len(controller.get_tab_history()) == 2
 
     def test_concurrent_tab_switches(self):
         """Test concurrent tab switches from multiple clients."""
@@ -589,12 +588,12 @@ class TestDashboardTabIntegration:
 
         # Each client switches to different tab
         controller.switch_tab("client_1", "habitus")
-        controller.switch_tab("client_2", "energie")
-        controller.switch_tab("client_3", "system")
+        controller.switch_tab("client_2", "hausverwaltung")
+        controller.switch_tab("client_3", "styx")
 
         # All clients see same active tab (last one wins)
         active = controller.get_active_tab()
-        assert active["id"] == "system"
+        assert active["id"] == "styx"
 
         # But all received updates
         for client in [client1, client2, client3]:
@@ -603,3 +602,20 @@ class TestDashboardTabIntegration:
                 if m["event"] == "tab_changed"
             ]
             assert len(received_tab_changes) >= 1
+
+    def test_3_tab_layout_restored(self):
+        """Test that 3-Tab layout is properly restored."""
+        app = MockDashboardApp()
+        
+        tabs = app.get_tabs()
+        assert len(tabs) == 3
+        
+        # Verify tab order
+        assert tabs[0]["id"] == "habitus"
+        assert tabs[1]["id"] == "hausverwaltung"
+        assert tabs[2]["id"] == "styx"
+        
+        # Verify each tab has required content
+        for tab in tabs:
+            assert tab["widgets"]
+            assert len(tab["widgets"]) > 0

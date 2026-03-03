@@ -1,11 +1,39 @@
 /**
  * PilotSuite Styx - Dashboard Tab Logic & WebSocket Connection
- * Material Design Dashboard mit 10 Habituszonen-Tabs
+ * Material Design Dashboard mit 3-Tab Layout:
+ * - Tab 1: Habitus (Mood/Zonen)
+ * - Tab 2: Hausverwaltung (Energie, Präsenz, Automationen)
+ * - Tab 3: Styx (Neural Dashboard, Brain Graph)
  */
 
 class HabitusDashboard {
     constructor() {
-        // Habituszonen Konfiguration
+        // 3-Tab Layout Konfiguration (wiederhergestellt aus recovery)
+        this.tabs = [
+            { 
+                id: 'habitus', 
+                name: 'Habitus', 
+                icon: 'mdi-heart-pulse', 
+                alertCount: 0,
+                description: 'Mood & Zonen Status'
+            },
+            { 
+                id: 'hausverwaltung', 
+                name: 'Hausverwaltung', 
+                icon: 'mdi-home-city', 
+                alertCount: 0,
+                description: 'Energie, Präsenz & Automationen'
+            },
+            { 
+                id: 'styx', 
+                name: 'Styx', 
+                icon: 'mdi-brain', 
+                alertCount: 0,
+                description: 'Neural Dashboard & Brain Graph'
+            }
+        ];
+        
+        // Legacy zone support (for backward compatibility)
         this.zones = [
             { id: 'wohn', name: 'Wohnbereich', icon: 'mdi-sofa', alertCount: 0 },
             { id: 'bad', name: 'Badbereich', icon: 'mdi-shower', alertCount: 0 },
@@ -21,7 +49,7 @@ class HabitusDashboard {
         
         this.socket = null;
         this.connected = false;
-        this.activeTab = 'wohn';
+        this.activeTab = 'habitus';
         this.zoneData = {};
         this.theme = 'light';
         
@@ -88,13 +116,15 @@ class HabitusDashboard {
         const container = document.getElementById('tabs-container');
         if (!container) return;
         
-        container.innerHTML = this.zones.map((zone, index) => `
+        // 3-Tab Layout rendering
+        container.innerHTML = this.tabs.map((tab, index) => `
             <button class="tab-item ${index === 0 ? 'active' : ''}" 
-                    data-zone="${zone.id}"
-                    onclick="dashboard.switchTab('${zone.id}')">
-                <i class="mdi ${zone.icon}"></i>
-                <span class="label">${zone.name}</span>
-                <span class="badge" id="badge-${zone.id}" style="display: none;">0</span>
+                    data-tab="${tab.id}"
+                    onclick="dashboard.switchTab('${tab.id}')"
+                    title="${tab.description}">
+                <i class="mdi ${tab.icon}"></i>
+                <span class="label">${tab.name}</span>
+                <span class="badge" id="badge-${tab.id}" style="display: none;">0</span>
             </button>
         `).join('');
     }
@@ -103,24 +133,21 @@ class HabitusDashboard {
         const wrapper = document.getElementById('tab-content-wrapper');
         if (!wrapper) return;
         
-        wrapper.innerHTML = this.zones.map((zone, index) => `
-            <div class="tab-pane ${index === 0 ? 'active' : ''}" id="pane-${zone.id}">
+        // 3-Tab Layout Content
+        wrapper.innerHTML = this.tabs.map((tab, index) => `
+            <div class="tab-pane ${index === 0 ? 'active' : ''}" id="pane-${tab.id}">
                 <div class="tab-pane-header">
-                    <h2><i class="mdi ${zone.icon}"></i> ${zone.name}</h2>
-                    <p>Übersicht und Steuerung für ${zone.name.toLowerCase()}</p>
+                    <h2><i class="mdi ${tab.icon}"></i> ${tab.name}</h2>
+                    <p>${tab.description}</p>
                 </div>
-                <div class="zone-grid" id="grid-${zone.id}">
-                    <div class="empty-state">
-                        <i class="mdi ${zone.icon}"></i>
-                        <h3>${zone.name} wird geladen...</h3>
-                        <p>Home Assistant Discovery läuft</p>
-                    </div>
+                <div class="tab-content-grid" id="grid-${tab.id}">
+                    ${this.getTabContent(tab.id)}
                 </div>
-                <div class="quick-actions" id="actions-${zone.id}">
-                    <button class="quick-action-btn" onclick="dashboard.refreshZone('${zone.id}')">
+                <div class="quick-actions" id="actions-${tab.id}">
+                    <button class="quick-action-btn" onclick="dashboard.refreshTab('${tab.id}')">
                         <i class="mdi mdi-refresh"></i> Aktualisieren
                     </button>
-                    <button class="quick-action-btn" onclick="dashboard.showZoneSettings('${zone.id}')">
+                    <button class="quick-action-btn" onclick="dashboard.showTabSettings('${tab.id}')">
                         <i class="mdi mdi-cog"></i> Einstellungen
                     </button>
                 </div>
@@ -128,21 +155,123 @@ class HabitusDashboard {
         `).join('');
     }
     
+    getTabContent(tabId) {
+        // Return content based on tab
+        switch(tabId) {
+            case 'habitus':
+                return `
+                    <div class="content-card mood-gauges">
+                        <h3><i class="mdi mdi-emoticon"></i> Mood Status</h3>
+                        <div class="gauge-grid">
+                            <div class="gauge">
+                                <span class="gauge-label">Comfort</span>
+                                <div class="gauge-bar"><div class="gauge-fill" style="width: 75%"></div></div>
+                                <span class="gauge-value">75%</span>
+                            </div>
+                            <div class="gauge">
+                                <span class="gauge-label">Joy</span>
+                                <div class="gauge-bar"><div class="gauge-fill" style="width: 60%"></div></div>
+                                <span class="gauge-value">60%</span>
+                            </div>
+                            <div class="gauge">
+                                <span class="gauge-label">Frugality</span>
+                                <div class="gauge-bar"><div class="gauge-fill" style="width: 85%"></div></div>
+                                <span class="gauge-value">85%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-card zone-overview">
+                        <h3><i class="mdi mdi-home-group"></i> Zonen Übersicht</h3>
+                        <div class="zone-list">
+                            ${this.zones.map(z => `
+                                <div class="zone-item" data-zone="${z.id}">
+                                    <i class="mdi ${z.icon}"></i>
+                                    <span>${z.name}</span>
+                                    <span class="zone-status active"> Aktiv</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            case 'hausverwaltung':
+                return `
+                    <div class="content-card energy-overview">
+                        <h3><i class="mdi mdi-lightning-bolt"></i> Energie</h3>
+                        <div class="energy-stats">
+                            <div class="stat">
+                                <span class="stat-value">2.4</span>
+                                <span class="stat-unit">kW</span>
+                                <span class="stat-label">Aktuell</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">18.5</span>
+                                <span class="stat-unit">kWh</span>
+                                <span class="stat-label">Heute</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">€4.20</span>
+                                <span class="stat-label">Kosten</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-card praesenz">
+                        <h3><i class="mdi mdi-account-multiple"></i> Präsenz</h3>
+                        <div class="praesenz-list">
+                            <div class="praesenz-item"><i class="mdi mdi-account"></i> Zuhause: 3</div>
+                            <div class="praesenz-item"><i class="mdi mdi-door"></i> Anwesend: 2</div>
+                        </div>
+                    </div>
+                    <div class="content-card automationen">
+                        <h3><i class="mdi mdi-robot"></i> Automationen</h3>
+                        <div class="automation-list">
+                            <div class="automation-item active">
+                                <span>Autolicht</span>
+                                <span class="status">aktiv</span>
+                            </div>
+                            <div class="automation-item active">
+                                <span>Heizungssteuerung</span>
+                                <span class="status">aktiv</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            case 'styx':
+                return `
+                    <div class="content-card brain-graph">
+                        <h3><i class="mdi mdi-brain"></i> Brain Graph</h3>
+                        <div class="brain-visualization" id="brain-graph-canvas">
+                            <canvas id="brain-canvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="content-card neural-dashboard">
+                        <h3><i class="mdi mdi-chart-timeline-variant"></i> Neural Dashboard</h3>
+                        <div class="neural-stats">
+                            <div class="stat"><span class="stat-value">12</span><span class="stat-label">Neuronen</span></div>
+                            <div class="stat"><span class="stat-value">48</span><span class="stat-label">Synapsen</span></div>
+                            <div class="stat"><span class="stat-value">98%</span><span class="stat-label">Uptime</span></div>
+                        </div>
+                    </div>
+                `;
+            default:
+                return '<div class="empty-state"><p>Tab Content wird geladen...</p></div>';
+        }
+    }
+    
     setupTabNavigation() {
-        // Keyboard navigation
+        // Keyboard navigation for 3 tabs
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                const currentIndex = this.zones.findIndex(z => z.id === this.activeTab);
+                const currentIndex = this.tabs.findIndex(t => t.id === this.activeTab);
                 let newIndex = currentIndex;
                 
                 if (e.key === 'ArrowLeft' && currentIndex > 0) {
                     newIndex = currentIndex - 1;
-                } else if (e.key === 'ArrowRight' && currentIndex < this.zones.length - 1) {
+                } else if (e.key === 'ArrowRight' && currentIndex < this.tabs.length - 1) {
                     newIndex = currentIndex + 1;
                 }
                 
                 if (newIndex !== currentIndex) {
-                    this.switchTab(this.zones[newIndex].id);
+                    this.switchTab(this.tabs[newIndex].id);
                 }
             }
         });
@@ -179,29 +308,29 @@ class HabitusDashboard {
         }
     }
     
-    switchTab(zoneId) {
-        if (this.activeTab === zoneId) return;
+    switchTab(tabId) {
+        if (this.activeTab === tabId) return;
         
-        this.activeTab = zoneId;
+        this.activeTab = tabId;
         
-        // Update tab buttons
+        // Update tab buttons (using data-tab attribute)
         document.querySelectorAll('.tab-item').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.zone === zoneId);
+            tab.classList.toggle('active', tab.dataset.tab === tabId);
         });
         
         // Update tab panes
         document.querySelectorAll('.tab-pane').forEach(pane => {
-            pane.classList.toggle('active', pane.id === `pane-${zoneId}`);
+            pane.classList.toggle('active', pane.id === `pane-${tabId}`);
         });
         
         // Scroll active tab into view
-        const activeTab = document.querySelector(`.tab-item[data-zone="${zoneId}"]`);
-        if (activeTab) {
-            activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        const activeTabElement = document.querySelector(`.tab-item[data-tab="${tabId}"]`);
+        if (activeTabElement) {
+            activeTabElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         }
         
         this.updateLastUpdateTime();
-        console.log(`[Dashboard] Switched to tab: ${zoneId}`);
+        console.log(`[Dashboard] Switched to tab: ${tabId}`);
     }
     
     setupWebSocket() {
@@ -447,6 +576,26 @@ class HabitusDashboard {
         console.log(`[Dashboard] Opening settings for zone: ${zoneId}`);
         // Hier könnte ein Modal oder eine separate Einstellungsseite geöffnet werden
         alert(`Einstellungen für ${zoneId} werden geöffnet...`);
+    }
+    
+    refreshTab(tabId) {
+        console.log(`[Dashboard] Refreshing tab: ${tabId}`);
+        // Trigger content refresh for the tab
+        const pane = document.getElementById(`pane-${tabId}`);
+        if (pane) {
+            const grid = pane.querySelector('.tab-content-grid');
+            if (grid) {
+                // Re-render tab content
+                grid.innerHTML = this.getTabContent(tabId);
+            }
+        }
+        this.updateLastUpdateTime();
+    }
+    
+    showTabSettings(tabId) {
+        console.log(`[Dashboard] Show settings for tab: ${tabId}`);
+        // Settings panel would open here
+        alert(`Einstellungen für ${tabId} - wird in Kürze verfügbar sein`);
     }
     
     hideLoading() {
