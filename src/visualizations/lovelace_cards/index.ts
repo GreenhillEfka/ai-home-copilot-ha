@@ -1,7 +1,10 @@
-// Lovelace Custom Cards for Mood, Neurons, and Habitus
+// Lovelace Custom Cards for Mood, Neurons, Habitus, and RAG Search
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { HomeAssistant } from 'custom-card-helpers';
+
+// Re-export RAG Search Card
+export { HaCopilotRAGSearchCard } from './rag_search_card';
 
 /**
  * Mood Card - Displays current mood context with visualization
@@ -806,5 +809,6 @@ declare global {
     'ha-copilot-mood-card': HaCopilotMoodCard;
     'ha-copilot-neurons-card': HaCopilotNeuronsCard;
     'ha-copilot-habitus-card': HaCopilotHabitusCard;
+    'ha-copilot-rag-search-card': import('./rag_search_card').HaCopilotRAGSearchCard;
   }
 }
