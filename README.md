@@ -104,6 +104,7 @@ PilotSuite benötigt das **PilotSuite Core Backend** (separates Add-on):
 - **Mood Timeline** — Stimmungsverlauf
 - **Energy Forecast** — Verbrauchsprognosen
 - **Agent Status** — Alle Agents im Überblick
+- **Styx Dashboard Link** — Direkte Verknüpfung zum Styx SPA (Musikwolke, Vorschläge, Chat)
 
 ### **Automationen**
 

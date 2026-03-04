@@ -2,6 +2,16 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [v13.2.0] - 2026-03-04
+
+### Styx Dashboard Integration & Habitus Dashboard Erweiterung
+
+- **Styx Dashboard Link**: Jede Habitus-Zone enthält jetzt einen Link-Card zum Styx Dashboard für erweiterte Ansicht (Musikwolke, Vorschläge, KI-Chat)
+- **Cross-Module Verknüpfung**: Nahtloser Übergang von HA Lovelace Zonen-Ansicht → Styx Dashboard SPA
+- **Sync mit Core v13.2.0**: Kompatibel mit neuen Styx Dashboard Features (8 Tabs, Suggestions API, Musikwolke Sonos-Steuerung)
+
+---
+
 ## [v13.1.0] - 2026-03-03
 
 ### Production Readiness Release — Bug Fixes, Hub Integration & RAG Pipeline
