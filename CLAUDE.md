@@ -6,210 +6,153 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Projektueberblick
 
-**PilotSuite Core Add-on** ist das Backend fuer die PilotSuite-Plattform. Es laeuft als Home Assistant Add-on auf Port **8909** und stellt eine Flask/Waitress REST-API bereit.
+**PilotSuite Styx HA** ist die Home Assistant HACS Integration der PilotSuite-Plattform. Sie stellt Sensoren, Buttons, Dashboards, Lovelace Cards und eine Config-Flow UI bereit, die mit dem PilotSuite Core Add-on kommuniziert.
 
-**Gegenstueck:** [pilotsuite-styx-ha](../pilotsuite-styx-ha) -- HACS Integration (Sensoren, Module, Dashboard)
+**Gegenstueck:** [pilotsuite-styx-core](../pilotsuite-styx-core) -- Backend Add-on (Flask REST-API, Brain Graph, Neurons, LLM)
 
-- **Framework:** Flask (Web), Waitress (WSGI Server)
-- **Sprache:** Python 3.11+
-- **Deployment:** Home Assistant Add-on (Docker Container)
-- **Port:** 8909
+- **Typ:** HACS Custom Integration (`integration_type: hub`)
+- **Domain:** `copilot_ha`
+- **Sprache:** Python 3.11+ (Backend), TypeScript/JS (Lovelace Cards)
+- **HA Mindestversion:** 2024.1.0
 - **Lizenz:** Privat, alle Rechte vorbehalten
+- **Version:** Muss in `custom_components/copilot_ha/manifest.json` und `VERSION` uebereinstimmen, paired mit Core-Version
 
 ---
 
 ## Entwicklungskommandos
 
 ```bash
+# Tests ausfuehren (alle Python-Tests)
+cd /home/user/pilotsuite-styx-ha && python -m pytest tests/ -v --tb=short -x
+
+# Einzelne Testdatei
+python -m pytest tests/test_zone_matching.py -v -x
+
+# Einzelne Testklasse
+python -m pytest tests/test_zone_matching.py::TestZoneMatchingBasics -v
+
+# JS/TS Tests (Playwright E2E + Jest)
+npx playwright test
+npx jest tests/test_neuron_dashboard.test.js
+
 # Syntax-Check
-python -m py_compile $(find copilot_core/rootfs/usr/src/app -name '*.py')
-
-# Tests ausfuehren
-PYTHONPATH=copilot_core/rootfs/usr/src/app python -m pytest copilot_core/rootfs/usr/src/app/tests -v --tb=short -x
-
-# Tests mit Coverage
-PYTHONPATH=copilot_core/rootfs/usr/src/app python -m pytest copilot_core/rootfs/usr/src/app/tests -v --tb=short --cov=copilot_core/rootfs/usr/src/app/copilot_core --cov-report=term-missing -x
-
-# Security Scan
-bandit -r copilot_core/rootfs/usr/src/app/copilot_core -ll --skip B101,B404,B603
-
-# App erstellen (Smoke Test)
-PYTHONPATH=copilot_core/rootfs/usr/src/app python -c "from copilot_core.app import create_app; app = create_app(); print('ok')"
+python -m py_compile $(find custom_components/copilot_ha -name '*.py')
 ```
+
+**Hinweis:** `conftest.py` fuegt `custom_components/copilot_ha` automatisch zum Python-Path hinzu. Kein PYTHONPATH-Export noetig.
 
 ---
 
 ## Architektur
 
-### Neural Pipeline (Normative Kette)
+### Kommunikationsmodell
 
 ```
-HA Events --> Event Ingest --> Brain Graph --> Habitus Miner --> Candidates
-                                  |               |
-                              Neurons          Patterns
-                                  |               |
-                              Mood Engine    Vorschlaege --> HA Repairs UI
+Home Assistant <--> copilot_ha Integration <--> PilotSuite Core Add-on (Port 8909)
+                         |                              |
+                    Sensoren/Buttons              Flask REST-API
+                    Dashboard YAML                Brain Graph
+                    Lovelace Cards                LLM / Neurons
+                    Config Flow                   Zone Automation
+                    Event Forwarding              Musikwolke
 ```
 
-1. **Event Ingest**: Empfaengt Events von der HACS Integration (batched, dedupliziert)
-2. **Brain Graph**: Zustandsgraph mit Nodes + Edges, exponential Decay, Snapshots
-3. **Habitus Miner**: Pattern-Discovery mit Association Rules (Support, Confidence, Lift)
-4. **Mood Engine**: Multidimensionale Stimmungsbewertung (Comfort, Joy, Frugality)
-5. **Candidates**: Vorschlaege mit Governance-Workflow (pending -> offered -> accepted/dismissed)
-6. **Neurons**: 12+ Bewertungs-Neuronen (Presence, Energy, Weather, Context, etc.)
+Die Integration ist ein **Thin Client**: Sie pollt/pusht Daten vom/zum Core Add-on via HTTP und mappt die Ergebnisse auf HA-Entities.
 
-### Brain Graph
+### CopilotRuntime + ModuleRegistry (core/)
 
-- In-Memory Graph Store mit optionaler JSON-Persistenz
-- Nodes: Entities, Zonen, Devices mit Score und Metadata
-- Edges: Beziehungen mit Gewicht und Decay
-- Max: 500 Nodes, 1500 Edges (konfigurierbar)
-- Pruning, Patterns, SVG-Snapshots
+Zentrales Plugin-System fuer die Integration:
 
-### Habitus Mining
+```python
+# core/runtime.py — Singleton pro HA-Instanz
+runtime = CopilotRuntime.get(hass)
+await runtime.async_setup_entry(entry, ["brain_sync", "event_forwarder", ...])
+```
 
-- Association Rule Mining aus Event-Streams
-- Zone-basiertes Mining (Wohnbereich, Schlafbereich, etc.)
-- Confidence-Scoring und Feedback-Loop
-- Zeitbasierte, Trigger-basierte, sequenzielle und kontextuelle Muster
+- **CopilotRuntime**: Verwaltet `ModuleRegistry`, erstellt und lifecycle-managed Module pro ConfigEntry
+- **CopilotModule**: Basisklasse (async_setup_entry / async_unload_entry)
+- **ModuleContext**: `(hass, entry)` Wrapper fuer Module
+- Fehlgeschlagene Module werden uebersprungen (graceful degradation)
 
-### Mood Engine
+### Config Flow (7-Step Wizard)
 
-- 3D-Bewertung: Comfort, Joy, Frugality (je 0.0-1.0)
-- Zone-spezifische Mood-Snapshots
-- Exponential Smoothing fuer stabile Werte
-- Suggestion-Suppression basierend auf Stimmung
+Modulare Config Flow in 5 Dateien aufgeteilt:
+
+| Datei | Verantwortung |
+|-------|-------------|
+| `config_flow.py` | Duenner Coordinator, importiert Steps |
+| `config_wizard_steps.py` | Wizard-Step-Handler (Discovery, Zones, Entities, Features, Network, Review) |
+| `config_schema_builders.py` | Schema-Builder Funktionen (voluptuous) |
+| `config_zones_flow.py` | Zone-Management + Helpers |
+| `config_options_flow.py` | OptionsFlowHandler (nach Setup) |
+| `config_helpers.py` | Constants, CSV-Utils, Validierung |
+
+Steps: DISCOVERY -> ZONES -> ZONE_ENTITIES -> ENTITIES -> FEATURES -> NETWORK -> REVIEW
+
+### Entity-Plattformen
+
+145+ Python-Module in `custom_components/copilot_ha/`. Plattformen:
+
+- **sensor.py**: Hauptsensoren (Brain Score, Mood, etc.)
+- **binary_sensor.py**: Praesenz-, Anomalie-Sensoren
+- **button.py + button_*.py**: ~20 Button-Module (Debug, Graph, Camera, Demo, etc.)
+- **switch.py**: Automation Toggles
+- **number.py**: Konfigurierbare Zahlenwerte
+- **select.py**: Dropdowns
+- **conversation.py**: HA Conversation Agent (Styx Assist)
+- **stt.py + tts.py**: Speech-to-Text / Text-to-Speech via Core LLM
+- **camera.py**: Brain Graph Visualisierung als Kamera-Entity
+
+### Dashboard
+
+- `dashboard/pilotsuite_dashboard_v13.yaml` — Haupt-Dashboard (YAML, wird bei Setup installiert)
+- `dashboard/card_generator.py` — Dynamische Card-Generierung
+- `brain_graph_panel.py` — Brain Graph Custom Panel
+
+### Connection Config
+
+- `connection_config.py` — Merged Entry Config: Kombiniert `config_entry.data` + `config_entry.options` + Umgebungsvariablen
+- `resolve_core_connection_from_mapping()` — Findet Core Add-on URL (Fallback-Kette: Entry → Env → localhost:8909)
+- Token-Handling: Auth-Token aus Config Entry, COPILOT_AUTH_TOKEN Env, oder Add-on Options
 
 ---
 
 ## Konventionen
 
-### Blueprint-Pattern (Flask)
+### HA Entity Pattern
 
-Alle API-Endpunkte sind als Flask Blueprints organisiert:
+Entities erben von `CopilotStyxEntity` (in `entity.py`) und definieren:
+- `_attr_unique_id`: Basierend auf `INTEGRATION_UNIQUE_ID` + Suffix
+- `device_info`: Verknuepfung mit Haupt-Device "Styx Hub"
+- `async_update()`: Pollt Core API
 
-```python
-from flask import Blueprint
-bp = Blueprint("modulname", __name__, url_prefix="/modulname")
+### Neue Module hinzufuegen
 
-@bp.get("/endpoint")
-def get_endpoint():
-    ...
-```
+1. Python-Modul in `custom_components/copilot_ha/` anlegen
+2. Entity-Plattform (sensor, button, etc.) implementieren
+3. In `__init__.py` PLATFORMS-Liste eintragen (falls neue Plattform)
+4. Optional: ModuleRegistry-Plugin via `core/module.py` Basisklasse
 
-Blueprints werden in `copilot_core/api/v1/blueprint.py` registriert (relative Prefixes unter `/api/v1`) oder direkt auf der App via `core_setup.register_blueprints()` (absolute Prefixes).
+### Services
 
-### Service-Dict Pattern
-
-`init_services(config)` in `core_setup.py` initialisiert alle Backend-Services und gibt ein Dict zurueck:
-
-```python
-services = init_services(config=options)
-# services["brain_graph_store"], services["event_store"], etc.
-```
-
-### init_services / register_blueprints
-
-- `init_services(config)`: Erstellt und verdrahtet alle Service-Instanzen
-- `register_blueprints(app, services)`: Registriert alle Flask Blueprints auf der App
-- Beide Funktionen leben in `core_setup.py`
-
-### Dateistruktur
-
-```
-copilot_core/
-+-- Dockerfile               # Container-Build
-+-- config.yaml              # HA Add-on Manifest
-+-- rootfs/usr/src/app/
-    +-- main.py              # Entry Point (Flask + Waitress)
-    +-- copilot_core/
-        +-- app.py           # Flask App Factory
-        +-- core_setup.py    # init_services + register_blueprints
-        +-- api/
-        |   +-- v1/
-        |   |   +-- blueprint.py   # Blueprint-Registry
-        |   |   +-- candidates.py  # Candidates API
-        |   |   +-- events.py      # Events API (wird importiert, nicht hier)
-        |   |   +-- mood.py        # Mood API
-        |   |   +-- graph.py       # Brain Graph API
-        |   |   +-- habitus.py     # Habitus API
-        |   |   +-- neurons.py     # Neurons API
-        |   |   +-- search.py      # Search API
-        |   |   +-- notifications.py
-        |   |   +-- dashboard.py
-        |   |   +-- weather.py
-        |   |   +-- user_preferences.py
-        |   |   +-- voice_context_bp.py
-        |   |   +-- user_hints.py
-        |   +-- security.py   # Token-Validierung
-        |   +-- rate_limit.py  # Rate Limiting
-        |   +-- performance.py # Performance Middleware
-        +-- brain_graph/       # Brain Graph Store + Service
-        +-- habitus_miner/     # Habitus Mining Engine
-        +-- habitus/           # Habitus Service Layer
-        +-- mood/              # Mood Engine + Scoring
-        +-- neurons/           # 12+ Bewertungs-Neuronen
-        +-- candidates/        # Candidate Store + API
-        +-- ingest/            # Event Processing Pipeline
-        +-- knowledge_graph/   # Knowledge Graph Store
-        +-- collective_intelligence/  # Federated Learning
-        +-- sharing/           # Cross-Home Sync
-        +-- synapses/          # Synapse Manager
-        +-- storage/           # Persistenz-Layer
-        +-- tags/              # Tag Registry
-        +-- system_health/     # System Health Checks
-        +-- dev_surface/       # Debug/Diagnose
-        +-- energy/            # Energy Neuron API
-        +-- log_fixer_tx/      # Log Recovery
-```
-
----
-
-## Aktueller Stand
-
-### Version v7.7.19
-
-- **Tests:** 1962 passed, 1 skipped
-- 28+ Backend-Module implementiert und registriert
-- 40+ API Endpoints (30 Flask Blueprints)
-- Security: Token-Validierung mit `hmac.compare_digest`
-- Brain Graph mit Persistenz, Pruning, SVG-Snapshots
-- Habitus Miner mit Zone Mining und Association Rules
-- Mood Engine mit 3D-Scoring (Comfort/Joy/Frugality)
-- Event Ingest mit Deduplication und Idempotency
-- Candidate Management mit State Machine
-- Knowledge Graph, Vector Store, Search
-- Cross-Home Sync und Collective Intelligence
-- System Health Checks (Zigbee, Z-Wave, Recorder, etc.)
-- Ollama LLM Integration (Default: qwen3:0.6b, Optional: qwen3:4b)
-- Dashboard Auth Bridge fuer Token-geschuetzte API
-- Ollama Cloud Endpoint Hardening
+`services_setup.py` + `services.yaml` registrieren HA-Services unter `copilot_ha.*`:
+- `copilot_ha.send_event` — Event an Core weiterleiten
+- `copilot_ha.trigger_brain_sync` — Brain Graph Sync ausloesen
+- etc.
 
 ---
 
 ## Hinweise fuer KI-Assistenten
 
-- Flask-Blueprints mit relativen Prefixes werden in `api/v1/blueprint.py` registriert
-- Standalone Blueprints mit `/api/v1/...` Prefix werden in `core_setup.register_blueprints()` registriert
-- Neue Services muessen in `init_services()` initialisiert und im services-Dict zurueckgegeben werden
-- Token-Validierung: `validate_token(request)` aus `api/security.py` verwenden
-- Port ist immer 8909 (Umgebungsvariable PORT)
-- Persistenz unter `/data/` (HA Add-on Mount)
-- Tests mit pytest, Dateien in Repository-Root oder `/tests/`
+- **Dual-Repo**: Aenderungen an der API muessen in beiden Repos (core + ha) synchron sein
+- **Version Sync**: `VERSION`, `manifest.json` in HA MUSS mit Core-Version uebereinstimmen
+- Domain ist `copilot_ha`, aber User-facing Name ist "PilotSuite"
+- `MAIN_DEVICE_IDENTIFIER = "styx_hub"` — alle Entities gehoeren zu diesem Device
+- Legacy-Identifiers (`copilot_ha`, `copilot_hub`, `pilotsuite_hub`) werden fuer Migration unterstuetzt
+- Dashboard-Pfad: `pilotsuite-styx/` (Primary) oder `copilot_ha/` (Legacy)
+- Tests: Python in `tests/`, JS in `tests/*.test.js`, E2E in `tests/e2e/`
 - Dokumentation in Deutsch bevorzugt
-
-### Thread-Sicherheit
-
-Flask/Waitress bedient Requests in mehreren Threads:
-- Double-Checked Locking fuer Singletons verwenden (siehe `LLMProvider`, `ModuleRegistry`)
-- Das `services`-Dict ist read-only nach Initialisierung
-- SQLite WAL-Modus mit `busy_timeout=5000` verwenden
-
-### Circuit Breaker
-
-Zwei konfigurierte Instanzen schuetzen vor kaskadierenden Fehlern:
-- `ha_supervisor`: 5 Fehler / 30s Recovery (HA Supervisor API)
-- `ollama`: 3 Fehler / 60s Recovery (Ollama LLM API)
+- Commit-Messages: `feat:`, `fix:`, `chore:`, `release:` Prefix
 
 ### Projektprinzipien
 
@@ -218,15 +161,7 @@ Zwei konfigurierte Instanzen schuetzen vor kaskadierenden Fehlern:
 | **Local-first** | Alles lokal, kein Cloud-API-Call |
 | **Privacy-first** | PII-Redaktion, bounded Storage, opt-in |
 | **Governance-first** | Vorschlaege vor Aktionen, Human-in-the-Loop |
-| **Safe Defaults** | Max 500 Nodes, 1500 Edges, Persistenz opt-in |
-
-### PR-Checkliste
-
-- [ ] Changelog updated (if user-visible)
-- [ ] Docs updated (if applicable)
-- [ ] Privacy-first (no secrets, no personal defaults)
-- [ ] Safe defaults (caps/limits; persistence off by default)
-- [ ] Governance-first (no silent actions)
+| **Thin Client** | HA-Integration ist duenn, Logik lebt im Core |
 
 ---
 
@@ -234,11 +169,16 @@ Zwei konfigurierte Instanzen schuetzen vor kaskadierenden Fehlern:
 
 | Datei | Beschreibung |
 |-------|-------------|
-| `copilot_core/rootfs/usr/src/app/main.py` | Entry Point |
-| `copilot_core/rootfs/usr/src/app/copilot_core/app.py` | Flask App Factory |
-| `copilot_core/rootfs/usr/src/app/copilot_core/core_setup.py` | Service-Initialisierung |
-| `copilot_core/rootfs/usr/src/app/copilot_core/api/v1/blueprint.py` | Blueprint-Registry |
-| `copilot_core/rootfs/usr/src/app/copilot_core/api/security.py` | Token-Validierung |
-| `copilot_core/config.yaml` | HA Add-on Manifest |
-| `docs/ARCHITECTURE.md` | Vollstaendige Architektur-Dokumentation |
-| `docs/API_REFERENCE.md` | API-Endpunkte Dokumentation |
+| `custom_components/copilot_ha/__init__.py` | Integration Entry Point (async_setup_entry) |
+| `custom_components/copilot_ha/const.py` | Domain, Constants, Data Keys |
+| `custom_components/copilot_ha/core/runtime.py` | CopilotRuntime + ModuleRegistry |
+| `custom_components/copilot_ha/config_flow.py` | Config Flow Coordinator |
+| `custom_components/copilot_ha/connection_config.py` | Core-Verbindungs-Resolver |
+| `custom_components/copilot_ha/entity.py` | Basis-Entity-Klasse |
+| `custom_components/copilot_ha/sensor.py` | Haupt-Sensoren |
+| `custom_components/copilot_ha/conversation.py` | HA Conversation Agent |
+| `custom_components/copilot_ha/services_setup.py` | HA Service-Registration |
+| `custom_components/copilot_ha/manifest.json` | HACS/HA Manifest |
+| `custom_components/copilot_ha/dashboard/pilotsuite_dashboard_v13.yaml` | Dashboard YAML |
+| `hacs.json` | HACS Repository Config |
+| `VERSION` | Aktuelle Version (muss mit Core synchron sein) |
