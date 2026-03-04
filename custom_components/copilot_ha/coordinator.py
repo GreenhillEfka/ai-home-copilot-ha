@@ -224,6 +224,94 @@ class CopilotApiClient(SharedCopilotApiClient):
             content = choices[0].get("message", {}).get("content", "")
         return {"content": content, "conversation_id": conversation_id}
 
+    async def async_stt(
+        self, audio_data: bytes, language: str = "de"
+    ) -> dict[str, Any]:
+        """Send audio to Core STT endpoint and return transcription."""
+        path = f"/api/v1/styx/stt?language={language}"
+        last_err: CopilotApiError | None = None
+
+        for idx, base_url in enumerate(self._base_urls):
+            url = f"{base_url}{path}"
+            try:
+                async with self._session.post(
+                    url,
+                    data=audio_data,
+                    headers={
+                        **self._headers(),
+                        "Content-Type": "audio/wav",
+                    },
+                    timeout=aiohttp.ClientTimeout(total=30.0),
+                ) as resp:
+                    if resp.status >= 400:
+                        body = await resp.text()
+                        raise CopilotApiError(f"HTTP {resp.status} for {url}: {body[:200]}")
+                    return await resp.json()
+            except asyncio.TimeoutError as err:
+                last_err = CopilotApiError(f"Timeout calling {url}")
+                if idx < len(self._base_urls) - 1:
+                    continue
+                raise last_err from err
+            except aiohttp.ClientError as err:
+                last_err = CopilotApiError(f"Client error calling {url}: {err}")
+                if idx < len(self._base_urls) - 1:
+                    continue
+                raise last_err from err
+            except CopilotApiError as err:
+                last_err = err
+                if idx < len(self._base_urls) - 1 and _should_failover(err):
+                    continue
+                raise
+        raise last_err or CopilotApiError("No available Core API endpoint")
+
+    async def async_tts(
+        self, text: str, language: str = "de", voice: str | None = None
+    ) -> bytes:
+        """Send text to Core TTS endpoint and return audio bytes."""
+        path = "/api/v1/styx/tts"
+        payload = {"text": text, "language": language}
+        if voice:
+            payload["voice"] = voice
+        last_err: CopilotApiError | None = None
+
+        for idx, base_url in enumerate(self._base_urls):
+            url = f"{base_url}{path}"
+            try:
+                async with self._session.post(
+                    url,
+                    json=payload,
+                    headers=self._headers(),
+                    timeout=aiohttp.ClientTimeout(total=30.0),
+                ) as resp:
+                    if resp.status >= 400:
+                        body = await resp.text()
+                        raise CopilotApiError(f"HTTP {resp.status} for {url}: {body[:200]}")
+                    return await resp.read()
+            except asyncio.TimeoutError as err:
+                last_err = CopilotApiError(f"Timeout calling {url}")
+                if idx < len(self._base_urls) - 1:
+                    continue
+                raise last_err from err
+            except aiohttp.ClientError as err:
+                last_err = CopilotApiError(f"Client error calling {url}: {err}")
+                if idx < len(self._base_urls) - 1:
+                    continue
+                raise last_err from err
+            except CopilotApiError as err:
+                last_err = err
+                if idx < len(self._base_urls) - 1 and _should_failover(err):
+                    continue
+                raise
+        raise last_err or CopilotApiError("No available Core API endpoint")
+
+    async def async_voice_status(self) -> dict[str, Any]:
+        """Get voice service status from Core."""
+        try:
+            return await self._request_json("GET", "/api/v1/styx/voice/status")
+        except CopilotApiError as e:
+            _LOGGER.debug("Voice status not available: %s", e)
+            return {"ok": False, "stt": {"available": False}, "tts": {"available": False}}
+
     async def async_evaluate_neurons(self, context: dict[str, Any]) -> dict[str, Any]:
         """Evaluate neural pipeline with HA states."""
         try:

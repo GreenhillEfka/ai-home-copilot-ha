@@ -19,7 +19,7 @@ from ..module import ModuleContext
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[str] = ["binary_sensor", "sensor", "button", "text", "number", "select"]
+PLATFORMS: list[str] = ["binary_sensor", "sensor", "button", "text", "number", "select", "stt", "tts"]
 
 
 class LegacyModule:

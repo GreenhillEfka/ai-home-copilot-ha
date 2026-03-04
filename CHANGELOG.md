@@ -2,6 +2,81 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [v13.3.0] - 2026-03-04
+
+### Version Sync mit Core v13.3.0
+
+- **Sync**: Kompatibel mit Zone Automation Controller (praesenzabhaengige Licht-/Musiksteuerung)
+- **Entity-Management**: Neue Tag-basierte Entitaetszuordnung via Core API nutzbar
+- **Version**: 13.3.0 synchronisiert
+
+---
+
+## [v13.2.0] - 2026-03-04
+
+### Styx Dashboard Integration & Habitus Dashboard Erweiterung
+
+- **Styx Dashboard Link**: Jede Habitus-Zone enthält jetzt einen Link-Card zum Styx Dashboard für erweiterte Ansicht (Musikwolke, Vorschläge, KI-Chat)
+- **Cross-Module Verknüpfung**: Nahtloser Übergang von HA Lovelace Zonen-Ansicht → Styx Dashboard SPA
+- **Sync mit Core v13.2.0**: Kompatibel mit neuen Styx Dashboard Features (8 Tabs, Suggestions API, Musikwolke Sonos-Steuerung)
+
+---
+
+## [v13.1.0] - 2026-03-03
+
+### Production Readiness Release — Bug Fixes, Hub Integration & RAG Pipeline
+
+#### Critical Bug Fixes ✅
+
+- **UniFi Module NameError**: `hass` → `ctx.hass` in `unifi_module.py:114` — Module konnte nicht initialisieren
+- **37 Broken API Routes**: Double-prefix `/api/v1/api/v1/...` in Sharing (16 Routes), Federated Learning (15 Routes), HA Discovery (7 Routes), OpenAPI Spec (2 Routes) korrigiert
+- **RAG Chat Pipeline**: ChatHandler komplett umgeschrieben — nutzt jetzt interne RAG Pipeline statt fehlgeschlagenem HTTP-Call zu `localhost:8765`
+- **82 Test Failures**: Alle behoben (12 Core Cache/Alert Tests + 70 HA PROJECT_ROOT Tests)
+
+#### Hub Module Integration ✅ NEW
+
+- **17 Hub Engines** aktiviert und mit API verbunden:
+  - Dashboard, Plugin Manager, Multi-Home, Predictive Maintenance
+  - Anomaly Detection, Habitus Zones, Light Intelligence, Zone Modes
+  - Media Follow, Energy Advisor, Automation Templates, Scene Intelligence
+  - Presence Intelligence, Notification Intelligence, System Integration
+  - Brain Architecture, Brain Activity
+- **100+ API Routes** unter `/api/v1/hub/*` jetzt erreichbar
+
+#### Version Synchronization ✅
+
+- Alle VERSION-Dateien, manifest.json, config.yaml, OpenAPI Specs auf v13.1.0 synchronisiert
+- Sync zwischen Core und HA Repos verifiziert
+
+#### Test Coverage
+
+- **Core**: 295 Tests passed (241 + 54 Monitoring)
+- **HA**: 239 Tests passed, 41 skipped, 0 failed
+
+---
+
+## [v13.0.4] - 2026-03-03
+
+### Version Sync & Documentation Fixes
+
+- **VERSION Sync**: `custom_components/copilot_ha/VERSION` auf 13.0.4 synchronisiert (war 13.0.3)
+- **OpenAPI Version**: `docs/openapi.yaml` Version auf 13.0.4 aktualisiert
+- **GitHub URLs**: Falsche URLs `github.com/pilotsuite/` korrigiert zu `github.com/GreenhillEfka/`
+- **Masterplan**: Konsolidierter Projektplan `PILOTSUITE_MASTERPLAN_2026-03-03.md` hinzugefuegt
+- **Sync mit Core**: Alle Versionsdateien zwischen Core und HA synchronisiert
+
+---
+
+## [v13.0.3] - 2026-03-03
+
+### Module Registry & Test Coverage
+
+- **Module Registry**: Dynamic module discovery and registration (synced from Core)
+- **Test Coverage**: 100% auf Module Registry
+- **Version Sync**: Synchronisiert mit Core v13.0.3
+
+---
+
 ## [v13.0.2] - 2026-03-02
 
 ### Security Hardening — RAG API P0-Fixes ✅ COMPLETE
