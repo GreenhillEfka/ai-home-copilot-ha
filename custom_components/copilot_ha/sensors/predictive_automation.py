@@ -124,7 +124,11 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up predictive automation sensors from a config entry."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    coordinator = entry_data.get("coordinator")
+    if coordinator is None:
+        _LOGGER.error("Coordinator not available for entry %s", entry.entry_id)
+        return
     
     sensors = [
         PredictiveAutomationSensor(coordinator),

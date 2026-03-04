@@ -410,7 +410,7 @@ async def async_setup_suggestion_websocket(hass: HomeAssistant, entry_id: str) -
     @websocket_api.async_response
     async def ws_get_suggestions(hass_local, connection, msg):
         """Get suggestions with optional filters."""
-        store: SuggestionPanelStore = hass.data[DOMAIN][entry_id].get("suggestion_store")
+        store: SuggestionPanelStore = hass_local.data[DOMAIN][entry_id].get("suggestion_store")
         if not store:
             connection.send_error(msg["id"], "store_not_found", "Suggestion store not initialized")
             return
@@ -439,7 +439,7 @@ async def async_setup_suggestion_websocket(hass: HomeAssistant, entry_id: str) -
     @websocket_api.async_response
     async def ws_suggestion_action(hass_local, connection, msg):
         """Perform action on a suggestion."""
-        store: SuggestionPanelStore = hass.data[DOMAIN][entry_id].get("suggestion_store")
+        store: SuggestionPanelStore = hass_local.data[DOMAIN][entry_id].get("suggestion_store")
         if not store:
             connection.send_error(msg["id"], "store_not_found", "Suggestion store not initialized")
             return
