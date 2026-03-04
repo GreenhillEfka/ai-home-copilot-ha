@@ -2,6 +2,16 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [v13.3.0] - 2026-03-04
+
+### Version Sync mit Core v13.3.0
+
+- **Sync**: Kompatibel mit Zone Automation Controller (praesenzabhaengige Licht-/Musiksteuerung)
+- **Entity-Management**: Neue Tag-basierte Entitaetszuordnung via Core API nutzbar
+- **Version**: 13.3.0 synchronisiert
+
+---
+
 ## [v13.2.0] - 2026-03-04
 
 ### Styx Dashboard Integration & Habitus Dashboard Erweiterung
