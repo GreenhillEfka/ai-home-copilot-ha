@@ -322,6 +322,15 @@ def _lovelace_yaml_for_zone(hass: HomeAssistant, z: HabitusZoneV2) -> str:
     cards.append(_history_graph_yaml("Übersicht — Verlauf (24h)", key_signals))
     cards.append(_logbook_yaml("Übersicht — Logbuch (24h)", key_signals))
 
+    # Styx Dashboard integration link
+    cards.append(
+        "      - type: markdown\n"
+        f"        title: PilotSuite Styx\n"
+        f"        content: >\n"
+        f"          Erweiterte Ansicht im [Styx Dashboard](/styx?tab=zones)\n"
+        f"          mit Musikwolke, Vorschläge und KI-Chat.\n"
+    )
+
     return (
         f"  - title: {_yaml_q(zone_name)}\n"
         f"    path: {_yaml_q('hz-' + _safe_zone_path(zone_id))}\n"
