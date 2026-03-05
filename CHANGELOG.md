@@ -2,6 +2,35 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [v13.5.0] - 2026-03-05
+
+### Dashboard-Restrukturierung & 4 neue Lovelace Custom Cards
+
+#### Dashboard 3-Tab-Layout (NEU)
+- **Tab 1 "Styx"**: Brain-Visualisierung (iframe), Mood + Brain Grid, Chat-Interface, KI-Vorschlaege, Fehlerlog mit Reparaturvorschlaegen, Automatisierungen
+- **Tab 2 "Haushalt"**: Haushaltsuebersicht (Health-Score, Wetter, Preise, Zonen), System-Status, Medien, Energie, Quicklinks
+- **Tab 3+ pro Habitus-Zone**: Dynamisch generiert mit Licht, Klima, Media, Sensoren pro Zone
+- `pilotsuite_dashboard_v14.yaml` als statische Referenz
+
+#### Neue Lovelace Custom Cards
+- **styx-chat-card.js**: Eingebettetes Chat-Interface mit Message-Bubbles, Typing-Indicator, History-Loading, AbortController-Timeouts (10s/30s)
+- **styx-suggestions-card.js**: KI-Vorschlaege mit Konfidenz-Badges, Kategorie-/Risiko-Tags, Governance-Actions (Annehmen/Spaeter/Ablehnen), sichtbare Fehlermeldungen
+- **styx-error-card.js**: Error-Digest mit Severity-Badges, Kategorie-Chips, aufklappbare Reparaturvorschlaege, Sensor-Fallback wenn Core nicht erreichbar
+- **styx-household-card.js**: Haushaltsuebersicht mit SVG-Health-Ring, Wetter + Unwetterwarnungen, Strom-/Treibstoffpreise, Proaktive Alerts, Zonen-Chips mit Belegungsanzeige
+
+#### Technische Verbesserungen
+- **Event Delegation** statt direkte Listener in allen interaktiven Cards (kein Memory Leak)
+- **AbortController-Timeouts** auf allen Fetch-Calls (10s fuer Lesen, 30s fuer Chat)
+- **Auto-Registration** aller 8 Card-Dateien in `lovelace_resources.py`
+- **Responsive Design**: CSS Grid/Flexbox mit auto-fit, flex-wrap, mobile-first
+
+#### Metriken
+- 8 Lovelace Custom Cards insgesamt
+- 255 Tests bestanden, 41 skipped
+- Version synchronisiert mit Core v13.5.0
+
+---
+
 ## [v13.3.0] - 2026-03-04
 
 ### Version Sync mit Core v13.3.0
