@@ -1,13 +1,62 @@
-name: Production Guard (pilotsuite-styx-core)
+name: Production Guard (pilotsuite-styx-ha)
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 6 * * *"  # Taeglich um 06:00 UTC
   workflow_dispatch:
 
 jobs:
-  critical-path:
-    uses: ./.github/workflows/pilotsuite-dev/github-action-shared.yml
-    with:
-      repo-name: "pilotsuite-styx-core"
-      repo-path: "pilotsuite-dev/pilotsuite-styx-core"
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate manifest.json
+        run: |
+          python -c "
+          import json
+          with open('custom_components/copilot_ha/manifest.json') as f:
+              m = json.load(f)
+          print(f'PilotSuite v{m[\"version\"]} — manifest OK')
+          assert 'domain' in m and m['domain'] == 'copilot_ha'
+          assert 'version' in m
+          "
+
+      - name: Validate hacs.json
+        run: |
+          python -c "
+          import json
+          with open('hacs.json') as f:
+              h = json.load(f)
+          print(f'HACS config OK — {h[\"name\"]}')
+          "
+
+      - name: Check required files exist
+        run: |
+          for f in \
+            custom_components/copilot_ha/__init__.py \
+            custom_components/copilot_ha/manifest.json \
+            custom_components/copilot_ha/config_flow.py \
+            custom_components/copilot_ha/sensor.py \
+            hacs.json \
+            README.md \
+            VERSION; do
+            if [ ! -f "$f" ]; then
+              echo "ERROR: Missing required file: $f"
+              exit 1
+            fi
+          done
+          echo "All required files present"
+
+      - name: Lint critical files
+        run: |
+          pip install flake8
+          flake8 custom_components/copilot_ha/__init__.py custom_components/copilot_ha/config_flow.py --select=E9,F63,F7,F82 --show-source
+          echo "Critical files lint OK"

@@ -1,10 +1,8 @@
 name: Sync HA+Core Versions
 
 on:
-  push:
-    branches: [main]
   schedule:
-    - cron: '*/20 * * * *'  # Alle 20 Min
+    - cron: '0 */6 * * *'  # Alle 6 Stunden
   workflow_dispatch:
     inputs:
       force:
@@ -33,20 +31,18 @@ jobs:
       - name: Check Version Sync
         id: check
         run: |
-          cd $GITHUB_WORKSPACE/ha-repo
-          HA_VER=$(cat VERSION | tr -d '[:space:]')
-          CORE_VER=$(cat ../core-repo/VERSION | tr -d '[:space:]')
-          
+          HA_VER=$(cat ha-repo/VERSION | tr -d '[:space:]')
+          CORE_VER=$(cat core-repo/VERSION | tr -d '[:space:]' | sed 's/^v//')
+
           echo "HA version: $HA_VER"
           echo "Core version: $CORE_VER"
-          
+
           if [ "$CORE_VER" != "$HA_VER" ]; then
             echo "::warning::Version mismatch! Core: $CORE_VER, HA: $HA_VER"
-            echo "::warning::Auto-fixing HA version..."
             echo "MISMATCH=true" >> $GITHUB_OUTPUT
             echo "TARGET_VERSION=$CORE_VER" >> $GITHUB_OUTPUT
           else
-            echo "✅ Versions synchron: v$CORE_VER"
+            echo "Versions synchron: v$CORE_VER"
             echo "MISMATCH=false" >> $GITHUB_OUTPUT
           fi
 
@@ -54,47 +50,47 @@ jobs:
         if: steps.check.outputs.MISMATCH == 'true' || github.event.inputs.force == 'true'
         run: |
           TARGET_VER="${{ steps.check.outputs.TARGET_VERSION }}"
-          
-          cd $GITHUB_WORKSPACE/ha-repo
-          
+          cd ha-repo
+
           # Update VERSION files
           echo "$TARGET_VER" > VERSION
-          echo "$TARGET_VER" > copilot_core/VERSION
-          
+          echo "$TARGET_VER" > custom_components/copilot_ha/VERSION
+
           # Update manifest.json version
-          CURRENT_MANIFEST=$(grep -o '"version": "[^"]*"' copilot_core/manifest.json | head -1 | cut -d'"' -f4)
-          sed -i "s/\"version\": \"$CURRENT_MANIFEST\"/\"version\": \"$TARGET_VER\"/" copilot_core/manifest.json
-          
-          # Sync CHANGELOG if exists in core repo
-          if [ -f ../core-repo/CHANGELOG.md ]; then
-            cp ../core-repo/CHANGELOG.md CHANGELOG.md
-          fi
-          
-          echo "✅ HA version updated to $TARGET_VER"
+          python3 -c "
+          import json
+          with open('custom_components/copilot_ha/manifest.json', 'r') as f:
+              m = json.load(f)
+          m['version'] = '$TARGET_VER'
+          with open('custom_components/copilot_ha/manifest.json', 'w') as f:
+              json.dump(m, f, indent=2)
+              f.write('\n')
+          "
+
+          echo "HA version updated to $TARGET_VER"
 
       - name: Commit and Push
         if: steps.check.outputs.MISMATCH == 'true' || github.event.inputs.force == 'true'
         run: |
-          cd $GITHUB_WORKSPACE/ha-repo
-          
+          cd ha-repo
+
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action (Auto-Sync)"
-          
-          git add VERSION copilot_core/VERSION copilot_core/manifest.json CHANGELOG.md 2>/dev/null || true
-          
+
+          git add VERSION custom_components/copilot_ha/VERSION custom_components/copilot_ha/manifest.json 2>/dev/null || true
+
           if ! git diff --cached --quiet; then
             git commit -m "chore: Auto-sync HA version to Core v${{ steps.check.outputs.TARGET_VERSION }}"
             git push origin main || echo "Push failed (expected for protected branches)"
-            echo "✅ Changes committed and pushed"
+            echo "Changes committed and pushed"
           else
-            echo "ℹ️ No changes to commit"
+            echo "No changes to commit"
           fi
 
       - name: Report Status
         run: |
           if [ "${{ steps.check.outputs.MISMATCH }}" == "true" ]; then
-            echo "🔧 Auto-Sync completed successfully!"
-            echo "HA version is now: ${{ steps.check.outputs.TARGET_VERSION }}"
+            echo "Auto-Sync completed: v${{ steps.check.outputs.TARGET_VERSION }}"
           else
-            echo "✅ No sync needed - versions already match"
+            echo "No sync needed — versions already match"
           fi
