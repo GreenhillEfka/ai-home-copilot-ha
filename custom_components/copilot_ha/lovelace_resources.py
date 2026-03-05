@@ -22,18 +22,24 @@ _LOGGER = logging.getLogger(__name__)
 
 CARD_JS_PATH = "/api/v1/cards/pilotsuite-cards.js"
 
+# Local cards served from custom_components/copilot_ha/www/
+LOCAL_CARD_FILES = [
+    "styx-chat-card.js",
+    "styx-suggestions-card.js",
+    "styx-error-card.js",
+    "styx-household-card.js",
+    "styx-mood-card.js",
+    "styx-brain-card.js",
+    "styx-habitus-card.js",
+    "styx-zone-card.js",
+]
+
 
 async def async_register_card_resources(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> None:
-    """Register PilotSuite Lovelace card resources."""
+    """Register PilotSuite Lovelace card resources (Core + local)."""
     host, port, _token = resolve_core_connection(entry)
-
-    if not host:
-        _LOGGER.debug("No host configured, skipping Lovelace resource registration")
-        return
-
-    card_url = f"http://{host}:{port}{CARD_JS_PATH}"
 
     try:
         # Use the Lovelace resources API if available
@@ -49,30 +55,44 @@ async def async_register_card_resources(
         else:
             resources = getattr(lovelace, "resources", None)
 
-        # Check if resource already registered
-        if resources is not None:
-            existing = await resources.async_get_items()
-            for item in existing:
-                if not isinstance(item, Mapping):
-                    continue
-                if CARD_JS_PATH in (item.get("url") or ""):
-                    _LOGGER.debug("PilotSuite card resource already registered")
-                    return
-
-            # Register new resource
-            await resources.async_create_item({"res_type": "module", "url": card_url})
-            _LOGGER.info("PilotSuite Lovelace cards registered: %s", card_url)
-        else:
+        if resources is None:
             _LOGGER.info(
                 "Lovelace resources API not available. "
-                "To use PilotSuite cards, manually add this resource in "
-                "Settings > Dashboards > Resources:\n  URL: %s\n  Type: JavaScript Module",
-                card_url,
+                "Add PilotSuite cards manually in Settings > Dashboards > Resources."
             )
+            return
+
+        existing = await resources.async_get_items()
+        existing_urls = set()
+        for item in existing:
+            if isinstance(item, Mapping):
+                existing_urls.add(item.get("url") or "")
+
+        registered = 0
+
+        # Register Core-served card bundle
+        if host:
+            card_url = f"http://{host}:{port}{CARD_JS_PATH}"
+            if not any(CARD_JS_PATH in u for u in existing_urls):
+                await resources.async_create_item({"res_type": "module", "url": card_url})
+                _LOGGER.info("Registered Core card bundle: %s", card_url)
+                registered += 1
+
+        # Register local card files from www/ directory
+        for filename in LOCAL_CARD_FILES:
+            local_url = f"/hacsfiles/{DOMAIN}/{filename}"
+            alt_url = f"/local/community/{DOMAIN}/{filename}"
+            if not any(filename in u for u in existing_urls):
+                await resources.async_create_item({"res_type": "module", "url": local_url})
+                registered += 1
+
+        if registered:
+            _LOGGER.info("Registered %d PilotSuite Lovelace card resources", registered)
+        else:
+            _LOGGER.debug("All PilotSuite card resources already registered")
+
     except Exception as err:
         _LOGGER.warning(
-            "Could not auto-register Lovelace cards (%s). "
-            "Add manually: URL=%s, Type=JavaScript Module",
+            "Could not auto-register Lovelace cards: %s",
             err,
-            card_url,
         )
