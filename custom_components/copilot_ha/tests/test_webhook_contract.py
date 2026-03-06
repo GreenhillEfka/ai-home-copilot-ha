@@ -419,6 +419,63 @@ async def test_legacy_api_key_rejected_after_sunset_with_structured_error(monkey
 
 
 @pytest.mark.asyncio
+async def test_legacy_api_key_rejected_at_exact_sunset_with_structured_error(monkeypatch, hass, coordinator):
+    """Edgecase: now == sunset_at must be treated as sunset (reject legacy header)."""
+
+    monkeypatch.setenv(ENV_LEGACY_HEADER_SUNSET_AT, "2026-03-06T12:00:00Z")
+    monkeypatch.setattr(
+        webhook_module,
+        "_utcnow",
+        lambda: datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": "status", "data": {"online": True}},
+        headers={HEADER_AUTH_LEGACY: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    _assert_error_contract(response, body)
+    assert response.status == 401
+    assert body["ok"] is False
+    assert body["error"]["code"] == "legacy_header_sunset"
+    assert body["error"]["details"]["header"] == HEADER_AUTH_LEGACY
+    assert body["error"]["details"]["mode"] == "sunset"
+
+
+@pytest.mark.asyncio
+async def test_legacy_api_key_invalid_sunset_env_fails_closed(monkeypatch, hass, coordinator):
+    """Invalid sunset config must fail-closed (reject legacy header)."""
+
+    monkeypatch.setenv(ENV_LEGACY_HEADER_SUNSET_AT, "not-a-date")
+    monkeypatch.setattr(
+        webhook_module,
+        "_utcnow",
+        lambda: datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": "status", "data": {"online": True}},
+        headers={HEADER_AUTH_LEGACY: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    _assert_error_contract(response, body)
+    assert response.status == 401
+    assert body["ok"] is False
+    assert body["error"]["code"] == "legacy_header_sunset"
+    assert body["error"]["details"]["header"] == HEADER_AUTH_LEGACY
+    assert body["error"]["details"]["mode"] == "sunset"
+    assert body["error"]["details"]["sunset_at_raw"] == "not-a-date"
+
+
+@pytest.mark.asyncio
 async def test_canonical_header_still_valid_after_sunset(monkeypatch, hass, coordinator):
     monkeypatch.setenv(ENV_LEGACY_HEADER_SUNSET_AT, "2026-03-05T00:00:00Z")
     monkeypatch.setattr(
