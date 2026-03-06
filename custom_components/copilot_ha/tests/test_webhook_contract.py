@@ -320,6 +320,7 @@ async def test_legacy_aliases_in_sunset_mode_return_400_with_stable_error_code(
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 400
     assert body["ok"] is False
     assert body["error"]["code"] == "legacy_type_unsupported"
@@ -368,6 +369,7 @@ async def test_legacy_api_key_rejected_after_sunset_with_structured_error(monkey
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 401
     assert body["ok"] is False
     assert body["error"]["code"] == "legacy_header_sunset"
@@ -398,7 +400,7 @@ async def test_canonical_header_still_valid_after_sunset(monkeypatch, hass, coor
 
 
 @pytest.mark.asyncio
-async def test_invalid_token_returns_401_with_structured_error(hass, coordinator):
+async def test_invalid_token_returns_auth_failed_with_structured_error(hass, coordinator):
     handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
 
     request = _FakeRequest(
@@ -408,14 +410,15 @@ async def test_invalid_token_returns_401_with_structured_error(hass, coordinator
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 401
     assert body["ok"] is False
-    assert body["error"]["code"] == "invalid_token"
+    assert body["error"]["code"] == "auth_failed"
     assert body["error"]["details"]["sources"] == ["canonical"]
 
 
 @pytest.mark.asyncio
-async def test_missing_token_returns_401_with_structured_error(hass, coordinator):
+async def test_missing_token_returns_auth_missing_with_structured_error(hass, coordinator):
     handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
 
     request = _FakeRequest(
@@ -425,7 +428,8 @@ async def test_missing_token_returns_401_with_structured_error(hass, coordinator
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 401
     assert body["ok"] is False
-    assert body["error"]["code"] == "invalid_token"
+    assert body["error"]["code"] == "auth_missing"
     assert body["error"]["details"]["sources"] == ["missing"]
