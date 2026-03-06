@@ -99,14 +99,9 @@ ERROR_CODE_SPECS: dict[str, ErrorCodeSpec] = {
         "required_details": ("received", "canonical_type", "mode"),
     },
     # Auth
-    "auth_missing": {
+    "invalid_token": {
         "status": 401,
-        "message": "Webhook auth token is missing.",
-        "required_details": ("sources",),
-    },
-    "auth_failed": {
-        "status": 401,
-        "message": "Webhook auth token is invalid.",
+        "message": "Webhook auth token is missing or invalid.",
         "required_details": ("sources",),
     },
     "legacy_header_sunset": {
@@ -340,14 +335,12 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 )
 
             sources = [src for src, _, err in tokens if err is None] or ["missing"]
-            error_code = "auth_missing" if sources == ["missing"] else "auth_failed"
             _LOGGER.warning(
-                "Rejected webhook: %s (sources=%s)",
-                error_code,
+                "Rejected webhook: invalid_token (sources=%s)",
                 sources,
             )
             return _error_response(
-                code=error_code,
+                code="invalid_token",
                 details={"sources": sources},
             )
 
