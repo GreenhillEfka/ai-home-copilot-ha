@@ -142,6 +142,77 @@ async def test_unknown_type_returns_400_with_structured_error(hass, coordinator)
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(("_label", "payload", "expected_code", "expected_details"), FUZZED_TYPE_CASES)
+async def test_fuzzed_type_values_return_deterministic_errors(
+    hass,
+    coordinator,
+    _label,
+    payload,
+    expected_code,
+    expected_details,
+):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload=payload,
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 400
+    assert body["ok"] is False
+    assert body["error"]["code"] == expected_code
+    for key, value in expected_details.items():
+        assert body["error"]["details"][key] == value
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("_label", "data_value"), INVALID_DATA_CASES)
+async def test_invalid_data_types_return_400_with_structured_error(
+    hass,
+    coordinator,
+    _label,
+    data_value,
+):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": "status", "data": data_value},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 400
+    assert body["ok"] is False
+    assert body["error"]["code"] == "invalid_data"
+    assert body["error"]["details"]["field"] == "data"
+    assert body["error"]["details"]["expected"] == "object"
+
+
+@pytest.mark.asyncio
+async def test_nested_payload_with_large_unicode_data_returns_200(hass, coordinator):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    nested_payload = {
+        "online": True,
+        "version": f"v-{LARGE_TYPE_STRING}",
+        "meta": {"unicode": "über", "nested": {"depth": 3}},
+    }
+    request = _FakeRequest(
+        payload={"type": "status", "data": nested_payload},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 200
+    assert body == {"ok": True}
+    coordinator.async_set_updated_data.assert_called_once()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(("event_type", "data"), CANONICAL_CASES)
 async def test_canonical_types_with_valid_data_return_200(hass, coordinator, event_type, data):
     handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
