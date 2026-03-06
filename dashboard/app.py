@@ -92,6 +92,11 @@ def dashboard_habitus():
     """Habitus Dashboard mit 10 Tabs"""
     return render_template('dashboard.html')
 
+@app.route('/dashboard/home')
+def dashboard_home():
+    """Alias route für Dashboard Home-View (UI und E2E-Kompatibilität)."""
+    return render_template('dashboard.html')
+
 @app.route('/api/status')
 def get_status():
     """Get dashboard status"""
