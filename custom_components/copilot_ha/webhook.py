@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, TypedDict
 
 from aiohttp.web import Response, json_response
 
@@ -251,11 +251,17 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                     details=sunset_error,
                 )
 
+            sources = [src for src, _, err in tokens if err is None] or ["missing"]
             _LOGGER.warning(
                 "Rejected webhook: invalid token (sources=%s)",
-                [src for src, _, _ in tokens] or ["missing"],
+                sources,
             )
-            return Response(status=401)
+            return _error_response(
+                status=401,
+                code="invalid_token",
+                message="Webhook auth token is missing or invalid.",
+                details={"sources": sources},
+            )
 
         try:
             payload = await request.json()

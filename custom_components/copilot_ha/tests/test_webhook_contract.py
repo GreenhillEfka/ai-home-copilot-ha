@@ -395,3 +395,37 @@ async def test_canonical_header_still_valid_after_sunset(monkeypatch, hass, coor
     body = _response_json(response)
     assert response.status == 200
     assert body == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_invalid_token_returns_401_with_structured_error(hass, coordinator):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": "status", "data": {"online": True}},
+        headers={HEADER_AUTH: "wrong-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 401
+    assert body["ok"] is False
+    assert body["error"]["code"] == "invalid_token"
+    assert body["error"]["details"]["sources"] == ["canonical"]
+
+
+@pytest.mark.asyncio
+async def test_missing_token_returns_401_with_structured_error(hass, coordinator):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": "status", "data": {"online": True}},
+        headers={},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 401
+    assert body["ok"] is False
+    assert body["error"]["code"] == "invalid_token"
+    assert body["error"]["details"]["sources"] == ["missing"]
