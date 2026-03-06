@@ -43,6 +43,8 @@ class StyxSuggestionsCard extends HTMLElement {
     this._loadError = null;
     this._stale = false;
     this._actionError = null;
+    this._loading = false;
+    this._selectedId = null;
   }
 
   static getConfigElement() {
@@ -133,6 +135,9 @@ class StyxSuggestionsCard extends HTMLElement {
 
   async _loadSuggestions() {
     this._actionError = null;
+    this._loading = true;
+    // Keep current suggestions visible; but if we have none yet, show a loading state.
+    if (!this._suggestions || this._suggestions.length === 0) this._render();
     const url = this._getCoreUrl();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
@@ -149,6 +154,7 @@ class StyxSuggestionsCard extends HTMLElement {
           this._suggestions = (data.suggestions || []).slice(0, this._config.max_suggestions);
           this._loadError = null;
           this._stale = false;
+          this._loading = false;
           this._render();
           return;
         }
@@ -157,11 +163,13 @@ class StyxSuggestionsCard extends HTMLElement {
       // Non-OK or unexpected payload -> try sensor fallback
       this._loadError = `HTTP ${resp.status || 'Fehler'}`;
       this._stale = this._loadFromSensor();
+      this._loading = false;
       this._render();
     } catch (e) {
       clearTimeout(timer);
       this._loadError = e.name === 'AbortError' ? 'Zeitueberschreitung' : 'Verbindungsfehler';
       this._stale = this._loadFromSensor();
+      this._loading = false;
       this._render();
     }
   }
@@ -217,9 +225,32 @@ class StyxSuggestionsCard extends HTMLElement {
     return `<span class="badge ${cls}">${pct}%</span>`;
   }
 
+  _getSuggestionId(s) {
+    return (s && (s.id || s.suggestion_id)) || '';
+  }
+
+  _openDetail(id) {
+    if (!id) return;
+    this._selectedId = id;
+    this._render();
+  }
+
+  _closeDetail() {
+    this._selectedId = null;
+    this._render();
+  }
+
+  _getSelectedSuggestion() {
+    if (!this._selectedId) return null;
+    return (this._suggestions || []).find(s => this._getSuggestionId(s) === this._selectedId) || null;
+  }
+
   _render() {
-    const suggestions = this._suggestions;
+    const suggestions = this._suggestions || [];
     const hasSuggestions = suggestions.length > 0;
+
+    const selected = this._getSelectedSuggestion();
+    if (this._selectedId && !selected) this._selectedId = null;
     const showStaleBanner = this._stale || (this._loadError && hasSuggestions);
 
     const countLabel = this._stale ? `${suggestions.length} letzte` : `${suggestions.length} aktiv`;
@@ -231,7 +262,14 @@ class StyxSuggestionsCard extends HTMLElement {
 
     let html = '';
 
-    if (this._loadError && !hasSuggestions) {
+    if (this._loading && !hasSuggestions && !this._loadError) {
+      html = `
+        <div class="state-loading" aria-label="Lade Vorschlaege">
+          <div class="sk sk-1"></div>
+          <div class="sk sk-2"></div>
+          <div class="sk sk-3"></div>
+        </div>`;
+    } else if (this._loadError && !hasSuggestions) {
       html = `
         <div class="state-error">
           <div class="state-title">Vorschlaege konnten nicht geladen werden</div>
@@ -242,7 +280,7 @@ class StyxSuggestionsCard extends HTMLElement {
       html = '<div class="empty">Keine aktiven Vorschlaege.</div>';
     } else {
       html = `${banners}` + suggestions.map(s => {
-        const id = s.id || s.suggestion_id || '';
+        const id = this._getSuggestionId(s);
         const cat = (s.category || 'default').toLowerCase();
         const catColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default;
         const risk = (s.risk || 'low').toLowerCase();
@@ -257,7 +295,7 @@ class StyxSuggestionsCard extends HTMLElement {
           </div>` : '';
 
         return `
-          <div class="suggestion">
+          <div class="suggestion" data-id="${this._esc(id)}">
             <div class="sg-header">
               <span class="sg-title">${this._esc(s.title || s.name || 'Vorschlag')}</span>
               ${this._confidenceBadge(s.confidence)}
@@ -269,9 +307,86 @@ class StyxSuggestionsCard extends HTMLElement {
               ${s.zone ? `<span class="tag">Zone: ${this._esc(s.zone)}</span>` : ''}
               ${s.estimated_savings ? `<span class="tag" style="background:#4caf5020;color:#4caf50;border:1px solid #4caf5040">${this._esc(s.estimated_savings)}</span>` : ''}
             </div>
+            <div class="sg-footer">
+              <button class="details" data-id="${this._esc(id)}" data-action="detail">Details</button>
+              ${this._stale ? `<span class="ro">Nur Lesen</span>` : ''}
+            </div>
             ${actions}
           </div>`;
       }).join('');
+    }
+
+    let detailHtml = '';
+    if (selected) {
+      const id = this._getSuggestionId(selected);
+
+      const stepsRaw = selected.steps || selected.actions || selected.plan_steps || null;
+      const steps = Array.isArray(stepsRaw)
+        ? `<ul class="steps">${stepsRaw.map(st => {
+            if (st && typeof st === 'object') return `<li>${this._esc(st.title || st.name || JSON.stringify(st))}</li>`;
+            return `<li>${this._esc(String(st))}</li>`;
+          }).join('')}</ul>`
+        : '';
+
+      const rationale = selected.rationale || selected.reason || selected.why || '';
+      const detailsObj = selected.details || selected.payload || null;
+      const details = (detailsObj && typeof detailsObj === 'object')
+        ? `<pre class="code">${this._esc(JSON.stringify(detailsObj, null, 2))}</pre>`
+        : (detailsObj ? `<div class="detail-value">${this._esc(String(detailsObj))}</div>` : '');
+
+      const actionsDisabled = this._stale;
+      const detailActions = this._config.show_actions ? `
+        <div class="detail-actions ${actionsDisabled ? 'disabled' : ''}">
+          <button class="act-accept" data-id="${this._esc(id)}" data-action="accept">Annehmen</button>
+          <button class="act-snooze" data-id="${this._esc(id)}" data-action="snooze">Spaeter</button>
+          <button class="act-reject" data-id="${this._esc(id)}" data-action="reject">Ablehnen</button>
+        </div>` : '';
+
+      detailHtml = `
+        <div class="detail-backdrop">
+          <div class="detail" role="dialog" aria-modal="true">
+            <div class="detail-header">
+              <div class="detail-title">${this._esc(selected.title || selected.name || 'Vorschlag')}</div>
+              <button class="detail-close" data-action="detail-close" aria-label="Schliessen">×</button>
+            </div>
+
+            ${this._stale ? `<div class="banner warn">Offline — nur Lesen. Aktionen sind deaktiviert.</div>` : ''}
+
+            <div class="detail-body">
+              <div class="detail-section">
+                <div class="detail-label">Beschreibung</div>
+                <div class="detail-value">${this._esc(selected.description || '')}</div>
+              </div>
+
+              ${rationale ? `
+                <div class="detail-section">
+                  <div class="detail-label">Warum</div>
+                  <div class="detail-value">${this._esc(String(rationale))}</div>
+                </div>` : ''}
+
+              ${steps ? `
+                <div class="detail-section">
+                  <div class="detail-label">Schritte</div>
+                  ${steps}
+                </div>` : ''}
+
+              ${details ? `
+                <div class="detail-section">
+                  <div class="detail-label">Details</div>
+                  ${details}
+                </div>` : ''}
+
+              <div class="detail-meta">
+                ${selected.category ? `<span class="tag">Kategorie: ${this._esc(String(selected.category))}</span>` : ''}
+                ${selected.risk ? `<span class="tag">Risiko: ${this._esc(String(selected.risk))}</span>` : ''}
+                ${selected.zone ? `<span class="tag">Zone: ${this._esc(String(selected.zone))}</span>` : ''}
+                ${selected.estimated_savings ? `<span class="tag">${this._esc(String(selected.estimated_savings))}</span>` : ''}
+              </div>
+            </div>
+
+            ${detailActions}
+          </div>
+        </div>`;
     }
 
     this.shadowRoot.innerHTML = `
@@ -413,6 +528,149 @@ class StyxSuggestionsCard extends HTMLElement {
           padding: 24px 0;
           font-size: 13px;
         }
+
+        .state-loading {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 8px 0 2px 0;
+        }
+        .sk {
+          height: 14px;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.06);
+          position: relative;
+          overflow: hidden;
+        }
+        .sk::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -40%;
+          width: 40%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+          animation: shimmer 1.2s infinite;
+        }
+        .sk-1 { width: 92%; }
+        .sk-2 { width: 78%; }
+        .sk-3 { width: 86%; }
+        @keyframes shimmer {
+          0% { left: -40%; }
+          100% { left: 100%; }
+        }
+
+        .sg-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 6px;
+        }
+        button.details {
+          padding: 4px 10px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(79,195,247,0.10);
+          color: #4fc3f7;
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 11px;
+        }
+        button.details:hover { background: rgba(79,195,247,0.18); }
+        .ro {
+          font-size: 11px;
+          color: #ffb74d;
+          opacity: 0.9;
+        }
+
+        .detail-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.55);
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          padding: 18px;
+          z-index: 9999;
+        }
+        .detail {
+          width: min(680px, 100%);
+          max-height: 82vh;
+          overflow: auto;
+          background: var(--card-background-color, #1a1a2e);
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.10);
+          padding: 14px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        }
+        .detail-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 10px;
+        }
+        .detail-title {
+          font-size: 15px;
+          font-weight: 800;
+        }
+        button.detail-close {
+          width: 34px;
+          height: 34px;
+          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(255,255,255,0.06);
+          color: var(--primary-text-color, #e6eef6);
+          cursor: pointer;
+          font-size: 18px;
+          font-weight: 900;
+          line-height: 1;
+        }
+        button.detail-close:hover { background: rgba(255,255,255,0.10); }
+        .detail-body { padding-top: 4px; }
+        .detail-section { margin-bottom: 12px; }
+        .detail-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--secondary-text-color, #9fb1c3);
+          margin-bottom: 4px;
+        }
+        .detail-value {
+          font-size: 12px;
+          line-height: 1.45;
+          color: var(--primary-text-color, #e6eef6);
+        }
+        .detail-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 8px;
+        }
+        .detail-actions {
+          display: flex;
+          gap: 6px;
+          margin-top: 10px;
+          justify-content: flex-end;
+        }
+        .detail-actions.disabled button {
+          opacity: 0.55;
+        }
+        .steps {
+          margin: 0;
+          padding-left: 18px;
+          color: var(--primary-text-color, #e6eef6);
+          font-size: 12px;
+        }
+        .steps li { margin: 3px 0; }
+        pre.code {
+          margin: 0;
+          background: rgba(0,0,0,0.25);
+          padding: 10px;
+          border-radius: 10px;
+          overflow: auto;
+          font-size: 11px;
+          border: 1px solid rgba(255,255,255,0.08);
+        }
       </style>
       <div class="card">
         <div class="header">
@@ -420,14 +678,38 @@ class StyxSuggestionsCard extends HTMLElement {
           <span class="count">${this._esc(countLabel)}</span>
         </div>
         ${html}
+        ${detailHtml}
       </div>`;
 
-    // Wire buttons via event delegation on card container
+    // Wire interactions via event delegation on card container
     const card = this.shadowRoot.querySelector('.card');
     if (card) {
       card.addEventListener('click', (e) => {
-        const btn = e.target.closest('.actions button, button.retry');
-        if (btn) this._action(btn.dataset.id || '', btn.dataset.action || 'retry');
+        // Close modal when clicking on the backdrop.
+        if (e.target && e.target.classList && e.target.classList.contains('detail-backdrop')) {
+          this._closeDetail();
+          return;
+        }
+
+        const closeBtn = e.target.closest('button.detail-close');
+        if (closeBtn) {
+          this._closeDetail();
+          return;
+        }
+
+        const btn = e.target.closest('.actions button, .detail-actions button, button.retry, button.details');
+        if (btn) {
+          const action = btn.dataset.action || 'retry';
+          const id = btn.dataset.id || '';
+          if (action === 'detail') this._openDetail(id);
+          else this._action(id, action);
+          return;
+        }
+
+        const sg = e.target.closest('.suggestion');
+        if (sg && sg.dataset && sg.dataset.id) {
+          this._openDetail(sg.dataset.id);
+        }
       });
     }
   }
