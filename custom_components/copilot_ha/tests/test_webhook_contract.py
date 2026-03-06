@@ -157,6 +157,23 @@ async def test_missing_data_returns_400_with_structured_error(hass, coordinator)
 
 
 @pytest.mark.asyncio
+async def test_non_object_payload_returns_invalid_payload_structured_error(hass, coordinator):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload=["not", "an", "object"],
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 400
+    assert body["ok"] is False
+    assert body["error"]["code"] == "invalid_payload"
+    assert body["error"]["details"]["expected"] == "object"
+
+
+@pytest.mark.asyncio
 async def test_unknown_type_returns_400_with_structured_error(hass, coordinator):
     handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
 
