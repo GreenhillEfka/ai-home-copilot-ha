@@ -541,6 +541,7 @@
     },
     "error": {
       "cannot_connect": "Verbindung fehlgeschlagen",
+      "invalid_auth": "Authentifizierung fehlgeschlagen",
       "cannot_read": "Snapshot-Datei konnte nicht gelesen werden",
       "invalid_json": "Ungueltiges JSON",
       "confirm_required": "Bitte bestaetigen",
