@@ -78,7 +78,7 @@ class StyxSuggestionsCard extends HTMLElement {
 
   static getStubConfig() {
     return {
-      title: 'Vorschlaege',
+      title: 'Vorschläge',
       max_suggestions: 10,
       show_actions: true,
     };
@@ -86,7 +86,7 @@ class StyxSuggestionsCard extends HTMLElement {
 
   setConfig(config) {
     this._config = {
-      title: config.title || 'KI-Vorschlaege',
+      title: config.title || 'KI-Vorschläge',
       max_suggestions: config.max_suggestions || 10,
       show_actions: config.show_actions !== false,
       core_url: config.core_url || '',
@@ -395,7 +395,7 @@ class StyxSuggestionsCard extends HTMLElement {
     if (this._loading && !hasSuggestions && !this._loadError) {
       this._setUiState('loading');
       html = `
-        <div class="state-loading" aria-label="Lade Vorschlaege">
+        <div class="state-loading" aria-label="Lade Vorschläge">
           <div class="sk sk-1"></div>
           <div class="sk sk-2"></div>
           <div class="sk sk-3"></div>
@@ -405,13 +405,13 @@ class StyxSuggestionsCard extends HTMLElement {
       this._setUiState('error', { error_class: errClass, error: this._loadError });
       html = `
         <div class="state-error">
-          <div class="state-title">Vorschlaege konnten nicht geladen werden</div>
+          <div class="state-title">Vorschläge konnten nicht geladen werden</div>
           <div class="state-msg">${this._esc(this._loadError)}</div>
           <button class="retry" data-action="retry">Erneut versuchen</button>
         </div>`;
     } else if (!hasSuggestions) {
       this._setUiState('empty', { reason: 'no_suggestions' });
-      html = '<div class="empty">Keine aktiven Vorschlaege.</div>';
+      html = '<div class="empty">Keine aktiven Vorschläge.</div>';
     } else if (filtered.length === 0) {
       this._setUiState('empty', { reason: 'filter_empty' });
       html = `
@@ -431,7 +431,7 @@ class StyxSuggestionsCard extends HTMLElement {
         const actions = this._config.show_actions ? `
           <div class="actions ${actionsDisabledGlobal ? 'disabled' : ''}">
             <button class="act-accept" data-id="${this._esc(id)}" data-action="accept" ${actionsDisabledGlobal ? 'disabled' : ''}>Annehmen</button>
-            <button class="act-snooze" data-id="${this._esc(id)}" data-action="snooze" ${actionsDisabledGlobal ? 'disabled' : ''}>Spaeter</button>
+            <button class="act-snooze" data-id="${this._esc(id)}" data-action="snooze" ${actionsDisabledGlobal ? 'disabled' : ''}>Später</button>
             <button class="act-reject" data-id="${this._esc(id)}" data-action="reject" ${actionsDisabledGlobal ? 'disabled' : ''}>Ablehnen</button>
           </div>` : '';
 
@@ -532,7 +532,7 @@ class StyxSuggestionsCard extends HTMLElement {
       const detailActions = this._config.show_actions ? `
         <div class="detail-actions ${actionsDisabledGlobal ? 'disabled' : ''}">
           <button class="act-accept" data-id="${this._esc(id)}" data-action="accept" ${actionsDisabledGlobal ? 'disabled' : ''}>Annehmen</button>
-          <button class="act-snooze" data-id="${this._esc(id)}" data-action="snooze" ${actionsDisabledGlobal ? 'disabled' : ''}>Spaeter</button>
+          <button class="act-snooze" data-id="${this._esc(id)}" data-action="snooze" ${actionsDisabledGlobal ? 'disabled' : ''}>Später</button>
           <button class="act-reject" data-id="${this._esc(id)}" data-action="reject" ${actionsDisabledGlobal ? 'disabled' : ''}>Ablehnen</button>
         </div>` : '';
 
@@ -959,6 +959,6 @@ customElements.define('styx-suggestions-card', StyxSuggestionsCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'styx-suggestions-card',
-  name: 'PilotSuite Styx Vorschlaege',
+  name: 'PilotSuite Styx Vorschläge',
   description: 'AI-powered suggestion cards with governance actions',
 });
