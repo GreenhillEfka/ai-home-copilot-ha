@@ -36,6 +36,8 @@ class StyxErrorCard extends HTMLElement {
     this._summary = {};
     this._lastFetch = 0;
     this._expanded = {};
+    this._loadError = null;
+    this._stale = false;
   }
 
   static getConfigElement() {
@@ -95,43 +97,64 @@ class StyxErrorCard extends HTMLElement {
     const url = this._getCoreUrl();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
+
+    this._loadError = null;
+    this._stale = false;
+
     try {
       const resp = await fetch(
         `${url}/api/v1/errors/digest?hours=${this._config.hours}`,
         { headers: { 'X-Auth-Token': this._getToken() }, signal: ctrl.signal }
       );
       clearTimeout(timer);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.ok) {
-          this._errors = (data.errors || []).slice(0, this._config.max_errors);
-          this._summary = data.summary || {};
-          this._render();
-        }
+
+      if (!resp.ok) {
+        this._loadError = `HTTP ${resp.status}`;
+        this._stale = this._loadFromSensors();
+        this._render();
+        return;
       }
+
+      const data = await resp.json();
+      if (data && data.ok) {
+        this._errors = (data.errors || []).slice(0, this._config.max_errors);
+        this._summary = data.summary || {};
+        this._loadError = null;
+        this._stale = false;
+        this._render();
+        return;
+      }
+
+      this._loadError = 'Unerwartete Antwort';
+      this._stale = this._loadFromSensors();
+      this._render();
     } catch (e) {
       clearTimeout(timer);
-      this._loadFromSensors();
+      this._loadError = e.name === 'AbortError' ? 'Zeitueberschreitung' : 'Verbindungsfehler';
+      this._stale = this._loadFromSensors();
+      this._render();
     }
   }
 
   _loadFromSensors() {
-    if (!this._hass) return;
+    if (!this._hass) return false;
     const alertSensor = this._hass.states['sensor.copilot_ha_home_alerts_count'] ||
                         this._hass.states['sensor.copilot_home_alerts_count'];
-    if (alertSensor) {
-      const attrs = alertSensor.attributes || {};
-      const total = parseInt(alertSensor.state, 10) || 0;
-      this._summary = {
-        total_errors: total,
-        by_category: {
-          system: attrs.system_count || 0,
-          device: attrs.device_count || 0,
-          connectivity: attrs.network_count || 0,
-        },
-      };
-      this._render();
-    }
+    if (!alertSensor) return false;
+
+    const attrs = alertSensor.attributes || {};
+    const total = parseInt(alertSensor.state, 10) || 0;
+    this._summary = {
+      total_errors: total,
+      by_category: {
+        system: attrs.system_count || 0,
+        device: attrs.device_count || 0,
+        connectivity: attrs.network_count || 0,
+      },
+    };
+
+    // No detailed list in sensor fallback; keep whatever list we had.
+    return true;
   }
 
   _esc(s) {
@@ -157,6 +180,15 @@ class StyxErrorCard extends HTMLElement {
     const byCat = summary.by_category || {};
     const bySev = summary.by_severity || {};
 
+    const showStaleBanner = !!this._loadError;
+    const bannerHtml = showStaleBanner ? `
+      <div class="banner ${this._stale ? 'warn' : 'err'}">
+        ${this._esc(this._loadError)}${this._stale ? ' — letzte bekannte Daten.' : ''}
+        <button class="retry" data-action="retry">Erneut versuchen</button>
+      </div>` : '';
+
+    const showHardError = !!this._loadError && !this._stale && errors.length === 0 && totalErrors === 0;
+
     // Summary chips
     let summaryHtml = '';
     if (totalErrors > 0) {
@@ -173,8 +205,15 @@ class StyxErrorCard extends HTMLElement {
 
     // Error list
     let errorsHtml = '';
-    if (errors.length === 0) {
-      errorsHtml = `<div class="empty">Keine Fehler in den letzten ${this._config.hours}h.</div>`;
+    if (showHardError) {
+      errorsHtml = `
+        <div class="state-error">
+          <div class="state-title">Fehlerliste konnte nicht geladen werden</div>
+          <div class="state-msg">${this._esc(this._loadError)}</div>
+          <button class="retry" data-action="retry">Erneut versuchen</button>
+        </div>`;
+    } else if (errors.length === 0) {
+      errorsHtml = `<div class="empty">${this._loadError && this._stale ? 'Details derzeit nicht verfuegbar.' : `Keine Fehler in den letzten ${this._config.hours}h.`}</div>`;
     } else {
       errorsHtml = errors.map((e, idx) => {
         const sev = SEVERITY_CONFIG[e.severity] || SEVERITY_CONFIG.low;
@@ -338,6 +377,45 @@ class StyxErrorCard extends HTMLElement {
           color: #4fc3f7;
           border: 1px solid rgba(79,195,247,0.2);
         }
+        .banner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 8px 10px;
+          margin: 10px 0 10px 0;
+          border-radius: 10px;
+          font-size: 12px;
+          border: 1px solid rgba(255,255,255,0.08);
+        }
+        .banner.warn { background: rgba(255,152,0,0.12); color: #ffb74d; border-color: rgba(255,152,0,0.25); }
+        .banner.err { background: rgba(244,67,54,0.12); color: #ff8a80; border-color: rgba(244,67,54,0.25); }
+        button.retry {
+          padding: 6px 10px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(79,195,247,0.12);
+          color: #4fc3f7;
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+        button.retry:hover { background: rgba(79,195,247,0.2); }
+        .state-error {
+          text-align: center;
+          padding: 16px 0;
+        }
+        .state-title {
+          font-size: 13px;
+          font-weight: 700;
+          margin-bottom: 6px;
+        }
+        .state-msg {
+          font-size: 12px;
+          color: var(--secondary-text-color, #9fb1c3);
+          margin-bottom: 10px;
+        }
         .empty {
           text-align: center;
           color: var(--secondary-text-color, #9fb1c3);
@@ -352,14 +430,20 @@ class StyxErrorCard extends HTMLElement {
             ${totalErrors === 0 ? 'Alles OK' : `${totalErrors} Fehler`}
           </span>
         </div>
+        ${bannerHtml}
         ${summaryHtml}
         ${errorsHtml}
       </div>`;
 
-    // Wire expand/collapse via event delegation
+    // Wire events via delegation
     const card = this.shadowRoot.querySelector('.card');
     if (card) {
       card.addEventListener('click', (e) => {
+        const retry = e.target.closest('button.retry');
+        if (retry) {
+          this._loadErrors();
+          return;
+        }
         const item = e.target.closest('.error-item');
         if (item) this._toggleExpand(parseInt(item.dataset.idx, 10));
       });
