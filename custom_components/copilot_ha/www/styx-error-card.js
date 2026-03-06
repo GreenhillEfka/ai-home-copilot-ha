@@ -26,6 +26,21 @@ const CATEGORY_LABELS = {
   other:         'Sonstige',
 };
 
+// Central UI telemetry event names (prefer constants over ad-hoc strings).
+// Uses shared UiState constants when available; falls back to canonical names.
+const UI_TELEMETRY_EVENTS = (window.UiState && window.UiState.EventKeys)
+  ? window.UiState.EventKeys
+  : Object.freeze({
+      LOADING_SHOWN: 'ui_state_loading_shown',
+      EMPTY_SHOWN: 'ui_state_empty_shown',
+      ERROR_SHOWN: 'ui_state_error_shown',
+      GLOBAL_DEGRADED_ON: 'ui_global_degraded_on',
+      GLOBAL_DEGRADED_OFF: 'ui_global_degraded_off',
+      RETRY_CLICKED: 'ui_state_retry_clicked',
+      RETRY_SUCCEEDED: 'ui_state_retry_succeeded',
+      RETRY_FAILED: 'ui_state_retry_failed',
+    });
+
 class StyxErrorCard extends HTMLElement {
   constructor() {
     super();
@@ -38,6 +53,8 @@ class StyxErrorCard extends HTMLElement {
     this._expanded = {};
     this._loadError = null;
     this._stale = false;
+
+    this._lastRetryTs = 0;
   }
 
   static getConfigElement() {
@@ -75,6 +92,25 @@ class StyxErrorCard extends HTMLElement {
     return 4;
   }
 
+  _emitUi(eventKeyOrName, detail = {}) {
+    const payload = {
+      ...detail,
+      emittedAt: new Date().toISOString(),
+    };
+
+    try {
+      if (window.UiState && typeof window.UiState.emit === 'function') {
+        window.UiState.emit(eventKeyOrName, payload);
+        return;
+      }
+
+      const resolvedName = UI_TELEMETRY_EVENTS[eventKeyOrName] || eventKeyOrName;
+      window.dispatchEvent(new CustomEvent(resolvedName, { detail: payload }));
+    } catch (_e) {
+      // ignore
+    }
+  }
+
   _getCoreUrl() {
     if (this._config.core_url) return this._config.core_url;
     if (this._hass) {
@@ -101,6 +137,8 @@ class StyxErrorCard extends HTMLElement {
     this._loadError = null;
     this._stale = false;
 
+    this._emitUi('LOADING_SHOWN', { scope: 'errors', source: 'styx-error-card' });
+
     try {
       const resp = await fetch(
         `${url}/api/v1/errors/digest?hours=${this._config.hours}`,
@@ -111,6 +149,19 @@ class StyxErrorCard extends HTMLElement {
       if (!resp.ok) {
         this._loadError = `HTTP ${resp.status}`;
         this._stale = this._loadFromSensors();
+
+        this._emitUi('ERROR_SHOWN', {
+          scope: 'errors',
+          source: 'styx-error-card',
+          message: 'Fehlerliste konnte nicht geladen werden',
+          detail: this._loadError,
+          degraded: !!this._stale,
+        });
+
+        if (Date.now() - this._lastRetryTs < 20000) {
+          this._emitUi('RETRY_FAILED', { scope: 'errors', source: 'styx-error-card', error: this._loadError });
+        }
+
         this._render();
         return;
       }
@@ -121,17 +172,48 @@ class StyxErrorCard extends HTMLElement {
         this._summary = data.summary || {};
         this._loadError = null;
         this._stale = false;
+
+        if (Date.now() - this._lastRetryTs < 20000) {
+          this._emitUi('RETRY_SUCCEEDED', { scope: 'errors', source: 'styx-error-card' });
+        }
+
         this._render();
         return;
       }
 
       this._loadError = 'Unerwartete Antwort';
       this._stale = this._loadFromSensors();
+
+      this._emitUi('ERROR_SHOWN', {
+        scope: 'errors',
+        source: 'styx-error-card',
+        message: 'Unerwartete Antwort beim Laden der Fehlerliste',
+        detail: this._loadError,
+        degraded: !!this._stale,
+      });
+
+      if (Date.now() - this._lastRetryTs < 20000) {
+        this._emitUi('RETRY_FAILED', { scope: 'errors', source: 'styx-error-card', error: this._loadError });
+      }
+
       this._render();
     } catch (e) {
       clearTimeout(timer);
       this._loadError = e.name === 'AbortError' ? 'Zeitueberschreitung' : 'Verbindungsfehler';
       this._stale = this._loadFromSensors();
+
+      this._emitUi('ERROR_SHOWN', {
+        scope: 'errors',
+        source: 'styx-error-card',
+        message: 'Fehlerliste konnte nicht geladen werden',
+        detail: this._loadError,
+        degraded: !!this._stale,
+      });
+
+      if (Date.now() - this._lastRetryTs < 20000) {
+        this._emitUi('RETRY_FAILED', { scope: 'errors', source: 'styx-error-card', error: this._loadError });
+      }
+
       this._render();
     }
   }
@@ -441,6 +523,8 @@ class StyxErrorCard extends HTMLElement {
       card.addEventListener('click', (e) => {
         const retry = e.target.closest('button.retry');
         if (retry) {
+          this._lastRetryTs = Date.now();
+          this._emitUi('RETRY_CLICKED', { scope: 'errors', source: 'styx-error-card' });
           this._loadErrors();
           return;
         }

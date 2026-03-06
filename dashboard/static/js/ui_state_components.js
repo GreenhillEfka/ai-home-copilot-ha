@@ -29,6 +29,9 @@
     UNKNOWN: 'unknown'
   });
 
+  // Stable public contract marker (for consumers / docs).
+  const UI_STATE_API_VERSION = '1.0.1';
+
   const TELEMETRY_EVENT_KEYS = new Set(Object.values(UI_STATE_EVENTS));
 
   function isBrowser() {
@@ -563,9 +566,24 @@
   }
 
   window.UiState = {
+    apiVersion: UI_STATE_API_VERSION,
+
+    // Canonical UI telemetry event names.
+    // Prefer using these constants instead of ad-hoc strings in widgets/cards.
     EventKeys: UI_STATE_EVENTS,
+    Events: UI_STATE_EVENTS, // alias (stable)
+
     ErrorClass: UI_ERROR_CLASS,
+
     telemetry,
+
+    // Convenience wrapper: accepts either a full event name ("ui_state_*" string)
+    // or an enum-key ("LOADING_SHOWN"), and forwards to telemetry.emit().
+    emit(eventNameOrKey, payload = {}) {
+      const resolved = UI_STATE_EVENTS[eventNameOrKey] || eventNameOrKey;
+      return telemetry.emit(resolved, payload);
+    },
+
     StateSkeleton,
     StateEmpty,
     StateError,

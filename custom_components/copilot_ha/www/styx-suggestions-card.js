@@ -35,6 +35,21 @@ const RISK_COLORS = {
   high: '#f44336',
 };
 
+// Central UI telemetry event names (prefer constants over ad-hoc strings).
+// Uses shared UiState constants when available; falls back to canonical names.
+const UI_TELEMETRY_EVENTS = (window.UiState && window.UiState.EventKeys)
+  ? window.UiState.EventKeys
+  : Object.freeze({
+      LOADING_SHOWN: 'ui_state_loading_shown',
+      EMPTY_SHOWN: 'ui_state_empty_shown',
+      ERROR_SHOWN: 'ui_state_error_shown',
+      GLOBAL_DEGRADED_ON: 'ui_global_degraded_on',
+      GLOBAL_DEGRADED_OFF: 'ui_global_degraded_off',
+      RETRY_CLICKED: 'ui_state_retry_clicked',
+      RETRY_SUCCEEDED: 'ui_state_retry_succeeded',
+      RETRY_FAILED: 'ui_state_retry_failed',
+    });
+
 class StyxSuggestionsCard extends HTMLElement {
   constructor() {
     super();
@@ -91,14 +106,21 @@ class StyxSuggestionsCard extends HTMLElement {
     return 4;
   }
 
-  _emitUi(eventName, detail = {}) {
+  _emitUi(eventKeyOrName, detail = {}) {
+    const payload = {
+      ...detail,
+      emittedAt: new Date().toISOString(),
+    };
+
     try {
-      window.dispatchEvent(new CustomEvent(eventName, {
-        detail: {
-          ...detail,
-          emittedAt: new Date().toISOString(),
-        },
-      }));
+      // Prefer shared UiState.emit() if present (handles enum keys + validation).
+      if (window.UiState && typeof window.UiState.emit === 'function') {
+        window.UiState.emit(eventKeyOrName, payload);
+        return;
+      }
+
+      const resolvedName = UI_TELEMETRY_EVENTS[eventKeyOrName] || eventKeyOrName;
+      window.dispatchEvent(new CustomEvent(resolvedName, { detail: payload }));
     } catch (_e) {
       // ignore
     }
@@ -108,15 +130,15 @@ class StyxSuggestionsCard extends HTMLElement {
     if (this._uiState === state) return;
     this._uiState = state;
 
-    if (state === 'loading') this._emitUi('ui_state_loading_shown', { scope: 'suggestions', ...meta });
-    if (state === 'empty') this._emitUi('ui_state_empty_shown', { scope: 'suggestions', ...meta });
-    if (state === 'error') this._emitUi('ui_state_error_shown', { scope: 'suggestions', ...meta });
+    if (state === 'loading') this._emitUi('LOADING_SHOWN', { scope: 'suggestions', ...meta });
+    if (state === 'empty') this._emitUi('EMPTY_SHOWN', { scope: 'suggestions', ...meta });
+    if (state === 'error') this._emitUi('ERROR_SHOWN', { scope: 'suggestions', ...meta });
   }
 
   _setDegraded(enabled, meta = {}) {
     if (this._degraded === enabled) return;
     this._degraded = enabled;
-    this._emitUi(enabled ? 'ui_global_degraded_on' : 'ui_global_degraded_off', { scope: 'suggestions', ...meta });
+    this._emitUi(enabled ? 'GLOBAL_DEGRADED_ON' : 'GLOBAL_DEGRADED_OFF', { scope: 'suggestions', ...meta });
   }
 
   _getCoreUrl() {
@@ -200,7 +222,7 @@ class StyxSuggestionsCard extends HTMLElement {
 
           // Retry telemetry: if we got here from a retry click recently, mark success.
           if (Date.now() - this._lastRetryTs < 20000) {
-            this._emitUi('ui_state_retry_succeeded', { scope: 'suggestions' });
+            this._emitUi('RETRY_SUCCEEDED', { scope: 'suggestions' });
           }
 
           this._render();
@@ -215,7 +237,7 @@ class StyxSuggestionsCard extends HTMLElement {
       this._setDegraded(true, { reason: 'core_unreachable' });
 
       if (Date.now() - this._lastRetryTs < 20000) {
-        this._emitUi('ui_state_retry_failed', { scope: 'suggestions', error: this._loadError });
+        this._emitUi('RETRY_FAILED', { scope: 'suggestions', error: this._loadError });
       }
 
       this._render();
@@ -227,7 +249,7 @@ class StyxSuggestionsCard extends HTMLElement {
       this._setDegraded(true, { reason: this._loadError });
 
       if (Date.now() - this._lastRetryTs < 20000) {
-        this._emitUi('ui_state_retry_failed', { scope: 'suggestions', error: this._loadError });
+        this._emitUi('RETRY_FAILED', { scope: 'suggestions', error: this._loadError });
       }
 
       this._render();
@@ -237,7 +259,7 @@ class StyxSuggestionsCard extends HTMLElement {
   async _action(id, action) {
     if (action === 'retry') {
       this._lastRetryTs = Date.now();
-      this._emitUi('ui_state_retry_clicked', { scope: 'suggestions' });
+      this._emitUi('RETRY_CLICKED', { scope: 'suggestions' });
       this._loadSuggestions();
       return;
     }
