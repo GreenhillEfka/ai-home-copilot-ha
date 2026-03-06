@@ -1,11 +1,14 @@
 /**
- * PilotSuite Styx Suggestions Card v1.0.0
+ * PilotSuite Styx Suggestions Card v1.1.0
  *
  * Lovelace custom card displaying AI-generated suggestions
  * with accept/snooze/reject governance actions.
  *
- * Reads from sensor.copilot_ha_suggestions and calls Core API
- * for suggestion management.
+ * PS-UX-015:
+ * - List states: loading / empty / error / offline-read-only
+ * - Filter empty case with CTA "Filter zurücksetzen"
+ * - Detail sub-screen (no blank view) + soft-guard for offline/auth-missing
+ * - ui_state_* telemetry events (best-effort)
  */
 
 const CATEGORY_COLORS = {
@@ -32,19 +35,73 @@ const RISK_COLORS = {
   high: '#f44336',
 };
 
+const UI_STATE_EVENTS = Object.freeze({
+  LOADING_SHOWN: 'ui_state_loading_shown',
+  EMPTY_SHOWN: 'ui_state_empty_shown',
+  ERROR_SHOWN: 'ui_state_error_shown',
+  GLOBAL_DEGRADED_ON: 'ui_global_degraded_on',
+  GLOBAL_DEGRADED_OFF: 'ui_global_degraded_off',
+  RETRY_CLICKED: 'ui_state_retry_clicked',
+  RETRY_SUCCEEDED: 'ui_state_retry_succeeded',
+  RETRY_FAILED: 'ui_state_retry_failed',
+});
+
+const UI_ERROR_CLASS = Object.freeze({
+  AUTH: 'auth',
+  NETWORK: 'network',
+  UNKNOWN: 'unknown',
+});
+
+function _dispatchUiEvent(eventName, detail = {}) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(
+      new CustomEvent(eventName, {
+        detail: {
+          ...detail,
+          event: eventName,
+          emittedAt: detail.emittedAt || new Date().toISOString(),
+        },
+        bubbles: true,
+        cancelable: false,
+      })
+    );
+  } catch (_e) {
+    // best-effort only
+  }
+}
+
 class StyxSuggestionsCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+
     this._config = {};
     this._hass = null;
+
+    // Data
     this._suggestions = [];
     this._lastFetch = 0;
-    this._loadError = null;
-    this._stale = false;
-    this._actionError = null;
+
+    // List state
     this._loading = false;
+    this._loadError = null;
+    this._loadErrorClass = null;
+    this._stale = false; // last-known data
+    this._authMissing = false;
+
+    // UI state
+    this._actionError = null;
+    this._filterCategory = 'all';
     this._selectedId = null;
+
+    // Telemetry
+    this._attempt = 0;
+    this._emitted = new Set();
+    this._degradedActive = false;
+
+    this._boundClick = (e) => this._onClick(e);
+    this.shadowRoot.addEventListener('click', this._boundClick);
   }
 
   static getConfigElement() {
@@ -67,19 +124,59 @@ class StyxSuggestionsCard extends HTMLElement {
       core_url: config.core_url || '',
       ...config,
     };
+
+    // Render immediately (so the card doesn't stay blank until first hass update)
+    this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
+
+    // If we can already hydrate from sensor, do so immediately (helps offline-read-only).
+    if ((!this._suggestions || this._suggestions.length === 0) && this._loadFromSensor()) {
+      this._stale = true;
+      this._render();
+    }
+
     const now = Date.now();
     if (now - this._lastFetch > 30000) {
       this._lastFetch = now;
-      this._loadSuggestions();
+      this._loadSuggestions({ source: 'auto' });
     }
   }
 
   getCardSize() {
     return 4;
+  }
+
+  _scope(sub = 'list') {
+    return `suggestions/${sub}`;
+  }
+
+  _emitOnce(key, eventName, detail) {
+    const namespaced = `${this._attempt}:${key}`;
+    if (this._emitted.has(namespaced)) return;
+    this._emitted.add(namespaced);
+    _dispatchUiEvent(eventName, detail);
+  }
+
+  _setDegraded(active, payload = {}) {
+    if (active === this._degradedActive) return;
+    this._degradedActive = active;
+
+    if (active) {
+      _dispatchUiEvent(UI_STATE_EVENTS.GLOBAL_DEGRADED_ON, {
+        scope: this._scope('global'),
+        reason: payload.reason || 'degraded',
+        source: 'styx-suggestions-card',
+      });
+    } else {
+      _dispatchUiEvent(UI_STATE_EVENTS.GLOBAL_DEGRADED_OFF, {
+        scope: this._scope('global'),
+        reason: payload.reason || 'recovered',
+        source: 'styx-suggestions-card',
+      });
+    }
   }
 
   _getCoreUrl() {
@@ -98,6 +195,25 @@ class StyxSuggestionsCard extends HTMLElement {
       return this._hass.auth.data.access_token || '';
     }
     return '';
+  }
+
+  _isReadOnly() {
+    return !!(this._stale || this._authMissing);
+  }
+
+  _readOnlyReason() {
+    if (this._authMissing) return 'Nicht authentifiziert';
+    if (this._stale) return 'Offline';
+    return '';
+  }
+
+  _classifyFetchError(resp, error) {
+    if (this._authMissing) return UI_ERROR_CLASS.AUTH;
+    if (resp && (resp.status === 401 || resp.status === 403)) return UI_ERROR_CLASS.AUTH;
+    if (error && error.name === 'AbortError') return UI_ERROR_CLASS.NETWORK;
+    if (error) return UI_ERROR_CLASS.NETWORK;
+    if (resp && resp.status) return UI_ERROR_CLASS.UNKNOWN;
+    return UI_ERROR_CLASS.UNKNOWN;
   }
 
   _loadFromSensor() {
@@ -133,14 +249,62 @@ class StyxSuggestionsCard extends HTMLElement {
     return true;
   }
 
-  async _loadSuggestions() {
+  async _loadSuggestions({ source = 'auto' } = {}) {
     this._actionError = null;
+
+    // Attempt boundary for telemetry de-dup.
+    this._attempt += 1;
+    this._emitted = new Set();
+
+    this._authMissing = !this._getToken();
+
+    // Show loading state if we have no content yet.
     this._loading = true;
-    // Keep current suggestions visible; but if we have none yet, show a loading state.
-    if (!this._suggestions || this._suggestions.length === 0) this._render();
+    if (!this._suggestions || this._suggestions.length === 0) {
+      this._emitOnce('loading_shown', UI_STATE_EVENTS.LOADING_SHOWN, {
+        scope: this._scope('list'),
+        source: 'styx-suggestions-card',
+        message: 'Lade Vorschlaege',
+      });
+      this._render();
+    }
+
+    if (this._authMissing) {
+      // Soft-guard: no auth token -> read-only, last-known data if available.
+      this._loadError = 'Kein Auth-Token';
+      this._loadErrorClass = UI_ERROR_CLASS.AUTH;
+      this._stale = this._loadFromSensor();
+      this._loading = false;
+      this._setDegraded(true, { reason: 'auth_missing' });
+
+      if (!this._stale) {
+        this._emitOnce('error_list_auth', UI_STATE_EVENTS.ERROR_SHOWN, {
+          scope: this._scope('list'),
+          source: 'styx-suggestions-card',
+          message: 'Authentifizierung fehlt.',
+          detail: 'Bitte Token/Berechtigungen prüfen.',
+          degraded: true,
+          error_class: UI_ERROR_CLASS.AUTH,
+        });
+      }
+
+      if (source === 'retry') {
+        _dispatchUiEvent(UI_STATE_EVENTS.RETRY_FAILED, {
+          scope: this._scope('list'),
+          source: 'styx-suggestions-card',
+          action: 'Erneut versuchen',
+          error: 'auth_missing',
+        });
+      }
+
+      this._render();
+      return;
+    }
+
     const url = this._getCoreUrl();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
+
     try {
       const resp = await fetch(`${url}/api/v1/suggestions`, {
         headers: { 'X-Auth-Token': this._getToken() },
@@ -150,39 +314,123 @@ class StyxSuggestionsCard extends HTMLElement {
 
       if (resp.ok) {
         const data = await resp.json();
-        if (data.ok) {
+        if (data && data.ok) {
           this._suggestions = (data.suggestions || []).slice(0, this._config.max_suggestions);
           this._loadError = null;
+          this._loadErrorClass = null;
           this._stale = false;
           this._loading = false;
+          this._setDegraded(false, { reason: 'core_ok' });
+
+          if (source === 'retry') {
+            _dispatchUiEvent(UI_STATE_EVENTS.RETRY_SUCCEEDED, {
+              scope: this._scope('list'),
+              source: 'styx-suggestions-card',
+              action: 'Erneut versuchen',
+            });
+          }
+
           this._render();
           return;
         }
       }
 
-      // Non-OK or unexpected payload -> try sensor fallback
+      // Non-OK or unexpected payload -> try sensor fallback (offline-read-only).
       this._loadError = `HTTP ${resp.status || 'Fehler'}`;
+      this._loadErrorClass = this._classifyFetchError(resp, null);
       this._stale = this._loadFromSensor();
       this._loading = false;
+
+      if (this._stale) {
+        this._setDegraded(true, { reason: 'offline_http' });
+      } else {
+        this._emitOnce('error_list_http', UI_STATE_EVENTS.ERROR_SHOWN, {
+          scope: this._scope('list'),
+          source: 'styx-suggestions-card',
+          message: 'Vorschlaege konnten nicht geladen werden',
+          detail: this._loadError,
+          degraded: false,
+          error_class: this._loadErrorClass || UI_ERROR_CLASS.UNKNOWN,
+        });
+      }
+
+      if (source === 'retry') {
+        _dispatchUiEvent(UI_STATE_EVENTS.RETRY_FAILED, {
+          scope: this._scope('list'),
+          source: 'styx-suggestions-card',
+          action: 'Erneut versuchen',
+          error: this._loadError,
+        });
+      }
+
       this._render();
     } catch (e) {
       clearTimeout(timer);
-      this._loadError = e.name === 'AbortError' ? 'Zeitueberschreitung' : 'Verbindungsfehler';
+      this._loadError = e && e.name === 'AbortError' ? 'Zeitueberschreitung' : 'Verbindungsfehler';
+      this._loadErrorClass = this._classifyFetchError(null, e);
       this._stale = this._loadFromSensor();
       this._loading = false;
+
+      if (this._stale) {
+        this._setDegraded(true, { reason: 'offline_network' });
+      } else {
+        this._emitOnce('error_list_net', UI_STATE_EVENTS.ERROR_SHOWN, {
+          scope: this._scope('list'),
+          source: 'styx-suggestions-card',
+          message: 'Vorschlaege konnten nicht geladen werden',
+          detail: this._loadError,
+          degraded: true,
+          error_class: UI_ERROR_CLASS.NETWORK,
+        });
+      }
+
+      if (source === 'retry') {
+        _dispatchUiEvent(UI_STATE_EVENTS.RETRY_FAILED, {
+          scope: this._scope('list'),
+          source: 'styx-suggestions-card',
+          action: 'Erneut versuchen',
+          error: this._loadError,
+        });
+      }
+
       this._render();
     }
   }
 
   async _action(id, action) {
     if (action === 'retry') {
-      this._loadSuggestions();
+      _dispatchUiEvent(UI_STATE_EVENTS.RETRY_CLICKED, {
+        scope: this._scope('list'),
+        source: 'styx-suggestions-card',
+        action: 'Erneut versuchen',
+      });
+      this._loadSuggestions({ source: 'retry' });
       return;
     }
 
-    // If we only have last-known (stale) data, do not allow mutating actions.
-    if (this._stale) {
-      this._actionError = 'Offline — Aktion ist deaktiviert.';
+    if (action === 'reset_filters') {
+      this._filterCategory = 'all';
+      this._render();
+      return;
+    }
+
+    if (action === 'detail-open') {
+      if (id) {
+        this._selectedId = id;
+        this._render();
+      }
+      return;
+    }
+
+    if (action === 'detail-close') {
+      this._selectedId = null;
+      this._render();
+      return;
+    }
+
+    // Mutating actions (accept/snooze/reject)
+    if (this._isReadOnly()) {
+      this._actionError = `${this._readOnlyReason()} — Aktion ist deaktiviert.`;
       this._render();
       return;
     }
@@ -202,10 +450,16 @@ class StyxSuggestionsCard extends HTMLElement {
         this._render();
         return;
       }
-      this._suggestions = this._suggestions.filter(s => (s.id || s.suggestion_id) !== id);
+
+      // Optimistic UI: remove from list
+      this._suggestions = (this._suggestions || []).filter((s) => this._getSuggestionId(s) !== id);
       this._actionError = null;
+
+      // If we removed the selected item, close detail.
+      if (this._selectedId === id) this._selectedId = null;
+
       this._render();
-    } catch (e) {
+    } catch (_e) {
       this._actionError = 'Aktion fehlgeschlagen';
       this._render();
     }
@@ -229,20 +483,43 @@ class StyxSuggestionsCard extends HTMLElement {
     return (s && (s.id || s.suggestion_id)) || '';
   }
 
-  _openDetail(id) {
-    if (!id) return;
-    this._selectedId = id;
-    this._render();
-  }
-
-  _closeDetail() {
-    this._selectedId = null;
-    this._render();
-  }
-
   _getSelectedSuggestion() {
     if (!this._selectedId) return null;
-    return (this._suggestions || []).find(s => this._getSuggestionId(s) === this._selectedId) || null;
+    return (this._suggestions || []).find((s) => this._getSuggestionId(s) === this._selectedId) || null;
+  }
+
+  _getFilterOptions() {
+    return [
+      { id: 'all', label: 'Alle' },
+      { id: 'energy', label: 'Energie' },
+      { id: 'comfort', label: 'Komfort' },
+      { id: 'security', label: 'Sicherheit' },
+      { id: 'health', label: 'Gesundheit' },
+      { id: 'automation', label: 'Automation' },
+    ];
+  }
+
+  _applyFilters(items) {
+    const cat = (this._filterCategory || 'all').toLowerCase();
+    if (cat === 'all') return items;
+    return (items || []).filter((s) => String(s.category || 'default').toLowerCase() === cat);
+  }
+
+  _renderFilters(hasAnySuggestions) {
+    const opts = this._getFilterOptions();
+    const show = hasAnySuggestions || (this._filterCategory && this._filterCategory !== 'all');
+    if (!show) return '';
+
+    const chips = opts
+      .map((o) => {
+        const active = (this._filterCategory || 'all') === o.id;
+        return `
+          <button class="chip ${active ? 'active' : ''}" data-action="set_filter" data-filter="${this._esc(o.id)}" type="button">${this._esc(o.label)}</button>
+        `;
+      })
+      .join('');
+
+    return `<div class="filters" aria-label="Filter">${chips}</div>`;
   }
 
   _render() {
@@ -250,14 +527,21 @@ class StyxSuggestionsCard extends HTMLElement {
     const hasSuggestions = suggestions.length > 0;
 
     const selected = this._getSelectedSuggestion();
-    if (this._selectedId && !selected) this._selectedId = null;
-    const showStaleBanner = this._stale || (this._loadError && hasSuggestions);
+    const selectedMissing = !!(this._selectedId && !selected);
 
-    const countLabel = this._stale ? `${suggestions.length} letzte` : `${suggestions.length} aktiv`;
+    const readOnly = this._isReadOnly();
+    const showStaleBanner = readOnly && hasSuggestions;
+
+    const filtered = this._applyFilters(suggestions);
+    const filterEmpty = hasSuggestions && filtered.length === 0;
+
+    const countLabel = readOnly ? `${suggestions.length} letzte` : `${suggestions.length} aktiv`;
+
+    const filterBar = this._renderFilters(hasSuggestions);
 
     const banners = `
       ${this._actionError ? `<div class="banner err">${this._esc(this._actionError)}</div>` : ''}
-      ${showStaleBanner ? `<div class="banner warn">${this._esc(this._loadError || 'Offline')} — letzte bekannte Daten.</div>` : ''}
+      ${showStaleBanner ? `<div class="banner warn">${this._esc(this._readOnlyReason())} — letzte bekannte Daten. Aktionen sind deaktiviert.</div>` : ''}
     `;
 
     let html = '';
@@ -269,6 +553,12 @@ class StyxSuggestionsCard extends HTMLElement {
           <div class="sk sk-2"></div>
           <div class="sk sk-3"></div>
         </div>`;
+
+      this._emitOnce('loading', UI_STATE_EVENTS.LOADING_SHOWN, {
+        scope: this._scope('list'),
+        source: 'styx-suggestions-card',
+        message: 'Ladevorgang',
+      });
     } else if (this._loadError && !hasSuggestions) {
       html = `
         <div class="state-error">
@@ -276,25 +566,59 @@ class StyxSuggestionsCard extends HTMLElement {
           <div class="state-msg">${this._esc(this._loadError)}</div>
           <button class="retry" data-action="retry">Erneut versuchen</button>
         </div>`;
+
+      this._emitOnce('error_list', UI_STATE_EVENTS.ERROR_SHOWN, {
+        scope: this._scope('list'),
+        source: 'styx-suggestions-card',
+        message: 'Vorschlaege konnten nicht geladen werden',
+        detail: this._loadError,
+        degraded: !!readOnly,
+        error_class: this._loadErrorClass || UI_ERROR_CLASS.UNKNOWN,
+      });
     } else if (!hasSuggestions) {
-      html = '<div class="empty">Keine aktiven Vorschlaege.</div>';
+      html = `<div class="empty">Keine aktiven Vorschlaege.</div>`;
+
+      this._emitOnce('empty_list', UI_STATE_EVENTS.EMPTY_SHOWN, {
+        scope: this._scope('list'),
+        source: 'styx-suggestions-card',
+        message: 'Keine aktiven Vorschlaege',
+      });
+    } else if (filterEmpty) {
+      html = `
+        <div class="state-empty">
+          <div class="state-title">Keine Treffer fuer den Filter</div>
+          <div class="state-msg">Passe den Filter an oder setze ihn zurueck.</div>
+          <button class="retry" data-action="reset_filters">Filter zuruecksetzen</button>
+        </div>`;
+
+      this._emitOnce('empty_filter', UI_STATE_EVENTS.EMPTY_SHOWN, {
+        scope: this._scope('list'),
+        source: 'styx-suggestions-card',
+        message: 'Keine Treffer fuer den Filter',
+      });
     } else {
-      html = `${banners}` + suggestions.map(s => {
-        const id = this._getSuggestionId(s);
-        const cat = (s.category || 'default').toLowerCase();
-        const catColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default;
-        const risk = (s.risk || 'low').toLowerCase();
-        const riskColor = RISK_COLORS[risk] || RISK_COLORS.low;
+      html = `${filterBar}${banners}` + filtered
+        .map((s) => {
+          const id = this._getSuggestionId(s);
+          const cat = String(s.category || 'default').toLowerCase();
+          const catColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.default;
+          const risk = String(s.risk || 'low').toLowerCase();
+          const riskColor = RISK_COLORS[risk] || RISK_COLORS.low;
 
-        const actionsDisabled = this._stale;
-        const actions = this._config.show_actions ? `
+          const actionsDisabled = readOnly;
+          const disabledAttr = actionsDisabled ? 'disabled' : '';
+          const disabledTitle = actionsDisabled ? `${this._esc(this._readOnlyReason())}: Aktionen deaktiviert.` : '';
+
+          const actions = this._config.show_actions
+            ? `
           <div class="actions ${actionsDisabled ? 'disabled' : ''}">
-            <button class="act-accept" data-id="${this._esc(id)}" data-action="accept">Annehmen</button>
-            <button class="act-snooze" data-id="${this._esc(id)}" data-action="snooze">Spaeter</button>
-            <button class="act-reject" data-id="${this._esc(id)}" data-action="reject">Ablehnen</button>
-          </div>` : '';
+            <button class="act-accept" ${disabledAttr} title="${disabledTitle}" data-id="${this._esc(id)}" data-action="accept">Annehmen</button>
+            <button class="act-snooze" ${disabledAttr} title="${disabledTitle}" data-id="${this._esc(id)}" data-action="snooze">Spaeter</button>
+            <button class="act-reject" ${disabledAttr} title="${disabledTitle}" data-id="${this._esc(id)}" data-action="reject">Ablehnen</button>
+          </div>`
+            : '';
 
-        return `
+          return `
           <div class="suggestion" data-id="${this._esc(id)}">
             <div class="sg-header">
               <span class="sg-title">${this._esc(s.title || s.name || 'Vorschlag')}</span>
@@ -308,85 +632,108 @@ class StyxSuggestionsCard extends HTMLElement {
               ${s.estimated_savings ? `<span class="tag" style="background:#4caf5020;color:#4caf50;border:1px solid #4caf5040">${this._esc(s.estimated_savings)}</span>` : ''}
             </div>
             <div class="sg-footer">
-              <button class="details" data-id="${this._esc(id)}" data-action="detail">Details</button>
-              ${this._stale ? `<span class="ro">Nur Lesen</span>` : ''}
+              <button class="details" type="button" data-id="${this._esc(id)}" data-action="detail-open">Details</button>
+              ${actionsDisabled ? `<span class="ro" title="${disabledTitle}">Read-only</span>` : ''}
             </div>
             ${actions}
           </div>`;
-      }).join('');
+        })
+        .join('');
     }
 
+    // Detail sub-screen (modal)
     let detailHtml = '';
-    if (selected) {
-      const id = this._getSuggestionId(selected);
-
-      const stepsRaw = selected.steps || selected.actions || selected.plan_steps || null;
-      const steps = Array.isArray(stepsRaw)
-        ? `<ul class="steps">${stepsRaw.map(st => {
-            if (st && typeof st === 'object') return `<li>${this._esc(st.title || st.name || JSON.stringify(st))}</li>`;
-            return `<li>${this._esc(String(st))}</li>`;
-          }).join('')}</ul>`
-        : '';
-
-      const rationale = selected.rationale || selected.reason || selected.why || '';
-      const detailsObj = selected.details || selected.payload || null;
-      const details = (detailsObj && typeof detailsObj === 'object')
-        ? `<pre class="code">${this._esc(JSON.stringify(detailsObj, null, 2))}</pre>`
-        : (detailsObj ? `<div class="detail-value">${this._esc(String(detailsObj))}</div>` : '');
-
-      const actionsDisabled = this._stale;
-      const detailActions = this._config.show_actions ? `
-        <div class="detail-actions ${actionsDisabled ? 'disabled' : ''}">
-          <button class="act-accept" data-id="${this._esc(id)}" data-action="accept">Annehmen</button>
-          <button class="act-snooze" data-id="${this._esc(id)}" data-action="snooze">Spaeter</button>
-          <button class="act-reject" data-id="${this._esc(id)}" data-action="reject">Ablehnen</button>
-        </div>` : '';
-
-      detailHtml = `
-        <div class="detail-backdrop">
-          <div class="detail" role="dialog" aria-modal="true">
-            <div class="detail-header">
-              <div class="detail-title">${this._esc(selected.title || selected.name || 'Vorschlag')}</div>
-              <button class="detail-close" data-action="detail-close" aria-label="Schliessen">×</button>
-            </div>
-
-            ${this._stale ? `<div class="banner warn">Offline — nur Lesen. Aktionen sind deaktiviert.</div>` : ''}
-
-            <div class="detail-body">
-              <div class="detail-section">
-                <div class="detail-label">Beschreibung</div>
-                <div class="detail-value">${this._esc(selected.description || '')}</div>
+    if (this._selectedId) {
+      if (selectedMissing) {
+        detailHtml = `
+          <div class="detail-backdrop" data-action="detail-close">
+            <div class="detail" role="dialog" aria-modal="true">
+              <div class="detail-header">
+                <div class="detail-title">Details</div>
+                <button class="detail-close" type="button" data-action="detail-close" aria-label="Schliessen">×</button>
               </div>
-
-              ${rationale ? `
-                <div class="detail-section">
-                  <div class="detail-label">Warum</div>
-                  <div class="detail-value">${this._esc(String(rationale))}</div>
-                </div>` : ''}
-
-              ${steps ? `
-                <div class="detail-section">
-                  <div class="detail-label">Schritte</div>
-                  ${steps}
-                </div>` : ''}
-
-              ${details ? `
-                <div class="detail-section">
-                  <div class="detail-label">Details</div>
-                  ${details}
-                </div>` : ''}
-
-              <div class="detail-meta">
-                ${selected.category ? `<span class="tag">Kategorie: ${this._esc(String(selected.category))}</span>` : ''}
-                ${selected.risk ? `<span class="tag">Risiko: ${this._esc(String(selected.risk))}</span>` : ''}
-                ${selected.zone ? `<span class="tag">Zone: ${this._esc(String(selected.zone))}</span>` : ''}
-                ${selected.estimated_savings ? `<span class="tag">${this._esc(String(selected.estimated_savings))}</span>` : ''}
+              <div class="state-error">
+                <div class="state-title">Vorschlag nicht gefunden</div>
+                <div class="state-msg">Die Daten sind nicht mehr verfuegbar.</div>
+                <button class="retry" data-action="retry">Erneut versuchen</button>
               </div>
             </div>
+          </div>`;
 
-            ${detailActions}
-          </div>
-        </div>`;
+        this._emitOnce('error_detail_missing', UI_STATE_EVENTS.ERROR_SHOWN, {
+          scope: this._scope('detail'),
+          source: 'styx-suggestions-card',
+          message: 'Vorschlag nicht gefunden',
+          detail: 'selected_missing',
+          degraded: !!readOnly,
+          error_class: UI_ERROR_CLASS.UNKNOWN,
+        });
+      } else if (selected) {
+        const id = this._getSuggestionId(selected);
+
+        const stepsRaw = selected.steps || selected.actions || selected.plan_steps || null;
+        const steps = Array.isArray(stepsRaw)
+          ? `<ul class="steps">${stepsRaw
+              .map((st) => {
+                if (st && typeof st === 'object') return `<li>${this._esc(st.title || st.name || JSON.stringify(st))}</li>`;
+                return `<li>${this._esc(String(st))}</li>`;
+              })
+              .join('')}</ul>`
+          : '';
+
+        const rationale = selected.rationale || selected.reason || selected.why || '';
+
+        const actionsDisabled = readOnly;
+        const disabledAttr = actionsDisabled ? 'disabled' : '';
+        const disabledTitle = actionsDisabled ? `${this._esc(this._readOnlyReason())}: Aktionen deaktiviert.` : '';
+
+        const detailActions = this._config.show_actions
+          ? `
+            <div class="detail-actions ${actionsDisabled ? 'disabled' : ''}">
+              <button class="act-accept" ${disabledAttr} title="${disabledTitle}" data-id="${this._esc(id)}" data-action="accept">Annehmen</button>
+              <button class="act-snooze" ${disabledAttr} title="${disabledTitle}" data-id="${this._esc(id)}" data-action="snooze">Spaeter</button>
+              <button class="act-reject" ${disabledAttr} title="${disabledTitle}" data-id="${this._esc(id)}" data-action="reject">Ablehnen</button>
+            </div>`
+          : '';
+
+        detailHtml = `
+          <div class="detail-backdrop" data-action="detail-close">
+            <div class="detail" role="dialog" aria-modal="true">
+              <div class="detail-header">
+                <div class="detail-title">${this._esc(selected.title || selected.name || 'Vorschlag')}</div>
+                <button class="detail-close" type="button" data-action="detail-close" aria-label="Schliessen">×</button>
+              </div>
+
+              ${readOnly ? `<div class="banner warn">${this._esc(this._readOnlyReason())} — Aktionen sind deaktiviert (Read-only).</div>` : ''}
+
+              <div class="detail-body">
+                <div class="detail-section">
+                  <div class="detail-label">Beschreibung</div>
+                  <div class="detail-value">${this._esc(selected.description || '')}</div>
+                </div>
+
+                ${rationale
+                  ? `<div class="detail-section"><div class="detail-label">Warum</div><div class="detail-value">${this._esc(
+                      String(rationale)
+                    )}</div></div>`
+                  : ''}
+
+                ${steps
+                  ? `<div class="detail-section"><div class="detail-label">Schritte</div>${steps}</div>`
+                  : ''}
+
+                <div class="detail-meta">
+                  ${selected.category ? `<span class="tag">Kategorie: ${this._esc(String(selected.category))}</span>` : ''}
+                  ${selected.risk ? `<span class="tag">Risiko: ${this._esc(String(selected.risk))}</span>` : ''}
+                  ${selected.zone ? `<span class="tag">Zone: ${this._esc(String(selected.zone))}</span>` : ''}
+                  ${selected.estimated_savings ? `<span class="tag">${this._esc(String(selected.estimated_savings))}</span>` : ''}
+                </div>
+              </div>
+
+              ${detailActions}
+            </div>
+          </div>`;
+      }
     }
 
     this.shadowRoot.innerHTML = `
@@ -413,6 +760,29 @@ class StyxSuggestionsCard extends HTMLElement {
           background: rgba(79, 195, 247, 0.15);
           color: #4fc3f7;
         }
+
+        .filters {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin: 0 0 10px 0;
+        }
+        .chip {
+          font-size: 11px;
+          border-radius: 999px;
+          padding: 4px 10px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.06);
+          color: var(--primary-text-color, #e6eef6);
+          cursor: pointer;
+        }
+        .chip.active {
+          background: rgba(79,195,247,0.16);
+          border-color: rgba(79,195,247,0.28);
+          color: #4fc3f7;
+          font-weight: 700;
+        }
+
         .suggestion {
           padding: 12px;
           margin-bottom: 8px;
@@ -456,10 +826,35 @@ class StyxSuggestionsCard extends HTMLElement {
           color: var(--secondary-text-color, #9fb1c3);
           border: 1px solid rgba(255,255,255,0.08);
         }
+        .sg-footer {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 4px;
+        }
+        .details {
+          padding: 4px 10px;
+          border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.14);
+          background: rgba(255,255,255,0.04);
+          color: var(--primary-text-color, #e6eef6);
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 11px;
+        }
+        .details:hover { background: rgba(255,255,255,0.08); }
+        .ro {
+          font-size: 11px;
+          color: #ffb74d;
+          opacity: 0.9;
+          font-weight: 700;
+        }
+
         .actions {
           display: flex;
           gap: 6px;
-          margin-top: 6px;
+          margin-top: 8px;
         }
         .actions button {
           padding: 4px 12px;
@@ -467,8 +862,12 @@ class StyxSuggestionsCard extends HTMLElement {
           border: none;
           font-size: 11px;
           cursor: pointer;
-          font-weight: 600;
+          font-weight: 700;
           transition: background 0.2s;
+        }
+        .actions button:disabled {
+          cursor: not-allowed;
+          opacity: 0.55;
         }
         .act-accept {
           background: rgba(76,175,80,0.2);
@@ -485,6 +884,7 @@ class StyxSuggestionsCard extends HTMLElement {
           color: #f44336;
         }
         .act-reject:hover { background: rgba(244,67,54,0.3); }
+
         .banner {
           padding: 8px 10px;
           margin: 10px 0 10px 0;
@@ -494,16 +894,14 @@ class StyxSuggestionsCard extends HTMLElement {
         }
         .banner.warn { background: rgba(255,152,0,0.12); color: #ffb74d; border-color: rgba(255,152,0,0.25); }
         .banner.err { background: rgba(244,67,54,0.12); color: #ff8a80; border-color: rgba(244,67,54,0.25); }
-        .actions.disabled button {
-          opacity: 0.55;
-        }
-        .state-error {
+
+        .state-error, .state-empty {
           text-align: center;
           padding: 16px 0;
         }
         .state-title {
           font-size: 13px;
-          font-weight: 700;
+          font-weight: 800;
           margin-bottom: 6px;
         }
         .state-msg {
@@ -518,10 +916,11 @@ class StyxSuggestionsCard extends HTMLElement {
           background: rgba(79,195,247,0.12);
           color: #4fc3f7;
           cursor: pointer;
-          font-weight: 700;
+          font-weight: 800;
           font-size: 12px;
         }
         button.retry:hover { background: rgba(79,195,247,0.2); }
+
         .empty {
           text-align: center;
           color: var(--secondary-text-color, #9fb1c3);
@@ -533,185 +932,136 @@ class StyxSuggestionsCard extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: 8px;
-          padding: 8px 0 2px 0;
+          padding: 8px 0;
         }
         .sk {
-          height: 14px;
-          border-radius: 10px;
-          background: rgba(255,255,255,0.06);
-          position: relative;
-          overflow: hidden;
-        }
-        .sk::after {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -40%;
-          width: 40%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
-          animation: shimmer 1.2s infinite;
+          height: 12px;
+          border-radius: 8px;
+          background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.05) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.1s ease-in-out infinite;
         }
         .sk-1 { width: 92%; }
-        .sk-2 { width: 78%; }
-        .sk-3 { width: 86%; }
+        .sk-2 { width: 75%; }
+        .sk-3 { width: 88%; }
         @keyframes shimmer {
-          0% { left: -40%; }
-          100% { left: 100%; }
-        }
-
-        .sg-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: 6px;
-        }
-        button.details {
-          padding: 4px 10px;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.14);
-          background: rgba(79,195,247,0.10);
-          color: #4fc3f7;
-          cursor: pointer;
-          font-weight: 700;
-          font-size: 11px;
-        }
-        button.details:hover { background: rgba(79,195,247,0.18); }
-        .ro {
-          font-size: 11px;
-          color: #ffb74d;
-          opacity: 0.9;
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
 
         .detail-backdrop {
           position: fixed;
           inset: 0;
           background: rgba(0,0,0,0.55);
+          z-index: 10000;
           display: flex;
-          align-items: flex-end;
+          align-items: center;
           justify-content: center;
-          padding: 18px;
-          z-index: 9999;
+          padding: 16px;
         }
         .detail {
-          width: min(680px, 100%);
-          max-height: 82vh;
+          width: min(560px, 100%);
+          max-height: min(80vh, 720px);
           overflow: auto;
-          background: var(--card-background-color, #1a1a2e);
-          border-radius: 14px;
+          background: rgba(20,20,40,0.98);
           border: 1px solid rgba(255,255,255,0.10);
+          border-radius: 14px;
           padding: 14px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+          box-shadow: 0 12px 44px rgba(0,0,0,0.50);
         }
         .detail-header {
           display: flex;
-          justify-content: space-between;
           align-items: center;
+          justify-content: space-between;
+          gap: 12px;
           margin-bottom: 10px;
         }
         .detail-title {
-          font-size: 15px;
-          font-weight: 800;
+          font-size: 14px;
+          font-weight: 900;
         }
-        button.detail-close {
+        .detail-close {
           width: 34px;
           height: 34px;
           border-radius: 10px;
-          border: 1px solid rgba(255,255,255,0.14);
-          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.04);
           color: var(--primary-text-color, #e6eef6);
-          cursor: pointer;
           font-size: 18px;
+          cursor: pointer;
           font-weight: 900;
-          line-height: 1;
         }
-        button.detail-close:hover { background: rgba(255,255,255,0.10); }
-        .detail-body { padding-top: 4px; }
+        .detail-body { padding: 8px 0; }
         .detail-section { margin-bottom: 12px; }
         .detail-label {
           font-size: 11px;
           text-transform: uppercase;
           letter-spacing: 0.06em;
-          color: var(--secondary-text-color, #9fb1c3);
+          opacity: 0.65;
           margin-bottom: 4px;
         }
         .detail-value {
-          font-size: 12px;
-          line-height: 1.45;
+          font-size: 13px;
           color: var(--primary-text-color, #e6eef6);
+          line-height: 1.4;
         }
         .detail-meta {
           display: flex;
           flex-wrap: wrap;
           gap: 6px;
-          margin-top: 8px;
+          margin-top: 10px;
+        }
+        .steps {
+          margin: 6px 0 0 16px;
+          padding: 0;
+          font-size: 12px;
+          color: var(--secondary-text-color, #9fb1c3);
         }
         .detail-actions {
           display: flex;
-          gap: 6px;
-          margin-top: 10px;
+          gap: 8px;
           justify-content: flex-end;
+          padding-top: 10px;
+          border-top: 1px solid rgba(255,255,255,0.08);
         }
-        .detail-actions.disabled button {
-          opacity: 0.55;
-        }
-        .steps {
-          margin: 0;
-          padding-left: 18px;
-          color: var(--primary-text-color, #e6eef6);
-          font-size: 12px;
-        }
-        .steps li { margin: 3px 0; }
-        pre.code {
-          margin: 0;
-          background: rgba(0,0,0,0.25);
-          padding: 10px;
-          border-radius: 10px;
-          overflow: auto;
-          font-size: 11px;
-          border: 1px solid rgba(255,255,255,0.08);
-        }
+        .detail-actions button:disabled { cursor: not-allowed; opacity: 0.55; }
       </style>
+
       <div class="card">
         <div class="header">
           <span class="title">${this._esc(this._config.title)}</span>
           <span class="count">${this._esc(countLabel)}</span>
         </div>
         ${html}
-        ${detailHtml}
-      </div>`;
+      </div>
 
-    // Wire interactions via event delegation on card container
-    const card = this.shadowRoot.querySelector('.card');
-    if (card) {
-      card.addEventListener('click', (e) => {
-        // Close modal when clicking on the backdrop.
-        if (e.target && e.target.classList && e.target.classList.contains('detail-backdrop')) {
-          this._closeDetail();
-          return;
-        }
+      ${detailHtml}
+    `;
+  }
 
-        const closeBtn = e.target.closest('button.detail-close');
-        if (closeBtn) {
-          this._closeDetail();
-          return;
-        }
-
-        const btn = e.target.closest('.actions button, .detail-actions button, button.retry, button.details');
-        if (btn) {
-          const action = btn.dataset.action || 'retry';
-          const id = btn.dataset.id || '';
-          if (action === 'detail') this._openDetail(id);
-          else this._action(id, action);
-          return;
-        }
-
-        const sg = e.target.closest('.suggestion');
-        if (sg && sg.dataset && sg.dataset.id) {
-          this._openDetail(sg.dataset.id);
-        }
-      });
+  _onClick(e) {
+    const btn = e.target && e.target.closest ? e.target.closest('button') : null;
+    if (!btn) {
+      // Backdrop click
+      const backdrop = e.target && e.target.classList && e.target.classList.contains('detail-backdrop') ? e.target : null;
+      if (backdrop && backdrop.dataset && backdrop.dataset.action === 'detail-close') {
+        this._action('', 'detail-close');
+      }
+      return;
     }
+
+    const action = btn.dataset && btn.dataset.action ? btn.dataset.action : null;
+    if (!action) return;
+
+    if (action === 'set_filter') {
+      const filter = btn.dataset.filter || 'all';
+      this._filterCategory = filter;
+      this._render();
+      return;
+    }
+
+    const id = btn.dataset && btn.dataset.id ? btn.dataset.id : '';
+    this._action(id, action);
   }
 }
 
