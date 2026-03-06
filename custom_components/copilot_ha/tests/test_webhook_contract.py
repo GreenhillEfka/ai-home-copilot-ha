@@ -179,6 +179,20 @@ async def test_missing_data_returns_400_with_structured_error(hass, coordinator)
 
 
 @pytest.mark.asyncio
+async def test_invalid_json_returns_400_with_structured_error(hass, coordinator):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _BadJsonRequest(headers={HEADER_AUTH: "secret-token"})
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    _assert_error_contract(response, body)
+    assert response.status == 400
+    assert body["ok"] is False
+    assert body["error"]["code"] == "invalid_json"
+
+
+@pytest.mark.asyncio
 async def test_non_object_payload_returns_invalid_payload_structured_error(hass, coordinator):
     handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
 
@@ -189,6 +203,7 @@ async def test_non_object_payload_returns_invalid_payload_structured_error(hass,
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 400
     assert body["ok"] is False
     assert body["error"]["code"] == "invalid_payload"
@@ -206,10 +221,12 @@ async def test_unknown_type_returns_400_with_structured_error(hass, coordinator)
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 400
     assert body["ok"] is False
     assert body["error"]["code"] == "unknown_type"
     assert body["error"]["details"]["received"] == "mystery_event"
+    assert "allowed" in body["error"]["details"]
 
 
 @pytest.mark.asyncio
@@ -231,6 +248,7 @@ async def test_fuzzed_type_values_return_deterministic_errors(
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 400
     assert body["ok"] is False
     assert body["error"]["code"] == expected_code
@@ -255,6 +273,7 @@ async def test_invalid_data_types_return_400_with_structured_error(
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 400
     assert body["ok"] is False
     assert body["error"]["code"] == "invalid_data"

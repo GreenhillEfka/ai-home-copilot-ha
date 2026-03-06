@@ -55,6 +55,79 @@ _EVENT_TYPE_ALIAS_TO_CANONICAL = {
 }
 
 
+class ErrorCodeSpec(TypedDict, total=False):
+    status: int
+    message: str
+    required_details: tuple[str, ...]
+
+
+ERROR_CODE_SPECS: dict[str, ErrorCodeSpec] = {
+    # Envelope + payload validation
+    "invalid_json": {
+        "status": 400,
+        "message": "Request body must be a valid JSON object.",
+        "required_details": (),
+    },
+    "invalid_payload": {
+        "status": 400,
+        "message": "Request body must be a JSON object.",
+        "required_details": ("expected",),
+    },
+    "missing_type": {
+        "status": 400,
+        "message": "Webhook envelope must include a non-empty 'type' field.",
+        "required_details": ("required_field",),
+    },
+    "missing_data": {
+        "status": 400,
+        "message": "Webhook envelope must include a 'data' field.",
+        "required_details": ("required_field",),
+    },
+    "invalid_data": {
+        "status": 400,
+        "message": "Webhook envelope field 'data' must be a JSON object.",
+        "required_details": ("field", "expected"),
+    },
+    "unknown_type": {
+        "status": 400,
+        "message": "Unsupported webhook event type.",
+        "required_details": ("received", "allowed"),
+    },
+    "legacy_type_unsupported": {
+        "status": 400,
+        "message": "Legacy webhook event type is not supported in sunset mode.",
+        "required_details": ("received", "canonical_type", "mode"),
+    },
+    # Auth
+    "auth_missing": {
+        "status": 401,
+        "message": "Webhook auth token is missing.",
+        "required_details": ("sources",),
+    },
+    "auth_failed": {
+        "status": 401,
+        "message": "Webhook auth token is invalid.",
+        "required_details": ("sources",),
+    },
+    "legacy_header_sunset": {
+        "status": 401,
+        "message": "Legacy webhook auth header is no longer accepted after the configured sunset interval.",
+        "required_details": ("header", "mode", "sunset_at", "sunset_at_raw"),
+    },
+    # Resource guards
+    "rate_limited": {
+        "status": 429,
+        "message": "Webhook rate limit exceeded.",
+        "required_details": ("retry_after_seconds",),
+    },
+    "payload_too_large": {
+        "status": 413,
+        "message": "Webhook payload size exceeds allowed limit.",
+        "required_details": ("max_bytes",),
+    },
+}
+
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -173,23 +246,43 @@ def _normalize_event_type(raw_event_type: object, *, allow_legacy_aliases: bool 
     return _EVENT_TYPE_ALIAS_TO_CANONICAL.get(key, key)
 
 
+def _normalize_error_details(code: str, provided: dict[str, Any] | None) -> dict[str, Any] | None:
+    spec = ERROR_CODE_SPECS.get(code)
+    if not spec:
+        return provided
+
+    details = dict(provided or {})
+    for field in spec.get("required_details", ()):
+        details.setdefault(field, None)
+    return details or None
+
+
+def _resolve_error_spec(code: str) -> ErrorCodeSpec | None:
+    return ERROR_CODE_SPECS.get(code)
+
+
 def _error_response(
     *,
-    status: int,
+    status: int | None = None,
     code: str,
-    message: str,
+    message: str | None = None,
     details: dict[str, Any] | None = None,
 ) -> Response:
+    spec = _resolve_error_spec(code)
+    resolved_status = status if status is not None else (spec["status"] if spec else 400)
+    resolved_message = message or (spec["message"] if spec else "Webhook error")
+    normalized_details = _normalize_error_details(code, details)
+
     payload: dict[str, Any] = {
         "ok": False,
         "error": {
             "code": code,
-            "message": message,
+            "message": resolved_message,
         },
     }
-    if details:
-        payload["error"]["details"] = details
-    return json_response(payload, status=status)
+    if normalized_details:
+        payload["error"]["details"] = normalized_details
+    return json_response(payload, status=resolved_status)
 
 
 def _ok_response() -> Response:
@@ -242,24 +335,19 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
         if token_expected and not has_valid_token:
             if sunset_error:
                 return _error_response(
-                    status=401,
                     code="legacy_header_sunset",
-                    message=(
-                        "Legacy webhook auth header is no longer accepted after the configured "
-                        "sunset interval."
-                    ),
                     details=sunset_error,
                 )
 
             sources = [src for src, _, err in tokens if err is None] or ["missing"]
+            error_code = "auth_missing" if sources == ["missing"] else "auth_failed"
             _LOGGER.warning(
-                "Rejected webhook: invalid token (sources=%s)",
+                "Rejected webhook: %s (sources=%s)",
+                error_code,
                 sources,
             )
             return _error_response(
-                status=401,
-                code="invalid_token",
-                message="Webhook auth token is missing or invalid.",
+                code=error_code,
                 details={"sources": sources},
             )
 
@@ -267,41 +355,31 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             payload = await request.json()
         except Exception:  # noqa: BLE001
             return _error_response(
-                status=400,
                 code="invalid_json",
-                message="Request body must be a valid JSON object.",
             )
 
         if not isinstance(payload, dict):
             return _error_response(
-                status=400,
                 code="invalid_payload",
-                message="Request body must be a JSON object.",
                 details={"expected": "object"},
             )
 
         if "type" not in payload or not isinstance(payload.get("type"), str) or not payload.get("type", "").strip():
             return _error_response(
-                status=400,
                 code="missing_type",
-                message="Webhook envelope must include a non-empty 'type' field.",
                 details={"required_field": "type"},
             )
 
         if "data" not in payload:
             return _error_response(
-                status=400,
                 code="missing_data",
-                message="Webhook envelope must include a 'data' field.",
                 details={"required_field": "data"},
             )
 
         data = payload.get("data")
         if not isinstance(data, dict):
             return _error_response(
-                status=400,
                 code="invalid_data",
-                message="Webhook envelope field 'data' must be a JSON object.",
                 details={"field": "data", "expected": "object"},
             )
 
@@ -312,9 +390,7 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
 
         if event_type in _EVENT_TYPE_LEGACY_ALIASES:
             return _error_response(
-                status=400,
                 code="legacy_type_unsupported",
-                message="Legacy webhook event type is not supported in sunset mode.",
                 details={
                     "received": raw_event_type,
                     "canonical_type": _EVENT_TYPE_LEGACY_ALIASES[event_type],
@@ -324,9 +400,7 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
 
         if event_type not in _ALLOWED_EVENT_TYPES:
             return _error_response(
-                status=400,
                 code="unknown_type",
-                message="Unsupported webhook event type.",
                 details={
                     "received": raw_event_type,
                     "allowed": sorted(_ALLOWED_EVENT_TYPES),
