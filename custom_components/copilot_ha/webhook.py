@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 import logging
+from typing import Any
 
-from aiohttp.web import Response
+from aiohttp.web import Response, json_response
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components import webhook
@@ -18,6 +18,13 @@ EVENT_TYPE_STATUS = "status"
 EVENT_TYPE_MOOD = "mood"
 EVENT_TYPE_SUGGESTION = "suggestion"
 EVENT_TYPE_NEURON = "neuron"
+
+_ALLOWED_EVENT_TYPES = {
+    EVENT_TYPE_STATUS,
+    EVENT_TYPE_MOOD,
+    EVENT_TYPE_SUGGESTION,
+    EVENT_TYPE_NEURON,
+}
 
 # Legacy aliases accepted for backward compatibility (older Core/HA versions)
 _EVENT_TYPE_ALIAS_TO_CANONICAL = {
@@ -39,9 +46,32 @@ def _normalize_event_type(raw_event_type: object) -> str:
         key = ""
 
     if not key:
-        return EVENT_TYPE_STATUS
+        return ""
 
     return _EVENT_TYPE_ALIAS_TO_CANONICAL.get(key, key)
+
+
+def _error_response(
+    *,
+    status: int,
+    code: str,
+    message: str,
+    details: dict[str, Any] | None = None,
+) -> Response:
+    payload: dict[str, Any] = {
+        "ok": False,
+        "error": {
+            "code": code,
+            "message": message,
+        },
+    }
+    if details:
+        payload["error"]["details"] = details
+    return json_response(payload, status=status)
+
+
+def _ok_response() -> Response:
+    return json_response({"ok": True}, status=200)
 
 
 def _make_webhook_url(hass: HomeAssistant, webhook_id: str) -> str:
@@ -80,14 +110,57 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
         try:
             payload = await request.json()
         except Exception:  # noqa: BLE001
-            return Response(status=400)
+            return _error_response(
+                status=400,
+                code="invalid_json",
+                message="Request body must be valid JSON.",
+            )
 
         if not isinstance(payload, dict):
-            return Response(status=400)
+            return _error_response(
+                status=400,
+                code="invalid_payload",
+                message="Request body must be a JSON object.",
+                details={"expected": "object"},
+            )
+
+        if "type" not in payload or not isinstance(payload.get("type"), str) or not payload.get("type", "").strip():
+            return _error_response(
+                status=400,
+                code="missing_type",
+                message="Webhook envelope must include a non-empty 'type' field.",
+                details={"required_field": "type"},
+            )
+
+        if "data" not in payload:
+            return _error_response(
+                status=400,
+                code="missing_data",
+                message="Webhook envelope must include a 'data' field.",
+                details={"required_field": "data"},
+            )
+
+        data = payload.get("data")
+        if not isinstance(data, dict):
+            return _error_response(
+                status=400,
+                code="invalid_data",
+                message="Webhook envelope field 'data' must be a JSON object.",
+                details={"field": "data", "expected": "object"},
+            )
 
         # Typed envelope: {"type": "mood|neuron|suggestion|status", "data": {...}}
-        event_type = _normalize_event_type(payload.get("type", EVENT_TYPE_STATUS))
-        data = payload.get("data") if payload.get("data") else payload
+        event_type = _normalize_event_type(payload.get("type"))
+        if event_type not in _ALLOWED_EVENT_TYPES:
+            return _error_response(
+                status=400,
+                code="unknown_type",
+                message="Unsupported webhook event type.",
+                details={
+                    "received": payload.get("type"),
+                    "allowed": sorted(_ALLOWED_EVENT_TYPES),
+                },
+            )
 
         if event_type == EVENT_TYPE_MOOD:
             # Add-on pushes mood change: merge into coordinator data
@@ -130,11 +203,7 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 merged = _merge_coordinator_data(coordinator, updates)
                 coordinator.async_set_updated_data(merged)
 
-        return Response(
-            status=200,
-            text=json.dumps({"ok": True}),
-            content_type="application/json",
-        )
+        return _ok_response()
 
     webhook.async_register(
         hass,
