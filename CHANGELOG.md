@@ -2,7 +2,15 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
-## [v13.5.0] - 2026-03-05
+## [Unreleased]
+
+## [13.5.0] - 2026-03-05
+
+### Compatibility
+- Core v13.5.0 ↔ HA v13.5.0
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Test gate: /config/clawd/pilotsuite_ops/AEGIS_SMOKE_GATE_DUAL_REPO.md
+- Migration required: no
 
 ### Dashboard-Restrukturierung & 4 neue Lovelace Custom Cards
 
@@ -31,7 +39,13 @@ Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Date
 
 ---
 
-## [v13.3.0] - 2026-03-04
+## [13.3.0] - 2026-03-04
+
+### Compatibility
+- Core v13.3.0 ↔ HA v13.3.0
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Test gate: /config/clawd/pilotsuite_ops/AEGIS_SMOKE_GATE_DUAL_REPO.md
+- Migration required: no
 
 ### Version Sync mit Core v13.3.0
 
@@ -41,7 +55,13 @@ Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Date
 
 ---
 
-## [v13.2.0] - 2026-03-04
+## [13.2.0] - 2026-03-04
+
+### Compatibility
+- Core v13.2.0 ↔ HA v13.2.0
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Test gate: /config/clawd/pilotsuite_ops/AEGIS_SMOKE_GATE_DUAL_REPO.md
+- Migration required: no
 
 ### Styx Dashboard Integration & Habitus Dashboard Erweiterung
 
