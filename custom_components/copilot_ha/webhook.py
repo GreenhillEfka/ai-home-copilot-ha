@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import hashlib
+import hmac
+import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from typing import Any, TypedDict
 
@@ -20,6 +25,22 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+ENV_WEBHOOK_SIGNING_SECRET_PRIMARY = "PILOTSUITE_WEBHOOK_SIGNING_SECRET_PRIMARY"
+ENV_WEBHOOK_SIGNING_SECRET_SECONDARY = "PILOTSUITE_WEBHOOK_SIGNING_SECRET_SECONDARY"
+ENV_WEBHOOK_SIGNING_TIMESTAMP_TTL_SECONDS = "PILOTSUITE_WEBHOOK_SIGNING_TIMESTAMP_TTL_SECONDS"
+
+HEADER_WEBHOOK_TIMESTAMP = "X-Webhook-Timestamp"
+HEADER_WEBHOOK_NONCE = "X-Webhook-Nonce"
+HEADER_WEBHOOK_SIGNATURE = "X-Webhook-Signature"
+
+_SIGNATURE_SCHEME = "sha256="
+_NONCE_RE = re.compile(r"^[0-9a-f]{32}$")
+
+_SIGNING_NONCE_CACHE: dict[tuple[str, str], int] = {}
+_SIGNING_NONCE_CACHE_LOCK = asyncio.Lock()
+_SIGNING_NONCE_CACHE_MAX_ENTRIES = 10_000
+_SIGNING_NONCE_CACHE_CLEANUP_MAX_DELETES = 500
 
 # Canonical webhook event types (Core ↔ HA contract)
 EVENT_TYPE_STATUS = "status"
@@ -109,6 +130,27 @@ ERROR_CODE_SPECS: dict[str, ErrorCodeSpec] = {
         "message": "Legacy webhook auth header is no longer accepted after the configured sunset interval.",
         "required_details": ("header", "mode", "sunset_at", "sunset_at_raw"),
     },
+    # Webhook signing (HMAC) verification
+    "missing_signature_headers": {
+        "status": 401,
+        "message": "Webhook signature verification is enabled but required signature headers are missing or invalid.",
+        "required_details": ("missing",),
+    },
+    "stale_timestamp": {
+        "status": 401,
+        "message": "Webhook signature timestamp is outside the allowed TTL window.",
+        "required_details": ("ttl_seconds", "timestamp"),
+    },
+    "replay_detected": {
+        "status": 401,
+        "message": "Webhook nonce replay detected within the allowed TTL window.",
+        "required_details": ("ttl_seconds",),
+    },
+    "invalid_signature": {
+        "status": 401,
+        "message": "Webhook signature verification failed.",
+        "required_details": (),
+    },
     # Resource guards
     "rate_limited": {
         "status": 429,
@@ -125,6 +167,178 @@ ERROR_CODE_SPECS: dict[str, ErrorCodeSpec] = {
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _signing_config() -> dict[str, Any] | None:
+    """Return signing config when enabled.
+
+    Signing verification is opt-in: it is enabled when
+    ``PILOTSUITE_WEBHOOK_SIGNING_SECRET_PRIMARY`` is set.
+    """
+
+    primary = os.getenv(ENV_WEBHOOK_SIGNING_SECRET_PRIMARY, "").strip()
+    if not primary:
+        return None
+
+    secondary = os.getenv(ENV_WEBHOOK_SIGNING_SECRET_SECONDARY, "").strip() or None
+    ttl_raw = os.getenv(ENV_WEBHOOK_SIGNING_TIMESTAMP_TTL_SECONDS, "").strip()
+    ttl_default = 300
+    ttl_min = 1
+    ttl_max = 86_400
+
+    ttl = ttl_default
+    if ttl_raw:
+        try:
+            ttl = int(ttl_raw)
+        except Exception:  # noqa: BLE001
+            _LOGGER.warning(
+                "Invalid %s value %r; using default %s",
+                ENV_WEBHOOK_SIGNING_TIMESTAMP_TTL_SECONDS,
+                ttl_raw,
+                ttl_default,
+            )
+            ttl = ttl_default
+
+    if ttl < ttl_min:
+        _LOGGER.warning(
+            "%s=%s below minimum %s; clamping",
+            ENV_WEBHOOK_SIGNING_TIMESTAMP_TTL_SECONDS,
+            ttl,
+            ttl_min,
+        )
+        ttl = ttl_min
+    if ttl > ttl_max:
+        _LOGGER.warning(
+            "%s=%s above maximum %s; clamping",
+            ENV_WEBHOOK_SIGNING_TIMESTAMP_TTL_SECONDS,
+            ttl,
+            ttl_max,
+        )
+        ttl = ttl_max
+
+    return {
+        "primary": primary,
+        "secondary": secondary,
+        "ttl_seconds": ttl,
+    }
+
+
+def _compute_hmac_digest(*, secret: str, timestamp: int, nonce: str, body_bytes: bytes) -> str:
+    signing_input = f"{timestamp}.{nonce}.".encode("utf-8") + body_bytes
+    return hmac.new(secret.encode("utf-8"), signing_input, hashlib.sha256).hexdigest()
+
+
+def _parse_signature_headers(request) -> tuple[int | None, str | None, str | None, dict[str, Any]]:
+    missing: list[str] = []
+    raw_timestamp = (request.headers.get(HEADER_WEBHOOK_TIMESTAMP) or "").strip()
+    raw_nonce = (request.headers.get(HEADER_WEBHOOK_NONCE) or "").strip().lower()
+    raw_signature = (request.headers.get(HEADER_WEBHOOK_SIGNATURE) or "").strip()
+
+    if not raw_timestamp:
+        missing.append(HEADER_WEBHOOK_TIMESTAMP)
+    if not raw_nonce:
+        missing.append(HEADER_WEBHOOK_NONCE)
+    if not raw_signature:
+        missing.append(HEADER_WEBHOOK_SIGNATURE)
+
+    timestamp: int | None = None
+    if raw_timestamp:
+        try:
+            timestamp = int(raw_timestamp)
+        except Exception:  # noqa: BLE001
+            missing.append(HEADER_WEBHOOK_TIMESTAMP)
+
+    nonce: str | None = None
+    if raw_nonce and _NONCE_RE.fullmatch(raw_nonce):
+        nonce = raw_nonce
+    elif raw_nonce:
+        missing.append(HEADER_WEBHOOK_NONCE)
+
+    digest: str | None = None
+    if raw_signature.startswith(_SIGNATURE_SCHEME):
+        candidate = raw_signature[len(_SIGNATURE_SCHEME) :]
+        if len(candidate) == 64:
+            try:
+                int(candidate, 16)
+            except Exception:  # noqa: BLE001
+                pass
+            else:
+                digest = candidate.lower()
+    if raw_signature and digest is None:
+        missing.append(HEADER_WEBHOOK_SIGNATURE)
+
+    details: dict[str, Any] = {"missing": sorted(set(missing))}
+    return timestamp, nonce, digest, details
+
+
+async def _nonce_seen_or_mark(*, scope: str, nonce: str, now_epoch: int, ttl_seconds: int) -> bool:
+    """Return True if nonce was seen in-window; else mark it and return False."""
+
+    expires_at = now_epoch + ttl_seconds
+    key = (scope, nonce)
+
+    async with _SIGNING_NONCE_CACHE_LOCK:
+        deleted = 0
+        for cache_key, expiry in list(_SIGNING_NONCE_CACHE.items()):
+            if expiry <= now_epoch:
+                _SIGNING_NONCE_CACHE.pop(cache_key, None)
+                deleted += 1
+                if deleted >= _SIGNING_NONCE_CACHE_CLEANUP_MAX_DELETES:
+                    break
+
+        existing = _SIGNING_NONCE_CACHE.get(key)
+        if existing is not None and existing > now_epoch:
+            return True
+
+        _SIGNING_NONCE_CACHE[key] = expires_at
+
+        if len(_SIGNING_NONCE_CACHE) > _SIGNING_NONCE_CACHE_MAX_ENTRIES:
+            over = len(_SIGNING_NONCE_CACHE) - _SIGNING_NONCE_CACHE_MAX_ENTRIES
+            victims = sorted(_SIGNING_NONCE_CACHE.items(), key=lambda item: item[1])[:over]
+            for victim_key, _expiry in victims:
+                _SIGNING_NONCE_CACHE.pop(victim_key, None)
+
+        return False
+
+
+async def _verify_webhook_signature(
+    request,
+    *,
+    body_bytes: bytes,
+    scope: str,
+    now_epoch: int,
+    ttl_seconds: int,
+    secret_primary: str,
+    secret_secondary: str | None,
+) -> tuple[bool, str | None, dict[str, Any] | None]:
+    timestamp, nonce, digest, parse_details = _parse_signature_headers(request)
+    if timestamp is None or nonce is None or digest is None:
+        return False, "missing_signature_headers", parse_details
+
+    if abs(now_epoch - timestamp) > ttl_seconds:
+        return False, "stale_timestamp", {"ttl_seconds": ttl_seconds, "timestamp": timestamp}
+
+    def _matches(secret: str) -> bool:
+        expected = _compute_hmac_digest(
+            secret=secret,
+            timestamp=timestamp,
+            nonce=nonce,
+            body_bytes=body_bytes,
+        )
+        return hmac.compare_digest(expected, digest)
+
+    if not _matches(secret_primary) and not (secret_secondary and _matches(secret_secondary)):
+        return False, "invalid_signature", None
+
+    if await _nonce_seen_or_mark(
+        scope=scope,
+        nonce=nonce,
+        now_epoch=now_epoch,
+        ttl_seconds=ttl_seconds,
+    ):
+        return False, "replay_detected", {"ttl_seconds": ttl_seconds}
+
+    return True, None, None
 
 
 def _parse_iso_utc(raw_value: str) -> datetime:
@@ -344,12 +558,45 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 details={"sources": sources},
             )
 
-        try:
-            payload = await request.json()
-        except Exception:  # noqa: BLE001
-            return _error_response(
-                code="invalid_json",
+        signing = _signing_config()
+        if signing:
+            body_bytes = await request.read()
+            now_epoch = int(_utcnow().timestamp())
+            auth_scope_token = (
+                token_expected
+                if token_expected
+                else next((candidate for _src, candidate, err in tokens if err is None), "")
             )
+            scope = f"{webhook_id}:{auth_scope_token or 'missing'}"
+            ok, error_code, details = await _verify_webhook_signature(
+                request,
+                body_bytes=body_bytes,
+                scope=scope,
+                now_epoch=now_epoch,
+                ttl_seconds=int(signing["ttl_seconds"]),
+                secret_primary=str(signing["primary"]),
+                secret_secondary=signing.get("secondary"),
+            )
+            if not ok and error_code:
+                _LOGGER.warning(
+                    "Rejected webhook: %s (signing enabled)",
+                    error_code,
+                )
+                return _error_response(code=error_code, details=details)
+
+            try:
+                payload = json.loads(body_bytes.decode("utf-8"))
+            except Exception:  # noqa: BLE001
+                return _error_response(
+                    code="invalid_json",
+                )
+        else:
+            try:
+                payload = await request.json()
+            except Exception:  # noqa: BLE001
+                return _error_response(
+                    code="invalid_json",
+                )
 
         if not isinstance(payload, dict):
             return _error_response(

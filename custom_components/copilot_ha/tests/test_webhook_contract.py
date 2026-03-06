@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -60,6 +62,26 @@ class _BadJsonRequest:
         raise ValueError("boom")
 
 
+class _BodyRequest:
+    def __init__(self, body_bytes: bytes, headers: dict[str, str] | None = None):
+        self._body_bytes = body_bytes
+        self.headers = headers or {}
+
+    async def read(self):
+        return self._body_bytes
+
+
+def _json_bytes(payload) -> bytes:
+    # Must match Core signing input (json.dumps(...).encode('utf-8'))
+    return json.dumps(payload, default=str).encode("utf-8")
+
+
+def _signature_header(secret: str, timestamp: int, nonce: str, body_bytes: bytes) -> str:
+    signing_input = f"{timestamp}.{nonce}.".encode("utf-8") + body_bytes
+    digest = hmac.new(secret.encode("utf-8"), signing_input, hashlib.sha256).hexdigest()
+    return f"sha256={digest}"
+
+
 def _make_entry(token: str = "secret-token") -> SimpleNamespace:
     return SimpleNamespace(
         entry_id="entry-test",
@@ -110,6 +132,13 @@ def _force_transition_modes(monkeypatch):
     # Keep default behavior explicit and test-stable.
     monkeypatch.setenv("PILOTSUITE_WEBHOOK_ALIAS_MODE", "transition")
     monkeypatch.delenv(ENV_LEGACY_HEADER_SUNSET_AT, raising=False)
+    monkeypatch.delenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_PRIMARY, raising=False)
+    monkeypatch.delenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_SECONDARY, raising=False)
+    monkeypatch.delenv(webhook_module.ENV_WEBHOOK_SIGNING_TIMESTAMP_TTL_SECONDS, raising=False)
+
+    # Prevent cross-test leakage from the module-level nonce cache.
+    if hasattr(webhook_module, "_SIGNING_NONCE_CACHE"):
+        webhook_module._SIGNING_NONCE_CACHE.clear()
 
 
 @pytest.fixture
@@ -531,3 +560,196 @@ async def test_missing_token_returns_invalid_token_with_structured_error(hass, c
     assert body["ok"] is False
     assert body["error"]["code"] == "invalid_token"
     assert body["error"]["details"]["sources"] == ["missing"]
+
+
+@pytest.mark.asyncio
+async def test_signing_enabled_missing_signature_headers_returns_401(monkeypatch, hass, coordinator):
+    monkeypatch.setenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_PRIMARY, "primary-secret")
+    monkeypatch.setattr(
+        webhook_module,
+        "_utcnow",
+        lambda: datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    payload = {"type": "status", "data": {"online": True}}
+    body_bytes = _json_bytes(payload)
+    request = _BodyRequest(
+        body_bytes,
+        headers={
+            HEADER_AUTH: "secret-token",
+            # Missing X-Webhook-* headers
+        },
+    )
+
+    response = await handler(hass, "webhook-test-id", request)
+    body = _response_json(response)
+    _assert_error_contract(response, body)
+    assert response.status == 401
+    assert body["error"]["code"] == "missing_signature_headers"
+
+
+@pytest.mark.asyncio
+async def test_signing_enabled_valid_signature_returns_200(monkeypatch, hass, coordinator):
+    secret = "primary-secret"
+    monkeypatch.setenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_PRIMARY, secret)
+
+    now = datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(webhook_module, "_utcnow", lambda: now)
+    timestamp = int(now.timestamp())
+    nonce = "a" * 32
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    payload = {"type": "status", "data": {"online": True}}
+    body_bytes = _json_bytes(payload)
+    signature = _signature_header(secret, timestamp, nonce, body_bytes)
+
+    request = _BodyRequest(
+        body_bytes,
+        headers={
+            HEADER_AUTH: "secret-token",
+            webhook_module.HEADER_WEBHOOK_TIMESTAMP: str(timestamp),
+            webhook_module.HEADER_WEBHOOK_NONCE: nonce,
+            webhook_module.HEADER_WEBHOOK_SIGNATURE: signature,
+        },
+    )
+
+    response = await handler(hass, "webhook-test-id", request)
+    assert response.status == 200
+    assert _response_json(response) == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_signing_enabled_stale_timestamp_returns_401(monkeypatch, hass, coordinator):
+    secret = "primary-secret"
+    monkeypatch.setenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_PRIMARY, secret)
+    monkeypatch.setenv(webhook_module.ENV_WEBHOOK_SIGNING_TIMESTAMP_TTL_SECONDS, "300")
+
+    now = datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(webhook_module, "_utcnow", lambda: now)
+
+    timestamp = int(now.timestamp()) - 1000
+    nonce = "b" * 32
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    payload = {"type": "status", "data": {"online": True}}
+    body_bytes = _json_bytes(payload)
+    signature = _signature_header(secret, timestamp, nonce, body_bytes)
+
+    request = _BodyRequest(
+        body_bytes,
+        headers={
+            HEADER_AUTH: "secret-token",
+            webhook_module.HEADER_WEBHOOK_TIMESTAMP: str(timestamp),
+            webhook_module.HEADER_WEBHOOK_NONCE: nonce,
+            webhook_module.HEADER_WEBHOOK_SIGNATURE: signature,
+        },
+    )
+
+    response = await handler(hass, "webhook-test-id", request)
+    body = _response_json(response)
+    _assert_error_contract(response, body)
+    assert response.status == 401
+    assert body["error"]["code"] == "stale_timestamp"
+
+
+@pytest.mark.asyncio
+async def test_signing_enabled_invalid_signature_returns_401(monkeypatch, hass, coordinator):
+    secret = "primary-secret"
+    monkeypatch.setenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_PRIMARY, secret)
+
+    now = datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(webhook_module, "_utcnow", lambda: now)
+    timestamp = int(now.timestamp())
+    nonce = "c" * 32
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    payload = {"type": "status", "data": {"online": True}}
+    body_bytes = _json_bytes(payload)
+    signature = _signature_header("wrong-secret", timestamp, nonce, body_bytes)
+
+    request = _BodyRequest(
+        body_bytes,
+        headers={
+            HEADER_AUTH: "secret-token",
+            webhook_module.HEADER_WEBHOOK_TIMESTAMP: str(timestamp),
+            webhook_module.HEADER_WEBHOOK_NONCE: nonce,
+            webhook_module.HEADER_WEBHOOK_SIGNATURE: signature,
+        },
+    )
+
+    response = await handler(hass, "webhook-test-id", request)
+    body = _response_json(response)
+    _assert_error_contract(response, body)
+    assert response.status == 401
+    assert body["error"]["code"] == "invalid_signature"
+
+
+@pytest.mark.asyncio
+async def test_signing_enabled_replay_detected_returns_401(monkeypatch, hass, coordinator):
+    secret = "primary-secret"
+    monkeypatch.setenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_PRIMARY, secret)
+
+    now = datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(webhook_module, "_utcnow", lambda: now)
+    timestamp = int(now.timestamp())
+    nonce = "d" * 32
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    payload = {"type": "status", "data": {"online": True}}
+    body_bytes = _json_bytes(payload)
+    signature = _signature_header(secret, timestamp, nonce, body_bytes)
+
+    headers = {
+        HEADER_AUTH: "secret-token",
+        webhook_module.HEADER_WEBHOOK_TIMESTAMP: str(timestamp),
+        webhook_module.HEADER_WEBHOOK_NONCE: nonce,
+        webhook_module.HEADER_WEBHOOK_SIGNATURE: signature,
+    }
+
+    first = await handler(hass, "webhook-test-id", _BodyRequest(body_bytes, headers=headers))
+    assert first.status == 200
+
+    second = await handler(hass, "webhook-test-id", _BodyRequest(body_bytes, headers=headers))
+    body = _response_json(second)
+    _assert_error_contract(second, body)
+    assert second.status == 401
+    assert body["error"]["code"] == "replay_detected"
+
+
+@pytest.mark.asyncio
+async def test_signing_key_rotation_accepts_secondary(monkeypatch, hass, coordinator):
+    old = "old-secret"
+    new = "new-secret"
+    monkeypatch.setenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_PRIMARY, old)
+    monkeypatch.setenv(webhook_module.ENV_WEBHOOK_SIGNING_SECRET_SECONDARY, new)
+
+    now = datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(webhook_module, "_utcnow", lambda: now)
+    timestamp = int(now.timestamp())
+    nonce = "e" * 32
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    payload = {"type": "status", "data": {"online": True}}
+    body_bytes = _json_bytes(payload)
+    signature = _signature_header(new, timestamp, nonce, body_bytes)
+
+    request = _BodyRequest(
+        body_bytes,
+        headers={
+            HEADER_AUTH: "secret-token",
+            webhook_module.HEADER_WEBHOOK_TIMESTAMP: str(timestamp),
+            webhook_module.HEADER_WEBHOOK_NONCE: nonce,
+            webhook_module.HEADER_WEBHOOK_SIGNATURE: signature,
+        },
+    )
+
+    response = await handler(hass, "webhook-test-id", request)
+    assert response.status == 200
+    assert _response_json(response) == {"ok": True}
