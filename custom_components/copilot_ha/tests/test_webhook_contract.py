@@ -89,6 +89,78 @@ LEGACY_CASES = [
     ("neuron_update", "neuron", {"neurons": {"n1": {"active": True}}}),
 ]
 
+# -----------------------------------------------------------------------------
+# Fuzz-style contract cases (PS-QA-027)
+# -----------------------------------------------------------------------------
+
+LARGE_TYPE_STRING = "x" * 1024
+
+FUZZED_TYPE_CASES = [
+    (
+        "type_none",
+        {"type": None, "data": {}},
+        "missing_type",
+        {"required_field": "type"},
+    ),
+    (
+        "type_empty",
+        {"type": "", "data": {}},
+        "missing_type",
+        {"required_field": "type"},
+    ),
+    (
+        "type_whitespace",
+        {"type": "   ", "data": {}},
+        "missing_type",
+        {"required_field": "type"},
+    ),
+    (
+        "type_list",
+        {"type": [], "data": {}},
+        "missing_type",
+        {"required_field": "type"},
+    ),
+    (
+        "type_dict",
+        {"type": {}, "data": {}},
+        "missing_type",
+        {"required_field": "type"},
+    ),
+    (
+        "nested_payload_missing_type",
+        {"payload": {"type": "status", "data": {"online": True}}},
+        "missing_type",
+        {"required_field": "type"},
+    ),
+    (
+        "type_unicode",
+        {"type": "💥", "data": {}},
+        "unknown_type",
+        {"received": "💥"},
+    ),
+    (
+        "type_with_nul",
+        {"type": "status\0", "data": {}},
+        "unknown_type",
+        {"received": "status\0"},
+    ),
+    (
+        "type_large_string",
+        {"type": LARGE_TYPE_STRING, "data": {}},
+        "unknown_type",
+        {"received": LARGE_TYPE_STRING},
+    ),
+]
+
+INVALID_DATA_CASES = [
+    ("data_none", None),
+    ("data_list", []),
+    ("data_str", "oops"),
+    ("data_int", 1),
+    ("data_float", 1.5),
+    ("data_bool", True),
+]
+
 
 @pytest.mark.asyncio
 async def test_missing_type_returns_400_with_structured_error(hass, coordinator):
