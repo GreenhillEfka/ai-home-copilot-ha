@@ -1,66 +1,105 @@
+/*
+  PilotSuite Styx Dashboard — Shared UI State Components
+
+  Purpose: keep Empty/Error/Skeleton states + degraded banner visually consistent
+  with the dashboard design system in dashboard/static/css/style.css.
+
+  Constraints:
+  - No functional changes; styling only.
+  - Bridge to existing design tokens (primary/warning/danger/bg/text/border).
+*/
+
 .ui-state-shell {
-  padding: 24px;
-  margin: 24px auto;
-  border-radius: var(--border-radius, 12px);
-  border: 1px solid var(--border-color, #e2e8f0);
-  background: var(--bg-card, var(--bg-secondary, #ffffff));
-  color: var(--text-primary, #1e293b);
+  /* Design-system bridge (with safe fallbacks) */
+  --ui-state-accent: var(--primary-color, #2563eb);
+  --ui-state-bg: var(--bg-secondary, #1e293b);
+  --ui-state-surface: var(--bg-tertiary, #334155);
+  --ui-state-border: var(--border-color, #475569);
+  --ui-state-radius: 12px;
+
+  width: 100%;
+  padding: 20px;
+  margin: 0;
+
+  border-radius: var(--ui-state-radius);
+  border: 1px solid var(--ui-state-border);
+  border-left: 4px solid var(--ui-state-accent);
+  background: var(--ui-state-bg);
+  color: var(--text-primary, #f1f5f9);
+
   display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.1));
-  max-width: 640px;
+  align-items: flex-start;
+  gap: 14px;
 }
 
 .ui-state-shell .ui-state-icon-wrap {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   flex-shrink: 0;
-  color: var(--text-muted, #64748b);
+
+  background: var(--ui-state-surface);
+  border: 1px solid var(--ui-state-border);
+  color: var(--ui-state-accent);
 }
 
 .ui-state-shell .ui-state-content {
   flex: 1;
+  min-width: 0;
 }
 
 .ui-state-title {
-  margin: 0 0 8px;
-  font-size: 1rem;
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-primary, #f1f5f9);
 }
 
 .ui-state-message,
 .ui-state-detail {
   margin: 0;
-  font-size: 0.9rem;
-  color: var(--text-secondary, #64748b);
-  line-height: 1.4;
+  font-size: 0.95rem;
+  color: var(--text-secondary, #94a3b8);
+  line-height: 1.5;
 }
 
 .ui-state-detail {
-  margin-top: 4px;
-  color: var(--text-muted, #94a3b8);
-  font-size: 0.84rem;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  opacity: 0.95;
 }
 
 .ui-state-action {
-  margin-top: 12px;
-  padding: 8px 14px;
+  margin-top: 14px;
+  padding: 12px 16px;
   border: 0;
   border-radius: 8px;
   background: var(--primary-color, #2563eb);
-  color: #ffffff;
-  font-size: 0.88rem;
+  color: var(--text-primary, #ffffff);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1;
+
   cursor: pointer;
-  transition: opacity 0.2s ease;
+  transition: background-color 0.2s ease, transform 0.05s ease, opacity 0.2s ease;
 }
 
 .ui-state-action:hover:not(:disabled) {
-  opacity: 0.9;
+  background: var(--primary-dark, #1e40af);
+}
+
+.ui-state-action:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ui-state-action:focus-visible {
+  outline: 2px solid var(--primary-color, #2563eb);
+  outline-offset: 2px;
 }
 
 .ui-state-action:disabled {
@@ -68,28 +107,24 @@
   cursor: not-allowed;
 }
 
+/* Accent mapping: info/warn/error (and loading) */
 .ui-state-skeleton {
-  border-left: 4px solid var(--primary-color, #2563eb);
+  --ui-state-accent: var(--primary-color, #2563eb);
 }
 
-.ui-state-skeleton .ui-state-icon-wrap {
-  color: var(--primary-color, #2563eb);
-}
-
+/* Empty should read as “info/neutral” (not error) */
 .ui-state-empty {
-  border-left: 4px solid var(--info-color, #06b6d4);
-}
-
-.ui-state-empty .ui-state-icon-wrap {
-  color: var(--info-color, #06b6d4);
+  /* Prefer --info-color when available; fall back to secondary */
+  --ui-state-accent: var(--info-color, var(--secondary-color, #64748b));
 }
 
 .ui-state-error {
-  border-left: 4px solid var(--danger-color, #ef4444);
+  --ui-state-accent: var(--danger-color, #ef4444);
 }
 
-.ui-state-error .ui-state-icon-wrap {
-  color: var(--danger-color, #ef4444);
+/* Optional helper (not currently used by components, but keeps the system complete) */
+.ui-state-warning {
+  --ui-state-accent: var(--warning-color, #f59e0b);
 }
 
 .ui-state-skeleton .ui-state-spinner {
@@ -108,6 +143,10 @@
   to { transform: rotate(360deg); }
 }
 
+/* Global degraded connectivity banner
+   - Treat as WARN (amber), not ERROR (red)
+   - Keep legible with dark text over warning surface
+*/
 .ui-global-degraded-banner {
   position: fixed;
   z-index: 1200;
@@ -124,14 +163,16 @@
 
 .ui-global-degraded-banner__inner {
   margin: 0;
-  min-height: 42px;
+  min-height: 44px;
   padding: 10px 16px;
   display: flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
-  color: #ffffff;
-  box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
+
+  background: var(--warning-color, #f59e0b);
+  color: var(--bg-color, #0f172a);
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   font-size: 0.92rem;
   pointer-events: auto;
 }
@@ -143,12 +184,22 @@
 .ui-global-degraded-banner__close {
   margin-left: auto;
   border: 0;
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  background: rgba(15, 23, 42, 0.18);
+  color: var(--bg-color, #0f172a);
   border-radius: 6px;
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ui-global-degraded-banner__close:hover {
+  background: rgba(15, 23, 42, 0.26);
+}
+
+.ui-global-degraded-banner__close:focus-visible {
+  outline: 2px solid rgba(15, 23, 42, 0.55);
+  outline-offset: 2px;
 }
 
 .ui-global-degraded-banner[hidden] {
@@ -157,7 +208,23 @@
 
 @media (max-width: 768px) {
   .ui-state-shell {
-    margin: 16px;
-    max-width: none;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .ui-state-shell .ui-state-icon-wrap {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-state-skeleton .ui-state-spinner {
+    animation: none;
+  }
+
+  .ui-global-degraded-banner {
+    transition: none;
   }
 }
