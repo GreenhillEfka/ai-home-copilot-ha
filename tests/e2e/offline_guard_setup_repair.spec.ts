@@ -31,7 +31,7 @@ test.describe('Offline/Degraded Guards (Setup/Repair)', () => {
     });
 
     // Avoid waiting for networkidle: socket.io retries can keep the network busy.
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' });
+    await page.goto(DASHBOARD_URL, { waitUntil: 'domcontentloaded' });
 
     // Basic page smoke
     await expect(page.locator('.dashboard-container')).toBeVisible();
