@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from aiohttp.web import Response, json_response
@@ -26,20 +27,46 @@ _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_NEURON,
 }
 
-# Legacy aliases accepted for backward compatibility (older Core/HA versions)
-_EVENT_TYPE_ALIAS_TO_CANONICAL = {
-    "status": EVENT_TYPE_STATUS,
-    "mood": EVENT_TYPE_MOOD,
+# Canonical aliases should continue to map directly; legacy aliases are only accepted in
+# transition mode.
+_EVENT_TYPE_CANONICAL_TO_CANONICAL = {
+    EVENT_TYPE_STATUS: EVENT_TYPE_STATUS,
+    EVENT_TYPE_MOOD: EVENT_TYPE_MOOD,
+    EVENT_TYPE_SUGGESTION: EVENT_TYPE_SUGGESTION,
+    EVENT_TYPE_NEURON: EVENT_TYPE_NEURON,
+}
+
+_EVENT_TYPE_LEGACY_ALIASES = {
     "mood_changed": EVENT_TYPE_MOOD,
-    "suggestion": EVENT_TYPE_SUGGESTION,
     "suggestion_new": EVENT_TYPE_SUGGESTION,
-    "neuron": EVENT_TYPE_NEURON,
     "neuron_update": EVENT_TYPE_NEURON,
 }
 
+_EVENT_TYPE_ALIAS_TO_CANONICAL = {
+    **_EVENT_TYPE_CANONICAL_TO_CANONICAL,
+    **_EVENT_TYPE_LEGACY_ALIASES,
+}
 
-def _normalize_event_type(raw_event_type: object) -> str:
-    """Map legacy and canonical event types to canonical contract values."""
+
+def _legacy_aliases_enabled() -> bool:
+    """Return True when legacy alias event types are still allowed.
+
+    Controlled via env var:
+    - "transition" (default): legacy aliases accepted and mapped to canonical types.
+    - "sunset": legacy aliases rejected with deterministic error code.
+    """
+
+    mode = os.getenv("PILOTSUITE_WEBHOOK_ALIAS_MODE", "transition").strip().lower()
+    return mode not in {"sunset", "disabled", "off", "false", "0"}
+
+
+def _normalize_event_type(raw_event_type: object, *, allow_legacy_aliases: bool = True) -> str:
+    """Map legacy and canonical event types to canonical contract values.
+
+    Returns a canonical type for known events, or the normalized raw string for
+    unknown events.
+    """
+
     if isinstance(raw_event_type, str):
         key = raw_event_type.strip().lower()
     else:
@@ -47,6 +74,9 @@ def _normalize_event_type(raw_event_type: object) -> str:
 
     if not key:
         return ""
+
+    if (not allow_legacy_aliases) and key in _EVENT_TYPE_LEGACY_ALIASES:
+        return key
 
     return _EVENT_TYPE_ALIAS_TO_CANONICAL.get(key, key)
 
@@ -89,6 +119,7 @@ async def async_ensure_webhook(hass: HomeAssistant, entry) -> str:
     return webhook_id
 
 
+
 def _merge_coordinator_data(coordinator, updates: dict) -> dict:
     """Merge partial updates into existing coordinator data dict."""
     current = coordinator.data if isinstance(coordinator.data, dict) else {}
@@ -113,7 +144,7 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             return _error_response(
                 status=400,
                 code="invalid_json",
-                message="Request body must be valid JSON.",
+                message="Request body must be a valid JSON object.",
             )
 
         if not isinstance(payload, dict):
@@ -150,14 +181,29 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             )
 
         # Typed envelope: {"type": "mood|neuron|suggestion|status", "data": {...}}
-        event_type = _normalize_event_type(payload.get("type"))
+        allow_legacy_aliases = _legacy_aliases_enabled()
+        raw_event_type = payload.get("type")
+        event_type = _normalize_event_type(raw_event_type, allow_legacy_aliases=allow_legacy_aliases)
+
+        if event_type in _EVENT_TYPE_LEGACY_ALIASES:
+            return _error_response(
+                status=400,
+                code="legacy_type_unsupported",
+                message="Legacy webhook event type is not supported in sunset mode.",
+                details={
+                    "received": raw_event_type,
+                    "canonical_type": _EVENT_TYPE_LEGACY_ALIASES[event_type],
+                    "mode": "sunset",
+                },
+            )
+
         if event_type not in _ALLOWED_EVENT_TYPES:
             return _error_response(
                 status=400,
                 code="unknown_type",
                 message="Unsupported webhook event type.",
                 details={
-                    "received": payload.get("type"),
+                    "received": raw_event_type,
                     "allowed": sorted(_ALLOWED_EVENT_TYPES),
                 },
             )

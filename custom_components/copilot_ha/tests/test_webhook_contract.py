@@ -54,6 +54,12 @@ def _response_json(response) -> dict:
     return json.loads(response.text)
 
 
+@pytest.fixture(autouse=True)
+def _force_transition_alias_mode(monkeypatch):
+    # Keep default behavior explicit and test-stable.
+    monkeypatch.setenv("PILOTSUITE_WEBHOOK_ALIAS_MODE", "transition")
+
+
 @pytest.fixture
 def hass():
     instance = MagicMock()
@@ -68,6 +74,20 @@ def coordinator():
     instance.data = {}
     instance.async_set_updated_data = MagicMock()
     return instance
+
+
+CANONICAL_CASES = [
+    ("status", {"online": True, "version": "13.5.0"}),
+    ("mood", {"mood": "calm", "confidence": 0.9}),
+    ("neuron", {"neurons": {"n1": {"active": True}}}),
+    ("suggestion", {"title": "Test suggestion", "action": "noop"}),
+]
+
+LEGACY_CASES = [
+    ("mood_changed", "mood", {"mood": "calm", "confidence": 0.9}),
+    ("suggestion_new", "suggestion", {"title": "Legacy suggestion", "action": "noop"}),
+    ("neuron_update", "neuron", {"neurons": {"n1": {"active": True}}}),
+]
 
 
 @pytest.mark.asyncio
@@ -122,15 +142,7 @@ async def test_unknown_type_returns_400_with_structured_error(hass, coordinator)
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("event_type", "data"),
-    [
-        ("status", {"online": True, "version": "13.5.0"}),
-        ("mood", {"mood": "calm", "confidence": 0.9}),
-        ("neuron", {"neurons": {"n1": {"active": True}}}),
-        ("suggestion", {"title": "Test suggestion", "action": "noop"}),
-    ],
-)
+@pytest.mark.parametrize(("event_type", "data"), CANONICAL_CASES)
 async def test_canonical_types_with_valid_data_return_200(hass, coordinator, event_type, data):
     handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
 
@@ -146,3 +158,51 @@ async def test_canonical_types_with_valid_data_return_200(hass, coordinator, eve
 
     if event_type == "suggestion":
         hass.bus.async_fire.assert_called_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("event_type", "canonical_type", "data"), LEGACY_CASES)
+async def test_legacy_aliases_in_transition_mode_still_map_to_canonical(hass, coordinator, event_type, canonical_type, data):
+    # Transition mode keeps backward-compatibility aliases active.
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": event_type, "data": data},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 200
+    assert body == {"ok": True}
+    if canonical_type == "suggestion":
+        hass.bus.async_fire.assert_called_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("event_type", "canonical_type", "data"), LEGACY_CASES)
+async def test_legacy_aliases_in_sunset_mode_return_400_with_stable_error_code(
+    hass,
+    coordinator,
+    event_type,
+    canonical_type,
+    data,
+    monkeypatch,
+):
+    # Sunset mode explicitly rejects legacy aliases with stable contract code.
+    monkeypatch.setenv("PILOTSUITE_WEBHOOK_ALIAS_MODE", "sunset")
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": event_type, "data": data},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 400
+    assert body["ok"] is False
+    assert body["error"]["code"] == "legacy_type_unsupported"
+    assert body["error"]["details"]["received"] == event_type
+    assert body["error"]["details"]["canonical_type"] == canonical_type
+    assert body["error"]["details"]["mode"] == "sunset"
