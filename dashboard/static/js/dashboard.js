@@ -332,9 +332,12 @@ class HabitusDashboard {
     grid.innerHTML = `<div class="empty-state"><p>${message}</p></div>`;
   }
 
-  renderZoneError(zoneId, { message = 'Fehler', detail = '' } = {}) {
+  renderZoneError(zoneId, { message = 'Fehler', detail = '', errorClass = null } = {}) {
     const grid = document.getElementById(`grid-${zoneId}`);
     if (!grid) return;
+
+    const resolvedErrorClass = errorClass
+      || (window.UiState && window.UiState.ErrorClass ? window.UiState.ErrorClass.NETWORK : 'network');
 
     if (this.ui) {
       this.ui.error(grid, {
@@ -342,6 +345,7 @@ class HabitusDashboard {
         message,
         detail,
         degraded: true,
+        errorClass: resolvedErrorClass,
         onRetry: () => this.refreshZone(zoneId)
       });
       return;

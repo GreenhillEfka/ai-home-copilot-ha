@@ -23,6 +23,12 @@
     RETRY_FAILED: 'ui_state_retry_failed'
   });
 
+  const UI_ERROR_CLASS = Object.freeze({
+    AUTH: 'auth',
+    NETWORK: 'network',
+    UNKNOWN: 'unknown'
+  });
+
   const TELEMETRY_EVENT_KEYS = new Set(Object.values(UI_STATE_EVENTS));
 
   function isBrowser() {
@@ -285,6 +291,7 @@
         container: null,
         scope: 'global',
         degraded: false,
+        errorClass: UI_ERROR_CLASS.UNKNOWN,
         title: 'Es ist ein Fehler aufgetreten',
         message: 'Die Anfrage konnte nicht verarbeitet werden.',
         icon: '<span class="ui-state-icon" aria-hidden="true">⚠️</span>',
@@ -362,7 +369,8 @@
         source: this.options.source || 'state_error',
         message: this.options.message,
         detail: this.options.detail,
-        degraded: !!this.options.degraded
+        degraded: !!this.options.degraded,
+        error_class: this.options.errorClass || UI_ERROR_CLASS.UNKNOWN
       });
 
       return this;
@@ -556,6 +564,7 @@
 
   window.UiState = {
     EventKeys: UI_STATE_EVENTS,
+    ErrorClass: UI_ERROR_CLASS,
     telemetry,
     StateSkeleton,
     StateEmpty,
