@@ -27,6 +27,8 @@ class HabitusDashboard {
     this.connected = false;
     this.activeZone = this.zones[0]?.id || 'wohn';
     this.zoneData = {};
+    this.zoneMeta = {};
+    this._globalStale = false;
     this.theme = 'light';
 
     // Shared UI State toolkit (wenn geladen)
@@ -220,6 +222,9 @@ class HabitusDashboard {
       this.updateConnectionStatus('connected');
       if (this.ui) this.ui.setGlobalDegraded(false, { reason: 'ws_connected' });
 
+      // Start a sync pass (widget-level partial failure instead of full-page error).
+      this._markAllZonesLoading('Synchronisiere…');
+
       // Request zone data
       this.socket.emit('request_zone_data', { zones: this.zones.map(z => z.id) });
     });
@@ -229,11 +234,16 @@ class HabitusDashboard {
       this.updateConnectionStatus('disconnected');
       if (this.ui) this.ui.setGlobalDegraded(true, { reason: reason || 'ws_disconnected' });
 
-      // Active zone goes into error partial state
-      this.renderZoneError(this.activeZone, {
-        message: 'Verbindung unterbrochen.',
-        detail: reason ? String(reason) : 'disconnect'
-      });
+      // Partial failure feedback: keep last-known values but mark stale in every widget.
+      this._markAllZonesStale(reason ? String(reason) : 'disconnect');
+
+      // If the active zone has no cached data, show an explicit error state.
+      if (!this.zoneData[this.activeZone]) {
+        this.renderZoneError(this.activeZone, {
+          message: 'Verbindung unterbrochen.',
+          detail: reason ? String(reason) : 'disconnect'
+        });
+      }
     });
 
     this.socket.on('connect_error', (error) => {
@@ -241,10 +251,14 @@ class HabitusDashboard {
       this.updateConnectionStatus('disconnected');
       if (this.ui) this.ui.setGlobalDegraded(true, { reason: error?.message || 'connect_error' });
 
-      this.renderZoneError(this.activeZone, {
-        message: 'Konnte keine Live-Verbindung aufbauen.',
-        detail: error?.message || 'connect_error'
-      });
+      this._markAllZonesStale(error?.message || 'connect_error');
+
+      if (!this.zoneData[this.activeZone]) {
+        this.renderZoneError(this.activeZone, {
+          message: 'Konnte keine Live-Verbindung aufbauen.',
+          detail: error?.message || 'connect_error'
+        });
+      }
     });
 
     this.socket.on('zone_update', (data) => {
@@ -270,6 +284,44 @@ class HabitusDashboard {
     if (statusText) statusText.textContent = status === 'connected' ? 'Verbunden' : 'Getrennt';
   }
 
+  _getZoneMeta(zoneId) {
+    if (!this.zoneMeta[zoneId]) {
+      this.zoneMeta[zoneId] = {
+        stale: false,
+        lastUpdatedAt: null,
+        lastError: null,
+        missingKeys: [],
+      };
+    }
+    return this.zoneMeta[zoneId];
+  }
+
+  _setZoneMeta(zoneId, patch = {}) {
+    const meta = this._getZoneMeta(zoneId);
+    this.zoneMeta[zoneId] = { ...meta, ...patch };
+  }
+
+  _markAllZonesStale(reason) {
+    this._globalStale = true;
+    this.zones.forEach(z => {
+      this._setZoneMeta(z.id, { stale: true, lastError: reason || 'disconnected' });
+      // If we have data, keep rendering cards but mark them stale.
+      if (this.zoneData[z.id]) {
+        this.renderZoneCards(z.id);
+      } else {
+        this.renderZoneEmpty(z.id, 'Offline — keine Daten verfügbar.');
+      }
+    });
+  }
+
+  _markAllZonesLoading(message = 'Synchronisiere…') {
+    this._globalStale = false;
+    this.zones.forEach(z => {
+      this._setZoneMeta(z.id, { stale: false, lastError: null });
+      this.renderZoneLoading(z.id, message);
+    });
+  }
+
   handleZoneUpdate(data) {
     if (!data || !data.zoneId) return;
 
@@ -278,6 +330,13 @@ class HabitusDashboard {
       ...(this.zoneData[data.zoneId] || {}),
       ...(data.data || {})
     };
+
+    this._globalStale = false;
+    this._setZoneMeta(data.zoneId, {
+      stale: false,
+      lastUpdatedAt: new Date().toISOString(),
+      lastError: null,
+    });
 
     // Render only affected zone
     this.renderZoneCards(data.zoneId);
@@ -360,16 +419,35 @@ class HabitusDashboard {
     if (!grid) return;
 
     if (!data) {
-      this.renderZoneEmpty(zoneId);
+      if (this._globalStale || !this.connected) {
+        this.renderZoneEmpty(zoneId, 'Offline — keine Daten verfügbar.');
+      } else {
+        this.renderZoneEmpty(zoneId);
+      }
       return;
     }
 
+    const meta = this._getZoneMeta(zoneId);
+    const requiredKeys = ['temperature', 'targetTemp', 'humidity', 'lights', 'brightness'];
+    const missingKeys = requiredKeys.filter(k => data[k] === undefined || data[k] === null);
+
+    const isStale = Boolean(meta.stale || this._globalStale || !this.connected);
+    const isPartial = missingKeys.length > 0;
+
+    const statusText = isStale ? 'Offline' : (isPartial ? 'Teildaten' : 'Aktiv');
+    const statusDotClass = isStale ? 'warning' : (isPartial ? 'warning' : '');
+
+    const zoneBannerHtml = isStale
+      ? `<div class="zone-card-banner warn">Offline · letzte bekannte Daten</div>`
+      : (isPartial ? `<div class="zone-card-banner warn">Teildaten · ${missingKeys.length} Feld(er) fehlen</div>` : '');
+
     // Mindestens 1 Element mit .widget/.card/.zone-item für E2E
-    grid.innerHTML = `
+    grid.innerHTML = `${zoneBannerHtml}
+
       <div class="zone-card widget widget-container card" data-widget-id="temp-${zoneId}" data-x="0" data-y="0">
         <div class="zone-card-header">
           <div class="zone-card-icon"><i class="mdi mdi-thermometer"></i></div>
-          <div class="zone-card-status"><span class="status-dot"></span><span>Aktiv</span></div>
+          <div class="zone-card-status"><span class="status-dot ${statusDotClass}"></span><span>${statusText}</span></div>
         </div>
         <div class="zone-card-title">Temperatur</div>
         <div class="zone-card-metrics">
@@ -387,7 +465,7 @@ class HabitusDashboard {
       <div class="zone-card widget widget-container card" data-widget-id="humidity-${zoneId}" data-x="0" data-y="0">
         <div class="zone-card-header">
           <div class="zone-card-icon"><i class="mdi mdi-water-percent"></i></div>
-          <div class="zone-card-status"><span class="status-dot"></span><span>Aktiv</span></div>
+          <div class="zone-card-status"><span class="status-dot ${statusDotClass}"></span><span>${statusText}</span></div>
         </div>
         <div class="zone-card-title">Luftfeuchtigkeit</div>
         <div class="zone-card-metrics">
@@ -405,7 +483,7 @@ class HabitusDashboard {
       <div class="zone-card widget widget-container card" data-widget-id="lights-${zoneId}" data-x="0" data-y="0">
         <div class="zone-card-header">
           <div class="zone-card-icon"><i class="mdi mdi-lightbulb"></i></div>
-          <div class="zone-card-status"><span class="status-dot"></span><span>Aktiv</span></div>
+          <div class="zone-card-status"><span class="status-dot ${statusDotClass}"></span><span>${statusText}</span></div>
         </div>
         <div class="zone-card-title">Beleuchtung</div>
         <div class="zone-card-metrics">
@@ -429,6 +507,7 @@ class HabitusDashboard {
 
   loadZoneDataDemo() {
     // Simulierter Payload (E2E + UX)
+    this._globalStale = false;
     this.zones.forEach(zone => {
       this.zoneData[zone.id] = {
         temperature: Number((20 + Math.random() * 3).toFixed(1)),
@@ -437,6 +516,11 @@ class HabitusDashboard {
         lights: Math.floor(Math.random() * 5),
         brightness: Math.floor(40 + Math.random() * 40)
       };
+      this._setZoneMeta(zone.id, {
+        stale: false,
+        lastUpdatedAt: new Date().toISOString(),
+        lastError: null,
+      });
       this.renderZoneCards(zone.id);
     });
 
@@ -451,10 +535,11 @@ class HabitusDashboard {
     }
 
     // Offline fallback
+    this._setZoneMeta(zoneId, { stale: true, lastError: 'offline' });
     this.renderZoneLoading(zoneId, 'Aktualisiere…');
     setTimeout(() => {
       if (!this.zoneData[zoneId]) {
-        this.renderZoneEmpty(zoneId);
+        this.renderZoneEmpty(zoneId, 'Offline — keine Daten verfügbar.');
       } else {
         this.renderZoneCards(zoneId);
       }
