@@ -135,19 +135,35 @@ class StyxZoneCard extends HTMLElement {
         active: null,
         total: null,
         score: null,
+        missingReason: 'Sensordaten fehlen',
       };
     }
 
     const nodes = Array.isArray(nodeEntity.attributes?.nodes) ? nodeEntity.attributes.nodes : [];
-    const zoneNodes = nodes.filter(n => n.zone === zoneId || n.rooms?.includes(zoneId));
+    const zoneNodes = nodes.filter(n => n.zone === zoneId || (Array.isArray(n.rooms) && n.rooms.includes(zoneId)));
+
+    if (zoneNodes.length === 0) {
+      return {
+        available: false,
+        active: null,
+        total: null,
+        score: null,
+        missingReason: 'Subsensoren fehlen',
+      };
+    }
+
+    const scoreValues = zoneNodes
+      .map(n => Number(n.score))
+      .filter(v => Number.isFinite(v));
 
     return {
       available: true,
       active: zoneNodes.filter(n => n.state === 'on').length,
       total: zoneNodes.length,
-      score: zoneNodes.length > 0
-        ? zoneNodes.reduce((acc, n) => acc + (n.score || 0), 0) / zoneNodes.length
-        : 0,
+      score: scoreValues.length > 0
+        ? scoreValues.reduce((acc, value) => acc + value, 0) / scoreValues.length
+        : null,
+      scoreMissing: scoreValues.length === 0,
     };
   }
 
@@ -167,6 +183,27 @@ class StyxZoneCard extends HTMLElement {
     }
 
     return this._buildGaugeSvg(mood.value, mood.start, mood.end, mood.label);
+  }
+
+  _buildPartialBadges(moodData, neuronActivity, trackNeuron = true) {
+    const missing = [];
+
+    const missingMoods = (moodData || []).filter(m => m.available === false);
+    if (missingMoods.length > 0) {
+      missing.push(`Mood: ${missingMoods.map(m => m.label).join(', ')}`);
+    }
+
+    if (trackNeuron) {
+      if (!neuronActivity || neuronActivity.available === false) {
+        missing.push('Neuronen');
+      } else if (neuronActivity.scoreMissing) {
+        missing.push('Neuronen (Score)');
+      }
+    }
+
+    return missing.length
+      ? `<div class="partial-badges">${missing.map(item => `<span class="partial-badge">${item}</span>`).join('')}</div>`
+      : '';
   }
 
   _buildGaugeSvg(value, startColor, endColor, label, size = 70) {
@@ -202,12 +239,15 @@ class StyxZoneCard extends HTMLElement {
 
   _buildNeuronBar(activity) {
     if (!activity || activity.available === false) {
-      return `<div class="neuron-bar-container neuron-missing">${this._buildMissingTileValue('Neuronen', 'Sensordaten fehlen')}</div>`;
+      const reason = activity?.missingReason || 'Sensordaten fehlen';
+      return `<div class="neuron-bar-container neuron-missing">${this._buildMissingTileValue('Neuronen', reason)}</div>`;
     }
 
-    const { active, total, score } = activity;
+    const { active, total, score, scoreMissing } = activity;
     const pct = total > 0 ? (active / total) * 100 : 0;
-    const scorePct = Math.max(0, Math.min(100, score * 100));
+    const activeLabel = Number.isFinite(total) ? `${active}/${total} aktiv` : 'n/a';
+    const scorePct = Number.isFinite(score) ? Math.max(0, Math.min(100, score * 100)) : null;
+    const scoreLabel = scorePct === null ? 'n/a' : `${Math.round(scorePct)}%`;
 
     return `
       <div class="neuron-bar-container">
@@ -217,11 +257,11 @@ class StyxZoneCard extends HTMLElement {
         </div>
         <div class="neuron-bar-track">
           <div class="neuron-bar-fill" style="width: ${pct}%"></div>
-          <div class="neuron-score-marker" style="left: ${scorePct}%"></div>
+          ${scoreMissing ? '' : `<div class="neuron-score-marker" style="left: ${scorePct}%"></div>`}
         </div>
         <div class="neuron-bar-stats">
-          <span>${active}/${total} aktiv</span>
-          <span>Score: ${Math.round(scorePct)}%</span>
+          <span>${activeLabel}</span>
+          <span>Score: ${scoreLabel}</span>
         </div>
       </div>
     `;
@@ -233,8 +273,8 @@ class StyxZoneCard extends HTMLElement {
     const hasMode = Boolean(zone.mode);
     const moodData = this._config.show_mood ? this._getMoodData(zoneId) : [];
     const neuronActivity = this._config.show_neuron_activity ? this._getNeuronActivity(zoneId) : null;
-    const hasPartialData = moodData.some(m => m.available === false) ||
-      (this._config.show_neuron_activity && (!neuronActivity || neuronActivity.available === false));
+    const partialBadgesHtml = this._buildPartialBadges(moodData, neuronActivity, this._config.show_neuron_activity);
+    const hasPartialData = Boolean(partialBadgesHtml);
 
     const moodGauges = this._config.show_mood
       ? moodData.map(m => this._buildMoodGauge(m)).join('')
@@ -260,7 +300,7 @@ class StyxZoneCard extends HTMLElement {
           </div>
         </div>
 
-        ${hasPartialData ? '<div class="partial-badge">Teildaten</div>' : ''}
+        ${partialBadgesHtml}
 
         ${isActive ? `
           <div class="zone-mode">
@@ -403,8 +443,13 @@ class StyxZoneCard extends HTMLElement {
           background: #f59e0b;
           box-shadow: 0 0 6px #f59e0b;
         }
-        .partial-badge {
+        .partial-badges {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
           margin-bottom: 10px;
+        }
+        .partial-badge {
           font-size: 11px;
           color: #f59e0b;
           background: rgba(245, 158, 11, 0.12);
@@ -414,6 +459,7 @@ class StyxZoneCard extends HTMLElement {
           padding: 4px 8px;
           text-transform: uppercase;
           letter-spacing: 0.2px;
+          line-height: 1.2;
         }
         .zone-mode {
           display: flex;
