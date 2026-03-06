@@ -13,11 +13,35 @@ from .const import CONF_TOKEN, CONF_WEBHOOK_ID, DOMAIN, HEADER_AUTH
 
 _LOGGER = logging.getLogger(__name__)
 
-# Event types the add-on can push via webhook
+# Canonical webhook event types (Core ↔ HA contract)
 EVENT_TYPE_STATUS = "status"
-EVENT_TYPE_MOOD = "mood_changed"
-EVENT_TYPE_SUGGESTION = "suggestion_new"
-EVENT_TYPE_NEURON = "neuron_update"
+EVENT_TYPE_MOOD = "mood"
+EVENT_TYPE_SUGGESTION = "suggestion"
+EVENT_TYPE_NEURON = "neuron"
+
+# Legacy aliases accepted for backward compatibility (older Core/HA versions)
+_EVENT_TYPE_ALIAS_TO_CANONICAL = {
+    "status": EVENT_TYPE_STATUS,
+    "mood": EVENT_TYPE_MOOD,
+    "mood_changed": EVENT_TYPE_MOOD,
+    "suggestion": EVENT_TYPE_SUGGESTION,
+    "suggestion_new": EVENT_TYPE_SUGGESTION,
+    "neuron": EVENT_TYPE_NEURON,
+    "neuron_update": EVENT_TYPE_NEURON,
+}
+
+
+def _normalize_event_type(raw_event_type: object) -> str:
+    """Map legacy and canonical event types to canonical contract values."""
+    if isinstance(raw_event_type, str):
+        key = raw_event_type.strip().lower()
+    else:
+        key = ""
+
+    if not key:
+        return EVENT_TYPE_STATUS
+
+    return _EVENT_TYPE_ALIAS_TO_CANONICAL.get(key, key)
 
 
 def _make_webhook_url(hass: HomeAssistant, webhook_id: str) -> str:
@@ -61,8 +85,8 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
         if not isinstance(payload, dict):
             return Response(status=400)
 
-        # Typed envelope: {"type": "mood_changed", "data": {...}}
-        event_type = payload.get("type", EVENT_TYPE_STATUS)
+        # Typed envelope: {"type": "mood|neuron|suggestion|status", "data": {...}}
+        event_type = _normalize_event_type(payload.get("type", EVENT_TYPE_STATUS))
         data = payload.get("data") if payload.get("data") else payload
 
         if event_type == EVENT_TYPE_MOOD:
