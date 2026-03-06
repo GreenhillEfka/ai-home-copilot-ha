@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 import logging
+import re
+import traceback
+
 import voluptuous as vol
 
 from homeassistant import data_entry_flow
+from homeassistant.components import persistent_notification
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 
 from .api import CopilotApiClient, CopilotApiError
 from .const import DOMAIN
-from .log_fixer import async_disable_custom_integration_for_manifest_error
+from .log_fixer import async_analyze_logs, async_disable_custom_integration_for_manifest_error
 from .log_store import FindingType
 from .log_store import async_get_log_fixer_state
 from .storage import CandidateState, async_defer_candidate, async_set_candidate_state
@@ -18,6 +22,65 @@ from .storage import CandidateState, async_defer_candidate, async_set_candidate_
 _LOGGER = logging.getLogger(__name__)
 
 
+# --- Repair UX helpers (PS-UX-014) -----------------------------------------
+
+_RE_EMAIL = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
+_RE_JWT = re.compile(r"(?<![A-Za-z0-9_-])(eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})")
+_RE_BEARER = re.compile(r"(?i)(bearer\s+)(\S+)")
+_RE_URL_CREDS = re.compile(r"(?i)(https?://)([^\s:/]+):([^\s@/]+)@")
+
+
+def _redact_text(text: str, *, max_len: int = 4000) -> str:
+    """Best-effort redaction for user-visible repair diagnostics."""
+    s = str(text or "")
+    s = _RE_URL_CREDS.sub(r"\1**REDACTED**:**REDACTED**@", s)
+    s = _RE_BEARER.sub(r"\1**REDACTED**", s)
+    s = _RE_JWT.sub("**REDACTED_JWT**", s)
+    s = _RE_EMAIL.sub("**REDACTED_EMAIL**", s)
+    if len(s) > max_len:
+        s = s[: max_len - 50] + "...(truncated)..."
+    return s
+
+
+def _safe_tb(err: Exception, *, max_lines: int = 25) -> str:
+    """Return a compact, redacted traceback snippet."""
+    try:
+        tb = "".join(traceback.format_exception(type(err), err, err.__traceback__))
+    except Exception:  # noqa: BLE001
+        tb = repr(err)
+
+    tb = _redact_text(tb, max_len=8000)
+    lines = [ln.rstrip("\n") for ln in tb.splitlines() if ln.strip()]
+    if len(lines) > max_lines:
+        lines = lines[-max_lines:]
+    return "\n".join(lines)
+
+
+def _safe_notification_id(prefix: str, *parts: str) -> str:
+    raw = "_".join([prefix, *[str(p or "") for p in parts if p]])
+    raw = re.sub(r"[^a-zA-Z0-9_-]+", "_", raw).strip("_")
+    if len(raw) > 80:
+        raw = raw[:80]
+    return raw or prefix
+
+
+def _notify_repair_diagnostics(
+    hass: HomeAssistant,
+    *,
+    title: str,
+    message: str,
+    notification_id: str,
+) -> None:
+    """Publish diagnostics via persistent notification (HA UI)."""
+    try:
+        persistent_notification.async_create(
+            hass,
+            _redact_text(message, max_len=12000),
+            title=title,
+            notification_id=notification_id,
+        )
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Failed to create persistent_notification for diagnostics", exc_info=True)
 def _get_core_api(hass: HomeAssistant, entry_id: str) -> CopilotApiClient | None:
     """Retrieve the shared CopilotApiClient for this config entry."""
     ent_data = hass.data.get(DOMAIN, {}).get(entry_id)
@@ -298,6 +361,11 @@ class DisableCustomIntegrationRepairFlow(RepairsFlow):
         self._issue_id = issue_id
         self._integration = integration
 
+        # Runtime state (PS-UX-014)
+        self._failures: int = 0
+        self._last_error: str | None = None
+        self._last_tb: str | None = None
+
     async def async_step_init(self, user_input=None) -> data_entry_flow.FlowResult:
         if user_input is not None:
             if not user_input.get("confirm"):
@@ -310,9 +378,34 @@ class DisableCustomIntegrationRepairFlow(RepairsFlow):
                     },
                 )
 
-            tx = await async_disable_custom_integration_for_manifest_error(
-                self.hass, integration=self._integration, issue_id=self._issue_id
-            )
+            try:
+                tx = await async_disable_custom_integration_for_manifest_error(
+                    self.hass, integration=self._integration, issue_id=self._issue_id
+                )
+            except Exception as err:  # noqa: BLE001
+                self._failures += 1
+                self._last_error = _redact_text(str(err), max_len=800)
+                self._last_tb = _safe_tb(err)
+
+                _notify_repair_diagnostics(
+                    self.hass,
+                    title="PilotSuite Repair fehlgeschlagen",
+                    message=(
+                        f"Integration: {self._integration}\n"
+                        f"Aktion: Disable integration\n"
+                        f"Fehler: {self._last_error}\n\n"
+                        f"Traceback (gekürzt):\n{self._last_tb}"
+                    ),
+                    notification_id=_safe_notification_id(
+                        "copilot_ha_repair_disable_failed",
+                        self._integration,
+                        self._issue_id,
+                        str(self._failures),
+                    ),
+                )
+
+                return await self.async_step_failed()
+
             return self.async_create_entry(title="", data={"result": "disabled", "tx": tx.data})
 
         return self.async_show_form(
@@ -322,6 +415,50 @@ class DisableCustomIntegrationRepairFlow(RepairsFlow):
                 "integration": self._integration,
             },
         )
+
+    def _failed_schema(self) -> vol.Schema:
+        actions: dict[str, str] = {}
+        if self._failures < 3:
+            actions["retry"] = "Erneut versuchen"
+        actions["export_logs"] = "Logs exportieren"
+        actions["details"] = "Details anzeigen"
+        actions["close"] = "Schließen"
+
+        default = "retry" if "retry" in actions else "export_logs"
+        return vol.Schema({vol.Required("action", default=default): vol.In(actions)})
+
+    async def async_step_failed(self, user_input=None) -> data_entry_flow.FlowResult:
+        """Failure panel with Retry + Export logs + Details (PS-UX-014)."""
+        if user_input is not None:
+            action = str(user_input.get("action") or "")
+
+            if action == "retry":
+                # Re-run with explicit confirm step to keep governance-first behavior.
+                return await self.async_step_init()
+
+            if action in ("export_logs", "details"):
+                _notify_repair_diagnostics(
+                    self.hass,
+                    title="PilotSuite Repair — Details",
+                    message=(
+                        f"Integration: {self._integration}\n"
+                        f"Fehlversuche: {self._failures}\n"
+                        f"Letzter Fehler: {self._last_error or 'unknown'}\n\n"
+                        + ("Traceback (gekürzt):\n" + (self._last_tb or "(keine)") if action == "details" else "")
+                    ),
+                    notification_id=_safe_notification_id(
+                        "copilot_ha_repair_disable_details",
+                        self._integration,
+                        self._issue_id,
+                        action,
+                        str(self._failures),
+                    ),
+                )
+                return await self.async_step_failed()
+
+            return self.async_create_entry(title="", data={"result": "failed"})
+
+        return self.async_show_form(step_id="failed", data_schema=self._failed_schema())
 
 
 async def async_create_fix_flow(
@@ -428,6 +565,19 @@ STEP_BP_CONFIRM = vol.Schema(
     }
 )
 
+STEP_BP_RESULT_FAILED = vol.Schema(
+    {
+        vol.Required("action", default="retry"): vol.In(
+            {
+                "retry": "Retry",
+                "export_logs": "Export logs (analyze)",
+                "defer": "Später nochmal erinnern",
+                "dismiss": "Schließen",
+            }
+        )
+    }
+)
+
 
 class RepairsBlueprintApplyFlow(RepairsFlow):
     def __init__(
@@ -447,6 +597,13 @@ class RepairsBlueprintApplyFlow(RepairsFlow):
 
         # Runtime state
         self._plan = None
+        self._apply_failures: int = 0
+        self._last_apply_error: str | None = None
+        self._last_apply_tb: str | None = None
+        self._apply_failures = 0
+        self._last_confirm_input: dict | None = None
+        self._last_apply_error: str | None = None
+        self._last_log_export: str | None = None
 
     async def _maybe_delete_issue(self) -> None:
         try:
@@ -586,13 +743,26 @@ class RepairsBlueprintApplyFlow(RepairsFlow):
                         errors={"base": "confirm_required"},
                     )
 
+            self._last_confirm_input = dict(user_input)
+
             # Apply.
             from .repairs_blueprints import async_apply_plan
 
             if self._plan is None:
                 raise data_entry_flow.UnknownFlow
 
-            await async_apply_plan(self.hass, self._plan)
+            try:
+                await async_apply_plan(self.hass, self._plan)
+            except Exception as err:  # noqa: BLE001
+                self._apply_failures += 1
+                self._last_apply_error = str(err)
+                _LOGGER.warning(
+                    "Repair apply failed (candidate=%s, failures=%s): %s",
+                    self._candidate_id,
+                    self._apply_failures,
+                    err,
+                )
+                return await self.async_step_result_failed()
 
             await async_set_candidate_state(
                 self.hass, self._entry_id, self._candidate_id, CandidateState.ACCEPTED
@@ -607,6 +777,66 @@ class RepairsBlueprintApplyFlow(RepairsFlow):
             description_placeholders={
                 "risk": self._risk(),
                 "note": "Bei risk=high musst du zusätzlich CONFIRM eintippen.",
+            },
+        )
+
+    async def async_step_result_failed(self, user_input=None) -> data_entry_flow.FlowResult:
+        """ResultPanel.failed: Controlled recovery with Retry + Export-logs."""
+
+        if user_input is not None:
+            action = user_input.get("action")
+
+            if action == "retry":
+                # Re-run apply without forcing the user to re-navigate.
+                return await self.async_step_confirm(self._last_confirm_input or {"confirm": True, "confirm_text": "CONFIRM"})
+
+            if action == "export_logs":
+                try:
+                    result = await async_analyze_logs(self.hass)
+                    findings = result.findings or []
+                    lines = [
+                        f"Scanned lines: {result.scanned_lines}",
+                        f"Findings: {len(findings)}",
+                    ]
+                    for f in findings[:8]:
+                        details = f.details or {}
+                        samples = details.get("sample_lines") or []
+                        lines.append(f"- {f.title} (count={details.get('count','?')})")
+                        for s in samples[:3]:
+                            lines.append(f"  · {s}")
+                    self._last_log_export = "\n".join(lines)
+                except Exception as err:  # noqa: BLE001
+                    self._last_log_export = f"Log export failed: {err}"
+
+                return await self.async_step_result_failed()
+
+            if action == "defer":
+                return await self.async_step_defer()
+
+            # dismiss/close
+            return self.async_create_entry(
+                title="",
+                data={
+                    "result": "apply_failed",
+                    "failures": self._apply_failures,
+                    "error": self._last_apply_error,
+                },
+            )
+
+        export = self._last_log_export or "(noch kein Log-Export erzeugt)"
+        err = self._last_apply_error or "unknown"
+        hint = (
+            "Repair konnte nicht angewendet werden. Du kannst es erneut versuchen oder Logs exportieren."
+            + ("\n\nHinweis: Mehrere Fehlversuche erkannt — prüfe Token/Netzwerk und die System-Logs." if self._apply_failures >= 3 else "")
+        )
+
+        return self.async_show_form(
+            step_id="result_failed",
+            data_schema=STEP_BP_RESULT_FAILED,
+            description_placeholders={
+                "hint": hint,
+                "error": err,
+                "export": export,
             },
         )
 
