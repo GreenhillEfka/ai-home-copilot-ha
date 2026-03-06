@@ -52,6 +52,14 @@ class _FakeRequest:
         return self._payload
 
 
+class _BadJsonRequest:
+    def __init__(self, headers: dict[str, str] | None = None):
+        self.headers = headers or {}
+
+    async def json(self):
+        raise ValueError("boom")
+
+
 def _make_entry(token: str = "secret-token") -> SimpleNamespace:
     return SimpleNamespace(
         entry_id="entry-test",
@@ -83,6 +91,18 @@ async def _capture_registered_handler(hass, entry, coordinator):
 def _response_json(response) -> dict:
     assert response.content_type == "application/json"
     return json.loads(response.text)
+
+
+def _assert_error_contract(response, body: dict):
+    code = body["error"]["code"]
+    assert code in webhook_module.ERROR_CODE_SPECS
+    spec = webhook_module.ERROR_CODE_SPECS[code]
+    assert response.status == spec["status"]
+    required = spec.get("required_details", ())
+    if required:
+        assert "details" in body["error"]
+    for field in required:
+        assert field in body["error"].get("details", {})
 
 
 @pytest.fixture(autouse=True)
@@ -133,6 +153,7 @@ async def test_missing_type_returns_400_with_structured_error(hass, coordinator)
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 400
     assert body["ok"] is False
     assert body["error"]["code"] == "missing_type"
@@ -150,6 +171,7 @@ async def test_missing_data_returns_400_with_structured_error(hass, coordinator)
     response = await handler(hass, "webhook-test-id", request)
 
     body = _response_json(response)
+    _assert_error_contract(response, body)
     assert response.status == 400
     assert body["ok"] is False
     assert body["error"]["code"] == "missing_data"
