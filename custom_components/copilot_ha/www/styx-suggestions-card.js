@@ -63,6 +63,7 @@ class StyxSuggestionsCard extends HTMLElement {
     this._actionError = null;
     this._loading = false;
     this._selectedId = null;
+    this._detailMissingNotifiedForId = null;
 
     // PS-UX-015 additions
     this._filterText = '';
@@ -264,6 +265,11 @@ class StyxSuggestionsCard extends HTMLElement {
       return;
     }
 
+    if (action === 'detail-close') {
+      this._closeDetail();
+      return;
+    }
+
     // Non-mutating actions: detail, reset_filter
     if (action === 'detail') {
       this._openDetail(id);
@@ -334,11 +340,13 @@ class StyxSuggestionsCard extends HTMLElement {
   _openDetail(id) {
     if (!id) return;
     this._selectedId = id;
+    this._detailMissingNotifiedForId = null;
     this._render();
   }
 
   _closeDetail() {
     this._selectedId = null;
+    this._detailMissingNotifiedForId = null;
     this._render();
   }
 
@@ -363,10 +371,10 @@ class StyxSuggestionsCard extends HTMLElement {
       : suggestions;
 
     const selected = this._getSelectedSuggestion();
-    if (this._selectedId && !selected) {
-      // Avoid blank views: fall back to list and show an error banner.
-      this._actionError = 'Detailansicht nicht verfügbar (Item fehlt).';
-      this._selectedId = null;
+    const selectedMissing = Boolean(this._selectedId && !selected);
+    if (selectedMissing) {
+      // Avoid blank views: keep a dedicated detail empty/error state.
+      this._actionError = this._actionError || 'Detailansicht nicht verfügbar (Vorschlag fehlt oder wurde aktualisiert).';
     }
 
     const showStaleBanner = this._stale || (this._loadError && hasSuggestions);
@@ -450,22 +458,76 @@ class StyxSuggestionsCard extends HTMLElement {
     }
 
     let detailHtml = '';
-    if (selected) {
+
+    if (selectedMissing) {
+      const missingId = this._selectedId;
+      const eventKey = hasSuggestions ? 'ERROR_SHOWN' : 'EMPTY_SHOWN';
+      const reason = hasSuggestions ? 'missing_item' : 'no_data';
+
+      if (this._detailMissingNotifiedForId !== missingId) {
+        this._detailMissingNotifiedForId = missingId;
+        this._emitUi(eventKey, {
+          scope: 'suggestion_detail',
+          reason,
+          selected_id: missingId,
+          stale: Boolean(this._stale),
+          load_error: this._loadError || null,
+          list_count: suggestions.length,
+        });
+      }
+
+      detailHtml = `
+        <div class="detail-backdrop">
+          <div class="detail" role="dialog" aria-modal="true">
+            <div class="detail-header">
+              <div class="detail-title">Vorschlag nicht verfügbar</div>
+              <button class="detail-close" data-action="detail-close" aria-label="Schliessen">×</button>
+            </div>
+            <div class="detail-body">
+              <div class="state-error">
+                <div class="state-title">Detailansicht nicht verfügbar</div>
+                <div class="state-msg">Der Vorschlag ist nicht mehr in der Liste (z. B. nach Refresh oder Aktion).</div>
+                <button class="retry" data-action="detail-close">Zurück zur Liste</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    } else if (selected) {
       const id = this._getSuggestionId(selected);
 
+      const descRaw = selected.description || selected.summary || '';
+      const descText = (descRaw && typeof descRaw === 'object') ? JSON.stringify(descRaw) : String(descRaw || '');
+      const descValue = descText.trim()
+        ? `<div class="detail-value">${this._esc(descText)}</div>`
+        : `<div class="detail-value placeholder">Keine Beschreibung verfügbar.</div>`;
+
+      const rationaleRaw = selected.rationale || selected.reason || selected.why || '';
+      const rationaleText = (rationaleRaw && typeof rationaleRaw === 'object') ? JSON.stringify(rationaleRaw) : String(rationaleRaw || '');
+      const rationaleValue = rationaleText.trim()
+        ? `<div class="detail-value">${this._esc(rationaleText)}</div>`
+        : `<div class="detail-value placeholder">Keine Begründung verfügbar.</div>`;
+
       const stepsRaw = selected.steps || selected.actions || selected.plan_steps || null;
-      const steps = Array.isArray(stepsRaw)
-        ? `<ul class="steps">${stepsRaw.map(st => {
+      const stepsArr = Array.isArray(stepsRaw) ? stepsRaw : null;
+      const stepsValue = (stepsArr && stepsArr.length)
+        ? `<ul class="steps">${stepsArr.map(st => {
             if (st && typeof st === 'object') return `<li>${this._esc(st.title || st.name || JSON.stringify(st))}</li>`;
             return `<li>${this._esc(String(st))}</li>`;
           }).join('')}</ul>`
-        : '';
+        : `<div class="detail-value placeholder">Keine Schritte angegeben.</div>`;
 
-      const rationale = selected.rationale || selected.reason || selected.why || '';
       const detailsObj = selected.details || selected.payload || null;
       const details = (detailsObj && typeof detailsObj === 'object')
         ? `<pre class="code">${this._esc(JSON.stringify(detailsObj, null, 2))}</pre>`
         : (detailsObj ? `<div class="detail-value">${this._esc(String(detailsObj))}</div>` : '');
+
+      let readOnlyBanner = '';
+      if (actionsDisabledGlobal) {
+        const roReason = this._stale
+          ? `${this._loadError ? `${this._loadError} — ` : ''}letzte bekannte Daten.`
+          : (!this._getToken() ? 'Kein Token.' : '');
+        readOnlyBanner = `<div class="banner warn">Nur Lesen — ${this._esc(roReason)} Aktionen sind deaktiviert.</div>`;
+      }
 
       const detailActions = this._config.show_actions ? `
         <div class="detail-actions ${actionsDisabledGlobal ? 'disabled' : ''}">
@@ -482,25 +544,23 @@ class StyxSuggestionsCard extends HTMLElement {
               <button class="detail-close" data-action="detail-close" aria-label="Schliessen">×</button>
             </div>
 
-            ${actionsDisabledGlobal ? `<div class="banner warn">Nur Lesen — Aktionen sind deaktiviert.</div>` : ''}
+            ${readOnlyBanner}
 
             <div class="detail-body">
               <div class="detail-section">
                 <div class="detail-label">Beschreibung</div>
-                <div class="detail-value">${this._esc(selected.description || '')}</div>
+                ${descValue}
               </div>
 
-              ${rationale ? `
-                <div class="detail-section">
-                  <div class="detail-label">Warum</div>
-                  <div class="detail-value">${this._esc(String(rationale))}</div>
-                </div>` : ''}
+              <div class="detail-section">
+                <div class="detail-label">Warum</div>
+                ${rationaleValue}
+              </div>
 
-              ${steps ? `
-                <div class="detail-section">
-                  <div class="detail-label">Schritte</div>
-                  ${steps}
-                </div>` : ''}
+              <div class="detail-section">
+                <div class="detail-label">Schritte</div>
+                ${stepsValue}
+              </div>
 
               ${details ? `
                 <div class="detail-section">
@@ -803,6 +863,10 @@ class StyxSuggestionsCard extends HTMLElement {
           font-size: 12px;
           line-height: 1.45;
           color: var(--primary-text-color, #e6eef6);
+        }
+        .detail-value.placeholder {
+          color: var(--secondary-text-color, #9fb1c3);
+          font-style: italic;
         }
         .detail-meta {
           display: flex;
