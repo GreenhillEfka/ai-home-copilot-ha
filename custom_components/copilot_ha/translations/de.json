@@ -22,6 +22,16 @@
           "entity_profile": "Entitaetsprofil"
         }
       },
+      "wizard_network": {
+        "title": "Core-Verbindung",
+        "description": "{hint}",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "API-Token",
+          "allow_offline": "Ohne Verbindungstest fortfahren (nicht empfohlen)"
+        }
+      },
       "init": {
         "title": "PilotSuite Optionen",
         "description": "Konfiguriere PilotSuite.",
@@ -183,6 +193,7 @@
     },
     "error": {
       "cannot_connect": "Verbindung fehlgeschlagen",
+      "invalid_auth": "Authentifizierung fehlgeschlagen",
       "cannot_read": "Snapshot-Datei konnte nicht gelesen werden",
       "invalid_json": "Ungueltiges JSON",
       "confirm_required": "Bitte bestaetigen",

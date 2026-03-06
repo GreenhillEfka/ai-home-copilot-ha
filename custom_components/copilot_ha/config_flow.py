@@ -229,7 +229,74 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self._show_wizard_step(wizard_step, wizard)
 
         # Process input and advance to next step
-        next_step = self._process_wizard_input(wizard_step, user_input, wizard)
+        if wizard_step == STEP_NETWORK:
+            # Network step: validate connectivity on submit.
+            allow_offline = bool(user_input.get("allow_offline"))
+            network_input = {k: v for k, v in user_input.items() if k != "allow_offline"}
+
+            token = network_input.get(CONF_TOKEN)
+            if not isinstance(token, str) or not token.strip():
+                step_id, data_schema, desc = build_network_form(hint="Token ist erforderlich.")
+                return self.async_show_form(
+                    step_id=step_id,
+                    data_schema=data_schema,
+                    errors={CONF_TOKEN: "required"},
+                    description_placeholders=desc,
+                )
+
+            try:
+                await validate_input(self.hass, network_input)
+            except Exception as err:  # noqa: BLE001
+                msg = str(err)
+                msg_lower = msg.lower()
+
+                # Track consecutive failures for escalation copy.
+                fail_count = int(self._data.get("_network_failures", 0)) + 1
+                self._data["_network_failures"] = fail_count
+
+                if allow_offline:
+                    _LOGGER.warning(
+                        "Wizard network step: proceeding despite failed connectivity check (%s)",
+                        msg,
+                    )
+                    self._data["network"] = network_input
+                    self._data["_network_offline_override"] = True
+                    next_step = STEP_REVIEW
+                else:
+                    errors: dict[str, str] = {}
+                    hint: str | None
+
+                    if "http 401" in msg_lower or "http 403" in msg_lower:
+                        errors[CONF_TOKEN] = "invalid_auth"
+                        hint = "Authentifizierung fehlgeschlagen. Bitte prüfe Token und Berechtigungen."
+                    elif "timeout" in msg_lower or "cannot reach" in msg_lower or "cannot connect" in msg_lower:
+                        errors["base"] = "cannot_connect"
+                        hint = "Core nicht erreichbar. Prüfe, ob der Dienst läuft."
+                    else:
+                        errors["base"] = "invalid"
+                        hint = "Etwas ist schiefgelaufen. Bitte erneut versuchen."
+
+                    if fail_count >= 3:
+                        hint = (
+                            hint
+                            + "\n\nHinweis: Nach mehreren Fehlversuchen: prüfe Details in den Logs "
+                            + "und nutze anschließend Repair (Einstellungen → Geräte & Dienste → PilotSuite)."
+                        )
+
+                    step_id, data_schema, desc = build_network_form(hint=hint)
+                    return self.async_show_form(
+                        step_id=step_id,
+                        data_schema=data_schema,
+                        errors=errors,
+                        description_placeholders=desc,
+                    )
+            else:
+                # Success path
+                self._data["network"] = network_input
+                self._data.pop("_network_offline_override", None)
+                next_step = STEP_REVIEW
+        else:
+            next_step = self._process_wizard_input(wizard_step, user_input, wizard)
 
         # Handle async discovery if flagged
         if self._data.pop("_auto_discover", False):

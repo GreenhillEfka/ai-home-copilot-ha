@@ -28,7 +28,6 @@ from .const import (
 )
 from .setup_wizard import (
     SCHEMA_FEATURES,
-    SCHEMA_NETWORK,
     SCHEMA_REVIEW,
 )
 
@@ -137,9 +136,29 @@ def build_features_form():
     return ("wizard_features", SCHEMA_FEATURES, None)
 
 
-def build_network_form():
-    """Return (step_id, data_schema, description_placeholders) for network config."""
-    return ("wizard_network", SCHEMA_NETWORK, None)
+def build_network_form(*, hint: str | None = None, show_override_hint: bool = True):
+    """Return (step_id, data_schema, description_placeholders) for network config.
+
+    The HA config flow UI doesn't provide a dedicated "Test" button, so we
+    validate on submit and keep a manual override for offline/degraded cases.
+    """
+    schema = vol.Schema({
+        vol.Required(CONF_HOST, default=DEFAULT_HOST): str,
+        vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
+        vol.Required(CONF_TOKEN): str,
+        vol.Optional("allow_offline", default=False): bool,
+    })
+
+    resolved_hint = hint or (
+        "Gib Host/Port/Token an. Wir prüfen die Verbindung beim Weiterklicken." +
+        (" Falls Core offline ist, kannst du trotzdem fortfahren (nicht empfohlen)." if show_override_hint else "")
+    )
+
+    return (
+        "wizard_network",
+        schema,
+        {"hint": resolved_hint},
+    )
 
 
 def build_review_form(wizard_data: dict):
@@ -152,12 +171,15 @@ def build_review_form(wizard_data: dict):
     music_count = len(entities.get("music_players", [])) if isinstance(entities.get("music_players"), list) else 0
     tv_count = len(entities.get("tv_players", [])) if isinstance(entities.get("tv_players"), list) else 0
 
+    network_status = "Verified" if not wizard_data.get("_network_offline_override") else "Not verified (offline override)"
+
     summary = f"""
 **Configuration Summary:**
 
 **Network:**
 - Host: {network.get(CONF_HOST, DEFAULT_HOST)}
 - Port: {network.get(CONF_PORT, DEFAULT_PORT)}
+- Connectivity: {network_status}
 
 **Selected Zones:** {len(zones) if zones else 'Auto-detected'}
 
