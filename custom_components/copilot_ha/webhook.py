@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 from aiohttp.web import Response, json_response
@@ -9,8 +10,14 @@ from aiohttp.web import Response, json_response
 from homeassistant.core import HomeAssistant
 from homeassistant.components import webhook
 
-from .api import CopilotStatus
-from .const import CONF_TOKEN, CONF_WEBHOOK_ID, DOMAIN, HEADER_AUTH
+from .const import (
+    CONF_TOKEN,
+    CONF_WEBHOOK_ID,
+    DOMAIN,
+    HEADER_AUTH,
+    HEADER_AUTH_LEGACY,
+    ENV_LEGACY_HEADER_SUNSET_AT,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +53,91 @@ _EVENT_TYPE_ALIAS_TO_CANONICAL = {
     **_EVENT_TYPE_CANONICAL_TO_CANONICAL,
     **_EVENT_TYPE_LEGACY_ALIASES,
 }
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _parse_iso_utc(raw_value: str) -> datetime:
+    value = raw_value.strip()
+    if value.endswith("Z"):
+        value = value[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _legacy_header_window(*, now: datetime | None = None) -> dict[str, Any]:
+    """Return transition/sunset mode for the legacy auth header window.
+
+    Controlled via env var ``PILOTSUITE_WEBHOOK_LEGACY_HEADER_SUNSET_AT`` (ISO-8601).
+    - Empty / unset → transition mode (legacy header accepted)
+    - Invalid value → fail-closed (sunset)
+    - Past timestamp → sunset mode (legacy header rejected)
+    - Future timestamp → transition mode until timestamp
+    """
+
+    raw = os.getenv(ENV_LEGACY_HEADER_SUNSET_AT, "").strip()
+    if not raw:
+        return {"mode": "transition", "sunset_at": None, "sunset_at_raw": ""}
+
+    try:
+        sunset_at = _parse_iso_utc(raw)
+    except Exception:  # noqa: BLE001
+        _LOGGER.warning(
+            "Invalid %s value %r; treating legacy header as sunset (reject)",
+            ENV_LEGACY_HEADER_SUNSET_AT,
+            raw,
+        )
+        sunset_at = datetime.fromtimestamp(0, tz=timezone.utc)
+
+    now_ts = now or _utcnow()
+    mode = "transition" if now_ts < sunset_at else "sunset"
+    return {"mode": mode, "sunset_at": sunset_at, "sunset_at_raw": raw}
+
+
+def _resolve_auth_tokens(request, *, now: datetime | None = None) -> tuple[list[tuple[str, str, dict[str, Any] | None]], dict[str, Any]]:
+    """Collect auth tokens from canonical, bearer, and legacy headers.
+
+    Returns tuple of (tokens, window) where tokens is a list of (source, token, error)
+    and window is the current legacy-header window metadata.
+    """
+
+    window = _legacy_header_window(now=now)
+    tokens: list[tuple[str, str, dict[str, Any] | None]] = []
+
+    canonical = (request.headers.get(HEADER_AUTH) or "").strip()
+    if canonical:
+        tokens.append(("canonical", canonical, None))
+
+    bearer_header = (request.headers.get("Authorization") or "").strip()
+    if bearer_header.lower().startswith("bearer "):
+        bearer_token = bearer_header.split(" ", 1)[1].strip()
+        if bearer_token:
+            tokens.append(("bearer", bearer_token, None))
+
+    legacy = (request.headers.get(HEADER_AUTH_LEGACY) or "").strip()
+    if legacy:
+        if window["mode"] == "transition":
+            tokens.append(("legacy", legacy, None))
+        else:
+            sunset_at = window["sunset_at"]
+            tokens.append(
+                (
+                    "legacy",
+                    legacy,
+                    {
+                        "header": HEADER_AUTH_LEGACY,
+                        "mode": window["mode"],
+                        "sunset_at": sunset_at.isoformat() if sunset_at else window["sunset_at_raw"],
+                        "sunset_at_raw": window["sunset_at_raw"],
+                    },
+                )
+            )
+
+    return tokens, window
 
 
 def _legacy_aliases_enabled() -> bool:
@@ -132,10 +224,37 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
 
     async def _handle(hass: HomeAssistant, webhook_id: str, request):
         token_expected = (entry.data | entry.options).get(CONF_TOKEN)
-        token_got = request.headers.get(HEADER_AUTH)
+        tokens, _window = _resolve_auth_tokens(request)
 
-        if token_expected and token_got != token_expected:
-            _LOGGER.warning("Rejected webhook: invalid token")
+        def _matches_expected(candidate: str) -> bool:
+            if not token_expected:
+                return True
+            return candidate == token_expected
+
+        has_valid_token = any(
+            error is None and _matches_expected(candidate) for _, candidate, error in tokens
+        )
+        sunset_error = next(
+            (error for source, _, error in tokens if source == "legacy" and error is not None),
+            None,
+        )
+
+        if token_expected and not has_valid_token:
+            if sunset_error:
+                return _error_response(
+                    status=401,
+                    code="legacy_header_sunset",
+                    message=(
+                        "Legacy webhook auth header is no longer accepted after the configured "
+                        "sunset interval."
+                    ),
+                    details=sunset_error,
+                )
+
+            _LOGGER.warning(
+                "Rejected webhook: invalid token (sources=%s)",
+                [src for src, _, _ in tokens] or ["missing"],
+            )
             return Response(status=401)
 
         try:

@@ -3,13 +3,44 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.copilot_ha import webhook as webhook_module
-from custom_components.copilot_ha.const import CONF_TOKEN, CONF_WEBHOOK_ID, HEADER_AUTH
+import custom_components.copilot_ha.webhook as webhook_module
+from custom_components.copilot_ha.const import (
+    CONF_TOKEN,
+    CONF_WEBHOOK_ID,
+    ENV_LEGACY_HEADER_SUNSET_AT,
+    HEADER_AUTH,
+    HEADER_AUTH_LEGACY,
+)
+
+
+LARGE_TYPE_STRING = "x" * 1024
+
+FUZZED_TYPE_CASES = [
+    ("type_none", {"type": None, "data": {}}, "missing_type", {"required_field": "type"}),
+    ("type_empty", {"type": "", "data": {}}, "missing_type", {"required_field": "type"}),
+    ("type_whitespace", {"type": "   ", "data": {}}, "missing_type", {"required_field": "type"}),
+    ("type_list", {"type": ["status"], "data": {}}, "missing_type", {"required_field": "type"}),
+    ("type_dict", {"type": {"foo": "bar"}, "data": {}}, "missing_type", {"required_field": "type"}),
+    ("nested_payload", {"payload": {"type": "status", "data": {}}}, "missing_type", {"required_field": "type"}),
+    ("type_unicode", {"type": "💥", "data": {}}, "unknown_type", {"received": "💥"}),
+    ("type_nullbyte", {"type": "status\0", "data": {}}, "unknown_type", {"received": "status\0"}),
+    ("type_long", {"type": "x" * 1024, "data": {}}, "unknown_type", {"received": "x" * 1024}),
+]
+
+INVALID_DATA_CASES = [
+    ("data_none", None),
+    ("data_list", []),
+    ("data_string", "oops"),
+    ("data_int", 123),
+    ("data_float", 1.23),
+    ("data_bool", True),
+]
 
 
 class _FakeRequest:
@@ -55,9 +86,10 @@ def _response_json(response) -> dict:
 
 
 @pytest.fixture(autouse=True)
-def _force_transition_alias_mode(monkeypatch):
+def _force_transition_modes(monkeypatch):
     # Keep default behavior explicit and test-stable.
     monkeypatch.setenv("PILOTSUITE_WEBHOOK_ALIAS_MODE", "transition")
+    monkeypatch.delenv(ENV_LEGACY_HEADER_SUNSET_AT, raising=False)
 
 
 @pytest.fixture
@@ -87,78 +119,6 @@ LEGACY_CASES = [
     ("mood_changed", "mood", {"mood": "calm", "confidence": 0.9}),
     ("suggestion_new", "suggestion", {"title": "Legacy suggestion", "action": "noop"}),
     ("neuron_update", "neuron", {"neurons": {"n1": {"active": True}}}),
-]
-
-# -----------------------------------------------------------------------------
-# Fuzz-style contract cases (PS-QA-027)
-# -----------------------------------------------------------------------------
-
-LARGE_TYPE_STRING = "x" * 1024
-
-FUZZED_TYPE_CASES = [
-    (
-        "type_none",
-        {"type": None, "data": {}},
-        "missing_type",
-        {"required_field": "type"},
-    ),
-    (
-        "type_empty",
-        {"type": "", "data": {}},
-        "missing_type",
-        {"required_field": "type"},
-    ),
-    (
-        "type_whitespace",
-        {"type": "   ", "data": {}},
-        "missing_type",
-        {"required_field": "type"},
-    ),
-    (
-        "type_list",
-        {"type": [], "data": {}},
-        "missing_type",
-        {"required_field": "type"},
-    ),
-    (
-        "type_dict",
-        {"type": {}, "data": {}},
-        "missing_type",
-        {"required_field": "type"},
-    ),
-    (
-        "nested_payload_missing_type",
-        {"payload": {"type": "status", "data": {"online": True}}},
-        "missing_type",
-        {"required_field": "type"},
-    ),
-    (
-        "type_unicode",
-        {"type": "💥", "data": {}},
-        "unknown_type",
-        {"received": "💥"},
-    ),
-    (
-        "type_with_nul",
-        {"type": "status\0", "data": {}},
-        "unknown_type",
-        {"received": "status\0"},
-    ),
-    (
-        "type_large_string",
-        {"type": LARGE_TYPE_STRING, "data": {}},
-        "unknown_type",
-        {"received": LARGE_TYPE_STRING},
-    ),
-]
-
-INVALID_DATA_CASES = [
-    ("data_none", None),
-    ("data_list", []),
-    ("data_str", "oops"),
-    ("data_int", 1),
-    ("data_float", 1.5),
-    ("data_bool", True),
 ]
 
 
@@ -349,3 +309,72 @@ async def test_legacy_aliases_in_sunset_mode_return_400_with_stable_error_code(
     assert body["error"]["details"]["received"] == event_type
     assert body["error"]["details"]["canonical_type"] == canonical_type
     assert body["error"]["details"]["mode"] == "sunset"
+
+
+@pytest.mark.asyncio
+async def test_legacy_api_key_accepted_before_sunset(monkeypatch, hass, coordinator):
+    monkeypatch.setenv(ENV_LEGACY_HEADER_SUNSET_AT, "2026-03-07T00:00:00Z")
+    monkeypatch.setattr(
+        webhook_module,
+        "_utcnow",
+        lambda: datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": "status", "data": {"online": True}},
+        headers={HEADER_AUTH_LEGACY: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 200
+    assert body == {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_legacy_api_key_rejected_after_sunset_with_structured_error(monkeypatch, hass, coordinator):
+    monkeypatch.setenv(ENV_LEGACY_HEADER_SUNSET_AT, "2026-03-05T00:00:00Z")
+    monkeypatch.setattr(
+        webhook_module,
+        "_utcnow",
+        lambda: datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": "status", "data": {"online": True}},
+        headers={HEADER_AUTH_LEGACY: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 401
+    assert body["ok"] is False
+    assert body["error"]["code"] == "legacy_header_sunset"
+    assert body["error"]["details"]["header"] == HEADER_AUTH_LEGACY
+    assert "2026-03-05" in body["error"]["details"]["sunset_at"]
+
+
+@pytest.mark.asyncio
+async def test_canonical_header_still_valid_after_sunset(monkeypatch, hass, coordinator):
+    monkeypatch.setenv(ENV_LEGACY_HEADER_SUNSET_AT, "2026-03-05T00:00:00Z")
+    monkeypatch.setattr(
+        webhook_module,
+        "_utcnow",
+        lambda: datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+    )
+
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+
+    request = _FakeRequest(
+        payload={"type": "status", "data": {"online": True}},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+
+    body = _response_json(response)
+    assert response.status == 200
+    assert body == {"ok": True}
