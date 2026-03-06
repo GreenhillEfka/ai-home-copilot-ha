@@ -1135,6 +1135,14 @@ paths:
         - `transition` (default): legacy aliases are mapped to canonical types.
         - `sunset` / `disabled` / `off` / `false` / `0`: legacy aliases are rejected.
 
+        Webhook signing (optional, HMAC):
+        - enabled when `PILOTSUITE_WEBHOOK_SIGNING_SECRET_PRIMARY` is set.
+        - if enabled, additional `401` error codes may be returned:
+          - `missing_signature_headers`
+          - `stale_timestamp`
+          - `replay_detected`
+          - `invalid_signature`
+
         Contract schemas:
         - `pilotsuite_ops/schemas/webhook_envelope.schema.json`
         - `pilotsuite_ops/schemas/webhook_response.schema.json`
@@ -1243,6 +1251,45 @@ paths:
                         mode: sunset
                         sunset_at: "2026-03-07T00:00:00Z"
                         sunset_at_raw: "2026-03-07T00:00:00Z"
+
+                missing_signature_headers:
+                  summary: Signing enabled but headers missing
+                  value:
+                    ok: false
+                    error:
+                      code: missing_signature_headers
+                      message: Webhook signature verification is enabled but required signature headers are missing or invalid.
+                      details:
+                        missing:
+                        - X-Signature
+                        - X-Signature-Timestamp
+                        - X-Signature-Nonce
+                stale_timestamp:
+                  summary: Signature timestamp outside TTL
+                  value:
+                    ok: false
+                    error:
+                      code: stale_timestamp
+                      message: Webhook signature timestamp is outside the allowed TTL window.
+                      details:
+                        ttl_seconds: 300
+                        timestamp: 1710000000
+                replay_detected:
+                  summary: Nonce replay detected
+                  value:
+                    ok: false
+                    error:
+                      code: replay_detected
+                      message: Webhook nonce replay detected within the allowed TTL window.
+                      details:
+                        ttl_seconds: 300
+                invalid_signature:
+                  summary: Signature verification failed
+                  value:
+                    ok: false
+                    error:
+                      code: invalid_signature
+                      message: Webhook signature verification failed.
       security:
       - apiKeyAuth: []
 components:
