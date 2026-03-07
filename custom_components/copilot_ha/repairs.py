@@ -102,7 +102,7 @@ async def async_sync_decision_to_core(
     """Best-effort sync of user decision back to Core Add-on.
 
     Maps HA candidate_id (prefixed ``core_``) back to the Core UUID and
-    calls ``PUT /api/v1/candidates/{id}`` to close the feedback loop.
+    calls ``PUT /api/v1/candidates/{candidate_id}`` to close the feedback loop.
     """
     api = _get_core_api(hass, entry_id)
     if api is None:
