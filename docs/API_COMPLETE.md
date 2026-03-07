@@ -305,11 +305,11 @@ Neuen Candidate erstellen.
 }
 ```
 
-#### `GET /api/v1/candidates/{id}`
+#### `GET /api/v1/candidates/{candidate_id}`
 
 Spezifischen Candidate nach ID abrufen.
 
-#### `PUT /api/v1/candidates/{id}`
+#### `PUT /api/v1/candidates/{candidate_id}`
 
 Candidate-State aktualisieren (accept/dismiss/defer).
 
@@ -540,19 +540,19 @@ Kompletten UniFi-Network-Snapshot abrufen.
 
 Tag-System für Entity-Organisation.
 
-#### `GET /api/v1/tags`
+#### `GET /api/v1/tag-system/tags`
 
 Alle Tags auflisten.
 
 **Authentifizierung:** Bearer Token
 
-#### `POST /api/v1/tags`
+#### `POST /api/v1/tag-system/tags`
 
 Neues Tag erstellen.
 
 **Authentifizierung:** Bearer Token
 
-#### `DELETE /api/v1/tags/{id}`
+#### `DELETE /api/v1/tag-system/tags/{tag_id}`
 
 Tag löschen.
 

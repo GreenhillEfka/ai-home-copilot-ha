@@ -170,10 +170,10 @@ Authorization: Bearer your-token
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/tags` | List all tags |
-| POST | `/api/v1/tags` | Create tag |
-| DELETE | `/api/v1/tags/<id>` | Delete tag |
-| GET | `/api/v1/tags/registry` | Tag registry |
+| GET | `/api/v1/tag-system/tags` | List all tags |
+| POST | `/api/v1/tag-system/tags` | Create tag |
+| DELETE | `/api/v1/tag-system/tags/{tag_id}` | Delete tag |
+| GET | `/api/v1/tag-system/tags` | Tag registry |
 
 ### Calendar
 
