@@ -4,6 +4,19 @@ Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Date
 
 ## [Unreleased]
 
+## [13.5.4] - 2026-03-07
+
+### Compatibility
+- Core v13.5.4 ↔ HA v13.5.4
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Migration required: no
+
+### Fixed
+- Inventory/Drift-Fix Batch A release mirror: HA OpenAPI auf aktive v13 Candidates/Tag-System-Pfade synchronisiert (inkl. `{candidate_id}`/`{tag_id}` Parametrisierung).
+
+### QA/Ops
+- Release-Gates nach Drift-Fix erneut verifiziert: Inventory/Drift Guard (PS-QA-083) + Smoke Preflight + Dual-Repo Tag Guard + PS-REL-018 Artefaktvalidator.
+
 ## [13.5.3] - 2026-03-07
 
 ### Compatibility
