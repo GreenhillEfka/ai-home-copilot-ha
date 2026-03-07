@@ -4,6 +4,20 @@ Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Date
 
 ## [Unreleased]
 
+## [13.5.3] - 2026-03-07
+
+### Compatibility
+- Core v13.5.3 ↔ HA v13.5.3
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Migration required: no
+
+### Security
+- HA webhook HMAC signature verification implemented (primary/secondary keys) with replay defense (timestamp TTL + nonce cache).
+
+### Docs
+- OpenAPI webhook signing 401 examples (`missing_signature_headers`, `stale_timestamp`, `replay_detected`, `invalid_signature`) aligned for drift-fix release readiness.
+
+
 ## [13.5.2] - 2026-03-06
 
 ### Compatibility
