@@ -131,6 +131,65 @@ media_context_v2_clear_overrides:
       selector:
         text:
 
+# ─── Suggestion Panel Actions ────────────────────────────────────────────────
+
+suggestion_accept:
+  name: Suggestion Panel – Accept
+  description: Akzeptiert einen offenen Vorschlag aus dem Suggestion Panel.
+  fields:
+    suggestion_id:
+      name: Suggestion ID
+      description: Eindeutige ID des Vorschlags.
+      required: true
+      selector:
+        text:
+    user:
+      name: User
+      description: Optionaler User, der die Aktion ausführt.
+      selector:
+        text:
+
+suggestion_reject:
+  name: Suggestion Panel – Reject
+  description: Lehnt einen offenen Vorschlag ab.
+  fields:
+    suggestion_id:
+      name: Suggestion ID
+      description: Eindeutige ID des Vorschlags.
+      required: true
+      selector:
+        text:
+    user:
+      name: User
+      description: Optionaler User, der die Aktion ausführt.
+      selector:
+        text:
+    reason:
+      name: Reason
+      description: Optionaler Ablehnungsgrund.
+      selector:
+        text:
+
+suggestion_snooze:
+  name: Suggestion Panel – Snooze
+  description: Schiebt einen Vorschlag für eine Anzahl Stunden auf.
+  fields:
+    suggestion_id:
+      name: Suggestion ID
+      description: Eindeutige ID des Vorschlags.
+      required: true
+      selector:
+        text:
+    hours:
+      name: Hours
+      description: "Dauer des Snooze in Stunden (Standard: 4)."
+      default: 4
+      selector:
+        number:
+          min: 1
+          max: 72
+          mode: box
+
 # ─── N3 Event Forwarder ──────────────────────────────────────────────────────
 
 forwarder_n3_start:
@@ -687,3 +746,74 @@ homekit_disable_zone:
       example: "zone:wohnzimmer"
       selector:
         text:
+
+# ─── Voice Context ──────────────────────────────────────────────────────────
+
+parse_command:
+  name: Voice – Parse Command
+  description: Parst einen Sprachbefehl in Intent, Entities und Confidence.
+  fields:
+    text:
+      name: Text
+      description: Der zu parsende Sprachbefehl.
+      required: true
+      example: "Licht im Wohnzimmer einschalten"
+      selector:
+        text:
+
+speak:
+  name: Voice – Speak
+  description: Gibt Text via TTS auf einem Media-Player aus.
+  fields:
+    text:
+      name: Text
+      description: Der auszugebende Text.
+      required: true
+      example: "Guten Morgen!"
+      selector:
+        text:
+    entity_id:
+      name: Entity ID
+      description: "Optional: Ziel-Media-Player Entity."
+      selector:
+        entity:
+          domain: media_player
+    language:
+      name: Language
+      description: "Sprache fuer TTS (default: de)."
+      default: "de"
+      selector:
+        text:
+
+execute_command:
+  name: Voice – Execute Command
+  description: Parst und fuehrt einen Sprachbefehl aus (parse + execute).
+  fields:
+    text:
+      name: Text
+      description: Der auszufuehrende Sprachbefehl.
+      required: true
+      example: "Schalte das Licht aus"
+      selector:
+        text:
+
+get_voice_state:
+  name: Voice – Get State
+  description: Gibt den aktuellen Voice-Context-Status zurueck (letzter Befehl, TTS-Entity, Tone).
+
+set_voice_tone:
+  name: Voice – Set Tone
+  description: Setzt den Sprachstil (formal, casual, friendly, professional).
+  fields:
+    tone:
+      name: Tone
+      description: Der gewuenschte Sprachstil.
+      required: true
+      default: "formal"
+      selector:
+        select:
+          options:
+            - "formal"
+            - "casual"
+            - "friendly"
+            - "professional"
