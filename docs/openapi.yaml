@@ -167,6 +167,33 @@ security:
 - apiKeyAuth: []
 - bearerAuth: []
 paths:
+  /api/v1/legacy/health:
+    get:
+      summary: Legacy health endpoint (deprecated)
+      description: Deprecated legacy health endpoint, wired as a stub for backward compatibility.
+      operationId: getLegacyHealth
+      tags:
+      - Legacy
+      responses:
+        '501':
+          description: Stub response (not implemented)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "501 Not Implemented"
+                  message:
+                    type: string
+                    example: "This endpoint is deprecated and wired as a stub."
+                  X-Stub:
+                    type: string
+                    example: "allowlist"
+      security:
+      - apiKeyAuth: []
+
   /api/v1/system_health:
     get:
       summary: Get complete system health status
