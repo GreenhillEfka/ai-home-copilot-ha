@@ -4,6 +4,16 @@ Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Date
 
 ## [Unreleased]
 
+## [13.5.7] - 2026-03-09
+
+### Compatibility
+- Core v13.5.7 ↔ HA v13.5.7
+- Migration required: no
+
+### Docs
+- Webhook contract mirrored in OpenAPI.
+- Version files normalized for aligned dual-repo release.
+
 ## [13.5.4] - 2026-03-07
 
 ### Compatibility
