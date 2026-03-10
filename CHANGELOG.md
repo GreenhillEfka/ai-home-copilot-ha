@@ -4,6 +4,17 @@ Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Date
 
 ## [Unreleased]
 
+## [13.5.8] - 2026-03-10
+
+### Compatibility
+- HA v13.5.8 ↔ Core v13.5.8
+- Protocol/API contract: aligned
+- Migration required: no
+
+### Fixed
+- **Drift-A Closed**: 5 OpenAPI-Pfade dokumentiert (`/api/v1/zone*`, `/api/v1/mood/aggregated`)
+- OpenAPI sync: HA + Core aligned (551/551 paths, 100%)
+
 ## [13.5.7] - 2026-03-09
 
 ### Compatibility

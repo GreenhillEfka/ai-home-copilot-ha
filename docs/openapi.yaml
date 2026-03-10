@@ -18678,6 +18678,118 @@ paths:
               schema:
                 type: object
       security:
+  /api/v1/zone/create:
+    post:
+      tags: [zone]
+      summary: Create new zone
+      operationId: createZone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneCreateRequest'
+      responses:
+        "201":
+          description: Zone created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        "400":
+          description: Invalid request
+  /api/v1/zone/delete/{zone_id}:
+    delete:
+      tags: [zone]
+      summary: Delete zone
+      operationId: deleteZone
+      parameters:
+      - name: zone_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Zone deleted
+        "404":
+          description: Zone not found
+  /api/v1/zone/update:
+    put:
+      tags: [zone]
+      summary: Update zone
+      operationId: updateZone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneUpdateRequest'
+      responses:
+        "200":
+          description: Zone updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        "404":
+          description: Zone not found
+  /api/v1/zone/{zone_id}:
+    get:
+      tags: [zone]
+      summary: Get zone details
+      operationId: getZone
+      parameters:
+      - name: zone_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Zone details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+        "404":
+          description: Zone not found
+  /api/v1/mood/aggregated:
+    get:
+      tags: [mood]
+      summary: Get aggregated mood data
+      operationId: getAggregatedMood
+      parameters:
+      - name: home_id
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: hours
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 24
+      responses:
+        "200":
+          description: Aggregated mood data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  home_id:
+                    type: string
+                  period_hours:
+                    type: integer
+                  mood_score:
+                    type: number
+                    format: float
+                  samples:
+                    type: integer
+        "400":
+          description: Invalid parameters
       - apiKeyAuth: []
 components:
   schemas:
