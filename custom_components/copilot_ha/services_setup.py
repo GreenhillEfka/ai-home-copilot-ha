@@ -1234,6 +1234,206 @@ def _register_homekit_services(hass: HomeAssistant) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Musikwolke / Zone Media Control services
+# ---------------------------------------------------------------------------
+
+def _get_coordinator(hass: HomeAssistant):
+    """Get the first available CopilotDataUpdateCoordinator."""
+    domain_data = hass.data.get(DOMAIN, {})
+    for entry_id, data in domain_data.items():
+        if isinstance(data, dict):
+            coord = data.get("coordinator")
+            if coord is not None:
+                return coord
+    return None
+
+
+def _register_musikwolke_services(hass: HomeAssistant) -> None:
+    """Register Musikwolke / zone media control services."""
+
+    if not hass.services.has_service(DOMAIN, "musikwolke_create"):
+
+        async def _handle_musikwolke_create(call: ServiceCall) -> None:
+            coord = _get_coordinator(hass)
+            if coord is None:
+                _LOGGER.warning("Musikwolke create: no coordinator available")
+                return
+            zone_ids = call.data.get("zone_ids", [])
+            if not zone_ids:
+                return
+            result = await coord.api.async_create_musikwolke(zone_ids)
+            hass.bus.async_fire(
+                f"{DOMAIN}_musikwolke_event",
+                {"action": "create", "zone_ids": zone_ids, **result},
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            "musikwolke_create",
+            _handle_musikwolke_create,
+            schema=vol.Schema({vol.Required("zone_ids"): list}),
+        )
+
+    if not hass.services.has_service(DOMAIN, "musikwolke_dissolve"):
+
+        async def _handle_musikwolke_dissolve(call: ServiceCall) -> None:
+            coord = _get_coordinator(hass)
+            if coord is None:
+                return
+            zone_ids = call.data.get("zone_ids", [])
+            if not zone_ids:
+                return
+            result = await coord.api.async_dissolve_musikwolke(zone_ids)
+            hass.bus.async_fire(
+                f"{DOMAIN}_musikwolke_event",
+                {"action": "dissolve", "zone_ids": zone_ids, **result},
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            "musikwolke_dissolve",
+            _handle_musikwolke_dissolve,
+            schema=vol.Schema({vol.Required("zone_ids"): list}),
+        )
+
+    if not hass.services.has_service(DOMAIN, "musikwolke_play"):
+
+        async def _handle_musikwolke_play(call: ServiceCall) -> None:
+            coord = _get_coordinator(hass)
+            if coord is None:
+                return
+            zone_id = call.data["zone_id"]
+            volume_pct = call.data.get("volume_pct")
+            result = await coord.api.async_musikwolke_play(zone_id, volume_pct)
+            hass.bus.async_fire(
+                f"{DOMAIN}_musikwolke_event",
+                {"action": "play", "zone_id": zone_id, **result},
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            "musikwolke_play",
+            _handle_musikwolke_play,
+            schema=vol.Schema({
+                vol.Required("zone_id"): str,
+                vol.Optional("volume_pct"): vol.All(int, vol.Range(min=0, max=100)),
+            }),
+        )
+
+    if not hass.services.has_service(DOMAIN, "musikwolke_pause"):
+
+        async def _handle_musikwolke_pause(call: ServiceCall) -> None:
+            coord = _get_coordinator(hass)
+            if coord is None:
+                return
+            zone_id = call.data["zone_id"]
+            result = await coord.api.async_musikwolke_pause(zone_id)
+            hass.bus.async_fire(
+                f"{DOMAIN}_musikwolke_event",
+                {"action": "pause", "zone_id": zone_id, **result},
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            "musikwolke_pause",
+            _handle_musikwolke_pause,
+            schema=vol.Schema({vol.Required("zone_id"): str}),
+        )
+
+    if not hass.services.has_service(DOMAIN, "musikwolke_volume"):
+
+        async def _handle_musikwolke_volume(call: ServiceCall) -> None:
+            coord = _get_coordinator(hass)
+            if coord is None:
+                return
+            zone_id = call.data["zone_id"]
+            volume_pct = call.data["volume_pct"]
+            result = await coord.api.async_musikwolke_volume(zone_id, volume_pct)
+            hass.bus.async_fire(
+                f"{DOMAIN}_musikwolke_event",
+                {"action": "volume", "zone_id": zone_id, "volume_pct": volume_pct, **result},
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            "musikwolke_volume",
+            _handle_musikwolke_volume,
+            schema=vol.Schema({
+                vol.Required("zone_id"): str,
+                vol.Required("volume_pct"): vol.All(int, vol.Range(min=0, max=100)),
+            }),
+        )
+
+    if not hass.services.has_service(DOMAIN, "musikwolke_start_follow"):
+
+        async def _handle_start_follow(call: ServiceCall) -> None:
+            coord = _get_coordinator(hass)
+            if coord is None:
+                return
+            person_id = call.data["person_id"]
+            source_zone = call.data["source_zone"]
+            result = await coord.api.async_start_media_follow(person_id, source_zone)
+            hass.bus.async_fire(
+                f"{DOMAIN}_musikwolke_event",
+                {"action": "start_follow", "person_id": person_id, "source_zone": source_zone, **result},
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            "musikwolke_start_follow",
+            _handle_start_follow,
+            schema=vol.Schema({
+                vol.Required("person_id"): str,
+                vol.Required("source_zone"): str,
+            }),
+        )
+
+    if not hass.services.has_service(DOMAIN, "musikwolke_stop_follow"):
+
+        async def _handle_stop_follow(call: ServiceCall) -> None:
+            coord = _get_coordinator(hass)
+            if coord is None:
+                return
+            session_id = call.data["session_id"]
+            result = await coord.api.async_stop_media_follow(session_id)
+            hass.bus.async_fire(
+                f"{DOMAIN}_musikwolke_event",
+                {"action": "stop_follow", "session_id": session_id, **result},
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            "musikwolke_stop_follow",
+            _handle_stop_follow,
+            schema=vol.Schema({vol.Required("session_id"): str}),
+        )
+
+    if not hass.services.has_service(DOMAIN, "zone_automation_set_mode"):
+
+        async def _handle_zone_automation_set_mode(call: ServiceCall) -> None:
+            coord = _get_coordinator(hass)
+            if coord is None:
+                return
+            zone_id = call.data["zone_id"]
+            mode = call.data["mode"]
+            result = await coord.api.async_set_zone_automation_mode(zone_id, mode)
+            hass.bus.async_fire(
+                f"{DOMAIN}_zone_automation_event",
+                {"action": "set_mode", "zone_id": zone_id, "mode": mode, **result},
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            "zone_automation_set_mode",
+            _handle_zone_automation_set_mode,
+            schema=vol.Schema({
+                vol.Required("zone_id"): str,
+                vol.Required("mode"): vol.In(["off", "learning", "autonomy"]),
+            }),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
@@ -1254,3 +1454,4 @@ def async_register_all_services(hass: HomeAssistant) -> None:
     _register_energy_services(hass)
     _register_habit_learning_services(hass)
     _register_homekit_services(hass)
+    _register_musikwolke_services(hass)

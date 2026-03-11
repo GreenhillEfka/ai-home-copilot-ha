@@ -1,219 +1,98 @@
-# Release Notes v12.0.0 -- Phase 5 & 6 Complete
+# Release Notes v13.7.0 -- Musikwolke HA Services & Documentation Overhaul
 
-**Datum:** 2026-03-01
+**Datum:** 2026-03-11
 **Branch:** main
-**Tag:** `v12.0.0`
-**HA hassfest:** ✓ compliant
+**Tag:** `v13.7.0`
+**HA hassfest:** compliant
+**Paired Release:** Core v13.7.0 <-> HA v13.7.0
 
 ---
 
 ## Ueberblick
 
-PilotSuite v12.0.0 ist ein **MAJOR Release**, das zwei grosse Entwicklungsphasen abschliesst:
+PilotSuite v13.7.0 schliesst die **Musikwolke End-to-End Integration** zwischen Core und HA ab und liefert eine vollstaendige Dokumentationsueberarbeitung.
 
-- **Phase 5 -- Cross-Home Sharing**: 52+ neue API-Endpoints fuer Notifications, Entity Sharing und Federated Learning
-- **Phase 6 -- Type Hints & Test Coverage**: Durchgaengige Typisierung, 2526 Tests mit 98% Pass-Rate
+### Highlights
 
-Dieses Release erweitert PilotSuite von einem einzelnen Smart-Home-Backend zu einer Plattform, die Haushalte sicher miteinander vernetzen kann -- ohne Kompromisse bei Privacy oder lokaler Kontrolle.
-
----
-
-## Highlights
-
-### 52+ neue API-Endpoints
-
-| Modul | Endpoints | Beschreibung |
-|-------|-----------|-------------|
-| Notifications | 21 | Benachrichtigungen, Subscriptions, HA Integration |
-| Sharing | 16 | Entity Registry, Sync, Discovery |
-| Federated Learning | 15 | Rounds, Aggregation, Knowledge Transfer |
-
-### 2526 Tests -- 98% Pass-Rate
-
-- **2476 passed**, 20 failed, 30 skipped
-- Flask v3.1.3, NumPy v2.4.2 voll integriert
-- Alle Integrationstests aktiviert
-
-### Security Fixes (P1)
-
-- WebSocket Authentication fuer `handle_connect()`
-- Neuron State Override Protection mit Admin-Token
-- Neuer `require_admin` Decorator in `api/security.py`
+- **8 neue Musikwolke HA-Services** fuer direkte Steuerung aus HA Automations und Dashboard
+- **Interaktives Musik-Dashboard** mit Button-Controls statt statischem Markdown
+- **14 neue Coordinator-API-Methoden** fuer Musikwolke, Media Follow und Zone Automation
+- **Vollstaendige Dokumentation**: Handbuch, Installationsanleitung, Modul-Referenz
 
 ---
 
-## Phase 5: Cross-Home Sharing
+## Neue HA-Services
 
-### Notifications API (`/api/v1/notifications`)
+| Service | Beschreibung |
+|---------|-------------|
+| `copilot_ha.musikwolke_create` | Musikwolke-Gruppe erstellen (synchronisierte Wiedergabe) |
+| `copilot_ha.musikwolke_dissolve` | Musikwolke-Gruppe aufloesen |
+| `copilot_ha.musikwolke_play` | Wiedergabe in einer Zone starten |
+| `copilot_ha.musikwolke_pause` | Wiedergabe in einer Zone pausieren |
+| `copilot_ha.musikwolke_volume` | Lautstaerke fuer eine Zone setzen (0-100%) |
+| `copilot_ha.musikwolke_start_follow` | Follow-Session starten (Musik folgt Person) |
+| `copilot_ha.musikwolke_stop_follow` | Follow-Session beenden |
+| `copilot_ha.zone_automation_set_mode` | Automatisierungsmodus setzen (off/learning/autonomy) |
 
-Ein vollstaendiges Benachrichtigungssystem mit 21 Endpoints:
+### Beispiel: HA Automation
 
-**Core Notifications**
-- `POST /send` -- Benachrichtigung senden
-- `GET /` -- Benachrichtigungen auflisten (Filter: unread_only, type, limit)
-- `POST /<id>/read` -- Als gelesen markieren
-- `DELETE /<id>` -- Benachrichtigung verwerfen
-- `POST /clear` -- Alle Benachrichtigungen loeschen
-
-**Device Subscriptions**
-- `POST /subscribe` -- Geraet registrieren (Push-Token, Preferences)
-- `POST /unsubscribe` -- Geraet abmelden
-- `GET /subscriptions` -- Alle Subscriptions anzeigen
-- `PUT /subscriptions/<device_id>` -- Subscription aktualisieren
-
-**Home Assistant Integration**
-- `POST /ha/register` -- HA-Geraet registrieren
-- `GET /ha/devices` -- HA-Geraete auflisten
-- `DELETE /ha/devices/<id>` -- HA-Geraet abmelden
-- `POST /ha/devices/<id>/enable` -- Geraet aktivieren
-- `POST /ha/devices/<id>/disable` -- Geraet deaktivieren
-- `POST /send/ha` -- Ueber HA Notify Service senden
-- `GET /ha/test` -- HA-Verbindung testen
-- `GET /ha/services` -- Verfuegbare HA Notify Services
-
-**Analytics**
-- `GET /stats` -- Statistiken (nach Quelle, Prioritaet, Typ)
-- `GET /pending` -- Ausstehende Benachrichtigungen
-- `GET /digest` -- Zusammenfassung (konfigurierbar: Stunden)
-
-### Sharing API (`/api/v1/sharing`)
-
-Cross-Home Entity Sharing mit 16 Endpoints:
-
-**Entity Registry**
-- `GET /entities` -- Alle Entities
-- `GET /entities/shared` -- Geteilte Entities
-- `GET /entities/<id>` -- Einzelne Entity
-- `POST /entities` -- Entity registrieren
-- `PUT /entities/<id>` -- Entity aktualisieren
-- `DELETE /entities/<id>` -- Entity abmelden
-
-**Sharing Workflow**
-- `POST /entities/<id>/share-with` -- Mit anderem Haushalt teilen
-- `POST /entities/<id>/stop-sharing/<home_id>` -- Teilen beenden
-- `GET /entities/<id>/shared-with` -- Geteilte Haushalte anzeigen
-
-**Sync & Discovery**
-- `GET /sync/status` -- Sync-Status
-- `GET /sync/entities` -- Synchronisierte Entities
-- `GET /sync/entities/<id>` -- Einzelne synchronisierte Entity
-- `GET /sync/peers` -- Sync-Peers
-- `GET /discovery/peers` -- Entdeckte Peers
-- `GET /discovery/local` -- Lokale Peer-Information
-- `GET /` -- Gesamtstatus (Registry, Sync, Discovery)
-
-### Collective Intelligence API (`/api/v1/federated`)
-
-Federated Learning mit 15 Endpoints:
-
-**Service Control**
-- `GET /` -- Service-Status
-- `POST /start` -- Service starten
-- `POST /stop` -- Service stoppen
-
-**Federated Learning Lifecycle**
-- `POST /register` -- Node registrieren
-- `POST /update` -- Update einreichen (Gewichte + Metriken)
-- `POST /round` -- Neue Runde starten
-- `POST /aggregate` -- Aggregation ausfuehren
-
-**Knowledge Management**
-- `POST /knowledge` -- Wissen extrahieren
-- `POST /knowledge/<id>/transfer` -- Wissen transferieren
-- `GET /knowledge-base` -- Wissensbasis anzeigen
-
-**History & Models**
-- `GET /rounds` -- Runden-Historie
-- `GET /models` -- Aggregierte Modelle
-- `GET /statistics` -- Statistiken
-
-**State Persistence**
-- `POST /save` -- Zustand speichern
-- `POST /load` -- Zustand laden
-
----
-
-## Phase 6: Type Hints & Test Coverage
-
-### Type Hints
-
-Alle Phase-5-Module haben jetzt durchgaengige Python Type Hints:
-
-- `from __future__ import annotations` in allen Modulen
-- Return Types: `Tuple[Response, int] | Response`
-- Dataclass-Typisierung fuer alle Request/Response-Strukturen
-- Einheitlicher Stil ueber Notifications, Sharing und Federated Learning
-
-### Test-Ergebnisse
-
-```
-2526 Tests total
-├── 2476 passed  (98.0%)
-├── 20 failed    (0.8%)
-└── 30 skipped   (1.2%)
-
-Frameworks:
-├── Flask v3.1.3
-├── NumPy v2.4.2
-└── pytest (alle Integration-Tests aktiviert)
+```yaml
+automation:
+  - alias: "Musikwolke bei Ankunft"
+    trigger:
+      - platform: state
+        entity_id: person.alice
+        to: "home"
+    action:
+      - service: copilot_ha.musikwolke_start_follow
+        data:
+          person_id: person.alice
+          source_zone: wohnzimmer
 ```
 
 ---
 
-## Security
+## Coordinator-Erweiterungen
 
-### WebSocket Authentication
-- Token-Validierung in `handle_connect()` fuer WebSocket-Verbindungen
-- Unterstuetzt `auth.token`, Query-Parameter und Header
-- Fehlende Tokens: Warning (Backward Compatibility)
-- Ungueltige Tokens: Connection abgelehnt
+14 neue API-Methoden im `CopilotApiClient`:
 
-### Neuron State Override Protection
-- Admin-Token erforderlich fuer `/evaluate` mit State-Overrides
-- Admin-Token erforderlich fuer `/update` Endpoint
-- Neuer `require_admin_token()` in `api/security.py`
+- `async_get_musikwolke_status()` -- Status aller aktiven Musikwolke-Gruppen
+- `async_musikwolke_play/pause/volume` -- Zone-Steuerung
+- `async_create_musikwolke/dissolve_musikwolke` -- Gruppen-Management
+- `async_start/stop_media_follow` -- Follow-Session-Management
+- `async_get_media_follow_sessions()` -- Session-Ueberblick
+- `async_set/get_zone_automation_mode` -- Automatisierungsmodus
+- `async_get_musikwolke_zone_map()` -- Zone-Speaker-Mapping
 
 ---
 
-## Weitere Aenderungen
+## Dashboard-Verbesserungen
 
-- **Zone Editor API**: CRUD-Operationen fuer Habitus-Zonen und Raeume
-- **Neuron Dashboard**: D3.js Force-Directed Graph (14 Neuronen, 24 Verbindungen)
-- **8 kritische Bugfixes** in Production-Readiness
+### Musik-Tab (Tab 5)
+
+- **Play/Pause/Dissolve Buttons**: Direkte Steuerung per Tap
+- **Follow Start/Stop Buttons**: Media-Follow per Knopfdruck
+- **Zonen-Automatisierung**: Tabellarische Modi-Uebersicht
+- **Info-Card**: Erklaerung der Musikwolke-Funktionalitaet
+
+---
+
+## Dokumentation
+
+| Dokument | Beschreibung |
+|----------|-------------|
+| `docs/HANDBUCH.md` | Deutsches Benutzerhandbuch |
+| `docs/INSTALLATIONSANLEITUNG.md` | Schritt-fuer-Schritt Installationsanleitung |
+| `docs/MODULE_REFERENCE.md` | Vollstaendige Modul-Referenz |
 
 ---
 
 ## Upgrade-Hinweise
 
-### Kompatibilitaet
-- **Breaking Changes:** Keine -- bestehende APIs bleiben unveraendert
-- **Neue Dependencies:** Keine zusaetzlichen Runtime-Dependencies
-- **Konfiguration:** Neue Features sind opt-in und standardmaessig deaktiviert
-
-### Migration
-```bash
-# Standard-Upgrade (Docker Pull)
-ha addons update pilotsuite_core
-
-# Manuell (fuer Entwickler)
-git pull origin main
-docker build -t pilotsuite-core .
-```
-
-### Bekannte Einschraenkungen
-- 20 Tests schlagen fehl (Phase 7 adressiert dies)
-- Federated Learning erfordert mindestens 2 Peers
-- Cross-Home Sharing benoetigt lokales Netzwerk oder optionalen Rendezvous-Server
+- **Breaking Changes:** Keine
+- **Neue Dependencies:** Keine
+- **Migration:** Nicht erforderlich -- Standard HA-Update
 
 ---
 
-## Naechste Phase: Phase 7
-
-- Production Readiness (Monitoring, Performance)
-- Advanced ML (On-Device Inference, Anomaly Detection)
-- Verbleibende Test-Fixes
-- OpenAPI-Spec-Erweiterung
-
----
-
-**PilotSuite v12.0.0** -- Local-first, Privacy-first, Governance-first.
+**PilotSuite v13.7.0** -- Local-first, Privacy-first, Governance-first.

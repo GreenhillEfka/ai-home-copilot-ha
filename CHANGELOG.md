@@ -1,5 +1,25 @@
 # Changelog
 
+## [13.7.0] - 2026-03-11
+
+### Compatibility
+- HA v13.7.0 <-> Core v13.7.0
+- Protocol/API contract: aligned
+- Migration required: no
+
+### Added
+- **8 Musikwolke HA-Services**: musikwolke_create, musikwolke_dissolve, musikwolke_play, musikwolke_pause, musikwolke_volume, musikwolke_start_follow, musikwolke_stop_follow, zone_automation_set_mode
+- **14 Coordinator-API-Methoden**: Musikwolke-Status, Play/Pause/Volume, Create/Dissolve, Media Follow, Zone Automation Mode, Zone Map
+- **Interaktives Musik-Dashboard**: Button-Cards fuer Play/Pause/Dissolve, Follow Start/Stop
+- **Handbuch** (docs/HANDBUCH.md): Deutsches Benutzerhandbuch
+- **Installationsanleitung** (docs/INSTALLATIONSANLEITUNG.md): Setup-Guide
+- **Modul-Referenz** (docs/MODULE_REFERENCE.md): Alle HA-Komponenten dokumentiert
+
+### Changed
+- Musik-Tab von statischem Markdown zu interaktiven Button-Cards
+- Versions-Bump auf 13.7.0
+
+
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
 ## [13.6.0] - 2026-03-11

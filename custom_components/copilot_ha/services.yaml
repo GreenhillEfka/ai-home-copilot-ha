@@ -817,3 +817,138 @@ set_voice_tone:
             - "casual"
             - "friendly"
             - "professional"
+
+# ─── Musikwolke / Zone Media Control ──────────────────────────────────────
+
+musikwolke_create:
+  name: Musikwolke – Create Group
+  description: Erstellt eine Musikwolke-Gruppe ueber mehrere Zonen (synchronisierte Wiedergabe).
+  fields:
+    zone_ids:
+      name: Zone IDs
+      description: Liste der Zonen-IDs fuer die Gruppe.
+      required: true
+      example: '["wohnzimmer", "kueche", "schlafzimmer"]'
+      selector:
+        object:
+
+musikwolke_dissolve:
+  name: Musikwolke – Dissolve Group
+  description: Loest eine Musikwolke-Gruppe auf.
+  fields:
+    zone_ids:
+      name: Zone IDs
+      description: Liste der aufzuloesenden Zonen-IDs.
+      required: true
+      example: '["wohnzimmer", "kueche"]'
+      selector:
+        object:
+
+musikwolke_play:
+  name: Musikwolke – Play Zone
+  description: Startet Wiedergabe in einer Zone.
+  fields:
+    zone_id:
+      name: Zone ID
+      description: ID der Zone.
+      required: true
+      example: "wohnzimmer"
+      selector:
+        text:
+    volume_pct:
+      name: Volume (%)
+      description: "Optional: Lautstaerke in Prozent (0-100)."
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: slider
+
+musikwolke_pause:
+  name: Musikwolke – Pause Zone
+  description: Pausiert Wiedergabe in einer Zone.
+  fields:
+    zone_id:
+      name: Zone ID
+      description: ID der Zone.
+      required: true
+      example: "wohnzimmer"
+      selector:
+        text:
+
+musikwolke_volume:
+  name: Musikwolke – Set Volume
+  description: Setzt die Lautstaerke fuer eine Zone.
+  fields:
+    zone_id:
+      name: Zone ID
+      description: ID der Zone.
+      required: true
+      example: "wohnzimmer"
+      selector:
+        text:
+    volume_pct:
+      name: Volume (%)
+      description: Lautstaerke in Prozent (0-100).
+      required: true
+      example: 30
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: slider
+
+musikwolke_start_follow:
+  name: Musikwolke – Start Follow
+  description: Startet eine Musikwolke-Follow-Session (Musik folgt Person durch Raeume).
+  fields:
+    person_id:
+      name: Person ID
+      description: Person-Entity-ID (z.B. person.alice).
+      required: true
+      example: "person.alice"
+      selector:
+        entity:
+          domain: person
+    source_zone:
+      name: Source Zone
+      description: Startzone der Follow-Session.
+      required: true
+      example: "wohnzimmer"
+      selector:
+        text:
+
+musikwolke_stop_follow:
+  name: Musikwolke – Stop Follow
+  description: Stoppt eine Musikwolke-Follow-Session.
+  fields:
+    session_id:
+      name: Session ID
+      description: ID der Follow-Session.
+      required: true
+      example: "mw_abc123"
+      selector:
+        text:
+
+zone_automation_set_mode:
+  name: Zone Automation – Set Mode
+  description: Setzt den Automatisierungsmodus einer Zone (off/learning/autonomy).
+  fields:
+    zone_id:
+      name: Zone ID
+      description: ID der Zone.
+      required: true
+      example: "wohnzimmer"
+      selector:
+        text:
+    mode:
+      name: Mode
+      description: "Automatisierungsmodus: off, learning oder autonomy."
+      required: true
+      example: "learning"
+      selector:
+        select:
+          options:
+            - "off"
+            - "learning"
+            - "autonomy"

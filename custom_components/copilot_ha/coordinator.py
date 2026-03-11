@@ -260,6 +260,129 @@ class CopilotApiClient(SharedCopilotApiClient):
             _LOGGER.debug("Core tags API not available: %s", e)
         return []
 
+    # ── Musikwolke / Media Zone Control ────────────────────────────────
+
+    async def async_get_musikwolke_status(self) -> dict[str, Any]:
+        """Get Musikwolke status (active zones, Sonos connection)."""
+        try:
+            return await self.async_get("/api/v1/musikwolke/status")
+        except CopilotApiError as e:
+            _LOGGER.debug("Musikwolke status not available: %s", e)
+        return {"ok": False, "sonos_connected": False, "active_zones": []}
+
+    async def async_musikwolke_play(self, zone_id: str, volume_pct: int | None = None) -> dict[str, Any]:
+        """Play media in a zone via Musikwolke."""
+        try:
+            result = await self._request_json("POST", f"/api/v1/media/zones/{zone_id}/play", payload={})
+            if volume_pct is not None:
+                await self.async_musikwolke_volume(zone_id, volume_pct)
+            return result
+        except CopilotApiError as e:
+            _LOGGER.debug("Musikwolke play failed for zone %s: %s", zone_id, e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_musikwolke_pause(self, zone_id: str) -> dict[str, Any]:
+        """Pause media in a zone via Musikwolke."""
+        try:
+            return await self._request_json("POST", f"/api/v1/media/zones/{zone_id}/pause", payload={})
+        except CopilotApiError as e:
+            _LOGGER.debug("Musikwolke pause failed for zone %s: %s", zone_id, e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_musikwolke_volume(self, zone_id: str, volume_pct: int) -> dict[str, Any]:
+        """Set volume for a zone (0-100)."""
+        try:
+            return await self._request_json(
+                "POST",
+                f"/api/v1/musikwolke/volume/{zone_id}",
+                payload={"volume_pct": volume_pct},
+            )
+        except CopilotApiError as e:
+            _LOGGER.debug("Musikwolke volume failed for zone %s: %s", zone_id, e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_create_musikwolke(self, zone_ids: list[str]) -> dict[str, Any]:
+        """Create a Musikwolke group across zones."""
+        try:
+            return await self._request_json(
+                "POST", "/api/v1/musikwolke/create", payload={"zone_ids": zone_ids}
+            )
+        except CopilotApiError as e:
+            _LOGGER.debug("Musikwolke create failed: %s", e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_dissolve_musikwolke(self, zone_ids: list[str]) -> dict[str, Any]:
+        """Dissolve a Musikwolke group."""
+        try:
+            return await self._request_json(
+                "POST", "/api/v1/musikwolke/dissolve", payload={"zone_ids": zone_ids}
+            )
+        except CopilotApiError as e:
+            _LOGGER.debug("Musikwolke dissolve failed: %s", e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_start_media_follow(self, person_id: str, source_zone: str) -> dict[str, Any]:
+        """Start a Musikwolke follow session for a person."""
+        try:
+            return await self._request_json(
+                "POST",
+                "/api/v1/media/musikwolke/start",
+                payload={"person_id": person_id, "source_zone": source_zone},
+            )
+        except CopilotApiError as e:
+            _LOGGER.debug("Media follow start failed: %s", e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_stop_media_follow(self, session_id: str) -> dict[str, Any]:
+        """Stop a Musikwolke follow session."""
+        try:
+            return await self._request_json(
+                "POST", f"/api/v1/media/musikwolke/{session_id}/stop", payload={}
+            )
+        except CopilotApiError as e:
+            _LOGGER.debug("Media follow stop failed: %s", e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_get_media_follow_sessions(self) -> list[dict[str, Any]]:
+        """List active Musikwolke follow sessions."""
+        try:
+            data = await self.async_get("/api/v1/media/musikwolke")
+            return data.get("sessions", [])
+        except CopilotApiError as e:
+            _LOGGER.debug("Media follow sessions not available: %s", e)
+        return []
+
+    async def async_set_zone_automation_mode(self, zone_id: str, mode: str) -> dict[str, Any]:
+        """Set zone automation mode (off/learning/autonomy)."""
+        try:
+            return await self._request_json(
+                "POST",
+                f"/api/v1/zone-automation/zones/{zone_id}/mode",
+                payload={"mode": mode},
+            )
+        except CopilotApiError as e:
+            _LOGGER.debug("Zone automation mode set failed for %s: %s", zone_id, e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_get_zone_automation_mode(self, zone_id: str) -> str:
+        """Get zone automation mode."""
+        try:
+            data = await self.async_get(f"/api/v1/zone-automation/zones/{zone_id}/mode")
+            return data.get("automation_mode", "off")
+        except CopilotApiError as e:
+            _LOGGER.debug("Zone automation mode get failed for %s: %s", zone_id, e)
+        return "off"
+
+    async def async_get_musikwolke_zone_map(self) -> dict[str, Any]:
+        """Get zone-to-speaker mapping."""
+        try:
+            return await self.async_get("/api/v1/musikwolke/zone-map")
+        except CopilotApiError as e:
+            _LOGGER.debug("Musikwolke zone map not available: %s", e)
+        return {"ok": False, "zone_map": {}}
+
+    # ── Presence / Light / Chat ────────────────────────────────────────
+
     async def async_get_presence(self) -> dict[str, Any]:
         """Get presence intelligence data."""
         try:

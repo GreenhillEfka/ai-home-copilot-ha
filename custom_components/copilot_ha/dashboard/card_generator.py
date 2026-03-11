@@ -370,7 +370,7 @@ def generate_presence_view(zones: list[dict[str, Any]] | None = None) -> dict[st
 # ── Tab 5: Musik / Musikwolke ─────────────────────────────────────────
 
 def generate_music_view(host: str, port: int) -> dict[str, Any]:
-    """Tab 5: Musik — Sonos / Musikwolke control."""
+    """Tab 5: Musik — Sonos / Musikwolke control with interactive buttons."""
     core_url = f"http://{host}:{port}"
     return {
         "title": "Musik",
@@ -378,6 +378,15 @@ def generate_music_view(host: str, port: int) -> dict[str, Any]:
         "icon": "mdi:speaker-group",
         "badges": [],
         "cards": [
+            # Musikwolke status + follow sensor
+            {
+                "type": "entities",
+                "title": "Musikwolke-Status",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "sensor.pilotsuite_media_follow", "name": "Follow-Modus"},
+                ],
+            },
             # Sonos overview iframe
             {
                 "type": "iframe",
@@ -385,26 +394,112 @@ def generate_music_view(host: str, port: int) -> dict[str, Any]:
                 "title": "Sonos-Uebersicht",
                 "aspect_ratio": "16:9",
             },
-            # Media Follow sensor
+            # Interactive Musikwolke controls
             {
-                "type": "entities",
-                "title": "Musikwolke",
-                "entities": [
-                    {"entity": "sensor.pilotsuite_media_follow", "name": "Follow-Status"},
+                "type": "vertical-stack",
+                "title": "Musikwolke-Steuerung",
+                "cards": [
+                    # Play / Pause / Volume grid
+                    {
+                        "type": "grid",
+                        "columns": 3,
+                        "square": False,
+                        "cards": [
+                            {
+                                "type": "button",
+                                "name": "Alle abspielen",
+                                "icon": "mdi:play",
+                                "tap_action": {
+                                    "action": "call-service",
+                                    "service": "copilot_ha.musikwolke_play",
+                                    "service_data": {"zone_id": "all"},
+                                },
+                            },
+                            {
+                                "type": "button",
+                                "name": "Alle pausieren",
+                                "icon": "mdi:pause",
+                                "tap_action": {
+                                    "action": "call-service",
+                                    "service": "copilot_ha.musikwolke_pause",
+                                    "service_data": {"zone_id": "all"},
+                                },
+                            },
+                            {
+                                "type": "button",
+                                "name": "Gruppe aufloesen",
+                                "icon": "mdi:speaker-off",
+                                "tap_action": {
+                                    "action": "call-service",
+                                    "service": "copilot_ha.musikwolke_dissolve",
+                                    "service_data": {"zone_ids": []},
+                                    "confirmation": {
+                                        "text": "Alle Musikwolke-Gruppen aufloesen?",
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                    # Follow mode controls
+                    {
+                        "type": "grid",
+                        "columns": 2,
+                        "square": False,
+                        "cards": [
+                            {
+                                "type": "button",
+                                "name": "Follow starten",
+                                "icon": "mdi:account-music",
+                                "tap_action": {
+                                    "action": "call-service",
+                                    "service": "copilot_ha.musikwolke_start_follow",
+                                    "service_data": {
+                                        "person_id": "person.default",
+                                        "source_zone": "wohnzimmer",
+                                    },
+                                },
+                            },
+                            {
+                                "type": "button",
+                                "name": "Follow stoppen",
+                                "icon": "mdi:account-music-outline",
+                                "tap_action": {
+                                    "action": "call-service",
+                                    "service": "copilot_ha.musikwolke_stop_follow",
+                                    "service_data": {"session_id": "latest"},
+                                },
+                            },
+                        ],
+                    },
                 ],
             },
-            # Quick controls (markdown with instructions)
+            # Zone automation mode
             {
                 "type": "markdown",
-                "title": "Musikwolke-Steuerung",
+                "title": "Zonen-Automatisierung",
                 "content": (
-                    "### Musikwolke\n"
-                    "Die Musikwolke folgt Ihnen automatisch durch die Raeume.\n\n"
-                    "**Aktive Gruppen:** Siehe Sonos-Uebersicht oben.\n\n"
-                    "Steuerung ueber:\n"
-                    "- Styx Chat: *\"Spiele Musik im Wohnzimmer\"*\n"
-                    "- HA Automation: `copilot_ha.send_event`\n"
-                    f"- API: `POST {core_url}/api/v1/sonos/musikwolke/create`"
+                    "{% set modes = state_attr('sensor.pilotsuite_zone_modes', 'active_modes') %}\n"
+                    "{% if modes and modes | length > 0 %}\n"
+                    "| Zone | Modus |\n"
+                    "|------|-------|\n"
+                    "{% for m in modes %}\n"
+                    "| {{ m.zone_id }} | {{ m.mode_name_de }} |\n"
+                    "{% endfor %}\n"
+                    "{% else %}\n"
+                    "Alle Zonen im Standard-Modus (off).\n"
+                    "{% endif %}"
+                ),
+            },
+            # Info card
+            {
+                "type": "markdown",
+                "title": "Info",
+                "content": (
+                    "Die **Musikwolke** synchronisiert Sonos-Speaker ueber Zonen.\n\n"
+                    "- **Follow-Modus**: Musik folgt Ihnen automatisch\n"
+                    "- **Gruppen**: Mehrere Zonen spielen synchron\n"
+                    "- **Steuerung**: Buttons oben, Styx Chat oder HA Automations\n\n"
+                    "Services: `copilot_ha.musikwolke_*`, `copilot_ha.zone_automation_set_mode`"
                 ),
             },
         ],
