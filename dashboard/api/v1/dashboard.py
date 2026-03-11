@@ -1,145 +1,174 @@
 """
 PilotSuite Styx Dashboard API v1
-Dashboard-Konfiguration und Habituszonen-Endpoints
+Zonenzentriertes Dashboard mit Habituszonen-Endpoints.
+
+Zone-IDs sind synchron mit pilotsuite-styx-core:
+  living, kitchen, bath, hallway, bedroom, office,
+  room_mira, room_paul, terrace, outside
 """
 from flask import Blueprint, jsonify, request, current_app
-from datetime import datetime
+from datetime import datetime, timezone
 import threading
 import time
 
 dashboard_bp = Blueprint('dashboard_v1', __name__, url_prefix='/api/v1/dashboard')
 
-# In-Memory Storage für Zone-Daten (wird durch HA-Integration ersetzt)
+# In-Memory Storage fuer Zone-Daten (wird durch HA-Integration ersetzt)
 zone_data_store = {}
 zone_lock = threading.Lock()
 
-# Standard-Konfiguration für Habituszonen
+# Standard-Konfiguration fuer Habituszonen (synchron mit Core Zone-IDs)
 DEFAULT_ZONES_CONFIG = [
     {
-        'id': 'wohn',
+        'id': 'living',
         'name': 'Wohnbereich',
         'icon': 'mdi-sofa',
         'enabled': True,
-        'priority': 1,
+        'priority': 10,
         'entities': {
             'temperature': 'sensor.wohnzimmer_temperatur',
             'humidity': 'sensor.wohnzimmer_luftfeuchtigkeit',
-            'lights': ['light.wohnzimmer_deckenlicht', 'light.wohnzimmer_stehlampe']
+            'lights': ['light.wohnzimmer_deckenlicht', 'light.wohnzimmer_stehlampe'],
+            'motion': ['binary_sensor.wohnzimmer_praesenz', 'binary_sensor.wohnzimmer_bewegung'],
+            'media': ['media_player.sonos_wohnzimmer'],
+            'climate': ['climate.wohnzimmer_thermostat'],
         }
     },
     {
-        'id': 'bad',
-        'name': 'Badbereich',
-        'icon': 'mdi-shower',
-        'enabled': True,
-        'priority': 2,
-        'entities': {
-            'temperature': 'sensor.bad_temperatur',
-            'humidity': 'sensor.bad_luftfeuchtigkeit',
-            'lights': ['light.bad_deckenlicht']
-        }
-    },
-    {
-        'id': 'koch',
+        'id': 'kitchen',
         'name': 'Kochbereich',
         'icon': 'mdi-stove',
         'enabled': True,
-        'priority': 3,
+        'priority': 10,
         'entities': {
             'temperature': 'sensor.kuche_temperatur',
             'humidity': 'sensor.kuche_luftfeuchtigkeit',
-            'lights': ['light.kuche_deckenlicht', 'light.kuche_arbeitsplatte']
+            'lights': ['light.kuche_deckenlicht', 'light.kuche_arbeitsplatte'],
+            'motion': ['binary_sensor.kueche_bewegung'],
+            'media': ['media_player.sonos_kueche'],
+            'climate': ['climate.kueche_thermostat'],
         }
     },
     {
-        'id': 'buero',
-        'name': 'Bürobereich',
+        'id': 'bath',
+        'name': 'Badbereich',
+        'icon': 'mdi-shower',
+        'enabled': True,
+        'priority': 10,
+        'entities': {
+            'temperature': 'sensor.bad_temperatur',
+            'humidity': 'sensor.bad_luftfeuchtigkeit',
+            'lights': ['light.bad_deckenlicht', 'light.bad_spiegel'],
+            'motion': ['binary_sensor.bad_praesenz'],
+            'media': ['media_player.sonos_bad'],
+            'climate': ['climate.bad_fussbodenheizung'],
+        }
+    },
+    {
+        'id': 'office',
+        'name': 'Buerobereich',
         'icon': 'mdi-desk',
         'enabled': True,
-        'priority': 4,
+        'priority': 8,
         'entities': {
             'temperature': 'sensor.buro_temperatur',
             'humidity': 'sensor.buro_luftfeuchtigkeit',
-            'lights': ['light.buro_schreibtisch', 'light.buro_deckenlicht']
+            'lights': ['light.buro_schreibtisch', 'light.buro_deckenlicht'],
+            'motion': ['binary_sensor.buero_praesenz'],
+            'media': ['media_player.sonos_buero'],
+            'climate': ['climate.buero_thermostat'],
         }
     },
     {
-        'id': 'gang',
+        'id': 'hallway',
         'name': 'Gangbereich',
         'icon': 'mdi-door-open',
         'enabled': True,
         'priority': 5,
         'entities': {
             'temperature': 'sensor.gang_temperatur',
-            'lights': ['light.gang_deckenlicht']
+            'lights': ['light.gang_deckenlicht', 'light.treppenhaus'],
+            'motion': ['binary_sensor.flur_bewegung', 'binary_sensor.eingang_bewegung'],
         }
     },
     {
-        'id': 'schlaf',
+        'id': 'bedroom',
         'name': 'Schlafbereich',
         'icon': 'mdi-bed',
         'enabled': True,
-        'priority': 6,
+        'priority': 12,
         'entities': {
             'temperature': 'sensor.schlafzimmer_temperatur',
             'humidity': 'sensor.schlafzimmer_luftfeuchtigkeit',
-            'lights': ['light.schlafzimmer_deckenlicht', 'light.schlafzimmer_nachttisch']
+            'lights': ['light.schlafzimmer_deckenlicht', 'light.schlafzimmer_nachttisch'],
+            'motion': ['binary_sensor.schlafzimmer_praesenz'],
+            'media': ['media_player.sonos_schlafzimmer'],
+            'climate': ['climate.schlafzimmer_thermostat'],
         }
     },
     {
-        'id': 'mira',
+        'id': 'room_mira',
         'name': 'Zimmer Mira',
         'icon': 'mdi-account-girl',
         'enabled': True,
-        'priority': 7,
+        'priority': 20,
         'entities': {
             'temperature': 'sensor.zimmer_mira_temperatur',
-            'lights': ['light.zimmer_mira_deckenlicht', 'light.zimmer_mira_schreibtisch']
+            'lights': ['light.zimmer_mira_deckenlicht', 'light.zimmer_mira_schreibtisch'],
+            'motion': ['binary_sensor.mira_bewegung'],
+            'media': ['media_player.sonos_mira'],
+            'climate': ['climate.mira_thermostat'],
         }
     },
     {
-        'id': 'paul',
+        'id': 'room_paul',
         'name': 'Zimmer Paul',
         'icon': 'mdi-account-boy',
         'enabled': True,
-        'priority': 8,
+        'priority': 20,
         'entities': {
             'temperature': 'sensor.zimmer_paul_temperatur',
-            'lights': ['light.zimmer_paul_deckenlicht', 'light.zimmer_paul_schreibtisch']
+            'lights': ['light.zimmer_paul_deckenlicht', 'light.zimmer_paul_schreibtisch'],
+            'motion': ['binary_sensor.paul_bewegung'],
+            'media': ['media_player.sonos_paul'],
+            'climate': ['climate.paul_thermostat'],
         }
     },
     {
-        'id': 'terrasse',
+        'id': 'terrace',
         'name': 'Terrassenbereich',
         'icon': 'mdi-patio-grass',
         'enabled': True,
-        'priority': 9,
+        'priority': 8,
         'entities': {
             'temperature': 'sensor.terrasse_temperatur',
-            'lights': ['light.terrasse_deckenlicht', 'light.terrasse_stimmungslicht']
+            'lights': ['light.terrasse_deckenlicht', 'light.terrasse_stimmungslicht'],
+            'motion': ['binary_sensor.terrasse_bewegung'],
+            'media': ['media_player.sonos_terrasse'],
         }
     },
     {
-        'id': 'aussen',
+        'id': 'outside',
         'name': 'Aussenbereich',
         'icon': 'mdi-tree',
         'enabled': True,
-        'priority': 10,
+        'priority': 5,
         'entities': {
             'temperature': 'sensor.garten_temperatur',
             'humidity': 'sensor.garten_luftfeuchtigkeit',
-            'lights': ['light.garten_weg', 'light.garten_baum']
+            'lights': ['light.garten_weg', 'light.garten_baum'],
+            'motion': ['binary_sensor.einfahrt_bewegung', 'binary_sensor.garten_bewegung'],
         }
     }
 ]
 
+# Lookup-Map fuer schnellen Zugriff
+_ZONE_BY_ID = {z['id']: z for z in DEFAULT_ZONES_CONFIG}
+
 
 @dashboard_bp.route('/config', methods=['GET'])
 def get_dashboard_config():
-    """
-    Dashboard-Konfiguration abrufen
-    Enthält alle Habituszonen mit Metadaten
-    """
+    """Dashboard-Konfiguration mit Habituszonen-Metadaten."""
     config = {
         'version': '13.0.4',
         'zones': DEFAULT_ZONES_CONFIG,
@@ -148,7 +177,8 @@ def get_dashboard_config():
             'tabs': True,
             'websocket': True,
             'alerts': True,
-            'responsive': True
+            'responsive': True,
+            'modules': True,
         },
         'layout': {
             'tab_height': 56,
@@ -161,15 +191,13 @@ def get_dashboard_config():
 
 @dashboard_bp.route('/zones', methods=['GET'])
 def get_zones():
-    """
-    Alle Habituszonen abrufen
-    """
+    """Alle Habituszonen mit Live-Daten."""
     zones = []
     with zone_lock:
         for zone_config in DEFAULT_ZONES_CONFIG:
             zone_id = zone_config['id']
             zone_data = zone_data_store.get(zone_id, {})
-            
+
             zones.append({
                 'id': zone_id,
                 'name': zone_config['name'],
@@ -180,7 +208,7 @@ def get_zones():
                 'alert_count': zone_data.get('alert_count', 0),
                 'last_update': zone_data.get('last_update')
             })
-    
+
     return jsonify({
         'zones': zones,
         'total': len(zones),
@@ -190,17 +218,15 @@ def get_zones():
 
 @dashboard_bp.route('/zones/<zone_id>', methods=['GET'])
 def get_zone(zone_id):
-    """
-    Daten einer spezifischen Habituszone abrufen
-    """
-    zone_config = next((z for z in DEFAULT_ZONES_CONFIG if z['id'] == zone_id), None)
-    
+    """Daten einer spezifischen Habituszone."""
+    zone_config = _ZONE_BY_ID.get(zone_id)
+
     if not zone_config:
         return jsonify({'error': 'Zone not found'}), 404
-    
+
     with zone_lock:
         zone_data = zone_data_store.get(zone_id, {})
-    
+
     return jsonify({
         'id': zone_id,
         'name': zone_config['name'],
@@ -216,55 +242,50 @@ def get_zone(zone_id):
 
 @dashboard_bp.route('/zones/<zone_id>/data', methods=['PUT'])
 def update_zone_data(zone_id):
-    """
-    Daten einer Habituszone aktualisieren (für HA-Integration)
-    """
-    zone_config = next((z for z in DEFAULT_ZONES_CONFIG if z['id'] == zone_id), None)
-    
+    """Daten einer Habituszone aktualisieren (fuer HA-Integration)."""
+    zone_config = _ZONE_BY_ID.get(zone_id)
+
     if not zone_config:
         return jsonify({'error': 'Zone not found'}), 404
-    
+
     data = request.get_json()
     if not data:
         return jsonify({'error': 'No data provided'}), 400
-    
+
     with zone_lock:
         zone_data_store[zone_id] = {
             **zone_data_store.get(zone_id, {}),
             **data,
-            'last_update': datetime.utcnow().isoformat()
+            'last_update': datetime.now(timezone.utc).isoformat()
         }
-    
-    # WebSocket-Benachrichtigung auslösen
+
+    # WebSocket-Benachrichtigung ausloesen
     if hasattr(current_app, 'socketio'):
-        from flask_socketio import emit
         current_app.socketio.emit('zone_update', {
             'zoneId': zone_id,
             'data': zone_data_store[zone_id]
         })
-    
+
     return jsonify({
         'success': True,
         'zone_id': zone_id,
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime.now(timezone.utc).isoformat()
     })
 
 
 @dashboard_bp.route('/zones/<zone_id>/alerts', methods=['GET'])
 def get_zone_alerts(zone_id):
-    """
-    Alerts einer spezifischen Zone abrufen
-    """
-    zone_config = next((z for z in DEFAULT_ZONES_CONFIG if z['id'] == zone_id), None)
-    
+    """Alerts einer spezifischen Zone."""
+    zone_config = _ZONE_BY_ID.get(zone_id)
+
     if not zone_config:
         return jsonify({'error': 'Zone not found'}), 404
-    
+
     with zone_lock:
         zone_data = zone_data_store.get(zone_id, {})
-    
+
     alerts = zone_data.get('alerts', [])
-    
+
     return jsonify({
         'zone_id': zone_id,
         'zone_name': zone_config['name'],
@@ -275,91 +296,84 @@ def get_zone_alerts(zone_id):
 
 @dashboard_bp.route('/zones/<zone_id>/alerts', methods=['POST'])
 def add_zone_alert(zone_id):
-    """
-    Neuer Alert für eine Zone
-    """
-    zone_config = next((z for z in DEFAULT_ZONES_CONFIG if z['id'] == zone_id), None)
-    
+    """Neuer Alert fuer eine Zone."""
+    zone_config = _ZONE_BY_ID.get(zone_id)
+
     if not zone_config:
         return jsonify({'error': 'Zone not found'}), 404
-    
+
     data = request.get_json()
     if not data or 'message' not in data:
         return jsonify({'error': 'Message required'}), 400
-    
+
     alert = {
         'id': f'alert_{zone_id}_{int(time.time())}',
         'message': data['message'],
-        'severity': data.get('severity', 'info'),  # info, warning, error
-        'timestamp': datetime.utcnow().isoformat(),
+        'severity': data.get('severity', 'info'),
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'acknowledged': False
     }
-    
+
     with zone_lock:
         if zone_id not in zone_data_store:
             zone_data_store[zone_id] = {}
-        
+
         if 'alerts' not in zone_data_store[zone_id]:
             zone_data_store[zone_id]['alerts'] = []
-        
+
         zone_data_store[zone_id]['alerts'].append(alert)
         zone_data_store[zone_id]['alert_count'] = len(zone_data_store[zone_id]['alerts'])
-        zone_data_store[zone_id]['last_update'] = datetime.utcnow().isoformat()
-    
+        zone_data_store[zone_id]['last_update'] = datetime.now(timezone.utc).isoformat()
+
     # WebSocket-Benachrichtigung
     if hasattr(current_app, 'socketio'):
-        from flask_socketio import emit
         current_app.socketio.emit('alert_update', {
             'zoneId': zone_id,
             'alertCount': zone_data_store[zone_id]['alert_count'],
             'alert': alert
         })
-    
+
     return jsonify({
         'success': True,
         'alert': alert,
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime.now(timezone.utc).isoformat()
     })
 
 
 @dashboard_bp.route('/zones/<zone_id>/alerts/<alert_id>/acknowledge', methods=['POST'])
 def acknowledge_alert(zone_id, alert_id):
-    """
-    Alert bestätigen
-    """
-    zone_config = next((z for z in DEFAULT_ZONES_CONFIG if z['id'] == zone_id), None)
-    
+    """Alert bestaetigen."""
+    zone_config = _ZONE_BY_ID.get(zone_id)
+
     if not zone_config:
         return jsonify({'error': 'Zone not found'}), 404
-    
+
     with zone_lock:
         zone_data = zone_data_store.get(zone_id, {})
         alerts = zone_data.get('alerts', [])
-        
+
         for alert in alerts:
             if alert['id'] == alert_id:
                 alert['acknowledged'] = True
-                alert['acknowledged_at'] = datetime.utcnow().isoformat()
+                alert['acknowledged_at'] = datetime.now(timezone.utc).isoformat()
                 break
-        
-        # Bestätigte Alerts entfernen
+
+        # Bestaetigte Alerts entfernen
         zone_data['alerts'] = [a for a in alerts if not a.get('acknowledged', False)]
         zone_data['alert_count'] = len(zone_data['alerts'])
         zone_data_store[zone_id] = zone_data
-    
+
     return jsonify({
         'success': True,
         'zone_id': zone_id,
         'alert_id': alert_id,
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime.now(timezone.utc).isoformat()
     })
 
 
 @dashboard_bp.route('/stats', methods=['GET'])
 def get_dashboard_stats():
-    """
-    Dashboard-Statistiken
-    """
+    """Dashboard-Statistiken."""
     with zone_lock:
         total_zones = len(DEFAULT_ZONES_CONFIG)
         enabled_zones = sum(1 for z in DEFAULT_ZONES_CONFIG if z['enabled'])
@@ -367,52 +381,47 @@ def get_dashboard_stats():
             zone_data_store.get(z['id'], {}).get('alert_count', 0)
             for z in DEFAULT_ZONES_CONFIG
         )
-        
+
         zones_with_data = sum(
             1 for z in DEFAULT_ZONES_CONFIG
             if zone_data_store.get(z['id'], {}).get('last_update')
         )
-    
+
     return jsonify({
         'total_zones': total_zones,
         'enabled_zones': enabled_zones,
         'zones_with_data': zones_with_data,
         'total_alerts': total_alerts,
-        'last_update': datetime.utcnow().isoformat()
+        'last_update': datetime.now(timezone.utc).isoformat()
     })
 
 
 @dashboard_bp.route('/theme', methods=['GET', 'PUT'])
 def theme_management():
-    """
-    Theme-Einstellungen verwalten
-    """
+    """Theme-Einstellungen verwalten."""
     if request.method == 'GET':
         return jsonify({
             'themes': ['light', 'dark'],
             'default': 'light',
             'auto_detect': True
         })
-    
+
     elif request.method == 'PUT':
         data = request.get_json()
         theme = data.get('theme')
-        
+
         if theme not in ['light', 'dark']:
             return jsonify({'error': 'Invalid theme'}), 400
-        
-        # Theme wird client-seitig gespeichert, Server merkt sich nur Präferenz
+
         return jsonify({
             'success': True,
             'theme': theme,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         })
 
 
 def initialize_zone_data():
-    """
-    Initiale Zonendaten setzen (für Demo-Zwecke)
-    """
+    """Initiale Zonendaten setzen (fuer Demo-Zwecke)."""
     for zone in DEFAULT_ZONES_CONFIG:
         zone_data_store[zone['id']] = {
             'temperature': 21.5,
@@ -421,7 +430,7 @@ def initialize_zone_data():
             'brightness': 60,
             'alert_count': 0,
             'alerts': [],
-            'last_update': datetime.utcnow().isoformat()
+            'last_update': datetime.now(timezone.utc).isoformat()
         }
 
 
