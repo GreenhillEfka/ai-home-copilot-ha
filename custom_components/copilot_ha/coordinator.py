@@ -236,6 +236,30 @@ class CopilotApiClient(SharedCopilotApiClient):
             _LOGGER.debug("Sonos action %s failed: %s", action, e)
         return {"ok": False, "error": str(e)}
 
+    async def async_sync_tags_to_core(self, tags: list[dict[str, Any]]) -> dict[str, Any]:
+        """Push HA entity tags to Core for bidirectional tag sync.
+
+        Args:
+            tags: List of tag dicts with tag_id, name, entity_ids, color, icon
+        """
+        try:
+            return await self.async_post(
+                "/api/v1/tags/sync",
+                {"source": "ha", "tags": tags},
+            )
+        except CopilotApiError as e:
+            _LOGGER.debug("Tag sync to Core not available: %s", e)
+        return {"ok": False, "synced": 0}
+
+    async def async_get_core_tags(self) -> list[dict[str, Any]]:
+        """Fetch tag definitions from Core (canonical tags.yaml registry)."""
+        try:
+            data = await self.async_get("/api/v1/tags")
+            return data.get("tags", [])
+        except CopilotApiError as e:
+            _LOGGER.debug("Core tags API not available: %s", e)
+        return []
+
     async def async_get_presence(self) -> dict[str, Any]:
         """Get presence intelligence data."""
         try:

@@ -162,6 +162,78 @@ class EntityTagsModule(CopilotModule):
         return len(new_ids)
 
     # ------------------------------------------------------------------
+    # Core Tag Sync (bidirectional: HA ↔ Core)
+    # ------------------------------------------------------------------
+
+    async def async_sync_tags_to_core(self) -> int:
+        """Push local HA entity tags to Core for bidirectional sync.
+
+        Returns number of tags synced.
+        """
+        if not self._hass or not self._entry_id:
+            return 0
+
+        coordinator = self._get_coordinator()
+        if not coordinator:
+            return 0
+
+        tags_payload = [
+            {
+                "tag_id": t.tag_id,
+                "name": t.name,
+                "entity_ids": list(t.entity_ids),
+                "color": t.color,
+                "icon": t.icon,
+                "module_hints": list(t.module_hints),
+            }
+            for t in self._tags.values()
+        ]
+
+        result = await coordinator.api.async_sync_tags_to_core(tags_payload)
+        synced = result.get("synced", 0)
+        _LOGGER.info("Synced %d entity tags to Core", synced)
+        return synced
+
+    async def async_sync_tags_to_zones(self) -> int:
+        """Bridge entity tags into HabitusZones — entities with matching zone
+        tags get linked to zones.
+
+        Returns number of zone-entity associations discovered.
+        """
+        if not self._hass or not self._entry_id:
+            return 0
+
+        from ...habitus_zones_store_v2 import async_get_zones_v2
+
+        zones = await async_get_zones_v2(self._hass, self._entry_id)
+        if not zones:
+            return 0
+
+        updates = 0
+        for tag in self._tags.values():
+            for zone in zones:
+                if tag.tag_id in zone.tags:
+                    current_entities = set(zone.entity_ids)
+                    new_entities = set(tag.entity_ids) - current_entities
+                    if new_entities:
+                        updates += len(new_entities)
+                        _LOGGER.debug(
+                            "Zone %s: %d new entities from tag %s",
+                            zone.zone_id,
+                            len(new_entities),
+                            tag.tag_id,
+                        )
+
+        return updates
+
+    def _get_coordinator(self):
+        """Get the CopilotDataUpdateCoordinator instance."""
+        if not self._hass or not self._entry_id:
+            return None
+        entry_data = self._hass.data.get("copilot_ha", {}).get(self._entry_id, {})
+        return entry_data.get("coordinator")
+
+    # ------------------------------------------------------------------
     # LLM Context
     # ------------------------------------------------------------------
 

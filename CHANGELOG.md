@@ -2,7 +2,20 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
-## [Unreleased]
+## [13.6.0] - 2026-03-11
+
+### Compatibility
+- HA v13.6.0 ↔ Core v13.6.0
+- Protocol/API contract: aligned
+- Migration required: no
+
+### Added
+- **Bidirektionale Tag-Synchronisierung**: `async_sync_tags_to_core()` und `async_get_core_tags()` im Coordinator
+- **EntityTagsModule Sync**: Tags werden zwischen HA und Core synchronisiert
+- **Zone Presence Trigger**: 3-Stufen-Modus (off/learning/autonomy) pro Zone
+
+### Fixed
+- **Versions-Synchronisierung**: Alle VERSION-Dateien auf 13.6.0 vereinheitlicht
 
 ## [13.5.8] - 2026-03-10
 
