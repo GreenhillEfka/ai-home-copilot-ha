@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import traceback
+from collections import deque
+from dataclasses import dataclass, field
+from datetime import datetime
 
 import voluptuous as vol
 
@@ -11,6 +15,7 @@ from homeassistant.components import persistent_notification
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.event import async_track_time_interval
 
 from .api import CopilotApiClient, CopilotApiError
 from .const import DOMAIN
@@ -20,6 +25,137 @@ from .log_store import async_get_log_fixer_state
 from .storage import CandidateState, async_defer_candidate, async_set_candidate_state
 
 _LOGGER = logging.getLogger(__name__)
+
+# --- Decision Sync Queue ---------------------------------------------------
+
+_SYNC_QUEUE_MAX_SIZE = 200
+_SYNC_QUEUE_MAX_RETRIES = 5
+_SYNC_QUEUE_RETRY_INTERVAL = 60  # seconds
+
+
+@dataclass
+class _PendingDecision:
+    """A decision that failed to sync and needs retry."""
+    entry_id: str
+    candidate_id: str
+    state: str
+    retry_after_days: int | None = None
+    attempts: int = 0
+    created: float = field(default_factory=lambda: datetime.now().timestamp())
+
+
+class DecisionSyncQueue:
+    """Queue for decisions that failed to sync to Core.
+
+    Stores failed decision syncs and retries them periodically.
+    Thread-safe via asyncio.Lock.
+    """
+
+    def __init__(self) -> None:
+        self._queue: deque[_PendingDecision] = deque(maxlen=_SYNC_QUEUE_MAX_SIZE)
+        self._lock = asyncio.Lock()
+        self._cancel_timer = None
+
+    @property
+    def pending_count(self) -> int:
+        return len(self._queue)
+
+    async def enqueue(self, decision: _PendingDecision) -> None:
+        async with self._lock:
+            self._queue.append(decision)
+        _LOGGER.debug(
+            "Decision sync queued: %s → %s (queue size: %d)",
+            decision.candidate_id, decision.state, len(self._queue),
+        )
+
+    async def process(self, hass: HomeAssistant) -> int:
+        """Process all pending decisions. Returns count of successfully synced."""
+        async with self._lock:
+            if not self._queue:
+                return 0
+            batch = list(self._queue)
+            self._queue.clear()
+
+        synced = 0
+        requeue: list[_PendingDecision] = []
+
+        for decision in batch:
+            api = _get_core_api(hass, decision.entry_id)
+            if api is None:
+                decision.attempts += 1
+                if decision.attempts < _SYNC_QUEUE_MAX_RETRIES:
+                    requeue.append(decision)
+                else:
+                    _LOGGER.warning(
+                        "Decision sync dropped after %d attempts: %s → %s",
+                        decision.attempts, decision.candidate_id, decision.state,
+                    )
+                continue
+
+            core_id = decision.candidate_id
+            if core_id.startswith("core_"):
+                core_id = core_id[5:]
+
+            payload: dict = {"state": decision.state}
+            if decision.state == "deferred" and decision.retry_after_days is not None:
+                payload["retry_after_days"] = decision.retry_after_days
+
+            try:
+                await api.async_put(f"/api/v1/candidates/{core_id}", payload)
+                _LOGGER.info("Decision sync (retry): %s → %s synced", core_id, decision.state)
+                synced += 1
+            except CopilotApiError:
+                decision.attempts += 1
+                if decision.attempts < _SYNC_QUEUE_MAX_RETRIES:
+                    requeue.append(decision)
+                else:
+                    _LOGGER.warning(
+                        "Decision sync dropped after %d attempts: %s → %s",
+                        decision.attempts, decision.candidate_id, decision.state,
+                    )
+
+        if requeue:
+            async with self._lock:
+                for item in requeue:
+                    self._queue.append(item)
+            _LOGGER.debug("Decision sync: %d items re-queued for retry", len(requeue))
+
+        return synced
+
+    def start_periodic_retry(self, hass: HomeAssistant) -> None:
+        """Start periodic retry timer."""
+        if self._cancel_timer is not None:
+            return
+
+        from datetime import timedelta
+
+        async def _retry_callback(_now) -> None:
+            if self.pending_count > 0:
+                synced = await self.process(hass)
+                if synced:
+                    _LOGGER.info("Decision sync retry: %d synced, %d remaining", synced, self.pending_count)
+
+        self._cancel_timer = async_track_time_interval(
+            hass, _retry_callback, timedelta(seconds=_SYNC_QUEUE_RETRY_INTERVAL),
+        )
+
+    def stop(self) -> None:
+        """Stop periodic retry timer."""
+        if self._cancel_timer is not None:
+            self._cancel_timer()
+            self._cancel_timer = None
+
+
+def _get_sync_queue(hass: HomeAssistant) -> DecisionSyncQueue:
+    """Get or create the decision sync queue singleton."""
+    hass.data.setdefault(DOMAIN, {})
+    queue = hass.data[DOMAIN].get("_decision_sync_queue")
+    if isinstance(queue, DecisionSyncQueue):
+        return queue
+    queue = DecisionSyncQueue()
+    hass.data[DOMAIN]["_decision_sync_queue"] = queue
+    queue.start_periodic_retry(hass)
+    return queue
 
 
 # --- Repair UX helpers (PS-UX-014) -----------------------------------------
@@ -99,14 +235,22 @@ async def async_sync_decision_to_core(
     state: str,
     retry_after_days: int | None = None,
 ) -> None:
-    """Best-effort sync of user decision back to Core Add-on.
+    """Sync user decision back to Core Add-on with retry queue.
 
     Maps HA candidate_id (prefixed ``core_``) back to the Core UUID and
     calls ``PUT /api/v1/candidates/{candidate_id}`` to close the feedback loop.
+    If the sync fails, the decision is queued for periodic retry.
     """
     api = _get_core_api(hass, entry_id)
     if api is None:
-        _LOGGER.debug("Decision sync: no Core API client, skipping")
+        _LOGGER.debug("Decision sync: no Core API client — queuing for retry")
+        queue = _get_sync_queue(hass)
+        await queue.enqueue(_PendingDecision(
+            entry_id=entry_id,
+            candidate_id=candidate_id,
+            state=state,
+            retry_after_days=retry_after_days,
+        ))
         return
 
     # HA candidate IDs from the poller are prefixed with "core_".
@@ -122,7 +266,14 @@ async def async_sync_decision_to_core(
         await api.async_put(f"/api/v1/candidates/{core_id}", payload)
         _LOGGER.info("Decision sync: %s → %s synced to Core", core_id, state)
     except CopilotApiError as err:
-        _LOGGER.debug("Decision sync: failed for %s → %s: %s", core_id, state, err)
+        _LOGGER.warning("Decision sync: failed for %s → %s: %s — queuing retry", core_id, state, err)
+        queue = _get_sync_queue(hass)
+        await queue.enqueue(_PendingDecision(
+            entry_id=entry_id,
+            candidate_id=candidate_id,
+            state=state,
+            retry_after_days=retry_after_days,
+        ))
 
 
 STEP_CHOICE = vol.Schema(
@@ -598,11 +749,9 @@ class RepairsBlueprintApplyFlow(RepairsFlow):
         # Runtime state
         self._plan = None
         self._apply_failures: int = 0
-        self._last_apply_error: str | None = None
-        self._last_apply_tb: str | None = None
-        self._apply_failures = 0
         self._last_confirm_input: dict | None = None
         self._last_apply_error: str | None = None
+        self._last_apply_tb: str | None = None
         self._last_log_export: str | None = None
 
     async def _maybe_delete_issue(self) -> None:
