@@ -663,6 +663,286 @@ def generate_styx_dashboard(
     return {"views": views}
 
 
+# ── Tab 7: Lichtmodul ────────────────────────────────────────────────
+
+def generate_licht_view(zones: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Tab: Licht — Per-zone light control."""
+    cards: list[dict[str, Any]] = [
+        {
+            "type": "entities",
+            "title": "Licht-Uebersicht",
+            "show_header_toggle": False,
+            "entities": [
+                {"entity": "sensor.pilotsuite_licht_status", "name": "Lichter an / gesamt"},
+                {"entity": "sensor.pilotsuite_licht_overrides", "name": "Manuelle Overrides"},
+            ],
+        },
+    ]
+
+    for zone in (zones or []):
+        zone_id = zone.get("zone_id", "")
+        zone_name = zone.get("zone_name", zone.get("name", zone_id))
+        light_entities = zone.get("entities", {}).get("lights", [])
+        if light_entities:
+            cards.append({
+                "type": "entities",
+                "title": zone_name,
+                "show_header_toggle": True,
+                "entities": [{"entity": eid} for eid in light_entities[:8]],
+            })
+
+    return {
+        "title": "Licht",
+        "path": "licht",
+        "icon": "mdi:lightbulb-group",
+        "badges": [],
+        "cards": cards,
+    }
+
+
+# ── Tab 8: Helligkeitsmodul ──────────────────────────────────────────
+
+def generate_helligkeit_view(zones: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Tab: Helligkeit — Brightness sensors per zone."""
+    cards: list[dict[str, Any]] = [
+        {
+            "type": "horizontal-stack",
+            "cards": [
+                {
+                    "type": "gauge",
+                    "entity": "sensor.outdoor_brightness",
+                    "name": "Outdoor Lux",
+                    "unit": "lx",
+                    "min": 0,
+                    "max": 100000,
+                    "severity": {"red": 0, "yellow": 5000, "green": 20000},
+                },
+                {
+                    "type": "gauge",
+                    "entity": "sensor.pilotsuite_helligkeit_zones_needing_light",
+                    "name": "Zonen brauchen Licht",
+                    "min": 0,
+                    "max": 10,
+                    "severity": {"green": 0, "yellow": 2, "red": 5},
+                },
+            ],
+        },
+    ]
+
+    for zone in (zones or []):
+        zone_id = zone.get("zone_id", "")
+        zone_name = zone.get("zone_name", zone.get("name", zone_id))
+        brightness_entities = (
+            zone.get("entities", {}).get("brightness", [])
+            + zone.get("entities", {}).get("illuminance", [])
+        )
+        if brightness_entities:
+            cards.append({
+                "type": "sensor",
+                "entity": brightness_entities[0],
+                "name": f"{zone_name} — Indoor Lux",
+                "graph": "line",
+                "hours_to_show": 24,
+            })
+
+    return {
+        "title": "Helligkeit",
+        "path": "helligkeit",
+        "icon": "mdi:brightness-6",
+        "badges": [],
+        "cards": cards,
+    }
+
+
+# ── Tab 9: Heizmodul ────────────────────────────────────────────────
+
+def generate_heiz_view(zones: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Tab: Heizung — Climate control per zone."""
+    cards: list[dict[str, Any]] = [
+        {
+            "type": "horizontal-stack",
+            "cards": [
+                {
+                    "type": "gauge",
+                    "entity": "sensor.pilotsuite_avg_indoor_temp",
+                    "name": "Ø Temperatur",
+                    "unit": "°C",
+                    "min": 10,
+                    "max": 30,
+                    "severity": {"green": 19, "yellow": 24, "red": 27},
+                },
+                {
+                    "type": "gauge",
+                    "entity": "sensor.pilotsuite_avg_humidity",
+                    "name": "Ø Feuchte",
+                    "unit": "%",
+                    "min": 0,
+                    "max": 100,
+                    "severity": {"red": 0, "yellow": 30, "green": 40},
+                },
+            ],
+        },
+    ]
+
+    for zone in (zones or []):
+        zone_id = zone.get("zone_id", "")
+        zone_name = zone.get("zone_name", zone.get("name", zone_id))
+        climate_entities = zone.get("entities", {}).get("heating", [])
+        temp_entities = zone.get("entities", {}).get("temperature", [])
+        humidity_entities = zone.get("entities", {}).get("humidity", [])
+
+        if climate_entities:
+            zone_cards: list[dict[str, Any]] = [
+                {"type": "thermostat", "entity": climate_entities[0]},
+            ]
+            side = []
+            if temp_entities:
+                side.append({"type": "entity", "entity": temp_entities[0], "name": "Temperatur"})
+            if humidity_entities:
+                side.append({"type": "entity", "entity": humidity_entities[0], "name": "Feuchte"})
+            if side:
+                zone_cards.append({"type": "horizontal-stack", "cards": side})
+            cards.append({"type": "vertical-stack", "title": zone_name, "cards": zone_cards})
+
+    return {
+        "title": "Heizung",
+        "path": "heizung",
+        "icon": "mdi:thermostat",
+        "badges": [],
+        "cards": cards,
+    }
+
+
+# ── Tab 10: Bewegungsmodul ───────────────────────────────────────────
+
+def generate_bewegung_view(zones: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Tab: Bewegung — Motion sensors per zone."""
+    cards: list[dict[str, Any]] = [
+        {
+            "type": "entities",
+            "title": "Bewegungs-Uebersicht",
+            "show_header_toggle": False,
+            "entities": [
+                {"entity": "sensor.pilotsuite_bewegung_active", "name": "Aktive Sensoren"},
+                {"entity": "sensor.pilotsuite_bewegung_last_motion", "name": "Letzte Bewegung"},
+            ],
+        },
+    ]
+
+    for zone in (zones or []):
+        zone_id = zone.get("zone_id", "")
+        zone_name = zone.get("zone_name", zone.get("name", zone_id))
+        motion_entities = zone.get("entities", {}).get("motion", [])
+        if motion_entities:
+            cards.append({
+                "type": "vertical-stack",
+                "title": zone_name,
+                "cards": [
+                    {"type": "entity", "entity": motion_entities[0], "name": "Bewegungsmelder", "icon": "mdi:motion-sensor"},
+                    {"type": "sensor", "entity": motion_entities[0], "name": "Verlauf", "graph": "line", "hours_to_show": 24},
+                ],
+            })
+
+    return {
+        "title": "Bewegung",
+        "path": "bewegung",
+        "icon": "mdi:motion-sensor",
+        "badges": [],
+        "cards": cards,
+    }
+
+
+# ── Tab 11: Praesenzmodul ───────────────────────────────────────────
+
+def generate_praesenz_view(zones: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Tab: Praesenz — Person presence per zone."""
+    cards: list[dict[str, Any]] = [
+        {
+            "type": "entities",
+            "title": "Personen zu Hause",
+            "show_header_toggle": False,
+            "entities": [
+                {"entity": "sensor.pilotsuite_persons_home", "name": "Personen"},
+                {"entity": "sensor.pilotsuite_zones_occupied", "name": "Zonen belegt"},
+            ],
+        },
+    ]
+
+    if zones:
+        zone_cards = []
+        for zone in zones:
+            zone_id = zone.get("zone_id", "")
+            zone_name = zone.get("zone_name", zone.get("name", zone_id))
+            zone_cards.append({
+                "type": "entities",
+                "title": zone_name,
+                "entities": [
+                    {"entity": f"binary_sensor.pilotsuite_zone_presence_{zone_id}", "name": "Belegt"},
+                    {"entity": f"sensor.pilotsuite_{zone_id}_person_count", "name": "Personen"},
+                ],
+            })
+        if zone_cards:
+            cards.append({"type": "grid", "columns": 2, "square": False, "cards": zone_cards})
+
+    cards.append({
+        "type": "markdown",
+        "title": "Praesenz-Uebersicht",
+        "content": (
+            "{% set dashboard = state_attr('sensor.pilotsuite_praesenz_dashboard', 'zones') %}\n"
+            "{% if dashboard %}\n"
+            "| Zone | Status | Personen |\n"
+            "|------|--------|----------|\n"
+            "{% for z in dashboard %}\n"
+            "| {{ z.zone_name }} | {{ 'belegt' if z.is_occupied else 'leer' }} | {{ z.persons | join(', ') if z.persons else '—' }} |\n"
+            "{% endfor %}\n"
+            "{% else %}\n"
+            "Keine Praesenz-Daten verfuegbar.\n"
+            "{% endif %}"
+        ),
+    })
+
+    return {
+        "title": "Praesenz",
+        "path": "praesenz-modul",
+        "icon": "mdi:account-group",
+        "badges": [],
+        "cards": cards,
+    }
+
+
+# ── Full Dashboard Assembly (updated) ────────────────────────────────
+
+
+def generate_styx_dashboard_extended(
+    host: str,
+    port: int,
+    zones: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Generate complete multi-tab Styx dashboard including module tabs.
+
+    Returns a dict with {"views": [...]} ready for Lovelace YAML import.
+    """
+    views: list[dict[str, Any]] = [
+        generate_styx_view(host, port),
+        generate_haushalt_view(host, port),
+        generate_energy_view(host, port, zones=zones),
+        generate_presence_view(zones=zones),
+        generate_music_view(host, port),
+        # Module tabs
+        generate_licht_view(zones=zones),
+        generate_helligkeit_view(zones=zones),
+        generate_heiz_view(zones=zones),
+        generate_bewegung_view(zones=zones),
+        generate_praesenz_view(zones=zones),
+    ]
+
+    # Add per-zone tabs
+    for zone in (zones or []):
+        views.append(generate_zone_view(zone, host, port))
+
+    return {"views": views}
+
+
 def dashboard_to_yaml(
     host: str,
     port: int,

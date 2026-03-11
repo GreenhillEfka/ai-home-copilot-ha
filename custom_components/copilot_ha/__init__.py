@@ -68,6 +68,11 @@ _MODULE_IMPORTS = {
     "scene_module": (".core.modules.scene_module", "SceneModule"),
     "homekit_bridge": (".core.modules.homekit_bridge", "HomeKitBridgeModule"),
     "calendar_module": (".core.modules.calendar_module", "CalendarModule"),
+    "licht_module": (".core.modules.licht_module", "LichtModule"),
+    "helligkeit_module": (".core.modules.helligkeit_module", "HelligkeitModule"),
+    "heiz_module": (".core.modules.heiz_module", "HeizModule"),
+    "bewegung_module": (".core.modules.bewegung_module", "BewegungModule"),
+    "praesenz_module": (".core.modules.praesenz_module", "PraesenzModule"),
 }
 
 _MODULES = [
@@ -102,6 +107,11 @@ _MODULES = [
     "scene_module",
     "homekit_bridge",
     "calendar_module",
+    "licht_module",
+    "helligkeit_module",
+    "heiz_module",
+    "bewegung_module",
+    "praesenz_module",
 ]
 
 _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
