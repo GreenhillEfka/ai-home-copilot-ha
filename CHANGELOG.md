@@ -2,7 +2,120 @@
 
 Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
-## [v13.3.0] - 2026-03-04
+## [Unreleased]
+
+## [13.5.8] - 2026-03-10
+
+### Compatibility
+- HA v13.5.8 ↔ Core v13.5.8
+- Protocol/API contract: aligned
+- Migration required: no
+
+### Fixed
+- **Drift-A Closed**: 5 OpenAPI-Pfade dokumentiert (`/api/v1/zone*`, `/api/v1/mood/aggregated`)
+- OpenAPI sync: HA + Core aligned (551/551 paths, 100%)
+
+## [13.5.7] - 2026-03-09
+
+### Compatibility
+- Core v13.5.7 ↔ HA v13.5.7
+- Migration required: no
+
+### Docs
+- Webhook contract mirrored in OpenAPI.
+- Version files normalized for aligned dual-repo release.
+
+## [13.5.4] - 2026-03-07
+
+### Compatibility
+- Core v13.5.4 ↔ HA v13.5.4
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Migration required: no
+
+### Fixed
+- Inventory/Drift-Fix Batch A release mirror: HA OpenAPI auf aktive v13 Candidates/Tag-System-Pfade synchronisiert (inkl. `{candidate_id}`/`{tag_id}` Parametrisierung).
+
+### QA/Ops
+- Release-Gates nach Drift-Fix erneut verifiziert: Inventory/Drift Guard (PS-QA-083) + Smoke Preflight + Dual-Repo Tag Guard + PS-REL-018 Artefaktvalidator.
+
+## [13.5.3] - 2026-03-07
+
+### Compatibility
+- Core v13.5.3 ↔ HA v13.5.3
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Migration required: no
+
+### Security
+- HA webhook HMAC signature verification implemented (primary/secondary keys) with replay defense (timestamp TTL + nonce cache).
+
+### Docs
+- OpenAPI webhook signing 401 examples (`missing_signature_headers`, `stale_timestamp`, `replay_detected`, `invalid_signature`) aligned for drift-fix release readiness.
+
+
+## [13.5.2] - 2026-03-06
+
+### Compatibility
+- Core v13.5.2 ↔ HA v13.5.2
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Migration required: no
+
+### Ops
+- Version-Sync Release.
+- PS-REL-017: Release-Commit verweist auf Smoke/Tag Gate Report (siehe Dossier/Evidence).
+
+## [13.5.1] - 2026-03-06
+
+### Compatibility
+- Core v13.5.1 ↔ HA v13.5.1
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Test gate: /config/clawd/pilotsuite_ops/AEGIS_SMOKE_GATE_DUAL_REPO.md
+- Migration required: no
+
+### Ops
+- Version-Sync Release (HA UI unverändert). Core-Fix: Core bootet auch ohne `sklearn` (Anomaly-Endpoints dann deaktiviert).
+
+## [13.5.0] - 2026-03-05
+
+### Compatibility
+- Core v13.5.0 ↔ HA v13.5.0
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Test gate: /config/clawd/pilotsuite_ops/AEGIS_SMOKE_GATE_DUAL_REPO.md
+- Migration required: no
+
+### Dashboard-Restrukturierung & 4 neue Lovelace Custom Cards
+
+#### Dashboard 3-Tab-Layout (NEU)
+- **Tab 1 "Styx"**: Brain-Visualisierung (iframe), Mood + Brain Grid, Chat-Interface, KI-Vorschlaege, Fehlerlog mit Reparaturvorschlaegen, Automatisierungen
+- **Tab 2 "Haushalt"**: Haushaltsuebersicht (Health-Score, Wetter, Preise, Zonen), System-Status, Medien, Energie, Quicklinks
+- **Tab 3+ pro Habitus-Zone**: Dynamisch generiert mit Licht, Klima, Media, Sensoren pro Zone
+- `pilotsuite_dashboard_v14.yaml` als statische Referenz
+
+#### Neue Lovelace Custom Cards
+- **styx-chat-card.js**: Eingebettetes Chat-Interface mit Message-Bubbles, Typing-Indicator, History-Loading, AbortController-Timeouts (10s/30s)
+- **styx-suggestions-card.js**: KI-Vorschlaege mit Konfidenz-Badges, Kategorie-/Risiko-Tags, Governance-Actions (Annehmen/Spaeter/Ablehnen), sichtbare Fehlermeldungen
+- **styx-error-card.js**: Error-Digest mit Severity-Badges, Kategorie-Chips, aufklappbare Reparaturvorschlaege, Sensor-Fallback wenn Core nicht erreichbar
+- **styx-household-card.js**: Haushaltsuebersicht mit SVG-Health-Ring, Wetter + Unwetterwarnungen, Strom-/Treibstoffpreise, Proaktive Alerts, Zonen-Chips mit Belegungsanzeige
+
+#### Technische Verbesserungen
+- **Event Delegation** statt direkte Listener in allen interaktiven Cards (kein Memory Leak)
+- **AbortController-Timeouts** auf allen Fetch-Calls (10s fuer Lesen, 30s fuer Chat)
+- **Auto-Registration** aller 8 Card-Dateien in `lovelace_resources.py`
+- **Responsive Design**: CSS Grid/Flexbox mit auto-fit, flex-wrap, mobile-first
+
+#### Metriken
+- 8 Lovelace Custom Cards insgesamt
+- 255 Tests bestanden, 41 skipped
+- Version synchronisiert mit Core v13.5.0
+
+---
+
+## [13.3.0] - 2026-03-04
+
+### Compatibility
+- Core v13.3.0 ↔ HA v13.3.0
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Test gate: /config/clawd/pilotsuite_ops/AEGIS_SMOKE_GATE_DUAL_REPO.md
+- Migration required: no
 
 ### Version Sync mit Core v13.3.0
 
@@ -12,7 +125,13 @@ Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Date
 
 ---
 
-## [v13.2.0] - 2026-03-04
+## [13.2.0] - 2026-03-04
+
+### Compatibility
+- Core v13.2.0 ↔ HA v13.2.0
+- Protocol/API contract: X-Auth-Token; Webhook envelope {type,data}; event types mood|neuron|suggestion|status
+- Test gate: /config/clawd/pilotsuite_ops/AEGIS_SMOKE_GATE_DUAL_REPO.md
+- Migration required: no
 
 ### Styx Dashboard Integration & Habitus Dashboard Erweiterung
 

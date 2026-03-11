@@ -1,8 +1,8 @@
 {
-  "name": "PilotSuite",
+  "name": "PilotSuite Core",
+  "content_in_root": false,
+  "zip_release": true,
+  "filename": "pilotsuite_core.zip",
   "render_readme": true,
-  "homeassistant": "2024.1.0",
-  "zip_release": false,
-  "hide_default_branch": false,
-  "hacs": "1.34.0"
+  "homeassistant": "2024.1.0"
 }

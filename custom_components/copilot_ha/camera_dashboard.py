@@ -206,15 +206,15 @@ cards:
 
   - type: horizontal-stack
     cards:
-{motion_history_card_yaml()}
+{_motion_history_card_yaml([])}
       - type: vertical-stack
-{presence_history_card_yaml()}
+{_presence_history_card_yaml()}
 
   - type: horizontal-stack
     cards:
-{activity_history_card_yaml()}
+{_activity_history_card_yaml()}
       - type: vertical-stack
-{zone_activity_card_yaml()}
+{_zone_activity_card_yaml()}
 
   - type: entities
     title: Bewegungserkennung

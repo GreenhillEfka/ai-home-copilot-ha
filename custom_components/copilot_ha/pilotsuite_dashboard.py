@@ -348,139 +348,160 @@ async def async_generate_pilotsuite_dashboard(
     else:
         core_base = f"http://{host}:{port}"
 
-    intro = _markdown_card(
-        "Übersicht",
-        f"""
-Dieses Dashboard wird von **PilotSuite** generiert (governance-first).
+    # ── TAB 1: STYX ──────────────────────────────────────────────────────
+    # Brain visualization, Chat, Suggestions, Automations, Error log
+    styx_cards: list[str] = []
 
-**Quicklinks (Core):**
-- Health: [{core_base}/health]({core_base}/health)
-- Version: [{core_base}/version]({core_base}/version)
-- Events: [{core_base}/api/v1/events]({core_base}/api/v1/events)
-
-**Hinweis:** In YAML-Dashboards ist der visuelle Editor nicht verfügbar. Änderungen kommen über **Generate** (Buttons) + Browser-Reload.
-""",
+    # Brain Graph (iframe from Core)
+    styx_cards.append(
+        "      - type: iframe\n"
+        f"        url: {core_base}/api/v1/styx/dashboard\n"
+        "        title: \"Neuronales Netzwerk\"\n"
+        "        aspect_ratio: \"16:9\"\n"
     )
 
-    grid_cards = [
-        _entities_card("Status", overview_entities),
-        _entities_card("Betrieb (sicher)", operations_entities),
-        _entities_card("Dashboards (Generate)", dashboards_entities),
-        _entities_card("Core API", core_entities),
-    ]
-    if resource_entities:
-        grid_cards.append(_entities_card("Systemressourcen", resource_entities))
-
-    grid = _grid_card(grid_cards, columns=2)
-
-    views.append(_view("PilotSuite", "copilot", "mdi:robot-outline", "\n\n".join([intro, grid])))
-
-    # Mood + Neurons view (Lovelace custom cards from Core Add-on)
+    # Mood + Neurons side by side
     mood_card = (
-        "      - type: custom:ha-copilot-mood-card\n"
+        "      - type: custom:styx-mood-card\n"
         "        entity: sensor.copilot_ha_mood\n"
         "        title: Stimmung\n"
         "        show_emotions: 5\n"
     )
     neurons_card = (
-        "      - type: custom:ha-copilot-neurons-card\n"
-        "        entity: sensor.copilot_ha_neuron_activity\n"
-        "        title: Neuronen\n"
+        "      - type: custom:styx-brain-card\n"
+        "        entity: sensor.copilot_ha_brain_graph_nodes\n"
+        "        title: Brain Graph\n"
     )
-    mood_neurons_grid = _grid_card([mood_card, neurons_card], columns=2)
-    views.append(
-        _view(
-            "Stimmung & Neuronen",
-            "copilot-mood-neurons",
-            "mdi:head-heart-outline",
-            mood_neurons_grid,
-        )
+    styx_cards.append(_grid_card([mood_card, neurons_card], columns=2))
+
+    # Chat Interface
+    styx_cards.append(
+        "      - type: custom:styx-chat-card\n"
+        "        title: Styx Chat\n"
+        f"        core_url: {_yaml_q(core_base)}\n"
+        "        max_messages: 50\n"
+        "        show_history: true\n"
     )
 
-    # Core view
-    views.append(
-        _view(
-            "Core",
-            "copilot-core",
-            "mdi:api",
-            "\n\n".join(
-                [
-                    _entities_card("Core-Tools", core_entities),
-                    _markdown_card(
-                        "Hinweise",
-                        """
-Wenn `/api/v1/events` leer bleibt:
-- **Forwarder-Status** prüfen
-- ein Licht toggeln, das in einer Habitus-Zone liegt
-- **HA-Fehler** holen (Thread-Safety / POST-Fehler)
-""",
-                    ),
-                ]
-            ),
-        )
+    # Suggestions
+    styx_cards.append(
+        "      - type: custom:styx-suggestions-card\n"
+        "        title: KI-Vorschlaege\n"
+        f"        core_url: {_yaml_q(core_base)}\n"
+        "        max_suggestions: 10\n"
+        "        show_actions: true\n"
     )
 
+    # Error Log + Repair Suggestions
+    styx_cards.append(
+        "      - type: custom:styx-error-card\n"
+        "        title: Fehler & Reparatur\n"
+        f"        core_url: {_yaml_q(core_base)}\n"
+        "        hours: 24\n"
+        "        max_errors: 20\n"
+    )
+
+    # Automations summary (entities card with existing HA automations)
+    automation_entities = _existing_entities(
+        hass,
+        [
+            "sensor.copilot_ha_predictive_automation",
+            "sensor.copilot_ha_zone_scenes",
+        ],
+    )
+    if automation_entities:
+        styx_cards.append(_entities_card("Automatisierungen", automation_entities))
+
+    views.append(_view("Styx", "styx", "mdi:brain", "\n\n".join(styx_cards)))
+
+    # ── TAB 2: HAUSHALTSUEBERSICHT ────────────────────────────────────────
+    # Household overview, zones, weather, prices, alerts, notifications
+    household_cards: list[str] = []
+
+    # Household Overview Card
+    household_cards.append(
+        "      - type: custom:styx-household-card\n"
+        "        title: Haushaltsuebersicht\n"
+        "        show_weather: true\n"
+        "        show_prices: true\n"
+        "        show_alerts: true\n"
+        "        show_zones: true\n"
+    )
+
+    # Status + Operations grid
+    grid_cards = [
+        _entities_card("Status", overview_entities),
+        _entities_card("Betrieb", operations_entities),
+    ]
+    if resource_entities:
+        grid_cards.append(_entities_card("Systemressourcen", resource_entities))
+    grid_cards.append(_entities_card("Dashboards", dashboards_entities))
+    household_cards.append(_grid_card(grid_cards, columns=2))
+
+    # Media overview
     if has_media:
-        views.append(
-            _view(
-                "Media",
-                "copilot-media",
-                "mdi:speaker",
-                _entities_card("Medien (Kontext)", media_entities),
-            )
-        )
+        household_cards.append(_entities_card("Medien", media_entities))
 
+    # Habitus zones overview
     if has_zones:
         habitus_custom_card = (
-            "      - type: custom:ha-copilot-habitus-card\n"
+            "      - type: custom:styx-zone-card\n"
             "        entity: sensor.copilot_ha_habitus_zones\n"
             "        title: Habitus-Zonen\n"
+            "        show_mood: true\n"
+            "        show_neuron_activity: true\n"
+            "        show_quick_actions: true\n"
         )
-        habitus_buttons = _entities_card("Habitus-Steuerung", habitus_entities)
+        household_cards.append(habitus_custom_card)
+        household_cards.append(_entities_card("Zonen-Steuerung", habitus_entities))
 
-        # HomeKit QR codes per zone
+    # HomeKit QR section (if zones)
+    if has_zones:
         homekit_cards: list[str] = []
         for z in zones:
             if z.current_state == "disabled":
                 continue
-            zone_slug = z.zone_id.replace(":", "_").replace(" ", "_")
             qr_url = f"{core_base}/api/v1/homekit/qr/{z.zone_id}.svg"
             homekit_card = _markdown_card(
-                f"HomeKit — {z.name} by Styx",
+                f"HomeKit — {z.name}",
                 f"![QR]({qr_url})\n\n"
                 f"**Zone:** {z.name}\n"
                 f"**Entities:** {len(z.entity_ids) if z.entity_ids else 0}\n\n"
-                f"Scanne den QR-Code mit der Apple Home App,\n"
-                f"um **{z.name}** zu deinem Zuhause hinzuzufügen.",
+                f"Scanne den QR-Code mit der Apple Home App.",
             )
             homekit_cards.append(homekit_card)
 
-        homekit_section = ""
         if homekit_cards:
-            homekit_section = _grid_card(homekit_cards, columns=2)
+            household_cards.append(_grid_card(homekit_cards, columns=2))
 
-        habitus_content = [habitus_custom_card, habitus_buttons]
-        if homekit_section:
-            habitus_content.append(homekit_section)
-
-        views.append(
-            _view(
-                "Habitus",
-                "copilot-habitus",
-                "mdi:layers-outline",
-                "\n\n".join(habitus_content),
-            )
-        )
-
-    # Entwicklung / Dev Surface (immer nützlich, bewusst leichtgewichtig)
-    views.append(
-        _view(
-            "Entwicklung",
-            "copilot-dev",
-            "mdi:bug-outline",
-            _entities_card("Dev Surface", dev_entities),
+    # Core API links
+    household_cards.append(
+        _markdown_card(
+            "Quicklinks",
+            f"**Core:** [{core_base}/health]({core_base}/health) | "
+            f"[Version]({core_base}/version) | "
+            f"[Events]({core_base}/api/v1/events)\n\n"
+            "In YAML-Dashboards: **Generate** + Browser-Reload.",
         )
     )
+
+    # Dev surface
+    if dev_entities:
+        household_cards.append(_entities_card("Entwicklung", dev_entities))
+
+    views.append(
+        _view("Haushalt", "haushalt", "mdi:home-city", "\n\n".join(household_cards))
+    )
+
+    # ── TAB 3+: PER-ZONE TABS ────────────────────────────────────────────
+    # One tab per Habitus zone with detailed entity views
+    if has_zones:
+        from .habitus_dashboard import _lovelace_yaml_for_zone
+        for z in zones:
+            if z.current_state == "disabled":
+                continue
+            zone_view = _lovelace_yaml_for_zone(hass, z)
+            views.append(zone_view)
 
     now = dt_util.now()
     ts = now.strftime("%Y%m%d_%H%M%S")

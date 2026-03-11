@@ -1,7 +1,18 @@
 # PilotSuite Styx Core API - Vollständige Referenz
 
-**Version:** 12.6.0  
-**Stand:** 2026-03-01  
+> ⚠️ **Legacy Documentation**
+>
+> This document describes historical API surfaces and is kept for reference only.
+> For the current v13.5.3 API contract, see:
+> - **OpenAPI Spec:** `/api/v1/docs/openapi.yaml`
+> - **Swagger UI:** `/docs`
+> - **Quick Reference:** `API_REFERENCE.md` (active endpoints only)
+>
+> Endpoints documented here may be deprecated, moved, or removed.
+> Use the Migration Quick Reference below to find active paths.
+
+**Version:** 12.6.0 (historical reference)  
+**Stand:** 2026-03-07  
 **Basis-URL:** `http://localhost:8909`
 
 ---
@@ -54,6 +65,20 @@
 
 Die PilotSuite Styx Core API ist eine RESTful API, die auf Flask basiert und umfassende Funktionen für Smart-Home-Automation, KI-gesteuerte Mustererkennung und Multi-Home-Synchronisation bereitstellt.
 
+> **📖 Quick Reference — historische Migration von v13.5.2 → v13.5.3**
+>
+> | Legacy | Aktiv | Hinweis |
+> |--------|-------|---------|
+> | `/api/v1/tags` | `/api/v1/tag-system/tags` | Tag-System Namespace |
+> | `/api/v1/tags/{id}` | `/api/v1/tag-system/tags/{tag_id}` | Tag-System Namespace |
+> | `/api/v1/candidates/{id}` | `/api/v1/candidates/{candidate_id}` | Parameter-Name vereinheitlicht |
+> | `X-API-Key` Header | `X-Auth-Token` Header | Auth-Header bevorzugt |
+> | `mood_changed` Event | `mood` Event | Kanonischer Event-Typ |
+> | `neuron_update` Event | `neuron` Event | Kanonischer Event-Typ |
+> | `suggestion_new` Event | `suggestion` Event | Kanonischer Event-Typ |
+>
+> Für neue Integrationen ausschliesslich die aktive v13-Surface verwenden.
+
 ### Basis-Informationen
 
 - **Protokoll:** HTTP/HTTPS
@@ -70,12 +95,14 @@ Die PilotSuite Styx Core API ist eine RESTful API, die auf Flask basiert und umf
 Die meisten Endpoints verwenden API-Key-Authentifizierung:
 
 ```http
-X-API-Key: dein-api-key-hier
+X-Auth-Token: dein-api-key-hier
 ```
+
+> **Hinweis:** `X-API-Key` ist deprecated. Verwende stattdessen `X-Auth-Token` oder `Authorization: Bearer ...`.
 
 ### Bearer Token Authentication
 
-Bestimmte Endpoints (Notifications, Telegram) verwenden Bearer-Token:
+Bestimmte Endpunkte (Notifications, Telegram) verwenden Bearer-Token:
 
 ```http
 Authorization: Bearer dein-jwt-token
@@ -85,7 +112,7 @@ Authorization: Bearer dein-jwt-token
 
 ```bash
 curl -X GET "http://localhost:8909/api/v1/system_health" \
-  -H "X-API-Key: your-api-key"
+  -H "X-Auth-Token: your-api-key"
 ```
 
 ---
@@ -305,11 +332,11 @@ Neuen Candidate erstellen.
 }
 ```
 
-#### `GET /api/v1/candidates/{id}`
+#### `GET /api/v1/candidates/{candidate_id}`
 
 Spezifischen Candidate nach ID abrufen.
 
-#### `PUT /api/v1/candidates/{id}`
+#### `PUT /api/v1/candidates/{candidate_id}`
 
 Candidate-State aktualisieren (accept/dismiss/defer).
 
@@ -540,19 +567,19 @@ Kompletten UniFi-Network-Snapshot abrufen.
 
 Tag-System für Entity-Organisation.
 
-#### `GET /api/v1/tags`
+#### `GET /api/v1/tag-system/tags`
 
 Alle Tags auflisten.
 
 **Authentifizierung:** Bearer Token
 
-#### `POST /api/v1/tags`
+#### `POST /api/v1/tag-system/tags`
 
 Neues Tag erstellen.
 
 **Authentifizierung:** Bearer Token
 
-#### `DELETE /api/v1/tags/{id}`
+#### `DELETE /api/v1/tag-system/tags/{tag_id}`
 
 Tag löschen.
 

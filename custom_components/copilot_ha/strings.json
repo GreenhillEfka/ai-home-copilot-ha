@@ -21,10 +21,21 @@
           "entity_profile": "Entity Profile",
           "test_light_entity_id": "Test Light (optional)"
         }
+      },
+      "wizard_network": {
+        "title": "Core connection",
+        "description": "{hint}",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "API token",
+          "allow_offline": "Continue without connection test (not recommended)"
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect",
+      "invalid_auth": "Authentication failed",
       "cannot_read": "Could not read snapshot file",
       "invalid_json": "Invalid JSON",
       "confirm_required": "Please confirm",

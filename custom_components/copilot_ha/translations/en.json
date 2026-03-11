@@ -22,6 +22,16 @@
           "entity_profile": "Entity profile"
         }
       },
+      "wizard_network": {
+        "title": "Core connection",
+        "description": "{hint}",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "API token",
+          "allow_offline": "Continue without connection test (not recommended)"
+        }
+      },
       "init": {
         "title": "PilotSuite options",
         "description": "Configure PilotSuite.",
@@ -183,6 +193,7 @@
     },
     "error": {
       "cannot_connect": "Failed to connect",
+      "invalid_auth": "Authentication failed",
       "cannot_read": "Could not read snapshot file",
       "invalid_json": "Invalid JSON",
       "confirm_required": "Please confirm",
@@ -530,6 +541,7 @@
     },
     "error": {
       "cannot_connect": "Failed to connect",
+      "invalid_auth": "Authentication failed",
       "cannot_read": "Could not read snapshot file",
       "invalid_json": "Invalid JSON",
       "confirm_required": "Please confirm",

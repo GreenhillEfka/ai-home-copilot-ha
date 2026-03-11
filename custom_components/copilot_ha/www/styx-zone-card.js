@@ -95,13 +95,13 @@ class StyxZoneCard extends HTMLElement {
 
   _getZonesData() {
     if (!this._hass || !this._config.entity) return { zones: [], active_zones: 0 };
-    
+
     const state = this._hass.states[this._config.entity];
     if (!state) return { zones: [], active_zones: 0 };
 
     const attrs = state.attributes || {};
     const zones = attrs.zones || [];
-    
+
     return {
       zones: zones,
       total_zones: attrs.total_zones || zones.length,
@@ -115,29 +115,95 @@ class StyxZoneCard extends HTMLElement {
     return MOOD_GAUGE_DEFS.map(def => {
       const entityId = `${prefix}_${def.key}`;
       const state = this._hass?.states[entityId];
-      const value = state ? parseFloat(state.state) : 0;
+      const parsed = state ? parseFloat(state.state) : null;
+      const hasNumeric = Number.isFinite(parsed);
+
       return {
         ...def,
-        value: isNaN(value) ? 0 : Math.max(0, Math.min(100, value)),
+        entityId,
+        value: hasNumeric ? Math.max(0, Math.min(100, parsed)) : null,
+        available: Boolean(state) && hasNumeric,
       };
     });
   }
 
   _getNeuronActivity(zoneId) {
-    // Read from brain graph nodes filtered by zone
     const nodeEntity = this._hass?.states['sensor.pilotsuite_brain_graph_nodes'];
-    if (!nodeEntity) return { active: 0, total: 0, score: 0 };
-    
-    const nodes = nodeEntity.attributes?.nodes || [];
-    const zoneNodes = nodes.filter(n => n.zone === zoneId || n.rooms?.includes(zoneId));
-    
+    if (!nodeEntity) {
+      return {
+        available: false,
+        active: null,
+        total: null,
+        score: null,
+        missingReason: 'Sensordaten fehlen',
+      };
+    }
+
+    const nodes = Array.isArray(nodeEntity.attributes?.nodes) ? nodeEntity.attributes.nodes : [];
+    const zoneNodes = nodes.filter(n => n.zone === zoneId || (Array.isArray(n.rooms) && n.rooms.includes(zoneId)));
+
+    if (zoneNodes.length === 0) {
+      return {
+        available: false,
+        active: null,
+        total: null,
+        score: null,
+        missingReason: 'Subsensoren fehlen',
+      };
+    }
+
+    const scoreValues = zoneNodes
+      .map(n => Number(n.score))
+      .filter(v => Number.isFinite(v));
+
     return {
+      available: true,
       active: zoneNodes.filter(n => n.state === 'on').length,
       total: zoneNodes.length,
-      score: zoneNodes.length > 0 
-        ? zoneNodes.reduce((acc, n) => acc + (n.score || 0), 0) / zoneNodes.length 
-        : 0,
+      score: scoreValues.length > 0
+        ? scoreValues.reduce((acc, value) => acc + value, 0) / scoreValues.length
+        : null,
+      scoreMissing: scoreValues.length === 0,
     };
+  }
+
+  _buildMissingTileValue(label, subtitle = '') {
+    const subtitleHtml = subtitle ? `<div class="value-subtitle">${subtitle}</div>` : '';
+    return `
+      <div class="missing-value">
+        <div class="value-na">n/a</div>
+        <div class="value-title">${label}</div>
+        ${subtitleHtml}
+      </div>`;
+  }
+
+  _buildMoodGauge(mood) {
+    if (!mood?.available) {
+      return `<div class="mood-gauge mood-gauge-missing">${this._buildMissingTileValue(mood?.label || 'n/a')}</div>`;
+    }
+
+    return this._buildGaugeSvg(mood.value, mood.start, mood.end, mood.label);
+  }
+
+  _buildPartialBadges(moodData, neuronActivity, trackNeuron = true) {
+    const missing = [];
+
+    const missingMoods = (moodData || []).filter(m => m.available === false);
+    if (missingMoods.length > 0) {
+      missing.push(`Mood: ${missingMoods.map(m => m.label).join(', ')}`);
+    }
+
+    if (trackNeuron) {
+      if (!neuronActivity || neuronActivity.available === false) {
+        missing.push('Neuronen');
+      } else if (neuronActivity.scoreMissing) {
+        missing.push('Neuronen (Score)');
+      }
+    }
+
+    return missing.length
+      ? `<div class="partial-badges">${missing.map(item => `<span class="partial-badge">${item}</span>`).join('')}</div>`
+      : '';
   }
 
   _buildGaugeSvg(value, startColor, endColor, label, size = 70) {
@@ -172,10 +238,17 @@ class StyxZoneCard extends HTMLElement {
   }
 
   _buildNeuronBar(activity) {
-    const { active, total, score } = activity;
+    if (!activity || activity.available === false) {
+      const reason = activity?.missingReason || 'Sensordaten fehlen';
+      return `<div class="neuron-bar-container neuron-missing">${this._buildMissingTileValue('Neuronen', reason)}</div>`;
+    }
+
+    const { active, total, score, scoreMissing } = activity;
     const pct = total > 0 ? (active / total) * 100 : 0;
-    const scorePct = Math.max(0, Math.min(100, score * 100));
-    
+    const activeLabel = Number.isFinite(total) ? `${active}/${total} aktiv` : 'n/a';
+    const scorePct = Number.isFinite(score) ? Math.max(0, Math.min(100, score * 100)) : null;
+    const scoreLabel = scorePct === null ? 'n/a' : `${Math.round(scorePct)}%`;
+
     return `
       <div class="neuron-bar-container">
         <div class="neuron-bar-label">
@@ -184,11 +257,11 @@ class StyxZoneCard extends HTMLElement {
         </div>
         <div class="neuron-bar-track">
           <div class="neuron-bar-fill" style="width: ${pct}%"></div>
-          <div class="neuron-score-marker" style="left: ${scorePct}%"></div>
+          ${scoreMissing ? '' : `<div class="neuron-score-marker" style="left: ${scorePct}%"></div>`}
         </div>
         <div class="neuron-bar-stats">
-          <span>${active}/${total} aktiv</span>
-          <span>Score: ${Math.round(scorePct)}%</span>
+          <span>${activeLabel}</span>
+          <span>Score: ${scoreLabel}</span>
         </div>
       </div>
     `;
@@ -197,48 +270,53 @@ class StyxZoneCard extends HTMLElement {
   _buildZoneCard(zone) {
     const zoneId = zone.name?.toLowerCase().replace(/\s+/g, '_') || zone.zone_id || 'unknown';
     const isActive = zone.mode && zone.mode !== 'inactive';
+    const hasMode = Boolean(zone.mode);
     const moodData = this._config.show_mood ? this._getMoodData(zoneId) : [];
     const neuronActivity = this._config.show_neuron_activity ? this._getNeuronActivity(zoneId) : null;
-    
-    const moodGauges = this._config.show_mood 
-      ? moodData.map(m => this._buildGaugeSvg(m.value, m.start, m.end, m.label)).join('')
+    const partialBadgesHtml = this._buildPartialBadges(moodData, neuronActivity, this._config.show_neuron_activity);
+    const hasPartialData = Boolean(partialBadgesHtml);
+
+    const moodGauges = this._config.show_mood
+      ? moodData.map(m => this._buildMoodGauge(m)).join('')
       : '';
-    
+
     const neuronBar = this._config.show_neuron_activity && neuronActivity
       ? this._buildNeuronBar(neuronActivity)
       : '';
 
-    const modeIcon = zone.mode ? this._getModeIcon(zone.mode) : 'mdi:home';
+    const modeIcon = hasMode ? this._getModeIcon(zone.mode) : 'mdi:home';
     const modeLabel = zone.mode || 'inaktiv';
 
     return `
-      <div class="zone-card ${isActive ? 'active' : 'inactive'}" data-zone="${zoneId}">
+      <div class="zone-card ${isActive ? 'active' : 'inactive'} ${hasPartialData ? 'partial' : ''}" data-zone="${zoneId}">
         <div class="zone-header">
           <div class="zone-info">
             <span class="zone-icon mdi-icon">${this._getZoneIcon(zoneId)}</span>
             <span class="zone-name">${zone.name || zoneId}</span>
           </div>
-          <div class="zone-status ${isActive ? 'active' : ''}">
+          <div class="zone-status ${isActive ? 'active' : ''} ${hasPartialData ? 'partial' : ''}">
             <span class="status-dot"></span>
-            <span class="status-text">${isActive ? 'Aktiv' : 'Inaktiv'}</span>
+            <span class="status-text">${hasPartialData ? 'Teildaten' : (isActive ? 'Aktiv' : 'Inaktiv')}</span>
           </div>
         </div>
-        
+
+        ${partialBadgesHtml}
+
         ${isActive ? `
           <div class="zone-mode">
             <span class="mdi-icon">${modeIcon}</span>
             <span class="mode-label">${modeLabel}</span>
           </div>
         ` : ''}
-        
+
         ${moodGauges ? `
           <div class="mood-gauges">
             ${moodGauges}
           </div>
         ` : ''}
-        
+
         ${neuronBar}
-        
+
         ${this._config.show_quick_actions ? `
           <div class="quick-actions">
             <button class="action-btn light-toggle" data-action="light" title="Licht">
@@ -259,7 +337,7 @@ class StyxZoneCard extends HTMLElement {
   _render() {
     const { zones, total_zones, active_zones } = this._getZonesData();
     const title = this._config.title || 'Zonen';
-    
+
     const zoneCards = zones.length > 0
       ? zones.map(z => this._buildZoneCard(z)).join('')
       : '<div class="no-zones">Keine Zonen konfiguriert</div>';
@@ -317,6 +395,9 @@ class StyxZoneCard extends HTMLElement {
           border-left: 3px solid #4b5563;
           opacity: 0.7;
         }
+        .zone-card.partial {
+          border-left: 3px solid #f59e0b;
+        }
         .zone-header {
           display: flex;
           justify-content: space-between;
@@ -345,6 +426,9 @@ class StyxZoneCard extends HTMLElement {
         .zone-status.active {
           color: #22c55e;
         }
+        .zone-status.partial {
+          color: #f59e0b;
+        }
         .status-dot {
           width: 8px;
           height: 8px;
@@ -354,6 +438,28 @@ class StyxZoneCard extends HTMLElement {
         .zone-status.active .status-dot {
           background: #22c55e;
           box-shadow: 0 0 6px #22c55e;
+        }
+        .zone-status.partial .status-dot {
+          background: #f59e0b;
+          box-shadow: 0 0 6px #f59e0b;
+        }
+        .partial-badges {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+        }
+        .partial-badge {
+          font-size: 11px;
+          color: #f59e0b;
+          background: rgba(245, 158, 11, 0.12);
+          border: 1px solid rgba(245, 158, 11, 0.4);
+          border-radius: 999px;
+          width: fit-content;
+          padding: 4px 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.2px;
+          line-height: 1.2;
         }
         .zone-mode {
           display: flex;
@@ -378,6 +484,45 @@ class StyxZoneCard extends HTMLElement {
         .mood-gauge {
           width: 70px;
           height: 70px;
+        }
+        .mood-gauge.mood-gauge-missing {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px dashed rgba(245, 158, 11, 0.35);
+          border-radius: 50%;
+          background: rgba(30, 42, 54, 0.35);
+          color: #f59e0b;
+        }
+        .missing-value {
+          text-align: center;
+          line-height: 1.1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+        }
+        .value-na {
+          font-size: 18px;
+          font-weight: 700;
+        }
+        .value-title {
+          font-size: 10px;
+          color: var(--secondary-text-color, #9fb1c3);
+          font-weight: 500;
+        }
+        .value-subtitle {
+          font-size: 10px;
+          color: #fbbf24;
+        }
+        .neuron-bar-container.neuron-missing {
+          min-height: 42px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(30, 42, 54, 0.5);
+          border-radius: 6px;
+          padding: 6px 4px;
         }
         .neuron-bar-container {
           margin: 10px 0;
@@ -482,7 +627,7 @@ class StyxZoneCard extends HTMLElement {
         const action = e.currentTarget.dataset.action;
         const zoneCard = e.currentTarget.closest('.zone-card');
         const zoneId = zoneCard?.dataset.zone;
-        
+
         if (action === 'light') {
           this._toggleLight(zoneId);
         } else if (action === 'scene') {
@@ -496,11 +641,11 @@ class StyxZoneCard extends HTMLElement {
 
   _toggleLight(zoneId) {
     if (!this._hass || !zoneId) return;
-    
+
     const lightEntity = `light.${zoneId}_main`;
     const state = this._hass.states[lightEntity];
     const newState = state?.state === 'on' ? 'off' : 'on';
-    
+
     this._hass.callService('light', 'toggle', {
       entity_id: lightEntity
     });
@@ -517,7 +662,7 @@ class StyxZoneCard extends HTMLElement {
 
   _adjustThermostat(zoneId) {
     if (!this._hass || !zoneId) return;
-    
+
     const thermostatEntity = `climate.${zoneId}`;
     this._hass.callService('climate', 'set_temperature', {
       entity_id: thermostatEntity,

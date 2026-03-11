@@ -1,276 +1,65 @@
-name: CI/CD Pipeline (pilotsuite-styx-core)
+name: CI (PilotSuite Styx HA)
 
 on:
   push:
-    branches: [main, dev]
-    tags: ['v*']
+    branches: [ main ]
   pull_request:
-    branches: [main, dev]
+    branches: [ main ]
 
-env:
-  PYTHON_VERSION: '3.11'
-  COVERAGE_TARGET: 90
+concurrency:
+  group: ha-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # ============================================
-  # Lint & Type Check
-  # ============================================
-  lint:
-    name: Lint & Type Check
+  lint-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 mypy types-requests types-PyYAML
+          # minimal deps for unit tests
+          pip install -r custom_components/copilot_ha/requirements-dev.txt
 
-      - name: Run flake8
+      - name: Run unit tests
         run: |
-          flake8 copilot_core/rootfs/usr/src/app --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 copilot_core/rootfs/usr/src/app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          pytest -q custom_components/copilot_ha/tests
 
-      - name: Run mypy (optional, non-blocking)
-        run: |
-          mypy copilot_core/rootfs/usr/src/app --ignore-missing-imports || true
-
-  # ============================================
-  # Test Suite
-  # ============================================
-  test:
-    name: Test Suite
+  e2e:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.11']  # Nur 3.11 für schnellere Runs (3.10/3.12 nur bei Release)
-
+    timeout-minutes: 20
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          node-version: '20'
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pip
-            .pytest_cache
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('copilot_core/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
+      - name: Install e2e deps
+        working-directory: tests/e2e
         run: |
-          python -m pip install --upgrade pip
-          pip install -r copilot_core/requirements.txt
-          pip install pytest pytest-cov pytest-xdist pytest-asyncio pytest-mock
-          pip install flask-testing responses freezegun
+          npm ci
+          npx playwright install --with-deps
 
-      - name: Run tests with pytest-xdist (parallel)
-        run: |
-          cd copilot_core/rootfs/usr/src/app
-          python -m pytest tests/ -v -n auto --cov=copilot_core --cov-report=xml --cov-report=html --cov-report=term-missing --cov-fail-under=${{ env.COVERAGE_TARGET }} || true
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./copilot_core/rootfs/usr/src/app/coverage.xml
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Upload coverage artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-${{ matrix.python-version }}
-          path: |
-            copilot_core/rootfs/usr/src/app/htmlcov/
-            copilot_core/rootfs/usr/src/app/coverage.xml
-          retention-days: 7
-
-  # ============================================
-  # Integration Tests
-  # ============================================
-  integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: [lint]
-    services:
-      neo4j:
-        image: neo4j:5
+      - name: Run Playwright
+        working-directory: tests/e2e
         env:
-          NEO4J_AUTH: neo4j/testpassword123
-        ports:
-          - 7687:7687
-          - 7474:7474
-        options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies
+          DASHBOARD_URL: ${{ secrets.DASHBOARD_URL }}
         run: |
-          python -m pip install --upgrade pip
-          pip install -r copilot_core/requirements.txt
-          pip install pytest pytest-cov pytest-xdist pytest-asyncio pytest-mock
-          pip install flask-testing responses freezegun
+          npm test
 
-      - name: Wait for Neo4j
-        run: |
-          sleep 10
-          echo "Neo4j service should be ready"
-
-      - name: Run integration tests
-        run: |
-          cd copilot_core/rootfs/usr/src/app
-          export NEO4J_URI=bolt://localhost:7687
-          export NEO4J_USER=neo4j
-          export NEO4J_PASSWORD=testpassword123
-          python -m pytest tests/integration/ -v --cov=copilot_core --cov-report=xml --cov-append || true
-
-      - name: Upload integration test results
+      - name: Upload Playwright report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: integration-test-results
-          path: copilot_core/rootfs/usr/src/app/coverage.xml
-          retention-days: 7
-
-  # ============================================
-  # Auto-Label PRs
-  # ============================================
-  auto-label:
-    name: Auto-Label PR
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Auto-label PR
-        uses: actions/labeler@v5
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          configuration-path: .github/labeler.yml
-
-  # ============================================
-  # Security Scan
-  # ============================================
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install safety
-        run: pip install safety
-
-      - name: Run safety check (non-blocking)
-        run: safety check -r copilot_core/requirements.txt --ignore 58689 || true
-
-      - name: Run Bandit security lint (non-blocking)
-        run: |
-          pip install bandit
-          bandit -r copilot_core/rootfs/usr/src/app -f json -o bandit-report.json --skip B101 || true
-
-      - name: Upload bandit report
-        uses: actions/upload-artifact@v4
-        with:
-          name: bandit-security-report
-          path: bandit-report.json
-          retention-days: 7
-
-  # ============================================
-  # Release Automation (on tag push)
-  # ============================================
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    needs: [test, integration]
-    if: startsWith(github.ref, 'refs/tags/v')
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          echo "changelog<<EOF" >> $GITHUB_OUTPUT
-          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          body: |
-            ## Changes
-            ${{ steps.changelog.outputs.changelog }}
-
-            ## Installation
-            ```bash
-            git clone https://github.com/${{ github.repository }}.git
-            cd pilotsuite-styx-core
-            ```
-
-            ## Testing
-            ```bash
-            ./scripts/run_tests.sh
-            ```
-
-          draft: false
-          prerelease: false
-          files: |
-            CHANGELOG.md
-            README.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ============================================
-  # Notify on Completion
-  # ============================================
-  notify:
-    name: Notify Completion
-    runs-on: ubuntu-latest
-    needs: [test, integration, release]
-    if: always()
-    steps:
-      - name: Check job status
-        run: |
-          if [ "${{ needs.test.result }}" == "failure" ] || [ "${{ needs.integration.result }}" == "failure" ]; then
-            echo "❌ CI Pipeline failed"
-            exit 1
-          else
-            echo "✅ CI Pipeline passed"
-          fi
+          name: playwright-report
+          path: tests/e2e/playwright-report
