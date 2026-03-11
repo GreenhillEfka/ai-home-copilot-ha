@@ -1279,6 +1279,7 @@ def _register_musikwolke_services(hass: HomeAssistant) -> None:
         async def _handle_musikwolke_dissolve(call: ServiceCall) -> None:
             coord = _get_coordinator(hass)
             if coord is None:
+                _LOGGER.warning("Musikwolke dissolve: no coordinator available")
                 return
             zone_ids = call.data.get("zone_ids", [])
             if not zone_ids:
@@ -1301,6 +1302,7 @@ def _register_musikwolke_services(hass: HomeAssistant) -> None:
         async def _handle_musikwolke_play(call: ServiceCall) -> None:
             coord = _get_coordinator(hass)
             if coord is None:
+                _LOGGER.warning("Musikwolke play: no coordinator available")
                 return
             zone_id = call.data["zone_id"]
             volume_pct = call.data.get("volume_pct")
@@ -1325,6 +1327,7 @@ def _register_musikwolke_services(hass: HomeAssistant) -> None:
         async def _handle_musikwolke_pause(call: ServiceCall) -> None:
             coord = _get_coordinator(hass)
             if coord is None:
+                _LOGGER.warning("Musikwolke pause: no coordinator available")
                 return
             zone_id = call.data["zone_id"]
             result = await coord.api.async_musikwolke_pause(zone_id)
@@ -1345,6 +1348,7 @@ def _register_musikwolke_services(hass: HomeAssistant) -> None:
         async def _handle_musikwolke_volume(call: ServiceCall) -> None:
             coord = _get_coordinator(hass)
             if coord is None:
+                _LOGGER.warning("Musikwolke volume: no coordinator available")
                 return
             zone_id = call.data["zone_id"]
             volume_pct = call.data["volume_pct"]
@@ -1369,6 +1373,7 @@ def _register_musikwolke_services(hass: HomeAssistant) -> None:
         async def _handle_start_follow(call: ServiceCall) -> None:
             coord = _get_coordinator(hass)
             if coord is None:
+                _LOGGER.warning("Musikwolke start_follow: no coordinator available")
                 return
             person_id = call.data["person_id"]
             source_zone = call.data["source_zone"]
@@ -1393,6 +1398,7 @@ def _register_musikwolke_services(hass: HomeAssistant) -> None:
         async def _handle_stop_follow(call: ServiceCall) -> None:
             coord = _get_coordinator(hass)
             if coord is None:
+                _LOGGER.warning("Musikwolke stop_follow: no coordinator available")
                 return
             session_id = call.data["session_id"]
             result = await coord.api.async_stop_media_follow(session_id)
@@ -1413,6 +1419,7 @@ def _register_musikwolke_services(hass: HomeAssistant) -> None:
         async def _handle_zone_automation_set_mode(call: ServiceCall) -> None:
             coord = _get_coordinator(hass)
             if coord is None:
+                _LOGGER.warning("Zone automation set_mode: no coordinator available")
                 return
             zone_id = call.data["zone_id"]
             mode = call.data["mode"]
