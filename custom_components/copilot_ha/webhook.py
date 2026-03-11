@@ -40,7 +40,6 @@ _NONCE_RE = re.compile(r"^[0-9a-f]{32}$")
 _SIGNING_NONCE_CACHE: dict[tuple[str, str], int] = {}
 _SIGNING_NONCE_CACHE_LOCK = asyncio.Lock()
 _SIGNING_NONCE_CACHE_MAX_ENTRIES = 10_000
-_SIGNING_NONCE_CACHE_CLEANUP_MAX_DELETES = 500
 
 # Canonical webhook event types (Core ↔ HA contract)
 EVENT_TYPE_STATUS = "status"
@@ -278,13 +277,13 @@ async def _nonce_seen_or_mark(*, scope: str, nonce: str, now_epoch: int, ttl_sec
     key = (scope, nonce)
 
     async with _SIGNING_NONCE_CACHE_LOCK:
-        deleted = 0
-        for cache_key, expiry in list(_SIGNING_NONCE_CACHE.items()):
-            if expiry <= now_epoch:
-                _SIGNING_NONCE_CACHE.pop(cache_key, None)
-                deleted += 1
-                if deleted >= _SIGNING_NONCE_CACHE_CLEANUP_MAX_DELETES:
-                    break
+        expired_keys = [
+            cache_key
+            for cache_key, expiry in _SIGNING_NONCE_CACHE.items()
+            if expiry <= now_epoch
+        ]
+        for cache_key in expired_keys:
+            del _SIGNING_NONCE_CACHE[cache_key]
 
         existing = _SIGNING_NONCE_CACHE.get(key)
         if existing is not None and existing > now_epoch:
