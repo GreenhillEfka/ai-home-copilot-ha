@@ -69,7 +69,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["connection", "modules", "habitus_zones", "entity_tags", "neurons", "backup_restore"],
+            menu_options=["connection", "modules", "automation_modes", "habitus_zones", "entity_tags", "neurons", "backup_restore"],
         )
 
     # ── Connection ───────────────────────────────────────────────────
@@ -388,6 +388,79 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
                     "(plus legacy mirror in `www/copilot_ha/`) for easy download."
                 )
             },
+        )
+
+    # ── Automation Modes ──────────────────────────────────────────────
+
+    async def async_step_automation_modes(self, user_input: dict | None = None) -> FlowResult:
+        """Configure automation mode (off / learning / autonomy) per zone.
+
+        Each zone can operate in one of three modes:
+        - off:       Sensors report but no automations fire
+        - learning:  Sensors report + pattern recording, no actions
+        - autonomy:  Full automation (lights, music, suggestions)
+        """
+        from .habitus_zones_store_v2 import async_get_zones_v2
+
+        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        data = self._effective_config()
+
+        # Load existing mode config
+        zone_modes: dict = data.get("zone_automation_modes", {})
+        global_mode: str = data.get("global_automation_mode", "learning")
+
+        if user_input is not None:
+            new_global = user_input.get("global_mode", global_mode)
+            updates = {
+                "global_automation_mode": new_global,
+                "zone_automation_modes": {},
+            }
+
+            for z in zones:
+                key = f"mode_{z.zone_id}"
+                mode = user_input.get(key, new_global)
+                if mode in ("off", "learning", "autonomy"):
+                    updates["zone_automation_modes"][z.zone_id] = mode
+
+            return self._create_merged_entry(updates)
+
+        mode_options = [
+            selector.SelectOptionDict(value="off", label="Aus (off)"),
+            selector.SelectOptionDict(value="learning", label="Lernen (learning)"),
+            selector.SelectOptionDict(value="autonomy", label="Autonomie (autonomy)"),
+        ]
+
+        schema_fields: dict = {
+            vol.Required("global_mode", default=global_mode): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=mode_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+        }
+
+        for z in zones:
+            zone_mode = zone_modes.get(z.zone_id, global_mode)
+            schema_fields[vol.Required(f"mode_{z.zone_id}", default=zone_mode)] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=mode_options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            )
+
+        schema = vol.Schema(schema_fields)
+        descriptions = {
+            "description": (
+                "Steuere den Automationsmodus pro Zone:\n"
+                "- **Aus**: Sensoren melden, aber keine Aktionen\n"
+                "- **Lernen**: Sensoren + Mustererkennung, keine Aktionen\n"
+                "- **Autonomie**: Volle Automatisierung (Licht, Musik, Vorschlaege)"
+            )
+        }
+        return self.async_show_form(
+            step_id="automation_modes",
+            data_schema=schema,
+            description_placeholders=descriptions,
         )
 
     # ── Neurons ──────────────────────────────────────────────────────

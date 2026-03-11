@@ -203,6 +203,55 @@ class CopilotApiClient(SharedCopilotApiClient):
             _LOGGER.debug("Neurons API not available: %s", e)
         return {"neurons": {}}
 
+    async def async_get_zone_automation(self) -> dict[str, Any]:
+        """Get zone automation dashboard (presence, lights, music per zone)."""
+        try:
+            return await self.async_get("/api/v1/zone-automation/dashboard")
+        except CopilotApiError as e:
+            _LOGGER.debug("Zone automation API not available: %s", e)
+        return {"zones": [], "summary": {}}
+
+    async def async_get_sonos_summary(self) -> dict[str, Any]:
+        """Get Sonos speaker summary from jishi API."""
+        try:
+            return await self.async_get("/api/v1/sonos/summary")
+        except CopilotApiError as e:
+            _LOGGER.debug("Sonos API not available: %s", e)
+        return {"total_speakers": 0, "speakers": [], "playing": 0}
+
+    async def async_get_sonos_favorites(self) -> list[dict[str, Any]]:
+        """Get Sonos favorites."""
+        try:
+            data = await self.async_get("/api/v1/sonos/favorites")
+            return data.get("favorites", [])
+        except CopilotApiError as e:
+            _LOGGER.debug("Sonos favorites API not available: %s", e)
+        return []
+
+    async def async_sonos_action(self, action: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Execute a Sonos action (play, pause, volume, etc.)."""
+        try:
+            return await self._request_json("POST", f"/api/v1/sonos/{action}", payload=payload)
+        except CopilotApiError as e:
+            _LOGGER.debug("Sonos action %s failed: %s", action, e)
+        return {"ok": False, "error": str(e)}
+
+    async def async_get_presence(self) -> dict[str, Any]:
+        """Get presence intelligence data."""
+        try:
+            return await self.async_get("/api/v1/hub/presence")
+        except CopilotApiError as e:
+            _LOGGER.debug("Presence API not available: %s", e)
+        return {"ok": False}
+
+    async def async_get_light_intelligence(self) -> dict[str, Any]:
+        """Get light intelligence data."""
+        try:
+            return await self.async_get("/api/v1/hub/light")
+        except CopilotApiError as e:
+            _LOGGER.debug("Light intelligence API not available: %s", e)
+        return {"ok": False}
+
     async def async_chat_completions(
         self, messages: list[dict[str, str]], conversation_id: str | None = None
     ) -> dict[str, Any]:
