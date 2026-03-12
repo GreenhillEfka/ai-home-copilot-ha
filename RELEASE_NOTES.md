@@ -1,6 +1,6 @@
-# Release Notes v13.7.0 -- Musikwolke HA Services & Documentation Overhaul
+# Release v13.7.0 — Zone Dashboard, Smart Home Module, Musikwolke HA Services
 
-**Datum:** 2026-03-11
+**Datum:** 2026-03-12
 **Branch:** main
 **Tag:** `v13.7.0`
 **HA hassfest:** compliant
@@ -10,70 +10,55 @@
 
 ## Ueberblick
 
-PilotSuite v13.7.0 schliesst die **Musikwolke End-to-End Integration** zwischen Core und HA ab und liefert eine vollstaendige Dokumentationsueberarbeitung.
+PilotSuite HA v13.7.0 ist ein Major-Feature-Release mit drei Schwerpunkten:
 
-### Highlights
-
-- **8 neue Musikwolke HA-Services** fuer direkte Steuerung aus HA Automations und Dashboard
-- **Interaktives Musik-Dashboard** mit Button-Controls statt statischem Markdown
-- **14 neue Coordinator-API-Methoden** fuer Musikwolke, Media Follow und Zone Automation
-- **Vollstaendige Dokumentation**: Handbuch, Installationsanleitung, Modul-Referenz
+1. **Zone Dashboard** — Angereichert mit Controls, Playlists, Notifications, Birthdays, Todos
+2. **5 neue PilotSuite HA Module** — Licht, Helligkeit, Heiz, Bewegung, Praesenz
+3. **Musikwolke HA Services** — 8 neue Services fuer direkte Steuerung aus HA Automations
 
 ---
 
-## Neue HA-Services
+## Neue Features
+
+### 5 PilotSuite Smart Home Module
+- Licht, Helligkeit, Heiz, Bewegung, Praesenz als eigenstaendige HA-Module
+- Beispiel-Dashboard mit realen Entities
+- Integration in Zone Dashboard
+
+### Zone Dashboard Erweiterungen
+- Habituszonen-IDs synchron mit Core
+- Reichere Datenstruktur mit Controls, Musik, Playlists
+- Notifications, Birthdays, Todos pro Zone
+
+### 8 Musikwolke HA-Services
 
 | Service | Beschreibung |
 |---------|-------------|
-| `copilot_ha.musikwolke_create` | Musikwolke-Gruppe erstellen (synchronisierte Wiedergabe) |
+| `copilot_ha.musikwolke_create` | Musikwolke-Gruppe erstellen |
 | `copilot_ha.musikwolke_dissolve` | Musikwolke-Gruppe aufloesen |
-| `copilot_ha.musikwolke_play` | Wiedergabe in einer Zone starten |
-| `copilot_ha.musikwolke_pause` | Wiedergabe in einer Zone pausieren |
-| `copilot_ha.musikwolke_volume` | Lautstaerke fuer eine Zone setzen (0-100%) |
-| `copilot_ha.musikwolke_start_follow` | Follow-Session starten (Musik folgt Person) |
+| `copilot_ha.musikwolke_play` | Wiedergabe starten |
+| `copilot_ha.musikwolke_pause` | Wiedergabe pausieren |
+| `copilot_ha.musikwolke_volume` | Lautstaerke setzen (0-100%) |
+| `copilot_ha.musikwolke_start_follow` | Follow-Session starten |
 | `copilot_ha.musikwolke_stop_follow` | Follow-Session beenden |
-| `copilot_ha.zone_automation_set_mode` | Automatisierungsmodus setzen (off/learning/autonomy) |
+| `copilot_ha.zone_automation_set_mode` | Automatisierungsmodus setzen |
 
-### Beispiel: HA Automation
+### Coordinator-Erweiterungen
+- 14 neue API-Methoden im `CopilotApiClient`
+- Musikwolke, Media Follow und Zone Automation vollstaendig angebunden
 
-```yaml
-automation:
-  - alias: "Musikwolke bei Ankunft"
-    trigger:
-      - platform: state
-        entity_id: person.alice
-        to: "home"
-    action:
-      - service: copilot_ha.musikwolke_start_follow
-        data:
-          person_id: person.alice
-          source_zone: wohnzimmer
-```
+### Interaktives Musik-Dashboard
+- Play/Pause/Dissolve Buttons mit direkter Steuerung
+- Follow Start/Stop per Knopfdruck
+- Tabellarische Modi-Uebersicht
 
 ---
 
-## Coordinator-Erweiterungen
+## Bug Fixes
 
-14 neue API-Methoden im `CopilotApiClient`:
-
-- `async_get_musikwolke_status()` -- Status aller aktiven Musikwolke-Gruppen
-- `async_musikwolke_play/pause/volume` -- Zone-Steuerung
-- `async_create_musikwolke/dissolve_musikwolke` -- Gruppen-Management
-- `async_start/stop_media_follow` -- Follow-Session-Management
-- `async_get_media_follow_sessions()` -- Session-Ueberblick
-- `async_set/get_zone_automation_mode` -- Automatisierungsmodus
-- `async_get_musikwolke_zone_map()` -- Zone-Speaker-Mapping
-
----
-
-## Dashboard-Verbesserungen
-
-### Musik-Tab (Tab 5)
-
-- **Play/Pause/Dissolve Buttons**: Direkte Steuerung per Tap
-- **Follow Start/Stop Buttons**: Media-Follow per Knopfdruck
-- **Zonen-Automatisierung**: Tabellarische Modi-Uebersicht
-- **Info-Card**: Erklaerung der Musikwolke-Funktionalitaet
+- Fehlender `asyncio`-Import und Auth-Header-Alignment in API Client
+- Warning Logs fuer fehlenden Coordinator in Musikwolke Service Handlers
+- Ungebundene Variable `e` in coordinator.py Musikwolke-Methoden
 
 ---
 
@@ -82,7 +67,7 @@ automation:
 | Dokument | Beschreibung |
 |----------|-------------|
 | `docs/HANDBUCH.md` | Deutsches Benutzerhandbuch |
-| `docs/INSTALLATIONSANLEITUNG.md` | Schritt-fuer-Schritt Installationsanleitung |
+| `docs/INSTALLATIONSANLEITUNG.md` | Installationsanleitung |
 | `docs/MODULE_REFERENCE.md` | Vollstaendige Modul-Referenz |
 
 ---
@@ -91,8 +76,15 @@ automation:
 
 - **Breaking Changes:** Keine
 - **Neue Dependencies:** Keine
-- **Migration:** Nicht erforderlich -- Standard HA-Update
+- **Migration:** Standard HA-Update (HACS → Update)
 
 ---
 
-**PilotSuite v13.7.0** -- Local-first, Privacy-first, Governance-first.
+## Statistiken
+
+- **49 Dateien geaendert** (+5.565 / -613 Zeilen)
+- **Neue Tests:** test_card_generator_modules.py, test_pilotsuite_modules.py
+
+---
+
+**PilotSuite v13.7.0** — Local-first, Privacy-first, Governance-first.
