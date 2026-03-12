@@ -80,21 +80,24 @@ class MLContext:
                 ["power_watts", "duration_seconds", "event_rate"]
             )
             
-            # Register energy devices for optimization
-            self.energy_optimizer.register_device(
-                "light.living_room", 10.0, "light"
-            )
-            self.energy_optimizer.register_device(
-                "light.kitchen", 15.0, "light"
-            )
-            self.energy_optimizer.register_device(
-                "climate.living_room", 1500.0, "climate"
-            )
-            
-            # Create device groups
-            self.energy_optimizer.create_device_group(
-                "living_room", ["light.living_room", "climate.living_room"]
-            )
+            # Auto-register devices from the existing device registry
+            for device_id, info in self.device_registry.items():
+                pw = info.get("power_watts")
+                dtype = info.get("device_type", "unknown")
+                if pw is not None:
+                    self.energy_optimizer.register_device(device_id, pw, dtype)
+
+            # Auto-create device groups by room (derived from entity naming)
+            room_groups: Dict[str, list] = {}
+            for device_id in self.device_registry:
+                # Extract room from entity_id (e.g. "light.living_room" → "living_room")
+                parts = device_id.split(".", 1)
+                if len(parts) == 2:
+                    room = parts[1].rsplit("_", 1)[0] if "_" in parts[1] else parts[1]
+                    room_groups.setdefault(room, []).append(device_id)
+            for room, devices in room_groups.items():
+                if len(devices) >= 2:
+                    self.energy_optimizer.create_device_group(room, devices)
             
             self._is_initialized = True
             return True
@@ -263,6 +266,38 @@ class MLContext:
             
         return self.multi_user_learner.get_multi_user_summary()
         
+    def _get_device_consumption(self, device_id: str) -> float:
+        """
+        Get current power consumption for a device.
+
+        Looks up the latest recorded consumption from the energy optimizer's
+        history, falling back to the registered power_watts from the device registry.
+        """
+        # Try to get latest from energy optimizer's history
+        try:
+            history = getattr(self.energy_optimizer, "energy_history", {})
+            records = history.get(device_id, [])
+            if records:
+                latest = records[-1]
+                return float(latest.get("power_watts", 0.0))
+        except (AttributeError, TypeError, IndexError):
+            pass
+
+        # Fall back to registered power_watts from device profiles
+        try:
+            profile = self.energy_optimizer.device_profiles.get(device_id, {})
+            if profile.get("power_rating_watts"):
+                return float(profile["power_rating_watts"])
+        except (AttributeError, TypeError):
+            pass
+
+        # Last resort: check local device registry
+        reg = self.device_registry.get(device_id)
+        if reg and reg.get("power_watts"):
+            return float(reg["power_watts"])
+
+        return 0.0
+
     def get_ml_context(
         self,
         device_id: Optional[str] = None,
@@ -288,70 +323,123 @@ class MLContext:
         }
         
         if device_id is not None:
+            # Resolve current consumption from device registry or recorded data
+            current_wh = self._get_device_consumption(device_id)
             context["device_context"] = {
                 "device_id": device_id,
                 "is_monitored": device_id in self.device_registry,
                 "energy_recommendations": self.get_energy_recommendations(
-                    device_id, 0  # Placeholder
+                    device_id, current_wh
                 ),
             }
             
         return context
         
     def train_models(self) -> Dict[str, Any]:
-        """Train all ML models."""
+        """Train all ML models using real subsystem data."""
         if not self.enabled or not self._is_initialized:
             return {"status": "not_ready"}
-            
+
         results = {}
-        
-        # Register and train anomaly detector
+
+        # ── Anomaly Detector ──────────────────────────────────────────
         if self.anomaly_detector:
-            self.training_pipeline.register_model(
-                "anomaly_detector",
-                type('SimpleAnomalyModel', (), {'fit': lambda self, X: None, 'predict': lambda self, X: [0] * len(X), 'score': lambda self, X, y: 0.0}),
-                ["power_watts", "duration_seconds", "event_rate"]
-            )
-            results["anomaly_detector"] = {
-                "status": "ready",
-                "message": "Model registered for incremental training",
-            }
-        
-        # Register and train habit predictor  
-        if self.habit_predictor:
-            # Gather training data from habit patterns
-            habit_training_data = []
-            for device_id, events in self.habit_predictor.device_patterns.items():
-                for event in events:
-                    habit_training_data.append({
-                        "features": {
-                            "hour": datetime.fromtimestamp(event["timestamp"]).hour,
-                            "day_of_week": datetime.fromtimestamp(event["timestamp"]).weekday(),
-                        },
-                        "target": event["event_type"],
-                    })
-            
-            if habit_training_data:
-                self.training_pipeline.register_model(
-                    "habit_predictor",
-                    type('SimpleHabitModel', (), {'fit': lambda self, X: None, 'predict': lambda self, X: ["unknown"] * len(X)}),
-                    ["hour", "day_of_week"]
-                )
-                result = self.training_pipeline.train_model("habit_predictor", habit_training_data)
-                results["habit_predictor"] = result
-            else:
-                results["habit_predictor"] = {
-                    "status": "no_data",
-                    "message": "Collect more events to enable training",
+            try:
+                window = self.anomaly_detector.window
+                if len(window) >= 10:
+                    # Convert window data to numpy array for fitting
+                    import numpy as np
+                    feature_names = self.anomaly_detector.feature_names
+                    data_rows = []
+                    for entry in window:
+                        row = [float(entry.get(fn, 0.0)) for fn in feature_names]
+                        data_rows.append(row)
+                    data_array = np.array(data_rows)
+                    self.anomaly_detector.fit(data_array)
+                    results["anomaly_detector"] = {
+                        "status": "trained",
+                        "samples": len(window),
+                        "features": feature_names,
+                    }
+                else:
+                    results["anomaly_detector"] = {
+                        "status": "insufficient_data",
+                        "samples": len(window),
+                        "features": self.anomaly_detector.feature_names,
+                        "message": f"Need at least 10 samples, have {len(window)}",
+                    }
+            except Exception as e:
+                _LOGGER.warning("Anomaly detector training failed: %s", e)
+                results["anomaly_detector"] = {
+                    "status": "error",
+                    "message": str(e),
                 }
-        
-        # Energy optimizer - uses rule-based recommendations
+
+        # ── Habit Predictor ───────────────────────────────────────────
+        if self.habit_predictor:
+            try:
+                habit_training_data = []
+                for device_id, events in self.habit_predictor.device_patterns.items():
+                    for event in events:
+                        ts = event.get("timestamp")
+                        if ts is None:
+                            continue
+                        dt = datetime.fromtimestamp(ts)
+                        habit_training_data.append({
+                            "features": {
+                                "hour": dt.hour,
+                                "day_of_week": dt.weekday(),
+                            },
+                            "target": event.get("event_type", "unknown"),
+                        })
+
+                if habit_training_data:
+                    # Use the training pipeline with the actual anomaly model class
+                    # (IsolationForest or fallback) for habit clustering
+                    self.training_pipeline.register_model(
+                        "habit_predictor",
+                        self.anomaly_detector.model.__class__
+                        if self.anomaly_detector.model is not None
+                        else type("FallbackModel", (), {
+                            "__init__": lambda s, **kw: None,
+                            "fit": lambda s, X: s,
+                        }),
+                        ["hour", "day_of_week"],
+                    )
+                    result = self.training_pipeline.train_model(
+                        "habit_predictor", habit_training_data
+                    )
+                    results["habit_predictor"] = result
+                else:
+                    results["habit_predictor"] = {
+                        "status": "no_data",
+                        "message": "Collect more events to enable training",
+                    }
+            except Exception as e:
+                _LOGGER.warning("Habit predictor training failed: %s", e)
+                results["habit_predictor"] = {
+                    "status": "error",
+                    "message": str(e),
+                }
+
+        # ── Energy Optimizer ──────────────────────────────────────────
         if self.energy_optimizer:
-            results["energy_optimizer"] = {
-                "status": "rule_based",
-                "message": "Energy optimizer uses rule-based recommendations",
-            }
-        
+            try:
+                devices_tracked = len(getattr(self.energy_optimizer, "device_profiles", {}))
+                savings = self.energy_optimizer.get_savings_summary()
+                results["energy_optimizer"] = {
+                    "status": "active",
+                    "mode": "rule_based_with_stats",
+                    "devices_tracked": devices_tracked,
+                    "savings_summary": savings,
+                    "message": "Energy optimizer uses rule-based recommendations with consumption statistics",
+                }
+            except Exception as e:
+                results["energy_optimizer"] = {
+                    "status": "error",
+                    "message": str(e),
+                }
+
         return {"status": "training_completed", "results": results}
         
     def get_statistics(self) -> Dict[str, Any]:
