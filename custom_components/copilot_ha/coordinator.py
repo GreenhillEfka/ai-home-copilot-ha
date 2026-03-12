@@ -381,6 +381,24 @@ class CopilotApiClient(SharedCopilotApiClient):
             _LOGGER.debug("Musikwolke zone map not available: %s", e)
         return {"ok": False, "zone_map": {}}
 
+    # ── Smart Home Module Dashboards ──────────────────────────────────
+
+    async def async_get_module_dashboards(self) -> dict[str, Any]:
+        """Get aggregated dashboard for all 5 smart home modules (single call)."""
+        try:
+            return await self.async_get("/api/v1/modules/dashboard")
+        except CopilotApiError as e:
+            _LOGGER.debug("Module dashboards API not available: %s", e)
+        return {"ok": False, "modules": {}}
+
+    async def async_get_module_zone_detail(self, zone_id: str) -> dict[str, Any]:
+        """Get aggregated zone detail for all 5 modules."""
+        try:
+            return await self.async_get(f"/api/v1/modules/zones/{zone_id}")
+        except CopilotApiError as e:
+            _LOGGER.debug("Module zone detail not available for %s: %s", zone_id, e)
+        return {"ok": False, "zone_id": zone_id, "modules": {}}
+
     # ── Presence / Light / Chat ────────────────────────────────────────
 
     async def async_get_presence(self) -> dict[str, Any]:
@@ -598,6 +616,12 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 # Get habit learning data from ML context if available
                 habit_data = await self._get_habit_learning_data()
 
+                # Get smart home module dashboards (aggregated single call)
+                module_data = await self.api.async_get_module_dashboards()
+
+                # Feed module data into HA module stubs
+                await self._update_smart_home_modules(module_data)
+
                 return {
                     "ok": bool(status.ok) if status.ok is not None else True,
                     "version": status.version or "unknown",
@@ -608,6 +632,7 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     "habit_summary": habit_data.get("habit_summary", {}),
                     "predictions": habit_data.get("predictions", []),
                     "sequences": habit_data.get("sequences", []),
+                    "modules": module_data.get("modules", {}),
                 }
             except CopilotApiError as err:
                 last_err = err
@@ -633,6 +658,101 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         _LOGGER.warning("PilotSuite API unreachable after 3 attempts: %s", last_err)
         raise UpdateFailed(f"API unavailable after retries: {last_err}") from last_err
     
+    async def _update_smart_home_modules(self, module_data: dict[str, Any]) -> None:
+        """Feed Core module dashboard data into HA module stubs.
+
+        Each HA smart home module (licht, helligkeit, heiz, bewegung, praesenz)
+        stores per-zone state locally. This method bridges Core → HA by pushing
+        the aggregated dashboard data from Core into the local module instances.
+        """
+        modules = module_data.get("modules", {})
+        if not modules:
+            return
+
+        # Find the active config entry store
+        entry_data = self.hass.data.get(DOMAIN, {})
+        entry_store: dict[str, Any] | None = None
+        for _eid, data in entry_data.items():
+            if isinstance(data, dict) and any(
+                k.endswith("_module") for k in data
+            ):
+                entry_store = data
+                break
+
+        if not entry_store:
+            return
+
+        # Also fetch zone automation data for per-zone detail
+        try:
+            zone_auto = await self.api.async_get_zone_automation()
+            zones = zone_auto.get("zones", [])
+        except Exception:
+            zones = []
+
+        # ── Licht ──
+        licht = entry_store.get("licht_module")
+        if licht and modules.get("licht"):
+            licht_summary = modules["licht"]
+            # Push zone-level data from zone automation if available
+            for zone in zones:
+                zid = zone.get("zone_id", "")
+                light_info = zone.get("light", {})
+                if zid and light_info:
+                    licht.update_zone(
+                        zone_id=zid,
+                        lights_on=light_info.get("lights_on", 0),
+                        lights_total=light_info.get("lights_total", 0),
+                        avg_brightness=light_info.get("avg_brightness", 0.0),
+                        auto_enabled=light_info.get("auto_enabled", False),
+                    )
+
+        # ── Helligkeit ──
+        helligkeit = entry_store.get("helligkeit_module")
+        if helligkeit and modules.get("helligkeit"):
+            for zone in zones:
+                zid = zone.get("zone_id", "")
+                brightness_info = zone.get("brightness", {})
+                if zid and brightness_info:
+                    helligkeit.update_zone(
+                        zone_id=zid,
+                        avg_indoor_lux=brightness_info.get("avg_indoor_lux", 0.0),
+                        avg_outdoor_lux=brightness_info.get("avg_outdoor_lux", 0.0),
+                        needs_light=brightness_info.get("needs_light", False),
+                        deficit_pct=brightness_info.get("deficit_pct", 0.0),
+                    )
+
+        # ── Heiz ──
+        heiz = entry_store.get("heiz_module")
+        if heiz and modules.get("heiz"):
+            for zone in zones:
+                zid = zone.get("zone_id", "")
+                climate_info = zone.get("climate", {})
+                if zid and climate_info:
+                    heiz.update_zone(zone_id=zid, **climate_info)
+
+        # ── Bewegung ──
+        bewegung = entry_store.get("bewegung_module")
+        if bewegung and modules.get("bewegung"):
+            for zone in zones:
+                zid = zone.get("zone_id", "")
+                motion_info = zone.get("motion", {})
+                if zid and motion_info:
+                    bewegung.update_zone(zone_id=zid, **motion_info)
+
+        # ── Praesenz ──
+        praesenz = entry_store.get("praesenz_module")
+        if praesenz and modules.get("praesenz"):
+            for zone in zones:
+                zid = zone.get("zone_id", "")
+                presence_info = zone.get("presence", {})
+                if zid and presence_info:
+                    praesenz.update_zone(zone_id=zid, **presence_info)
+
+        _LOGGER.debug(
+            "Smart home modules updated: %s",
+            [k for k, v in modules.items() if v is not None],
+        )
+
     async def _get_habit_learning_data(self) -> dict[str, Any]:
         """Get habit learning data from ML context."""
         try:

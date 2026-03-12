@@ -46,12 +46,14 @@ EVENT_TYPE_STATUS = "status"
 EVENT_TYPE_MOOD = "mood"
 EVENT_TYPE_SUGGESTION = "suggestion"
 EVENT_TYPE_NEURON = "neuron"
+EVENT_TYPE_MODULE_DATA = "module_data"
 
 _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_STATUS,
     EVENT_TYPE_MOOD,
     EVENT_TYPE_SUGGESTION,
     EVENT_TYPE_NEURON,
+    EVENT_TYPE_MODULE_DATA,
 }
 
 # Canonical aliases should continue to map directly; legacy aliases are only accepted in
@@ -61,6 +63,7 @@ _EVENT_TYPE_CANONICAL_TO_CANONICAL = {
     EVENT_TYPE_MOOD: EVENT_TYPE_MOOD,
     EVENT_TYPE_SUGGESTION: EVENT_TYPE_SUGGESTION,
     EVENT_TYPE_NEURON: EVENT_TYPE_NEURON,
+    EVENT_TYPE_MODULE_DATA: EVENT_TYPE_MODULE_DATA,
 }
 
 _EVENT_TYPE_LEGACY_ALIASES = {
@@ -671,6 +674,21 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 {"suggestion": data},
             )
             _LOGGER.debug("Webhook: suggestion push received")
+
+        elif event_type == EVENT_TYPE_MODULE_DATA:
+            # Core pushes smart home module data (licht, helligkeit, heiz, bewegung, praesenz)
+            modules = data.get("modules", {})
+            if modules:
+                updates = {"modules": modules}
+                merged = _merge_coordinator_data(coordinator, updates)
+                coordinator.async_set_updated_data(merged)
+
+                # Feed into HA module stubs via coordinator method
+                if hasattr(coordinator, "_update_smart_home_modules"):
+                    hass.async_create_task(
+                        coordinator._update_smart_home_modules(data)
+                    )
+            _LOGGER.debug("Webhook: module_data push received (%s)", list(modules.keys()))
 
         else:
             # Legacy status push (online/version)
