@@ -193,7 +193,7 @@ def handle_request_zone_data(data):
     print(f'[Dashboard] Zone data requested for: {zones}')
     
     # Return current zone data from store
-    from api.v1.dashboard import zone_data_store, DEFAULT_ZONES_CONFIG
+    from api.v1.dashboard import zone_data_store, FALLBACK_ZONES_CONFIG
     
     for zone_id in zones:
         zone_data = zone_data_store.get(zone_id, {})

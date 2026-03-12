@@ -17,6 +17,8 @@ class Config:
     
     # API endpoints
     RAG_API_URL = os.environ.get('RAG_API_URL', 'http://localhost:8765')
+    CORE_API_URL = os.environ.get('CORE_API_URL', 'http://localhost:8909')
+    CORE_AUTH_TOKEN = os.environ.get('COPILOT_AUTH_TOKEN', '')
     
     # Dashboard settings
     DASHBOARD_TITLE = 'PilotSuite Styx Dashboard'
