@@ -228,7 +228,7 @@ def _render_interactive_html(
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{sanitize_text(title, max_chars=120)}</title>
+    <title>{html.escape(sanitize_text(title, max_chars=120))}</title>
     <style>
         * {{ box-sizing: border-box; }}
         body {{

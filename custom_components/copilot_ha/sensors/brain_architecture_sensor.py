@@ -74,14 +74,15 @@ class BrainArchitectureSensor(CopilotBaseEntity, SensorEntity):
                     "health": r.get("health"),
                 }
                 for r in regions
+                if isinstance(r, dict)
             ]
 
         synapses = self._data.get("synapses", [])
         if synapses:
             attrs["synapse_summary"] = {
-                "active": sum(1 for s in synapses if s.get("state") == "active"),
-                "dormant": sum(1 for s in synapses if s.get("state") == "dormant"),
-                "total_fires": sum(s.get("fire_count", 0) for s in synapses),
+                "active": sum(1 for s in synapses if isinstance(s, dict) and s.get("state") == "active"),
+                "dormant": sum(1 for s in synapses if isinstance(s, dict) and s.get("state") == "dormant"),
+                "total_fires": sum(s.get("fire_count", 0) for s in synapses if isinstance(s, dict)),
             }
 
         graph = self._data.get("graph", {})
