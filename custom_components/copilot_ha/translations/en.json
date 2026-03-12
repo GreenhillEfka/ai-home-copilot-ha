@@ -36,8 +36,12 @@
         "title": "PilotSuite options",
         "description": "Configure PilotSuite.",
         "menu_options": {
-          "settings": "Settings",
+          "connection": "Connection",
+          "modules": "Modules",
+          "automation_modes": "Automation modes",
           "habitus_zones": "Habitus zones",
+          "entity_tags": "Entity tags",
+          "neurons": "Neurons",
           "backup_restore": "Backup / restore"
         }
       },

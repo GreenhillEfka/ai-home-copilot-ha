@@ -80,6 +80,7 @@
         "menu_options": {
           "connection": "Connection",
           "modules": "Modules",
+          "automation_modes": "Automation modes",
           "habitus_zones": "Habitus zones",
           "entity_tags": "Entity tags",
           "neurons": "Neurons",
@@ -156,6 +157,13 @@
           "birthday_tts_enabled": "Birthday TTS announcements",
           "birthday_tts_entity": "Birthday TTS entity",
           "birthday_reminder_hour": "Birthday reminder hour"
+        }
+      },
+      "automation_modes": {
+        "title": "Automation modes",
+        "description": "Control the automation mode per zone: Off (sensors report only), Learning (pattern recording), Autonomy (full automation).",
+        "data": {
+          "global_mode": "Global mode"
         }
       },
       "entity_tags": {

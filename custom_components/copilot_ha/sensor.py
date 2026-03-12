@@ -169,6 +169,21 @@ from .sensors.brain_architecture_sensor import BrainArchitectureSensor
 from .sensors.brain_activity_sensor import BrainActivitySensor
 from .sensors.cross_dependency_sensor import CrossDependencySensor
 
+# Forgotten/unwired sensors — wired in release v13.8.0
+from .sensors.appliance_fingerprint_sensor import ApplianceFingerprintSensor
+from .sensors.automation_suggestion_sensor import AutomationSuggestionSensor
+from .sensors.comfort_index_sensor import ComfortIndexSensor
+from .sensors.demand_response_sensor import DemandResponseSensor
+from .sensors.energy_cost_sensor import EnergyCostSensor
+from .sensors.energy_report_sensor import EnergyReportSensor
+from .sensors.energy_sankey_sensor import EnergySankeySensor
+from .sensors.energy_schedule_sensor import EnergyScheduleSensor
+from .sensors.module_integration import ModuleHealthSensor, SynapseActivitySensor, CrossPatternSensor
+from .sensors.notification_sensor import NotificationSensor
+from .sensors.regional_context_sensor import RegionalContextSensor
+from .sensors.weather_optimizer_sensor import WeatherOptimizerSensor
+from .sensors.zone_presence_trigger import ZonePresenceOverviewSensor
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
@@ -426,6 +441,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         BrainArchitectureSensor(coordinator),
         BrainActivitySensor(coordinator),
         CrossDependencySensor(coordinator),
+        # Wired in v13.8.0 — previously forgotten sensor modules
+        ApplianceFingerprintSensor(coordinator),
+        AutomationSuggestionSensor(coordinator),
+        ComfortIndexSensor(coordinator),
+        DemandResponseSensor(coordinator),
+        EnergyCostSensor(coordinator),
+        EnergyReportSensor(coordinator),
+        EnergySankeySensor(coordinator),
+        EnergyScheduleSensor(coordinator),
+        ModuleHealthSensor(coordinator),
+        SynapseActivitySensor(coordinator),
+        CrossPatternSensor(coordinator),
+        NotificationSensor(coordinator),
+        RegionalContextSensor(coordinator),
+        WeatherOptimizerSensor(coordinator),
+        ZonePresenceOverviewSensor(coordinator),
     ])
 
     # Camera Context Sensors (Habitus Camera Integration)
