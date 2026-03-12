@@ -5,7 +5,7 @@ Shows all neuron states, mood, and suggestions in a visual dashboard.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -33,7 +33,7 @@ class NeuronDashboardSensor(CoordinatorEntity, SensorEntity):
         self._attr_extra_state_attributes = {}
     
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return all neuron data."""
         if not self.coordinator.data:
             return {}
@@ -77,11 +77,11 @@ class MoodHistorySensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: CopilotDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_native_value = "ok"
-        self._history: List[Dict[str, Any]] = []
+        self._history: list[dict[str, Any]] = []
         self._max_history = 20
     
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return mood history."""
         if not self.coordinator.data:
             return {"history": []}
@@ -130,14 +130,15 @@ class SuggestionSensor(CoordinatorEntity, SensorEntity):
         suggestions = self.coordinator.data.get("suggestions", [])
         if not suggestions:
             return "none"
-        
+
         # Return top suggestion type
-        if suggestions:
-            return suggestions[0].get("action_type", "none")
+        first = suggestions[0]
+        if isinstance(first, dict):
+            return first.get("action_type", "none")
         return "none"
     
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return all suggestions."""
         if not self.coordinator.data:
             return {"suggestions": []}

@@ -590,7 +590,7 @@ def _render_interactive_html(
                         <div class="stat-label">Nodes</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value" id="edge-count">{len(edges)}</div>
+                        <div class="stat-value" id="edge-count">{len(edge_data)}</div>
                         <div class="stat-label">Edges</div>
                     </div>
                 </div>
