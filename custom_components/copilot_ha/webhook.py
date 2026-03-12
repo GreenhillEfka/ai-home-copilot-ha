@@ -47,6 +47,7 @@ EVENT_TYPE_MOOD = "mood"
 EVENT_TYPE_SUGGESTION = "suggestion"
 EVENT_TYPE_NEURON = "neuron"
 EVENT_TYPE_MODULE_DATA = "module_data"
+EVENT_TYPE_ZONE_UPDATE = "zone_update"
 
 _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_STATUS,
@@ -54,6 +55,7 @@ _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_SUGGESTION,
     EVENT_TYPE_NEURON,
     EVENT_TYPE_MODULE_DATA,
+    EVENT_TYPE_ZONE_UPDATE,
 }
 
 # Canonical aliases should continue to map directly; legacy aliases are only accepted in
@@ -64,6 +66,7 @@ _EVENT_TYPE_CANONICAL_TO_CANONICAL = {
     EVENT_TYPE_SUGGESTION: EVENT_TYPE_SUGGESTION,
     EVENT_TYPE_NEURON: EVENT_TYPE_NEURON,
     EVENT_TYPE_MODULE_DATA: EVENT_TYPE_MODULE_DATA,
+    EVENT_TYPE_ZONE_UPDATE: EVENT_TYPE_ZONE_UPDATE,
 }
 
 _EVENT_TYPE_LEGACY_ALIASES = {
@@ -689,6 +692,15 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                         coordinator._update_smart_home_modules(data)
                     )
             _LOGGER.debug("Webhook: module_data push received (%s)", list(modules.keys()))
+
+        elif event_type == EVENT_TYPE_ZONE_UPDATE:
+            # Core pushes per-zone data update (from zone automation evaluation)
+            zone_id = data.get("zone_id", "")
+            if zone_id:
+                updates = {"zone_updates": {zone_id: data}}
+                merged = _merge_coordinator_data(coordinator, updates)
+                coordinator.async_set_updated_data(merged)
+            _LOGGER.debug("Webhook: zone_update push received (zone=%s)", zone_id)
 
         else:
             # Legacy status push (online/version)
