@@ -10,11 +10,8 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from ..entity import CopilotBaseEntity
-
-import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -31,36 +28,12 @@ class CrossDependencySensor(CopilotBaseEntity, SensorEntity):
         self._data: dict[str, Any] = {}
         self._graph_data: dict[str, Any] = {}
 
-    async def _fetch_graph(self) -> dict | None:
-        try:
-            url = f"{self._core_base_url()}/api/v1/graph/state?limitNodes=200&limitEdges=400"
-            headers = self._core_headers()
-            session = async_get_clientsession(self.hass)
-            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-        except Exception:
-            logger.debug("Failed to fetch graph state for cross-dependencies")
-        return None
-
-    async def _fetch_suggestions(self) -> dict | None:
-        try:
-            url = f"{self._core_base_url()}/api/v1/suggestions/repairs"
-            headers = self._core_headers()
-            session = async_get_clientsession(self.hass)
-            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-        except Exception:
-            logger.debug("Failed to fetch repair suggestions")
-        return None
-
     async def async_update(self) -> None:
-        graph = await self._fetch_graph()
+        graph = await self._fetch("/api/v1/graph/state?limitNodes=200&limitEdges=400")
         if graph:
             self._graph_data = graph
 
-        suggestions = await self._fetch_suggestions()
+        suggestions = await self._fetch("/api/v1/suggestions/repairs")
         if suggestions and suggestions.get("ok"):
             self._data["repairs"] = suggestions
 

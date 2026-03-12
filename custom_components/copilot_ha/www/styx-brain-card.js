@@ -335,6 +335,9 @@ class StyxBrainCard extends HTMLElement {
       if (isCross) line.classList.add("cross-dep");
       line.dataset.from = src._nid;
       line.dataset.to = tgt._nid;
+      line._origOpacity = (0.15 + weight * 0.25).toFixed(2);
+      line._origWidth = (0.5 + weight * 1.5).toFixed(1);
+      line._origStroke = isCross ? "#5a7a9a" : "#3a5060";
       edgesLayer.appendChild(line);
 
       // Synaptic flow overlay (animated)
@@ -443,8 +446,7 @@ class StyxBrainCard extends HTMLElement {
       g.addEventListener("mouseleave", () => {
         this._hoveredNode = null;
         edgesLayer.querySelectorAll(".edge-line").forEach((el) => {
-          const isCross = el.classList.contains("cross-dep");
-          el.setAttribute("stroke", isCross ? "#5a7a9a" : "#3a5060");
+          el.setAttribute("stroke", el._origStroke || (el.classList.contains("cross-dep") ? "#5a7a9a" : "#3a5060"));
           el.setAttribute("stroke-opacity", el._origOpacity || "0.25");
           el.setAttribute("stroke-width", el._origWidth || "1");
         });
