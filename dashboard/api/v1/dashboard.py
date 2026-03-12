@@ -1021,15 +1021,15 @@ def acknowledge_alert(zone_id, alert_id):
             headers=_get_core_headers(),
             timeout=3,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        _LOGGER.debug("Failed to forward alert ack to Core: %s", exc)
 
     with zone_lock:
         zone_data = zone_data_store.get(zone_id, {})
         alerts = zone_data.get('alerts', [])
 
         for alert in alerts:
-            if alert['id'] == alert_id:
+            if alert.get('id') == alert_id:
                 alert['acknowledged'] = True
                 alert['acknowledged_at'] = datetime.now(timezone.utc).isoformat()
                 break
