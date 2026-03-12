@@ -160,6 +160,38 @@ class CopilotApiClient(SharedCopilotApiClient):
     async def async_put(self, path: str, payload: dict) -> dict:
         return await self._request_json("PUT", path, payload=payload, timeout_s=10.0)
 
+    # ── Safe wrappers to reduce boilerplate in API methods ────────────
+
+    async def _safe_get(
+        self,
+        path: str,
+        default: Any,
+        *,
+        key: str | None = None,
+        label: str = "",
+    ) -> Any:
+        """GET with error handling — returns *default* on failure."""
+        try:
+            data = await self.async_get(path)
+            return data.get(key, data) if key else data
+        except CopilotApiError as e:
+            _LOGGER.debug("%s not available: %s", label or path, e)
+        return default
+
+    async def _safe_post(
+        self,
+        path: str,
+        payload: dict,
+        *,
+        label: str = "",
+    ) -> dict[str, Any]:
+        """POST with error handling — returns ``{ok: False, error: ...}`` on failure."""
+        try:
+            return await self._request_json("POST", path, payload=payload)
+        except CopilotApiError as e:
+            _LOGGER.debug("%s failed: %s", label or path, e)
+            return {"ok": False, "error": str(e)}
+
     async def async_get_status(self) -> CopilotStatus:
         health: dict | None = None
         version: dict | None = None
@@ -187,257 +219,183 @@ class CopilotApiClient(SharedCopilotApiClient):
 
     async def async_get_mood(self) -> dict[str, Any]:
         """Get current mood from neural system."""
-        try:
-            data = await self.async_get("/api/v1/neurons/mood")
-            return data.get("data", data)
-        except CopilotApiError as e:
-            _LOGGER.debug("Mood API not available: %s", e)
-        return {"mood": "unknown", "confidence": 0.0}
+        return await self._safe_get(
+            "/api/v1/neurons/mood", {"mood": "unknown", "confidence": 0.0},
+            key="data", label="Mood API",
+        )
 
     async def async_get_neurons(self) -> dict[str, Any]:
         """Get all neuron states."""
-        try:
-            data = await self.async_get("/api/v1/neurons")
-            return data.get("data", data)
-        except CopilotApiError as e:
-            _LOGGER.debug("Neurons API not available: %s", e)
-        return {"neurons": {}}
+        return await self._safe_get(
+            "/api/v1/neurons", {"neurons": {}}, key="data", label="Neurons API",
+        )
 
     async def async_get_zone_automation(self) -> dict[str, Any]:
         """Get zone automation dashboard (presence, lights, music per zone)."""
-        try:
-            return await self.async_get("/api/v1/zone-automation/dashboard")
-        except CopilotApiError as e:
-            _LOGGER.debug("Zone automation API not available: %s", e)
-        return {"zones": [], "summary": {}}
+        return await self._safe_get(
+            "/api/v1/zone-automation/dashboard", {"zones": [], "summary": {}},
+            label="Zone automation API",
+        )
 
     async def async_get_sonos_summary(self) -> dict[str, Any]:
         """Get Sonos speaker summary from jishi API."""
-        try:
-            return await self.async_get("/api/v1/sonos/summary")
-        except CopilotApiError as e:
-            _LOGGER.debug("Sonos API not available: %s", e)
-        return {"total_speakers": 0, "speakers": [], "playing": 0}
+        return await self._safe_get(
+            "/api/v1/sonos/summary",
+            {"total_speakers": 0, "speakers": [], "playing": 0},
+            label="Sonos API",
+        )
 
     async def async_get_sonos_favorites(self) -> list[dict[str, Any]]:
         """Get Sonos favorites."""
-        try:
-            data = await self.async_get("/api/v1/sonos/favorites")
-            return data.get("favorites", [])
-        except CopilotApiError as e:
-            _LOGGER.debug("Sonos favorites API not available: %s", e)
-        return []
+        return await self._safe_get(
+            "/api/v1/sonos/favorites", [], key="favorites", label="Sonos favorites API",
+        )
 
     async def async_sonos_action(self, action: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Execute a Sonos action (play, pause, volume, etc.)."""
-        try:
-            return await self._request_json("POST", f"/api/v1/sonos/{action}", payload=payload)
-        except CopilotApiError as e:
-            _LOGGER.debug("Sonos action %s failed: %s", action, e)
-            return {"ok": False, "error": str(e)}
+        return await self._safe_post(
+            f"/api/v1/sonos/{action}", payload, label=f"Sonos action {action}",
+        )
 
     async def async_sync_tags_to_core(self, tags: list[dict[str, Any]]) -> dict[str, Any]:
-        """Push HA entity tags to Core for bidirectional tag sync.
-
-        Args:
-            tags: List of tag dicts with tag_id, name, entity_ids, color, icon
-        """
-        try:
-            return await self.async_post(
-                "/api/v1/tags/sync",
-                {"source": "ha", "tags": tags},
-            )
-        except CopilotApiError as e:
-            _LOGGER.debug("Tag sync to Core not available: %s", e)
-        return {"ok": False, "synced": 0}
+        """Push HA entity tags to Core for bidirectional tag sync."""
+        return await self._safe_post(
+            "/api/v1/tags/sync", {"source": "ha", "tags": tags}, label="Tag sync",
+        )
 
     async def async_get_core_tags(self) -> list[dict[str, Any]]:
         """Fetch tag definitions from Core (canonical tags.yaml registry)."""
-        try:
-            data = await self.async_get("/api/v1/tags")
-            return data.get("tags", [])
-        except CopilotApiError as e:
-            _LOGGER.debug("Core tags API not available: %s", e)
-        return []
+        return await self._safe_get(
+            "/api/v1/tags", [], key="tags", label="Core tags API",
+        )
 
     # ── Musikwolke / Media Zone Control ────────────────────────────────
 
     async def async_get_musikwolke_status(self) -> dict[str, Any]:
         """Get Musikwolke status (active zones, Sonos connection)."""
-        try:
-            return await self.async_get("/api/v1/musikwolke/status")
-        except CopilotApiError as e:
-            _LOGGER.debug("Musikwolke status not available: %s", e)
-        return {"ok": False, "sonos_connected": False, "active_zones": []}
+        return await self._safe_get(
+            "/api/v1/musikwolke/status",
+            {"ok": False, "sonos_connected": False, "active_zones": []},
+            label="Musikwolke status",
+        )
 
     async def async_musikwolke_play(self, zone_id: str, volume_pct: int | None = None) -> dict[str, Any]:
         """Play media in a zone via Musikwolke."""
-        try:
-            result = await self._request_json("POST", f"/api/v1/media/zones/{zone_id}/play", payload={})
-            if volume_pct is not None:
-                await self.async_musikwolke_volume(zone_id, volume_pct)
-            return result
-        except CopilotApiError as e:
-            _LOGGER.debug("Musikwolke play failed for zone %s: %s", zone_id, e)
-            return {"ok": False, "error": str(e)}
+        result = await self._safe_post(
+            f"/api/v1/media/zones/{zone_id}/play", {}, label=f"Musikwolke play {zone_id}",
+        )
+        if volume_pct is not None and result.get("ok", True):
+            await self.async_musikwolke_volume(zone_id, volume_pct)
+        return result
 
     async def async_musikwolke_pause(self, zone_id: str) -> dict[str, Any]:
         """Pause media in a zone via Musikwolke."""
-        try:
-            return await self._request_json("POST", f"/api/v1/media/zones/{zone_id}/pause", payload={})
-        except CopilotApiError as e:
-            _LOGGER.debug("Musikwolke pause failed for zone %s: %s", zone_id, e)
-            return {"ok": False, "error": str(e)}
+        return await self._safe_post(
+            f"/api/v1/media/zones/{zone_id}/pause", {}, label=f"Musikwolke pause {zone_id}",
+        )
 
     async def async_musikwolke_volume(self, zone_id: str, volume_pct: int) -> dict[str, Any]:
         """Set volume for a zone (0-100)."""
-        try:
-            return await self._request_json(
-                "POST",
-                f"/api/v1/musikwolke/volume/{zone_id}",
-                payload={"volume_pct": volume_pct},
-            )
-        except CopilotApiError as e:
-            _LOGGER.debug("Musikwolke volume failed for zone %s: %s", zone_id, e)
-            return {"ok": False, "error": str(e)}
+        return await self._safe_post(
+            f"/api/v1/musikwolke/volume/{zone_id}", {"volume_pct": volume_pct},
+            label=f"Musikwolke volume {zone_id}",
+        )
 
     async def async_create_musikwolke(self, zone_ids: list[str]) -> dict[str, Any]:
         """Create a Musikwolke group across zones."""
-        try:
-            return await self._request_json(
-                "POST", "/api/v1/musikwolke/create", payload={"zone_ids": zone_ids}
-            )
-        except CopilotApiError as e:
-            _LOGGER.debug("Musikwolke create failed: %s", e)
-            return {"ok": False, "error": str(e)}
+        return await self._safe_post(
+            "/api/v1/musikwolke/create", {"zone_ids": zone_ids}, label="Musikwolke create",
+        )
 
     async def async_dissolve_musikwolke(self, zone_ids: list[str]) -> dict[str, Any]:
         """Dissolve a Musikwolke group."""
-        try:
-            return await self._request_json(
-                "POST", "/api/v1/musikwolke/dissolve", payload={"zone_ids": zone_ids}
-            )
-        except CopilotApiError as e:
-            _LOGGER.debug("Musikwolke dissolve failed: %s", e)
-            return {"ok": False, "error": str(e)}
+        return await self._safe_post(
+            "/api/v1/musikwolke/dissolve", {"zone_ids": zone_ids}, label="Musikwolke dissolve",
+        )
 
     async def async_start_media_follow(self, person_id: str, source_zone: str) -> dict[str, Any]:
         """Start a Musikwolke follow session for a person."""
-        try:
-            return await self._request_json(
-                "POST",
-                "/api/v1/media/musikwolke/start",
-                payload={"person_id": person_id, "source_zone": source_zone},
-            )
-        except CopilotApiError as e:
-            _LOGGER.debug("Media follow start failed: %s", e)
-            return {"ok": False, "error": str(e)}
+        return await self._safe_post(
+            "/api/v1/media/musikwolke/start",
+            {"person_id": person_id, "source_zone": source_zone},
+            label="Media follow start",
+        )
 
     async def async_stop_media_follow(self, session_id: str) -> dict[str, Any]:
         """Stop a Musikwolke follow session."""
-        try:
-            return await self._request_json(
-                "POST", f"/api/v1/media/musikwolke/{session_id}/stop", payload={}
-            )
-        except CopilotApiError as e:
-            _LOGGER.debug("Media follow stop failed: %s", e)
-            return {"ok": False, "error": str(e)}
+        return await self._safe_post(
+            f"/api/v1/media/musikwolke/{session_id}/stop", {}, label="Media follow stop",
+        )
 
     async def async_get_media_follow_sessions(self) -> list[dict[str, Any]]:
         """List active Musikwolke follow sessions."""
-        try:
-            data = await self.async_get("/api/v1/media/musikwolke")
-            return data.get("sessions", [])
-        except CopilotApiError as e:
-            _LOGGER.debug("Media follow sessions not available: %s", e)
-        return []
+        return await self._safe_get(
+            "/api/v1/media/musikwolke", [], key="sessions", label="Media follow sessions",
+        )
 
     async def async_set_zone_automation_mode(self, zone_id: str, mode: str) -> dict[str, Any]:
         """Set zone automation mode (off/learning/autonomy)."""
-        try:
-            return await self._request_json(
-                "POST",
-                f"/api/v1/zone-automation/zones/{zone_id}/mode",
-                payload={"mode": mode},
-            )
-        except CopilotApiError as e:
-            _LOGGER.debug("Zone automation mode set failed for %s: %s", zone_id, e)
-            return {"ok": False, "error": str(e)}
+        return await self._safe_post(
+            f"/api/v1/zone-automation/zones/{zone_id}/mode", {"mode": mode},
+            label=f"Zone automation mode {zone_id}",
+        )
 
     async def async_get_zone_automation_mode(self, zone_id: str) -> str:
         """Get zone automation mode."""
-        try:
-            data = await self.async_get(f"/api/v1/zone-automation/zones/{zone_id}/mode")
-            return data.get("automation_mode", "off")
-        except CopilotApiError as e:
-            _LOGGER.debug("Zone automation mode get failed for %s: %s", zone_id, e)
-        return "off"
+        return await self._safe_get(
+            f"/api/v1/zone-automation/zones/{zone_id}/mode", "off",
+            key="automation_mode", label=f"Zone automation mode {zone_id}",
+        )
 
     async def async_get_musikwolke_zone_map(self) -> dict[str, Any]:
         """Get zone-to-speaker mapping."""
-        try:
-            return await self.async_get("/api/v1/musikwolke/zone-map")
-        except CopilotApiError as e:
-            _LOGGER.debug("Musikwolke zone map not available: %s", e)
-        return {"ok": False, "zone_map": {}}
+        return await self._safe_get(
+            "/api/v1/musikwolke/zone-map", {"ok": False, "zone_map": {}},
+            label="Musikwolke zone map",
+        )
 
     # ── Smart Home Module Dashboards ──────────────────────────────────
 
     async def async_get_module_dashboards(self) -> dict[str, Any]:
         """Get aggregated dashboard for all 5 smart home modules (single call)."""
-        try:
-            return await self.async_get("/api/v1/modules/dashboard")
-        except CopilotApiError as e:
-            _LOGGER.debug("Module dashboards API not available: %s", e)
-        return {"ok": False, "modules": {}}
+        return await self._safe_get(
+            "/api/v1/modules/dashboard", {"ok": False, "modules": {}},
+            label="Module dashboards API",
+        )
 
     async def async_get_module_zone_detail(self, zone_id: str) -> dict[str, Any]:
         """Get aggregated zone detail for all 5 modules."""
-        try:
-            return await self.async_get(f"/api/v1/modules/zones/{zone_id}")
-        except CopilotApiError as e:
-            _LOGGER.debug("Module zone detail not available for %s: %s", zone_id, e)
-        return {"ok": False, "zone_id": zone_id, "modules": {}}
+        return await self._safe_get(
+            f"/api/v1/modules/zones/{zone_id}",
+            {"ok": False, "zone_id": zone_id, "modules": {}},
+            label=f"Module zone detail {zone_id}",
+        )
 
     # ── Memory / Conversation ────────────────────────────────────────
 
     async def async_get_memory_stats(self) -> dict[str, Any]:
         """Get ConversationMemory statistics and learned preferences."""
-        try:
-            return await self.async_get("/api/styx/memory")
-        except CopilotApiError as e:
-            _LOGGER.debug("Memory stats API not available: %s", e)
-        return {"ok": False}
+        return await self._safe_get("/api/styx/memory", {"ok": False}, label="Memory stats API")
 
     async def async_get_memory_history(
         self, conversation_id: str, limit: int = 20
     ) -> dict[str, Any]:
         """Get conversation history for a specific thread."""
-        try:
-            return await self.async_get(
-                f"/api/styx/memory/history?conversation_id={conversation_id}&limit={limit}"
-            )
-        except CopilotApiError as e:
-            _LOGGER.debug("Memory history API not available: %s", e)
-        return {"ok": False, "messages": []}
+        return await self._safe_get(
+            f"/api/styx/memory/history?conversation_id={conversation_id}&limit={limit}",
+            {"ok": False, "messages": []},
+            label="Memory history API",
+        )
 
     # ── Presence / Light / Chat ────────────────────────────────────────
 
     async def async_get_presence(self) -> dict[str, Any]:
         """Get presence intelligence data."""
-        try:
-            return await self.async_get("/api/v1/hub/presence")
-        except CopilotApiError as e:
-            _LOGGER.debug("Presence API not available: %s", e)
-        return {"ok": False}
+        return await self._safe_get("/api/v1/hub/presence", {"ok": False}, label="Presence API")
 
     async def async_get_light_intelligence(self) -> dict[str, Any]:
         """Get light intelligence data."""
-        try:
-            return await self.async_get("/api/v1/hub/light")
-        except CopilotApiError as e:
-            _LOGGER.debug("Light intelligence API not available: %s", e)
-        return {"ok": False}
+        return await self._safe_get("/api/v1/hub/light", {"ok": False}, label="Light intelligence API")
 
     async def async_chat_completions(
         self, messages: list[dict[str, str]], conversation_id: str | None = None
@@ -542,11 +500,11 @@ class CopilotApiClient(SharedCopilotApiClient):
 
     async def async_voice_status(self) -> dict[str, Any]:
         """Get voice service status from Core."""
-        try:
-            return await self._request_json("GET", "/api/v1/styx/voice/status")
-        except CopilotApiError as e:
-            _LOGGER.debug("Voice status not available: %s", e)
-            return {"ok": False, "stt": {"available": False}, "tts": {"available": False}}
+        return await self._safe_get(
+            "/api/v1/styx/voice/status",
+            {"ok": False, "stt": {"available": False}, "tts": {"available": False}},
+            label="Voice status",
+        )
 
     async def async_evaluate_neurons(self, context: dict[str, Any]) -> dict[str, Any]:
         """Evaluate neural pipeline with HA states."""
