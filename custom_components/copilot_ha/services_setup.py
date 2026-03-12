@@ -1441,6 +1441,71 @@ def _register_musikwolke_services(hass: HomeAssistant) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Conversation Memory service
+# ---------------------------------------------------------------------------
+
+def _register_memory_services(hass: HomeAssistant) -> None:
+    """Register services for querying ConversationMemory via Core API."""
+
+    async def _handle_get_memory_stats(call: ServiceCall) -> None:
+        """Fetch ConversationMemory statistics and fire an event with the result."""
+        for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
+            coordinator = entry_data.get("coordinator")
+            if coordinator and hasattr(coordinator, "api"):
+                try:
+                    result = await coordinator.api.async_get_memory_stats()
+                    hass.bus.async_fire(
+                        f"{DOMAIN}_memory_stats",
+                        {"ok": result.get("ok", False), **result},
+                    )
+                    return
+                except Exception as exc:
+                    _LOGGER.warning("Memory stats fetch failed: %s", exc)
+        _LOGGER.warning("No active coordinator found for memory stats")
+
+    async def _handle_get_memory_history(call: ServiceCall) -> None:
+        """Fetch conversation history for a specific thread."""
+        conversation_id = call.data.get("conversation_id", "")
+        limit = call.data.get("limit", 20)
+        for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
+            coordinator = entry_data.get("coordinator")
+            if coordinator and hasattr(coordinator, "api"):
+                try:
+                    result = await coordinator.api.async_get_memory_history(
+                        conversation_id, limit=limit
+                    )
+                    hass.bus.async_fire(
+                        f"{DOMAIN}_memory_history",
+                        {
+                            "conversation_id": conversation_id,
+                            "ok": result.get("ok", False),
+                            "messages": result.get("messages", []),
+                            "count": result.get("count", 0),
+                        },
+                    )
+                    return
+                except Exception as exc:
+                    _LOGGER.warning("Memory history fetch failed: %s", exc)
+
+    hass.services.async_register(
+        DOMAIN,
+        "get_memory_stats",
+        _handle_get_memory_stats,
+        schema=vol.Schema({}),
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        "get_memory_history",
+        _handle_get_memory_history,
+        schema=vol.Schema({
+            vol.Optional("conversation_id", default=""): str,
+            vol.Optional("limit", default=20): vol.All(int, vol.Range(min=1, max=100)),
+        }),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
@@ -1462,3 +1527,4 @@ def async_register_all_services(hass: HomeAssistant) -> None:
     _register_habit_learning_services(hass)
     _register_homekit_services(hass)
     _register_musikwolke_services(hass)
+    _register_memory_services(hass)

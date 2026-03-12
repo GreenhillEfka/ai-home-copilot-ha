@@ -952,3 +952,33 @@ zone_automation_set_mode:
             - "off"
             - "learning"
             - "autonomy"
+
+# ─── Conversation Memory ────────────────────────────────────────────────────
+
+get_memory_stats:
+  name: Conversation Memory – Statistics
+  description: Ruft Statistiken und gelernte Praeferenzen aus dem ConversationMemory ab.
+
+get_memory_history:
+  name: Conversation Memory – History
+  description: Ruft den Gespraechsverlauf fuer einen bestimmten Thread ab.
+  fields:
+    conversation_id:
+      name: Conversation ID
+      description: Thread-ID des Gesprächs.
+      required: false
+      default: ""
+      example: "styx_abc123"
+      selector:
+        text:
+    limit:
+      name: Limit
+      description: Maximale Anzahl Nachrichten (1-100).
+      required: false
+      default: 20
+      example: 20
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: slider

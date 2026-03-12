@@ -399,6 +399,28 @@ class CopilotApiClient(SharedCopilotApiClient):
             _LOGGER.debug("Module zone detail not available for %s: %s", zone_id, e)
         return {"ok": False, "zone_id": zone_id, "modules": {}}
 
+    # ── Memory / Conversation ────────────────────────────────────────
+
+    async def async_get_memory_stats(self) -> dict[str, Any]:
+        """Get ConversationMemory statistics and learned preferences."""
+        try:
+            return await self.async_get("/api/styx/memory")
+        except CopilotApiError as e:
+            _LOGGER.debug("Memory stats API not available: %s", e)
+        return {"ok": False}
+
+    async def async_get_memory_history(
+        self, conversation_id: str, limit: int = 20
+    ) -> dict[str, Any]:
+        """Get conversation history for a specific thread."""
+        try:
+            return await self.async_get(
+                f"/api/styx/memory/history?conversation_id={conversation_id}&limit={limit}"
+            )
+        except CopilotApiError as e:
+            _LOGGER.debug("Memory history API not available: %s", e)
+        return {"ok": False, "messages": []}
+
     # ── Presence / Light / Chat ────────────────────────────────────────
 
     async def async_get_presence(self) -> dict[str, Any]:
