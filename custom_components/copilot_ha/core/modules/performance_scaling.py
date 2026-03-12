@@ -208,7 +208,7 @@ class PerformanceScalingModule:
                         kb = int(line.split()[1])
                         return round(kb / 1024, 1)
         except Exception:
-            pass
+            _LOGGER.debug("Failed to read /proc/self/status for memory usage", exc_info=True)
         return 0.0
 
     def _check_alerts(self) -> List[Dict[str, Any]]:

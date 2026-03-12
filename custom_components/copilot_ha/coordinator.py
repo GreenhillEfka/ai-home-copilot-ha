@@ -33,6 +33,13 @@ from .camera_entities import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# ── Timeout constants (seconds) ──────────────────────────────────────
+# Standard REST calls (health, mood, neurons, zone-automation, etc.)
+API_DEFAULT_TIMEOUT_S = 10.0
+# Audio endpoints (STT, TTS) — larger payloads, model inference
+AUDIO_TIMEOUT_S = 30.0
+# Chat completions — qwen3 on HA-class hardware often needs >20s
 CHAT_COMPLETIONS_TIMEOUT_S = 90.0
 
 
@@ -87,7 +94,7 @@ class CopilotApiClient(SharedCopilotApiClient):
         *,
         payload: dict | None = None,
         params: dict | None = None,
-        timeout_s: float = 10.0,
+        timeout_s: float = API_DEFAULT_TIMEOUT_S,
     ) -> dict:
         normalized_path = path if path.startswith("/") else f"/{path}"
         last_err: CopilotApiError | None = None
@@ -152,13 +159,13 @@ class CopilotApiClient(SharedCopilotApiClient):
         raise last_err or CopilotApiError("No available Core API endpoint")
 
     async def async_get(self, path: str, params: dict | None = None) -> dict:
-        return await self._request_json("GET", path, params=params, timeout_s=10.0)
+        return await self._request_json("GET", path, params=params)
 
     async def async_post(self, path: str, payload: dict) -> dict:
-        return await self._request_json("POST", path, payload=payload, timeout_s=10.0)
+        return await self._request_json("POST", path, payload=payload)
 
     async def async_put(self, path: str, payload: dict) -> dict:
-        return await self._request_json("PUT", path, payload=payload, timeout_s=10.0)
+        return await self._request_json("PUT", path, payload=payload)
 
     # ── Safe wrappers to reduce boilerplate in API methods ────────────
 
@@ -435,7 +442,7 @@ class CopilotApiClient(SharedCopilotApiClient):
                         **self._headers(),
                         "Content-Type": "audio/wav",
                     },
-                    timeout=aiohttp.ClientTimeout(total=30.0),
+                    timeout=aiohttp.ClientTimeout(total=AUDIO_TIMEOUT_S),
                 ) as resp:
                     if resp.status >= 400:
                         body = await resp.text()
@@ -475,7 +482,7 @@ class CopilotApiClient(SharedCopilotApiClient):
                     url,
                     json=payload,
                     headers=self._headers(),
-                    timeout=aiohttp.ClientTimeout(total=30.0),
+                    timeout=aiohttp.ClientTimeout(total=AUDIO_TIMEOUT_S),
                 ) as resp:
                     if resp.status >= 400:
                         body = await resp.text()
