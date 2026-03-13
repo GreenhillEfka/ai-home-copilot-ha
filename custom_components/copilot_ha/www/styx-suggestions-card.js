@@ -30,30 +30,29 @@ const CATEGORY_ICONS = {
 };
 
 const RISK_COLORS = {
-  low: '#4caf50',
-  medium: '#ff9800',
-  high: '#f44336',
+  low: 'var(--ps-green, #81c784)',
+  medium: 'var(--ps-orange, #ffb74d)',
+  high: 'var(--ps-red, #ef5350)',
 };
 
-// Central UI telemetry event names (prefer constants over ad-hoc strings).
-// Uses shared UiState constants when available; falls back to canonical names.
-const UI_TELEMETRY_EVENTS = (window.UiState && window.UiState.EventKeys)
-  ? window.UiState.EventKeys
-  : Object.freeze({
-      LOADING_SHOWN: 'ui_state_loading_shown',
-      EMPTY_SHOWN: 'ui_state_empty_shown',
-      ERROR_SHOWN: 'ui_state_error_shown',
-      GLOBAL_DEGRADED_ON: 'ui_global_degraded_on',
-      GLOBAL_DEGRADED_OFF: 'ui_global_degraded_off',
-      RETRY_CLICKED: 'ui_state_retry_clicked',
-      RETRY_SUCCEEDED: 'ui_state_retry_succeeded',
-      RETRY_FAILED: 'ui_state_retry_failed',
-    });
+// Use shared STYX_UI_EVENTS from styx-card-base.js if available.
+const UI_TELEMETRY_EVENTS_SUG = window.STYX_UI_EVENTS || Object.freeze({
+  LOADING_SHOWN: 'ui_state_loading_shown',
+  EMPTY_SHOWN: 'ui_state_empty_shown',
+  ERROR_SHOWN: 'ui_state_error_shown',
+  GLOBAL_DEGRADED_ON: 'ui_global_degraded_on',
+  GLOBAL_DEGRADED_OFF: 'ui_global_degraded_off',
+  RETRY_CLICKED: 'ui_state_retry_clicked',
+  RETRY_SUCCEEDED: 'ui_state_retry_succeeded',
+  RETRY_FAILED: 'ui_state_retry_failed',
+});
 
-class StyxSuggestionsCard extends HTMLElement {
+const _SugBase = window.StyxCardBase || HTMLElement;
+
+class StyxSuggestionsCard extends _SugBase {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this._config = {};
     this._hass = null;
     this._suggestions = [];
@@ -64,12 +63,18 @@ class StyxSuggestionsCard extends HTMLElement {
     this._loading = false;
     this._selectedId = null;
     this._detailMissingNotifiedForId = null;
+    this._focusTriggerEl = null;
 
     // PS-UX-015 additions
     this._filterText = '';
     this._uiState = null;           // loading|empty|error|loaded
     this._degraded = false;         // global degraded banner state
     this._lastRetryTs = 0;
+
+    // Esc key handler to close detail modal
+    this._onKeyDown = (e) => {
+      if (e.key === 'Escape') this._closeDetail();
+    };
   }
 
   static getConfigElement() {
@@ -120,7 +125,7 @@ class StyxSuggestionsCard extends HTMLElement {
         return;
       }
 
-      const resolvedName = UI_TELEMETRY_EVENTS[eventKeyOrName] || eventKeyOrName;
+      const resolvedName = UI_TELEMETRY_EVENTS_SUG[eventKeyOrName] || eventKeyOrName;
       window.dispatchEvent(new CustomEvent(resolvedName, { detail: payload }));
     } catch (_e) {
       // ignore
@@ -244,7 +249,7 @@ class StyxSuggestionsCard extends HTMLElement {
       this._render();
     } catch (e) {
       clearTimeout(timer);
-      this._loadError = e && e.name === 'AbortError' ? 'Zeitueberschreitung' : 'Verbindungsfehler';
+      this._loadError = e && e.name === 'AbortError' ? 'Zeitüberschreitung' : 'Verbindungsfehler';
       this._stale = this._loadFromSensor();
       this._loading = false;
       this._setDegraded(true, { reason: this._loadError });
@@ -320,6 +325,7 @@ class StyxSuggestionsCard extends HTMLElement {
   }
 
   _esc(s) {
+    if (typeof window.styxEsc === 'function') return window.styxEsc(s);
     const el = document.createElement('span');
     el.textContent = s || '';
     return el.innerHTML;
@@ -339,15 +345,30 @@ class StyxSuggestionsCard extends HTMLElement {
 
   _openDetail(id) {
     if (!id) return;
+    // Save the currently focused/active element for focus restore on close
+    this._focusTriggerEl = this.shadowRoot.activeElement || document.activeElement;
     this._selectedId = id;
     this._detailMissingNotifiedForId = null;
+    document.addEventListener('keydown', this._onKeyDown);
     this._render();
+    // Focus the close button inside the modal for focus trap
+    requestAnimationFrame(() => {
+      const closeBtn = this.shadowRoot.querySelector('button.detail-close');
+      if (closeBtn) closeBtn.focus();
+    });
   }
 
   _closeDetail() {
+    document.removeEventListener('keydown', this._onKeyDown);
+    const triggerEl = this._focusTriggerEl;
     this._selectedId = null;
     this._detailMissingNotifiedForId = null;
+    this._focusTriggerEl = null;
     this._render();
+    // Restore focus to the element that opened the modal
+    if (triggerEl && typeof triggerEl.focus === 'function') {
+      requestAnimationFrame(() => triggerEl.focus());
+    }
   }
 
   _getSelectedSuggestion() {
@@ -446,7 +467,7 @@ class StyxSuggestionsCard extends HTMLElement {
               <span class="tag" style="background:${catColor}20;color:${catColor};border:1px solid ${catColor}40">${this._esc(cat)}</span>
               <span class="tag" style="background:${riskColor}20;color:${riskColor};border:1px solid ${riskColor}40">Risiko: ${this._esc(risk)}</span>
               ${s.zone ? `<span class="tag">Zone: ${this._esc(s.zone)}</span>` : ''}
-              ${s.estimated_savings ? `<span class="tag" style="background:#4caf5020;color:#4caf50;border:1px solid #4caf5040">${this._esc(s.estimated_savings)}</span>` : ''}
+              ${s.estimated_savings ? `<span class="tag" style="background:rgba(129,199,132,0.12);color:var(--ps-green, #81c784);border:1px solid rgba(129,199,132,0.25)">${this._esc(s.estimated_savings)}</span>` : ''}
             </div>
             <div class="sg-footer">
               <button class="details" data-id="${this._esc(id)}" data-action="detail">Details</button>
@@ -583,12 +604,13 @@ class StyxSuggestionsCard extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
+        ${typeof this._designTokens === 'function' ? this._designTokens() : ''}
         :host { display: block; }
         .card {
-          background: var(--card-background-color, #1a1a2e);
-          border-radius: var(--ha-card-border-radius, 12px);
+          background: var(--ps-bg, var(--card-background-color, #1a1a2e));
+          border-radius: var(--ps-radius, var(--ha-card-border-radius, 12px));
           padding: 16px;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
           font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
         }
         .header {
@@ -603,7 +625,7 @@ class StyxSuggestionsCard extends HTMLElement {
           padding: 2px 8px;
           border-radius: 10px;
           background: rgba(79, 195, 247, 0.15);
-          color: #4fc3f7;
+          color: var(--ps-accent, #4fc3f7);
         }
         .toolbar {
           display: flex;
@@ -614,18 +636,18 @@ class StyxSuggestionsCard extends HTMLElement {
         .filter {
           flex: 1;
           padding: 8px 10px;
-          border-radius: 10px;
-          border: 1px solid rgba(255,255,255,0.12);
-          background: rgba(255,255,255,0.04);
-          color: var(--primary-text-color, #e6eef6);
+          border-radius: var(--ps-radius-sm, 10px);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.12));
+          background: var(--ps-surface, rgba(255,255,255,0.04));
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
           font-size: 12px;
         }
         .reset {
           padding: 8px 10px;
-          border-radius: 10px;
-          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: var(--ps-radius-sm, 10px);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.14));
           background: rgba(79,195,247,0.10);
-          color: #4fc3f7;
+          color: var(--ps-accent, #4fc3f7);
           cursor: pointer;
           font-weight: 700;
           font-size: 12px;
@@ -637,9 +659,9 @@ class StyxSuggestionsCard extends HTMLElement {
         .suggestion {
           padding: 12px;
           margin-bottom: 8px;
-          background: rgba(255,255,255,0.04);
-          border-radius: 10px;
-          border: 1px solid rgba(255,255,255,0.06);
+          background: var(--ps-surface, rgba(255,255,255,0.04));
+          border-radius: var(--ps-radius-sm, 10px);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.06));
         }
         .sg-header {
           display: flex;
@@ -649,17 +671,17 @@ class StyxSuggestionsCard extends HTMLElement {
         }
         .sg-title { font-size: 14px; font-weight: 600; }
         .badge {
-          font-size: 11px;
+          font-size: 0.75rem;
           padding: 2px 8px;
-          border-radius: 8px;
+          border-radius: var(--ps-radius-sm, 8px);
           font-weight: 600;
         }
-        .conf-high { background: rgba(76,175,80,0.2); color: #4caf50; }
-        .conf-mid { background: rgba(255,152,0,0.2); color: #ff9800; }
-        .conf-low { background: rgba(158,158,158,0.2); color: #9e9e9e; }
+        .conf-high { background: rgba(129,199,132,0.2); color: var(--ps-green, #81c784); }
+        .conf-mid { background: rgba(255,183,77,0.2); color: var(--ps-orange, #ffb74d); }
+        .conf-low { background: rgba(158,158,158,0.2); color: var(--ps-text-secondary, #9e9e9e); }
         .sg-desc {
           font-size: 12px;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           margin-bottom: 8px;
           line-height: 1.4;
         }
@@ -670,12 +692,12 @@ class StyxSuggestionsCard extends HTMLElement {
           margin-bottom: 8px;
         }
         .tag {
-          font-size: 10px;
+          font-size: 0.75rem;
           padding: 2px 8px;
           border-radius: 6px;
           background: rgba(255,255,255,0.06);
-          color: var(--secondary-text-color, #9fb1c3);
-          border: 1px solid rgba(255,255,255,0.08);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.08));
         }
         .actions {
           display: flex;
@@ -686,26 +708,26 @@ class StyxSuggestionsCard extends HTMLElement {
           padding: 4px 12px;
           border-radius: 6px;
           border: none;
-          font-size: 11px;
+          font-size: 0.75rem;
           cursor: pointer;
           font-weight: 600;
-          transition: background 0.2s;
+          transition: background var(--ps-transition, 0.2s ease);
         }
         .act-accept {
-          background: rgba(76,175,80,0.2);
-          color: #4caf50;
+          background: rgba(129,199,132,0.2);
+          color: var(--ps-green, #81c784);
         }
-        .act-accept:hover { background: rgba(76,175,80,0.35); }
+        .act-accept:hover { background: rgba(129,199,132,0.35); }
         .act-snooze {
-          background: rgba(255,152,0,0.2);
-          color: #ff9800;
+          background: rgba(255,183,77,0.2);
+          color: var(--ps-orange, #ffb74d);
         }
-        .act-snooze:hover { background: rgba(255,152,0,0.35); }
+        .act-snooze:hover { background: rgba(255,183,77,0.35); }
         .act-reject {
-          background: rgba(244,67,54,0.15);
-          color: #f44336;
+          background: rgba(239,83,80,0.15);
+          color: var(--ps-red, #ef5350);
         }
-        .act-reject:hover { background: rgba(244,67,54,0.3); }
+        .act-reject:hover { background: rgba(239,83,80,0.3); }
         .actions.disabled button,
         .detail-actions.disabled button {
           opacity: 0.55;
@@ -714,12 +736,12 @@ class StyxSuggestionsCard extends HTMLElement {
         .banner {
           padding: 8px 10px;
           margin: 10px 0 10px 0;
-          border-radius: 10px;
+          border-radius: var(--ps-radius-sm, 10px);
           font-size: 12px;
-          border: 1px solid rgba(255,255,255,0.08);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.08));
         }
-        .banner.warn { background: rgba(255,152,0,0.12); color: #ffb74d; border-color: rgba(255,152,0,0.25); }
-        .banner.err { background: rgba(244,67,54,0.12); color: #ff8a80; border-color: rgba(244,67,54,0.25); }
+        .banner.warn { background: rgba(255,183,77,0.12); color: var(--ps-orange, #ffb74d); border-color: rgba(255,183,77,0.25); }
+        .banner.err { background: rgba(239,83,80,0.12); color: var(--ps-red, #ef5350); border-color: rgba(239,83,80,0.25); }
 
         .state-error {
           text-align: center;
@@ -732,15 +754,15 @@ class StyxSuggestionsCard extends HTMLElement {
         }
         .state-msg {
           font-size: 12px;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           margin-bottom: 10px;
         }
         button.retry {
           padding: 6px 12px;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: var(--ps-radius-sm, 8px);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.14));
           background: rgba(79,195,247,0.12);
-          color: #4fc3f7;
+          color: var(--ps-accent, #4fc3f7);
           cursor: pointer;
           font-weight: 700;
           font-size: 12px;
@@ -748,7 +770,7 @@ class StyxSuggestionsCard extends HTMLElement {
         button.retry:hover { background: rgba(79,195,247,0.2); }
         .empty {
           text-align: center;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           padding: 24px 0;
           font-size: 13px;
         }
@@ -761,7 +783,7 @@ class StyxSuggestionsCard extends HTMLElement {
         }
         .sk {
           height: 14px;
-          border-radius: 10px;
+          border-radius: var(--ps-radius-sm, 10px);
           background: rgba(255,255,255,0.06);
           position: relative;
           overflow: hidden;
@@ -792,18 +814,18 @@ class StyxSuggestionsCard extends HTMLElement {
         }
         button.details {
           padding: 4px 10px;
-          border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: var(--ps-radius-sm, 8px);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.14));
           background: rgba(79,195,247,0.10);
-          color: #4fc3f7;
+          color: var(--ps-accent, #4fc3f7);
           cursor: pointer;
           font-weight: 700;
-          font-size: 11px;
+          font-size: 0.75rem;
         }
         button.details:hover { background: rgba(79,195,247,0.18); }
         .ro {
-          font-size: 11px;
-          color: #ffb74d;
+          font-size: 0.75rem;
+          color: var(--ps-orange, #ffb74d);
           opacity: 0.9;
         }
 
@@ -821,9 +843,9 @@ class StyxSuggestionsCard extends HTMLElement {
           width: min(680px, 100%);
           max-height: 82vh;
           overflow: auto;
-          background: var(--card-background-color, #1a1a2e);
-          border-radius: 14px;
-          border: 1px solid rgba(255,255,255,0.10);
+          background: var(--ps-bg, var(--card-background-color, #1a1a2e));
+          border-radius: var(--ps-radius, 14px);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.10));
           padding: 14px;
           box-shadow: 0 10px 30px rgba(0,0,0,0.35);
         }
@@ -840,10 +862,10 @@ class StyxSuggestionsCard extends HTMLElement {
         button.detail-close {
           width: 34px;
           height: 34px;
-          border-radius: 10px;
-          border: 1px solid rgba(255,255,255,0.14);
-          background: rgba(255,255,255,0.06);
-          color: var(--primary-text-color, #e6eef6);
+          border-radius: var(--ps-radius-sm, 10px);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.14));
+          background: var(--ps-surface, rgba(255,255,255,0.06));
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
           cursor: pointer;
           font-size: 18px;
           font-weight: 900;
@@ -853,19 +875,19 @@ class StyxSuggestionsCard extends HTMLElement {
         .detail-body { padding-top: 4px; }
         .detail-section { margin-bottom: 12px; }
         .detail-label {
-          font-size: 11px;
+          font-size: 0.75rem;
           text-transform: uppercase;
           letter-spacing: 0.06em;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           margin-bottom: 4px;
         }
         .detail-value {
           font-size: 12px;
           line-height: 1.45;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
         }
         .detail-value.placeholder {
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           font-style: italic;
         }
         .detail-meta {
@@ -883,7 +905,7 @@ class StyxSuggestionsCard extends HTMLElement {
         .steps {
           margin: 0;
           padding-left: 18px;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
           font-size: 12px;
         }
         .steps li { margin: 3px 0; }
@@ -891,10 +913,10 @@ class StyxSuggestionsCard extends HTMLElement {
           margin: 0;
           background: rgba(0,0,0,0.25);
           padding: 10px;
-          border-radius: 10px;
+          border-radius: var(--ps-radius-sm, 10px);
           overflow: auto;
-          font-size: 11px;
-          border: 1px solid rgba(255,255,255,0.08);
+          font-size: 0.75rem;
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.08));
         }
       </style>
       <div class="card">
@@ -903,7 +925,7 @@ class StyxSuggestionsCard extends HTMLElement {
           <span class="count">${this._esc(countLabel)}</span>
         </div>
         <div class="toolbar">
-          <input class="filter" type="search" placeholder="Filtern…" value="${this._esc(this._filterText)}" data-action="filter" />
+          <input class="filter" type="search" placeholder="Filtern…" value="${this._esc(this._filterText)}" data-action="filter" aria-label="Vorschläge filtern" />
           <button class="reset" data-action="reset_filter" ${filterText ? '' : 'disabled'}>Filter zurücksetzen</button>
         </div>
         ${html}
@@ -954,11 +976,17 @@ class StyxSuggestionsCard extends HTMLElement {
   }
 }
 
-customElements.define('styx-suggestions-card', StyxSuggestionsCard);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'styx-suggestions-card',
-  name: 'PilotSuite Styx Vorschläge',
-  description: 'AI-powered suggestion cards with governance actions',
-});
+if (typeof registerStyxCard === 'function') {
+  registerStyxCard('styx-suggestions-card', StyxSuggestionsCard, {
+    name: 'PilotSuite KI-Vorschlaege',
+    description: 'KI-gesteuerte Vorschlaege mit Governance-Aktionen',
+  });
+} else {
+  customElements.define('styx-suggestions-card', StyxSuggestionsCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: 'styx-suggestions-card',
+    name: 'PilotSuite KI-Vorschlaege',
+    description: 'KI-gesteuerte Vorschlaege mit Governance-Aktionen',
+  });
+}

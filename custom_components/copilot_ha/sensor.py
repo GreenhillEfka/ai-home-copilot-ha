@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DOMAIN, SIGNAL_CONTEXT_ENTITIES_REFRESH
@@ -596,6 +597,7 @@ class CopilotVersionSensor(CopilotBaseEntity, SensorEntity):
     _attr_name = "Version"
     _attr_unique_id = "copilot_ha_version"
     _attr_icon = "mdi:tag"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def native_value(self) -> str | None:

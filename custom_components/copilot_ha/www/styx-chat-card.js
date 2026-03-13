@@ -12,12 +12,16 @@
  * - Auto-scroll to latest message
  */
 
-class StyxChatCard extends HTMLElement {
+const _ChatBase = window.StyxCoreApiCard || HTMLElement;
+
+class StyxChatCard extends _ChatBase {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
-    this._config = {};
-    this._hass = null;
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: 'open' });
+      this._config = {};
+      this._hass = null;
+    }
     this._messages = [];
     this._loading = false;
     this._historyLoaded = false;
@@ -60,9 +64,10 @@ class StyxChatCard extends HTMLElement {
     return 6;
   }
 
+  /* _getCoreUrl / _getToken inherited from StyxCoreApiCard if available */
   _getCoreUrl() {
+    if (super._getCoreUrl) return super._getCoreUrl();
     if (this._config.core_url) return this._config.core_url;
-    // Try to derive from known sensor
     if (this._hass) {
       const apiSensor = this._hass.states['sensor.copilot_ha_core_api_v1'] ||
                         this._hass.states['sensor.pilotsuite_core_api_v1'];
@@ -74,6 +79,7 @@ class StyxChatCard extends HTMLElement {
   }
 
   _getToken() {
+    if (super._getToken) return super._getToken();
     if (this._config.auth_token) return this._config.auth_token;
     if (this._hass && this._hass.auth && this._hass.auth.data) {
       return this._hass.auth.data.access_token || '';
@@ -153,7 +159,7 @@ class StyxChatCard extends HTMLElement {
       clearTimeout(timer);
       this._messages.push({
         role: 'system',
-        content: e.name === 'AbortError' ? 'Zeitueberschreitung (30s).' : `Verbindungsfehler: ${e.message}`,
+        content: e.name === 'AbortError' ? 'Zeitüberschreitung (30s).' : `Verbindungsfehler: ${e.message}`,
         timestamp: new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       });
     }
@@ -164,6 +170,7 @@ class StyxChatCard extends HTMLElement {
   }
 
   _esc(s) {
+    if (typeof window.styxEsc === 'function') return window.styxEsc(s);
     const el = document.createElement('span');
     el.textContent = s;
     return el.innerHTML;
@@ -199,18 +206,29 @@ class StyxChatCard extends HTMLElement {
   }
 
   _render() {
+    const designTokens = typeof this._designTokens === 'function' ? this._designTokens() : '';
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; }
+        ${designTokens}
+        :host {
+          display: block;
+          --ps-accent: var(--accent-color, #4fc3f7);
+          --ps-bg: var(--card-background-color, var(--ha-card-background, #1a1a2e));
+          --ps-surface: var(--secondary-background-color, #222240);
+          --ps-text: var(--primary-text-color, #e0e0f0);
+          --ps-text-secondary: var(--secondary-text-color, #9e9eb8);
+          --ps-radius: var(--ha-card-border-radius, 12px);
+          --ps-transition: 0.2s ease;
+        }
         .card {
-          background: var(--card-background-color, #1a1a2e);
-          border-radius: var(--ha-card-border-radius, 12px);
+          background: var(--ps-bg);
+          border-radius: var(--ps-radius);
           padding: 16px;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text);
           font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
           display: flex;
           flex-direction: column;
-          height: 480px;
+          height: min(480px, 60vh);
         }
         .header {
           display: flex;
@@ -219,10 +237,10 @@ class StyxChatCard extends HTMLElement {
           margin-bottom: 12px;
           flex-shrink: 0;
         }
-        .title { font-size: 16px; font-weight: 600; }
+        .title { font-size: 0.9375rem; font-weight: 600; }
         .status {
-          font-size: 11px;
-          color: var(--secondary-text-color, #9fb1c3);
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary);
         }
         .messages {
           flex: 1;
@@ -241,9 +259,10 @@ class StyxChatCard extends HTMLElement {
           border-radius: 12px;
           max-width: 85%;
           word-wrap: break-word;
+          transition: opacity var(--ps-transition);
         }
         .msg-user {
-          background: rgba(79, 195, 247, 0.15);
+          background: linear-gradient(135deg, rgba(79,195,247,0.18), rgba(79,195,247,0.08));
           border: 1px solid rgba(79, 195, 247, 0.3);
           margin-left: auto;
           border-bottom-right-radius: 4px;
@@ -255,10 +274,10 @@ class StyxChatCard extends HTMLElement {
           border-bottom-left-radius: 4px;
         }
         .msg-system {
-          background: rgba(255, 152, 0, 0.1);
-          border: 1px solid rgba(255, 152, 0, 0.2);
+          background: rgba(255, 183, 77, 0.1);
+          border: 1px solid rgba(255, 183, 77, 0.2);
           margin: 0 auto;
-          font-size: 12px;
+          font-size: 0.8125rem;
           text-align: center;
         }
         .msg-header {
@@ -267,23 +286,23 @@ class StyxChatCard extends HTMLElement {
           margin-bottom: 4px;
         }
         .msg-role {
-          font-size: 11px;
+          font-size: 0.75rem;
           font-weight: 600;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary);
         }
         .msg-time {
-          font-size: 10px;
-          color: var(--secondary-text-color, #9fb1c3);
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary);
           opacity: 0.7;
         }
         .msg-content {
-          font-size: 13px;
+          font-size: 0.875rem;
           line-height: 1.5;
           white-space: pre-wrap;
         }
         .msg-meta {
-          font-size: 10px;
-          color: var(--secondary-text-color, #9fb1c3);
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary);
           margin-top: 4px;
           opacity: 0.6;
         }
@@ -299,7 +318,7 @@ class StyxChatCard extends HTMLElement {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: var(--secondary-text-color, #9fb1c3);
+          background: var(--ps-accent);
           animation: bounce 1.4s infinite;
         }
         .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
@@ -309,8 +328,8 @@ class StyxChatCard extends HTMLElement {
           40% { transform: scale(1.3); opacity: 1; }
         }
         .typing-label {
-          font-size: 11px;
-          color: var(--secondary-text-color, #9fb1c3);
+          font-size: 0.8125rem;
+          color: var(--ps-text-secondary);
           margin-left: 4px;
         }
         .input-area {
@@ -325,16 +344,17 @@ class StyxChatCard extends HTMLElement {
           border-radius: 20px;
           border: 1px solid rgba(255,255,255,0.15);
           background: rgba(255,255,255,0.06);
-          color: var(--primary-text-color, #e6eef6);
-          font-size: 13px;
+          color: var(--ps-text);
+          font-size: 0.875rem;
           outline: none;
-          transition: border-color 0.2s;
+          transition: border-color var(--ps-transition), box-shadow var(--ps-transition);
         }
         .input-area input:focus {
-          border-color: rgba(79, 195, 247, 0.5);
+          border-color: var(--ps-accent);
+          box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.15);
         }
         .input-area input::placeholder {
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary);
           opacity: 0.5;
         }
         .send-btn {
@@ -342,20 +362,20 @@ class StyxChatCard extends HTMLElement {
           border-radius: 20px;
           border: none;
           background: rgba(79, 195, 247, 0.2);
-          color: #4fc3f7;
+          color: var(--ps-accent);
           cursor: pointer;
-          font-size: 13px;
+          font-size: 0.875rem;
           font-weight: 600;
-          transition: background 0.2s;
+          transition: background var(--ps-transition);
           flex-shrink: 0;
         }
         .send-btn:hover { background: rgba(79, 195, 247, 0.35); }
         .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .empty {
           text-align: center;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary);
           padding: 40px 0;
-          font-size: 13px;
+          font-size: 0.875rem;
         }
       </style>
       <div class="card">
@@ -371,8 +391,8 @@ class StyxChatCard extends HTMLElement {
           <span class="typing-label">Styx denkt nach...</span>
         </div>
         <div class="input-area">
-          <input type="text" placeholder="Nachricht eingeben..." />
-          <button class="send-btn">Senden</button>
+          <input type="text" placeholder="Nachricht eingeben..." aria-label="Chat-Nachricht" />
+          <button class="send-btn" aria-label="Nachricht senden">Senden</button>
         </div>
       </div>`;
 
@@ -398,11 +418,17 @@ class StyxChatCard extends HTMLElement {
   }
 }
 
-customElements.define('styx-chat-card', StyxChatCard);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'styx-chat-card',
-  name: 'PilotSuite Styx Chat',
-  description: 'Chat interface for PilotSuite Styx AI assistant',
-});
+if (typeof registerStyxCard === 'function') {
+  registerStyxCard('styx-chat-card', StyxChatCard, {
+    name: 'PilotSuite Styx Chat',
+    description: 'Chat-Interface fuer den PilotSuite Styx KI-Assistenten',
+  });
+} else {
+  customElements.define('styx-chat-card', StyxChatCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: 'styx-chat-card',
+    name: 'PilotSuite Styx Chat',
+    description: 'Chat-Interface fuer den PilotSuite Styx KI-Assistenten',
+  });
+}

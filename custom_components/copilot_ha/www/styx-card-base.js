@@ -147,6 +147,109 @@ class StyxCardBase extends HTMLElement {
       </svg>`;
   }
 
+  /**
+   * Shared PilotSuite design tokens as CSS string.
+   * Use in subclass _render(): `<style>${this._designTokens()} ...</style>`
+   */
+  _designTokens() {
+    return `
+      :host {
+        /* ── PilotSuite Design System ─────────────── */
+        --ps-accent: var(--accent-color, #4fc3f7);
+        --ps-green: #81c784; --ps-orange: #ffb74d;
+        --ps-red: #ef5350; --ps-purple: #ce93d8;
+        /* Surfaces */
+        --ps-bg: var(--card-background-color, var(--ha-card-background, #1a1a2e));
+        --ps-surface: var(--secondary-background-color, #222240);
+        --ps-border: var(--divider-color, rgba(255,255,255,0.08));
+        /* Text */
+        --ps-text: var(--primary-text-color, #e0e0f0);
+        --ps-text-secondary: var(--secondary-text-color, #9e9eb8);
+        --ps-text-disabled: var(--disabled-text-color, #666);
+        /* Typography */
+        --ps-fs-xs: 0.75rem; --ps-fs-sm: 0.8125rem;
+        --ps-fs-base: 0.875rem; --ps-fs-md: 0.9375rem;
+        --ps-fs-lg: 1.0625rem; --ps-fs-xl: 1.25rem;
+        /* Spacing */
+        --ps-sp-xs: 4px; --ps-sp-sm: 8px;
+        --ps-sp-md: 12px; --ps-sp-lg: 16px;
+        /* Radius */
+        --ps-radius: var(--ha-card-border-radius, 12px);
+        --ps-radius-sm: 8px;
+        /* Transition */
+        --ps-transition: 0.2s ease;
+      }
+      ha-card {
+        padding: var(--ps-sp-lg);
+        color: var(--ps-text);
+        font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
+      }
+      .ps-card-header {
+        display: flex; align-items: center; gap: var(--ps-sp-sm);
+        margin-bottom: var(--ps-sp-md); font-weight: 600;
+        font-size: var(--ps-fs-md);
+      }
+      .ps-card-header ha-icon, .ps-card-header .icon {
+        color: var(--ps-accent); --mdc-icon-size: 20px;
+      }
+      .ps-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 3px 10px; border-radius: 12px;
+        font-size: var(--ps-fs-xs); font-weight: 600;
+      }
+      .ps-badge--ok { background: rgba(129,199,132,0.15); color: var(--ps-green); }
+      .ps-badge--warn { background: rgba(255,183,77,0.15); color: var(--ps-orange); }
+      .ps-badge--error { background: rgba(239,83,80,0.15); color: var(--ps-red); }
+      .ps-badge--info { background: rgba(79,195,247,0.15); color: var(--ps-accent); }
+      .ps-empty-state {
+        text-align: center; padding: var(--ps-sp-xl, 24px);
+        color: var(--ps-text-secondary); font-size: var(--ps-fs-sm);
+      }
+      .ps-loading {
+        display: flex; align-items: center; justify-content: center;
+        gap: var(--ps-sp-sm); padding: var(--ps-sp-lg);
+        color: var(--ps-text-secondary); font-size: var(--ps-fs-sm);
+      }
+      .ps-loading::before {
+        content: ""; width: 16px; height: 16px;
+        border: 2px solid var(--ps-surface); border-top-color: var(--ps-accent);
+        border-radius: 50%; animation: ps-spin 0.8s linear infinite;
+      }
+      @keyframes ps-spin { to { transform: rotate(360deg); } }
+      .ps-error-banner {
+        background: rgba(239,83,80,0.1); border: 1px solid rgba(239,83,80,0.3);
+        border-radius: var(--ps-radius-sm); padding: var(--ps-sp-sm) var(--ps-sp-md);
+        color: var(--ps-red); font-size: var(--ps-fs-sm);
+        display: flex; align-items: center; gap: var(--ps-sp-sm);
+        margin-bottom: var(--ps-sp-md);
+      }
+    `;
+  }
+
+  /**
+   * Render a loading state placeholder.
+   * @param {string} message — optional loading message
+   */
+  _renderLoading(message = 'Laden...') {
+    return `<div class="ps-loading">${this._esc(message)}</div>`;
+  }
+
+  /**
+   * Render an error banner.
+   * @param {string} message — error description
+   */
+  _renderError(message) {
+    return `<div class="ps-error-banner">⚠ ${this._esc(message)}</div>`;
+  }
+
+  /**
+   * Render an empty state with optional icon.
+   * @param {string} message — empty state message
+   */
+  _renderEmpty(message = 'Keine Daten verfügbar') {
+    return `<div class="ps-empty-state">${this._esc(message)}</div>`;
+  }
+
   /** Override in subclass to render card content into shadowRoot. */
   _render() {}
 }
