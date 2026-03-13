@@ -1,5 +1,103 @@
 # Changelog
 
+Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
+
+## [13.9.0] - 2026-03-13
+
+### Offizielles Release — Alle Beitraege seit v13.5.8
+
+Dies ist das konsolidierte offizielle Release, das alle Entwicklungen seit dem letzten getaggten Release (v13.5.8) zusammenfasst.
+
+### Compatibility
+- HA v13.9.0 <-> Core v13.9.0
+- Protocol/API contract: aligned
+- Migration required: no
+- Breaking Changes: keine
+
+### Added
+
+#### 8 Musikwolke HA-Services
+| Service | Beschreibung |
+|---------|-------------|
+| `copilot_ha.musikwolke_create` | Musikwolke-Gruppe erstellen |
+| `copilot_ha.musikwolke_dissolve` | Musikwolke-Gruppe aufloesen |
+| `copilot_ha.musikwolke_play` | Wiedergabe starten |
+| `copilot_ha.musikwolke_pause` | Wiedergabe pausieren |
+| `copilot_ha.musikwolke_volume` | Lautstaerke setzen (0-100%) |
+| `copilot_ha.musikwolke_start_follow` | Follow-Session starten |
+| `copilot_ha.musikwolke_stop_follow` | Follow-Session beenden |
+| `copilot_ha.zone_automation_set_mode` | Automatisierungsmodus setzen |
+
+#### 14 Coordinator-API-Methoden
+- Musikwolke-Status, Play/Pause/Volume, Create/Dissolve
+- Media Follow Start/Stop
+- Zone Automation Mode Get/Set
+- Zone Map Abfrage
+
+#### 5 PilotSuite HA Module
+- Licht, Helligkeit, Heiz, Bewegung, Praesenz als eigenstaendige HA-Module
+- Beispiel-Dashboard mit realen Entities
+- Integration in Zone Dashboard
+
+#### Living BrainGraph Dashboard
+- Pulsierender BrainGraph mit Echtzeit-Visualisierung
+- Neurale Cross-Dependencies sichtbar
+- Automation Repair direkt aus dem Dashboard
+
+#### Dashboard-API Core-Anbindung
+- Alle Dashboard-Endpunkte mit echten Core-API-Daten statt Hardcoded-Daten
+- ML-Mocks und Platzhalter durch funktionalen Code ersetzt
+
+#### Core<->HA Module Communication
+- Vollstaendige Core<->HA Kommunikations-Pipeline verdrahtet
+- Webhook Receiver fuer zone_update Events (Echtzeit)
+- Memory API Client, Services und Coordinator Wiring
+
+#### Interaktives Musik-Dashboard
+- Play/Pause/Dissolve Buttons mit direkter Steuerung
+- Follow Start/Stop per Knopfdruck
+- Button-Cards statt statischem Markdown
+
+#### Zone Dashboard Erweiterungen
+- Habituszonen-IDs synchron mit Core
+- Reichere Datenstruktur mit Controls, Musik, Playlists
+- Notifications, Birthdays, Todos pro Zone
+
+#### Bidirektionale Tag-Synchronisierung
+- `async_sync_tags_to_core()` und `async_get_core_tags()` im Coordinator
+- EntityTagsModule Sync zwischen HA und Core
+- Zone Presence Trigger: 3-Stufen-Modus (off/learning/autonomy) pro Zone
+
+#### Dokumentation
+- Deutsches Benutzerhandbuch (docs/HANDBUCH.md)
+- Installationsanleitung (docs/INSTALLATIONSANLEITUNG.md)
+- Vollstaendige Modul-Referenz (docs/MODULE_REFERENCE.md)
+
+### Code-Qualitaet & Hardening
+
+- **Button Base Class**: Gemeinsame Basisklasse fuer alle Button-Entities
+- **Lovelace Card Base**: Wiederverwendbare Basis fuer Custom Cards
+- **API Contract**: Verbesserte API-Vertraege zwischen HA und Core
+- **Coordinator API Cleanup**: `_safe_get`/`_safe_post` Wrapper fuer robustere API-Aufrufe
+- **Coordinator Timeouts**: Zentralisierte Timeout-Konfiguration
+- **Debug Logging**: Logging in zuvor stillen Handlern ergaenzt
+
+### Fixed
+- 6 tote Button-Dateien mit doppelten unique_ids entfernt
+- Fehlender `asyncio`-Import und Auth-Header-Alignment in API Client
+- Warning Logs fuer fehlenden Coordinator in Musikwolke Service Handlers
+- Ungebundene Variable `e` in coordinator.py Musikwolke-Methoden
+- Edge Cases, Type Safety und Automation Hardening
+- CrossDependencySensor Registration, Edge Count und Type Safety
+- 13 vergessene Sensoren verdrahtet, Translations korrigiert
+
+### QA
+- Neuron Dashboard Sensors registriert und getestet
+- Decision-Sync Retry Queue fuer Offline-Core-Resilienz
+- Verbesserte Module Lifecycle, SQLite Safety, Nonce Cache Cleanup
+
+---
+
 ## [13.7.0] - 2026-03-11
 
 ### Compatibility
@@ -18,9 +116,6 @@
 ### Changed
 - Musik-Tab von statischem Markdown zu interaktiven Button-Cards
 - Versions-Bump auf 13.7.0
-
-
-Alle wesentlichen Änderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
 ## [13.6.0] - 2026-03-11
 
