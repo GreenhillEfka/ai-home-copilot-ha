@@ -43,3 +43,4 @@ coverage.json
 coverage.xml
 .last-dev-check
 qg_venv/
+.tmp_ha_live/
