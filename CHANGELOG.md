@@ -2,6 +2,28 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [13.10.0] - 2026-03-13
+
+### Quality Release — Paired mit Core v13.10.0
+
+### Compatibility
+- HA v13.10.0 <-> Core v13.10.0
+- Protocol/API contract: aligned
+- Migration required: no
+- Breaking Changes: keine
+
+### Fixed (Core-seitig)
+- Production Bug in `zone_dashboard.py` behoben (undefinierte Variablen)
+- Blueprint-Doppelregistrierungen in `core_setup.py` bereinigt
+- Alle 210 Core-Test-Failures behoben (0 failed, 4133 passed)
+
+### Unchanged
+- HA Integration: 373 passed, 0 failed, 41 skipped (stabil)
+- 240+ Entity-Klassen, 174 Services, 9 Custom Cards
+- Config Flow (7 Steps), STT/TTS/Conversation Agent
+
+---
+
 ## [13.9.0] - 2026-03-13
 
 ### Offizielles Release — Alle Beitraege seit v13.5.8

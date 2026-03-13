@@ -1,7 +1,7 @@
 {
   "domain": "pilotsuite_core",
   "name": "PilotSuite Core",
-  "version": "13.9.0",
+  "version": "13.10.0",
   "integration_types": ["hub"],
   "requirements": ["requests==2.31.0", "aiohttp==3.9.1"],
   "dependencies": [],
