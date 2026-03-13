@@ -152,6 +152,7 @@ class ModuleConnector:
         self._activity_context = ActivityContext(source="", activity_level="idle")
         self._calendar_context = CalendarLoadContext(load_level="free")
         self._recent_alerts: list[MoodAlert] = []
+        self._unsubs: list = []
         self._enabled = True
     
     @property
@@ -199,22 +200,24 @@ class ModuleConnector:
                 await self._handle_zone_event(event_data)
         
         # Listen for camera events
-        self._hass.bus.async_listen(f"{DOMAIN}_camera_event", on_camera_event)
-        
+        self._unsubs.append(
+            self._hass.bus.async_listen(f"{DOMAIN}_camera_event", on_camera_event)
+        )
+
         # Also listen for binary sensor motion events
         async def on_state_change(event: Event) -> None:
             entity_id = event.data.get("entity_id", "")
             new_state = event.data.get("new_state")
             old_state = event.data.get("old_state")
-            
+
             if not new_state:
                 return
-            
+
             # Check for motion binary sensors
             if "motion" in entity_id.lower() and "binary_sensor" in entity_id:
                 is_motion = new_state.state == "on"
                 camera_id = entity_id.replace("binary_sensor.", "camera.")
-                
+
                 await self._handle_motion_event({
                     "type": "motion",
                     "camera_id": camera_id,
@@ -222,8 +225,10 @@ class ModuleConnector:
                     "confidence": new_state.attributes.get("confidence", 1.0),
                     "timestamp": datetime.now().isoformat(),
                 })
-        
-        self._hass.bus.async_listen("state_changed", on_state_change)
+
+        self._unsubs.append(
+            self._hass.bus.async_listen("state_changed", on_state_change)
+        )
         
         _LOGGER.debug("Camera → Activity link established")
     
@@ -351,20 +356,24 @@ class ModuleConnector:
                          load_level, event_count)
         
         # Listen for calendar context updates from calendar_context module
-        self._hass.bus.async_listen(f"{DOMAIN}_calendar_updated", on_calendar_update)
-        
+        self._unsubs.append(
+            self._hass.bus.async_listen(f"{DOMAIN}_calendar_updated", on_calendar_update)
+        )
+
         # Also check for calendar state changes
         async def on_calendar_state_change(event: Event) -> None:
             entity_id = event.data.get("entity_id", "")
             new_state = event.data.get("new_state")
-            
+
             if not entity_id.startswith("calendar."):
                 return
-            
+
             # Trigger calendar reload
             await self._refresh_calendar_context()
-        
-        self._hass.bus.async_listen("state_changed", on_calendar_state_change)
+
+        self._unsubs.append(
+            self._hass.bus.async_listen("state_changed", on_calendar_state_change)
+        )
         
         _LOGGER.debug("Calendar → calendar.load link established")
     
@@ -440,10 +449,14 @@ class ModuleConnector:
                              alert.alert_type, alert.severity)
         
         # Listen for notifications
-        self._hass.bus.async_listen("notify", on_notification)
-        
+        self._unsubs.append(
+            self._hass.bus.async_listen("notify", on_notification)
+        )
+
         # Also listen for persistent notifications
-        self._hass.bus.async_listen("call_service", on_notification)
+        self._unsubs.append(
+            self._hass.bus.async_listen("call_service", on_notification)
+        )
         
         _LOGGER.debug("Notification → Mood Alert link established")
     
@@ -608,8 +621,11 @@ class ModuleConnector:
         return [a for a in self._recent_alerts if a.timestamp > cutoff]
     
     async def async_shutdown(self) -> None:
-        """Clean up on shutdown."""
+        """Clean up on shutdown — unsubscribe all bus listeners."""
         _LOGGER.info("Shutting down Module Connector")
+        for unsub in self._unsubs:
+            unsub()
+        self._unsubs.clear()
         self._enabled = False
 
 

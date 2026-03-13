@@ -667,6 +667,10 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 break
 
         if not entry_store:
+            _LOGGER.warning(
+                "Smart home module entry store nicht gefunden — "
+                "Module-Updates uebersprungen (Module noch nicht geladen?)"
+            )
             return
 
         # Also fetch zone automation data for per-zone detail
