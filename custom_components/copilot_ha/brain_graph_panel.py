@@ -1,15 +1,18 @@
-"""Interactive Brain Graph Panel v0.8 with D3.js visualization.
+"""Interactive Brain Graph Panel v1.0 with living pulsing visualization.
 
 Generates an interactive HTML/JS visualization from Core graph state.
 Privacy-first: all data stays local; no external dependencies.
 
-Version 0.8 (2026-02-16):
-- Interactive D3.js visualization with zoom/pan
+Version 1.0 (2026-03-12):
+- Living, pulsing nodes with CSS animations
+- Multi-colored domain-specific node coloring
+- Neural cross-dependency highlighting on hover
+- Animated synaptic flow on edges
+- Breathing graph animation
 - Filter by Node Kind, Zone, or text search
-- Click nodes for detailed info panel
-- Color-coded node types (light, sensor, zone, media_player, etc.)
+- Click nodes for detailed info panel with cross-deps
 - Legend with all node kinds
-- Stats display (node/edge counts)
+- Stats display (node/edge/cross-dep counts)
 """
 
 from __future__ import annotations
@@ -225,7 +228,7 @@ def _render_interactive_html(
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{sanitize_text(title, max_chars=120)}</title>
+    <title>{html.escape(sanitize_text(title, max_chars=120))}</title>
     <style>
         * {{ box-sizing: border-box; }}
         body {{
@@ -498,26 +501,81 @@ def _render_interactive_html(
             cursor: pointer;
             transition: stroke-width 0.2s, filter 0.2s;
         }}
-        
+
         .node-circle:hover {{
             stroke-width: 2;
-            filter: brightness(1.2);
+            filter: brightness(1.3);
         }}
-        
+
         .node-circle.selected {{
             stroke: #ffd700;
             stroke-width: 3;
         }}
-        
+
         .node-circle.filtered {{
-            opacity: 0.2;
+            opacity: 0.15;
         }}
-        
+
         .node-label {{
             font-size: 10px;
             fill: #9fb1c3;
             fill-opacity: 0.7;
             pointer-events: none;
+        }}
+
+        /* Living pulsing animation */
+        @keyframes nodePulse {{
+            0%, 100% {{ r: var(--base-r, 8); opacity: 0; }}
+            50% {{ r: calc(var(--base-r, 8) + 6px); opacity: 0.3; }}
+        }}
+
+        .glow-ring {{
+            animation: nodePulse 3s ease-in-out infinite;
+            fill: none;
+            pointer-events: none;
+        }}
+
+        /* Synaptic flow on edges */
+        @keyframes synapticFlow {{
+            0% {{ stroke-dashoffset: 20; }}
+            100% {{ stroke-dashoffset: 0; }}
+        }}
+
+        .edge-flow {{
+            stroke-dasharray: 4 16;
+            animation: synapticFlow 2s linear infinite;
+        }}
+
+        .cross-dep {{
+            stroke-dasharray: 3 6;
+            stroke: #00bcd4;
+        }}
+
+        /* Breathing animation for graph layers */
+        @keyframes graphBreathe {{
+            0%, 100% {{ transform: scale(1); }}
+            50% {{ transform: scale(1.003); }}
+        }}
+
+        #nodes-layer, #edges-layer {{
+            transform-origin: center center;
+            animation: graphBreathe 6s ease-in-out infinite;
+        }}
+
+        .pulse-dot {{
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4caf50;
+            margin-right: 6px;
+            vertical-align: middle;
+            animation: pulseDot 2s ease-in-out infinite;
+        }}
+
+        @keyframes pulseDot {{
+            0%, 100% {{ opacity: 1; box-shadow: 0 0 4px #4caf50; }}
+            50% {{ opacity: 0.4; box-shadow: 0 0 12px #4caf50; }}
         }}
     </style>
 </head>
@@ -532,7 +590,7 @@ def _render_interactive_html(
                         <div class="stat-label">Nodes</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-value" id="edge-count">{len(edges)}</div>
+                        <div class="stat-value" id="edge-count">{len(edge_data)}</div>
                         <div class="stat-label">Edges</div>
                     </div>
                 </div>
@@ -572,8 +630,8 @@ def _render_interactive_html(
         
         <div class="main">
             <header>
-                <h1>🧠 Brain Graph</h1>
-                <div class="meta">Generated: {now} · Interactive View</div>
+                <h1><span class="pulse-dot"></span>Brain Graph</h1>
+                <div class="meta">Generated: {now} · Living Neural View · <span id="cross-dep-count">0</span> Cross-Dependencies</div>
             </header>
             
             <div class="graph-container">
@@ -679,65 +737,152 @@ def _render_interactive_html(
             }});
         }}
         
-        // Render graph
+        // Render graph with living pulsing animations
         function renderGraph() {{
             edgesLayer.innerHTML = '';
             nodesLayer.innerHTML = '';
             labelsLayer.innerHTML = '';
-            
+
             const kindFilter = document.getElementById('filter-kind').value;
             const zoneFilter = document.getElementById('filter-zone').value;
             const searchFilter = document.getElementById('filter-search').value.toLowerCase();
-            
+
             // Determine visible nodes
             const visibleNodes = new Set();
             nodes.forEach(n => {{
                 const matchKind = !kindFilter || n.kind === kindFilter;
                 const matchZone = !zoneFilter || n.zone === zoneFilter;
-                const matchSearch = !searchFilter || 
+                const matchSearch = !searchFilter ||
                     n.label.toLowerCase().includes(searchFilter) ||
                     n.id.toLowerCase().includes(searchFilter);
-                
+
                 if (matchKind && matchZone && matchSearch) {{
                     visibleNodes.add(n.id);
                 }}
             }});
-            
-            // Render edges
-            edges.forEach(e => {{
+
+            // Build node lookup for cross-dep detection
+            const nodeById = {{}};
+            nodes.forEach(n => {{ nodeById[n.id] = n; }});
+
+            // Count cross-dependencies (edges between different kinds)
+            let crossDepCount = 0;
+
+            // Render edges with synaptic flow
+            edges.forEach((e, ei) => {{
                 if (!visibleNodes.has(e.from) || !visibleNodes.has(e.to)) return;
-                
-                const n1 = nodes.find(n => n.id === e.from);
-                const n2 = nodes.find(n => n.id === e.to);
+
+                const n1 = nodeById[e.from];
+                const n2 = nodeById[e.to];
                 if (!n1 || !n2) return;
-                
+
+                const isCrossDep = n1.kind !== n2.kind;
+                if (isCrossDep) crossDepCount++;
+
+                // Base edge
                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                 line.setAttribute('x1', n1.x);
                 line.setAttribute('y1', n1.y);
                 line.setAttribute('x2', n2.x);
                 line.setAttribute('y2', n2.y);
-                line.setAttribute('class', 'edge');
+                line.setAttribute('class', 'edge' + (isCrossDep ? ' cross-dep' : ''));
                 line.setAttribute('data-from', e.from);
                 line.setAttribute('data-to', e.to);
                 edgesLayer.appendChild(line);
+
+                // Synaptic flow overlay for cross-deps and high-weight edges
+                const weight = e.weight || 0.5;
+                if (isCrossDep || weight > 0.6) {{
+                    const flow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    flow.setAttribute('x1', n1.x);
+                    flow.setAttribute('y1', n1.y);
+                    flow.setAttribute('x2', n2.x);
+                    flow.setAttribute('y2', n2.y);
+                    flow.setAttribute('stroke', isCrossDep ? '#00bcd4' : '#4aa3df');
+                    flow.setAttribute('stroke-opacity', '0.2');
+                    flow.setAttribute('stroke-width', '1.5');
+                    flow.setAttribute('class', 'edge-flow');
+                    flow.style.animationDelay = `${{(ei * 0.15) % 2}}s`;
+                    edgesLayer.appendChild(flow);
+                }}
             }});
-            
-            // Render nodes
-            nodes.forEach(n => {{
+
+            // Update cross-dep counter
+            const cdEl = document.getElementById('cross-dep-count');
+            if (cdEl) cdEl.textContent = crossDepCount;
+
+            // Render nodes with pulsing glow rings
+            nodes.forEach((n, ni) => {{
                 const isVisible = visibleNodes.has(n.id);
                 const r = 4 + 10 * n.score;
-                
+
+                // Glow ring for high-score visible nodes (pulsing)
+                if (isVisible && n.score > 0.3) {{
+                    const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    glow.setAttribute('cx', n.x);
+                    glow.setAttribute('cy', n.y);
+                    glow.setAttribute('r', r + 5);
+                    glow.setAttribute('stroke', n.color);
+                    glow.setAttribute('stroke-width', '2');
+                    glow.setAttribute('class', 'glow-ring');
+                    glow.style.setProperty('--base-r', `${{r}}px`);
+                    glow.style.animationDelay = `${{(ni * 0.2) % 3}}s`;
+                    nodesLayer.appendChild(glow);
+                }}
+
+                // Main node circle
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', n.x);
                 circle.setAttribute('cy', n.y);
                 circle.setAttribute('r', r);
                 circle.setAttribute('fill', n.color);
+                circle.setAttribute('fill-opacity', (0.35 + 0.65 * n.score).toFixed(2));
+                circle.setAttribute('stroke', n.color);
+                circle.setAttribute('stroke-opacity', '0.6');
                 circle.setAttribute('class', 'node-circle' + (isVisible ? '' : ' filtered'));
                 circle.setAttribute('data-id', n.id);
                 circle.addEventListener('click', () => showNodeDetail(n));
+
+                // Hover: highlight cross-dependencies
+                circle.addEventListener('mouseenter', () => {{
+                    const connected = new Set();
+                    edges.forEach(e => {{
+                        if (e.from === n.id) connected.add(e.to);
+                        if (e.to === n.id) connected.add(e.from);
+                    }});
+
+                    document.querySelectorAll('.edge, .edge-flow, .cross-dep').forEach(el => {{
+                        if (el.getAttribute('data-from') === n.id || el.getAttribute('data-to') === n.id) {{
+                            el.style.strokeOpacity = '0.8';
+                            el.style.stroke = '#88ccff';
+                            el.style.strokeWidth = '2.5';
+                        }} else {{
+                            el.style.strokeOpacity = '0.05';
+                        }}
+                    }});
+
+                    document.querySelectorAll('.node-circle').forEach(nc => {{
+                        const ncId = nc.getAttribute('data-id');
+                        if (ncId !== n.id && !connected.has(ncId)) {{
+                            nc.style.opacity = '0.15';
+                        }}
+                    }});
+                }});
+
+                circle.addEventListener('mouseleave', () => {{
+                    document.querySelectorAll('.edge, .edge-flow, .cross-dep').forEach(el => {{
+                        el.style.strokeOpacity = '';
+                        el.style.stroke = '';
+                        el.style.strokeWidth = '';
+                    }});
+                    document.querySelectorAll('.node-circle').forEach(nc => {{
+                        nc.style.opacity = '';
+                    }});
+                }});
+
                 nodesLayer.appendChild(circle);
-                
-                // Label (only for visible, high-score nodes)
+
+                // Label (visible high-score nodes)
                 if (isVisible && n.score > 0.4) {{
                     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                     text.setAttribute('x', n.x + r + 3);
@@ -747,7 +892,7 @@ def _render_interactive_html(
                     labelsLayer.appendChild(text);
                 }}
             }});
-            
+
             updateTransform();
         }}
         

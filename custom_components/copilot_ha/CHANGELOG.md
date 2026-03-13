@@ -5,6 +5,24 @@ All notable changes to PilotSuite will be documented in this file.
 > Hinweis (2026-02-22): Die aktive Release-Historie wird im Repository-Root gepflegt: `CHANGELOG.md` (7.7.x Linie).
 > Diese Datei enthaelt vor allem aeltere 0.x Historie und bleibt als Archiv erhalten.
 
+## [7.9.0] - 2026-03-11
+
+### Zone Presence Trigger Sensors
+- Neue ZonePresenceTriggerSensor: Per-Zone Binary-Sensor mit Automationsmodus (off/learning/autonomy)
+- ZonePresenceOverviewSensor: Globaler Praesenz-Binary-Sensor
+
+### Module Mode Configuration
+- Neuer Options-Flow-Step "automation_modes" fuer Per-Zone-Moduskonfiguration
+
+### Dashboard Generator v6.0
+- Komplett ueberarbeiteter 6-Tab-Dashboard-Generator (Styx, Haushalt, Energie, Praesenz, Musik, Per-Zone)
+
+### Coordinator API Erweiterung
+- Sonos, Zone Automation, Presence, Light Intelligence Endpunkte hinzugefuegt
+
+### Test-Infrastruktur
+- Root conftest.py mit HA-Stubs, ML-Tests bereinigt, 285+ Tests bestanden
+
 ## [7.8.9] - 2026-02-23
 - Hassfest-Fix: `assist_pipeline` in `manifest.json` als `after_dependencies` deklariert.
 - Behebt CI-Fehler fuer die neue Pipeline-Default-Logik in `agent_auto_config.py`.

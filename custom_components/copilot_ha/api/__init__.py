@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 
 import aiohttp
@@ -26,6 +27,7 @@ class CopilotApiClient:
     def _headers(self) -> dict[str, str]:
         headers: dict[str, str] = {}
         if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
             headers[HEADER_AUTH] = self._token
         return headers
 

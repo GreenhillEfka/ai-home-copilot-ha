@@ -22,6 +22,7 @@ Thread-safe singleton with SQLite persistence under /data/.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import sqlite3
@@ -35,6 +36,9 @@ DB_PATH = os.environ.get("MODULE_STATES_DB", "/data/module_states.db")
 
 VALID_STATES = frozenset({"active", "learning", "off"})
 DEFAULT_STATE = "active"
+
+# SQLite timeout prevents hanging on locked databases
+_SQLITE_TIMEOUT_S = 5.0
 
 
 class ModuleRegistry:
@@ -83,20 +87,20 @@ class ModuleRegistry:
     # ------------------------------------------------------------------
 
     def _init_db(self) -> None:
-        """Create the module_states table if it does not exist."""
-        with self._lock:
-            conn = sqlite3.connect(self._db_path)
-            try:
-                conn.execute("""
-                    CREATE TABLE IF NOT EXISTS module_states (
-                        module_id   TEXT PRIMARY KEY,
-                        state       TEXT NOT NULL DEFAULT 'active',
-                        updated_at  TEXT NOT NULL
-                    )
-                """)
-                conn.commit()
-            finally:
-                conn.close()
+        """Create the module_states table and index if they do not exist."""
+        with self._lock, self._connect() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS module_states (
+                    module_id   TEXT PRIMARY KEY,
+                    state       TEXT NOT NULL DEFAULT 'active',
+                    updated_at  TEXT NOT NULL
+                )
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_module_states_id
+                ON module_states (module_id)
+            """)
+            conn.commit()
 
     # ------------------------------------------------------------------
     # Helpers
@@ -107,9 +111,19 @@ class ModuleRegistry:
         """Return current UTC timestamp in ISO-8601 format."""
         return datetime.now(timezone.utc).isoformat()
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """Create a new SQLite connection (caller must close)."""
-        return sqlite3.connect(self._db_path)
+    @contextlib.contextmanager
+    def _connect(self):
+        """Context manager for SQLite connections.
+
+        Ensures connections are always closed, even on exceptions.
+        Uses WAL mode and a timeout to avoid locking issues.
+        """
+        conn = sqlite3.connect(self._db_path, timeout=_SQLITE_TIMEOUT_S)
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            yield conn
+        finally:
+            conn.close()
 
     # ------------------------------------------------------------------
     # Public API
@@ -120,16 +134,12 @@ class ModuleRegistry:
 
         Returns ``"active"`` if the module has never been explicitly configured.
         """
-        with self._lock:
-            conn = self._get_connection()
-            try:
-                row = conn.execute(
-                    "SELECT state FROM module_states WHERE module_id = ?",
-                    (module_id,),
-                ).fetchone()
-                return row[0] if row else DEFAULT_STATE
-            finally:
-                conn.close()
+        with self._lock, self._connect() as conn:
+            row = conn.execute(
+                "SELECT state FROM module_states WHERE module_id = ?",
+                (module_id,),
+            ).fetchone()
+            return row[0] if row else DEFAULT_STATE
 
     def set_state(self, module_id: str, state: str) -> bool:
         """Persist a new state for *module_id*.
@@ -151,26 +161,24 @@ class ModuleRegistry:
 
         now = self._now_iso()
         with self._lock:
-            conn = self._get_connection()
             try:
-                conn.execute(
-                    """
-                    INSERT INTO module_states (module_id, state, updated_at)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(module_id) DO UPDATE
-                        SET state = excluded.state,
-                            updated_at = excluded.updated_at
-                    """,
-                    (module_id, state, now),
-                )
-                conn.commit()
+                with self._connect() as conn:
+                    conn.execute(
+                        """
+                        INSERT INTO module_states (module_id, state, updated_at)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT(module_id) DO UPDATE
+                            SET state = excluded.state,
+                                updated_at = excluded.updated_at
+                        """,
+                        (module_id, state, now),
+                    )
+                    conn.commit()
                 _LOGGER.info("Module %s -> %s", module_id, state)
                 return True
             except sqlite3.Error:
                 _LOGGER.exception("Failed to persist state for %s", module_id)
                 return False
-            finally:
-                conn.close()
 
     def get_all_states(self) -> Dict[str, str]:
         """Return a mapping of every explicitly-configured module to its state.
@@ -178,15 +186,11 @@ class ModuleRegistry:
         Modules that have never been configured will *not* appear here
         (their implicit state is ``"active"``).
         """
-        with self._lock:
-            conn = self._get_connection()
-            try:
-                rows = conn.execute(
-                    "SELECT module_id, state FROM module_states ORDER BY module_id"
-                ).fetchall()
-                return {module_id: state for module_id, state in rows}
-            finally:
-                conn.close()
+        with self._lock, self._connect() as conn:
+            rows = conn.execute(
+                "SELECT module_id, state FROM module_states ORDER BY module_id"
+            ).fetchall()
+            return {module_id: state for module_id, state in rows}
 
     # ------------------------------------------------------------------
     # Convenience predicates

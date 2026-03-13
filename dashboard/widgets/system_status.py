@@ -6,6 +6,8 @@ from flask import Blueprint, jsonify, render_template
 from flask_socketio import emit
 import psutil
 import time
+import threading
+from collections import deque
 from datetime import datetime
 
 # Create blueprint
@@ -14,19 +16,60 @@ system_status_bp = Blueprint('system_status', __name__, url_prefix='/widget/syst
 # Store boot time for uptime calculation
 BOOT_TIME = psutil.boot_time()
 
+# Metrics history for trend computation (last 60 samples ~ 30 min at 30s interval)
+_HISTORY_SIZE = 60
+_metrics_history = deque(maxlen=_HISTORY_SIZE)
+_history_lock = threading.Lock()
+
+def _compute_trends():
+    """Compute min/max/avg trends from recent history."""
+    with _history_lock:
+        if not _metrics_history:
+            return None
+        samples = list(_metrics_history)
+
+    cpu_vals = [s['cpu_pct'] for s in samples]
+    mem_vals = [s['mem_pct'] for s in samples]
+    n = len(samples)
+    span_min = round(n * 0.5, 1)  # approximate minutes (30s interval)
+
+    return {
+        'sample_count': n,
+        'span_minutes': span_min,
+        'cpu': {
+            'min': round(min(cpu_vals), 1),
+            'max': round(max(cpu_vals), 1),
+            'avg': round(sum(cpu_vals) / n, 1),
+        },
+        'memory': {
+            'min': round(min(mem_vals), 1),
+            'max': round(max(mem_vals), 1),
+            'avg': round(sum(mem_vals) / n, 1),
+        },
+    }
+
+
 def get_system_metrics():
-    """Collect current system metrics"""
+    """Collect current system metrics with trend data."""
     cpu_percent = psutil.cpu_percent(interval=0.1)
     memory = psutil.virtual_memory()
     disk = psutil.disk_usage('/')
     uptime_seconds = time.time() - BOOT_TIME
-    
+
     # Format uptime
     days = int(uptime_seconds // 86400)
     hours = int((uptime_seconds % 86400) // 3600)
     minutes = int((uptime_seconds % 3600) // 60)
-    
-    return {
+
+    # Record sample for trend computation
+    with _history_lock:
+        _metrics_history.append({
+            'cpu_pct': cpu_percent,
+            'mem_pct': memory.percent,
+            'ts': time.time(),
+        })
+
+    result = {
         'cpu': {
             'percent': cpu_percent,
             'cores': psutil.cpu_count(logical=True),
@@ -50,6 +93,13 @@ def get_system_metrics():
         },
         'timestamp': datetime.now().isoformat()
     }
+
+    # Add trend data if history is available
+    trends = _compute_trends()
+    if trends:
+        result['trends'] = trends
+
+    return result
 
 @system_status_bp.route('/')
 def widget_view():

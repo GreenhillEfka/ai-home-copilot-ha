@@ -659,43 +659,83 @@ class MoodModule(CopilotModule):
     async def _call_core_api(
         self,
         hass: HomeAssistant,
-        method: str, 
-        path: str, 
-        data: Optional[Dict[str, Any]] = None
+        method: str,
+        path: str,
+        data: Optional[Dict[str, Any]] = None,
     ) -> Optional[APIResponse]:
-        """Call the Core Add-on API.
-        
+        """Call the Core Add-on API via HTTP.
+
+        Resolves the Core connection from the config entry and uses the
+        shared HA aiohttp session for connection pooling.
+
         Args:
             hass: Home Assistant instance.
             method: HTTP method (GET, POST, etc.).
             path: API endpoint path.
             data: Request body data.
-            
+
         Returns:
             API response dictionary or None on error.
         """
-        # Get core add-on URL from hass data or config
-        core_url = "http://localhost:8909"  # Default, should be configurable
-        
+        from homeassistant.helpers.aiohttp_client import async_get_clientsession
+        from ...connection_config import resolve_core_connection_from_mapping, merged_entry_config
+
+        # Resolve Core URL from config entry
         try:
-            # In production, this would make actual HTTP calls
-            # For now, simulate successful response
-            _LOGGER.debug("Would call Core API: %s %s with data: %s", method, path, data)
-            
-            # Simulate API response
-            return {
-                "ok": True,
-                "result": {
-                    "mood": {"mood": "relax", "confidence": 0.8},
-                    "skipped_reason": "Simulated response - Core API not connected"
-                }
-            }
-            
+            entry_data = hass.data.get(DOMAIN, {}).get(self._entry_id, {})
+            entry = entry_data.get("config_entry")
+            if entry:
+                host, port, token = resolve_core_connection_from_mapping(
+                    merged_entry_config(entry)
+                )
+            else:
+                host, port, token = "localhost", 8909, ""
+        except Exception:
+            host, port, token = "localhost", 8909, ""
+
+        base_url = f"http://{host}:{port}"
+        url = f"{base_url}{path}"
+
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        if token:
+            headers["X-Auth-Token"] = token
+
+        session = async_get_clientsession(hass)
+        timeout = aiohttp.ClientTimeout(total=30)
+
+        try:
+            async with session.request(
+                method,
+                url,
+                json=data,
+                headers=headers,
+                timeout=timeout,
+            ) as resp:
+                if resp.status >= 500:
+                    _LOGGER.error(
+                        "Core API server error: %s %s -> HTTP %d",
+                        method, path, resp.status,
+                    )
+                    return None
+                if resp.status >= 400:
+                    body = await resp.text()
+                    _LOGGER.warning(
+                        "Core API client error: %s %s -> HTTP %d: %s",
+                        method, path, resp.status, body[:200],
+                    )
+                    return None
+
+                result = await resp.json()
+                return result
+
+        except asyncio.TimeoutError:
+            _LOGGER.error("Core API timeout: %s %s", method, path)
+            return None
         except aiohttp.ClientError as e:
-            _LOGGER.error("HTTP error calling Core API: %s", e)
+            _LOGGER.error("HTTP error calling Core API: %s %s -> %s", method, path, e)
             return None
         except Exception as e:
-            _LOGGER.error("Error calling Core API: %s", e)
+            _LOGGER.error("Error calling Core API: %s %s -> %s", method, path, e)
             return None
 
 

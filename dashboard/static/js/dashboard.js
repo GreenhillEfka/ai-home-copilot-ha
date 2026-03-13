@@ -10,22 +10,23 @@
 class HabitusDashboard {
   constructor() {
     // 10 Zone Tabs (E2E-konform: data-zone + #grid-<zone> + #actions-<zone>)
+    // Zone-IDs synchron mit pilotsuite-styx-core Habituszonen
     this.zones = [
-      { id: 'wohn', name: 'Wohnbereich', icon: 'mdi-sofa' },
-      { id: 'bad', name: 'Badbereich', icon: 'mdi-shower' },
-      { id: 'koch', name: 'Kochbereich', icon: 'mdi-stove' },
-      { id: 'buero', name: 'Bürobereich', icon: 'mdi-desk' },
-      { id: 'gang', name: 'Gangbereich', icon: 'mdi-door-open' },
-      { id: 'schlaf', name: 'Schlafbereich', icon: 'mdi-bed' },
-      { id: 'mira', name: 'Zimmer Mira', icon: 'mdi-account-girl' },
-      { id: 'paul', name: 'Zimmer Paul', icon: 'mdi-account-boy' },
-      { id: 'terrasse', name: 'Terrassenbereich', icon: 'mdi-patio-grass' },
-      { id: 'aussen', name: 'Aussenbereich', icon: 'mdi-tree' }
+      { id: 'living', name: 'Wohnbereich', icon: 'mdi-sofa' },
+      { id: 'kitchen', name: 'Kochbereich', icon: 'mdi-stove' },
+      { id: 'bath', name: 'Badbereich', icon: 'mdi-shower' },
+      { id: 'office', name: 'Buerobereich', icon: 'mdi-desk' },
+      { id: 'hallway', name: 'Gangbereich', icon: 'mdi-door-open' },
+      { id: 'bedroom', name: 'Schlafbereich', icon: 'mdi-bed' },
+      { id: 'room_mira', name: 'Zimmer Mira', icon: 'mdi-account-girl' },
+      { id: 'room_paul', name: 'Zimmer Paul', icon: 'mdi-account-boy' },
+      { id: 'terrace', name: 'Terrassenbereich', icon: 'mdi-patio-grass' },
+      { id: 'outside', name: 'Aussenbereich', icon: 'mdi-tree' }
     ];
 
     this.socket = null;
     this.connected = false;
-    this.activeZone = this.zones[0]?.id || 'wohn';
+    this.activeZone = this.zones[0]?.id || 'living';
     this.zoneData = {};
     this.zoneMeta = {};
     this._globalStale = false;

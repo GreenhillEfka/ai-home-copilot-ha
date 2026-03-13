@@ -40,19 +40,22 @@ _NONCE_RE = re.compile(r"^[0-9a-f]{32}$")
 _SIGNING_NONCE_CACHE: dict[tuple[str, str], int] = {}
 _SIGNING_NONCE_CACHE_LOCK = asyncio.Lock()
 _SIGNING_NONCE_CACHE_MAX_ENTRIES = 10_000
-_SIGNING_NONCE_CACHE_CLEANUP_MAX_DELETES = 500
 
 # Canonical webhook event types (Core ↔ HA contract)
 EVENT_TYPE_STATUS = "status"
 EVENT_TYPE_MOOD = "mood"
 EVENT_TYPE_SUGGESTION = "suggestion"
 EVENT_TYPE_NEURON = "neuron"
+EVENT_TYPE_MODULE_DATA = "module_data"
+EVENT_TYPE_ZONE_UPDATE = "zone_update"
 
 _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_STATUS,
     EVENT_TYPE_MOOD,
     EVENT_TYPE_SUGGESTION,
     EVENT_TYPE_NEURON,
+    EVENT_TYPE_MODULE_DATA,
+    EVENT_TYPE_ZONE_UPDATE,
 }
 
 # Canonical aliases should continue to map directly; legacy aliases are only accepted in
@@ -62,6 +65,8 @@ _EVENT_TYPE_CANONICAL_TO_CANONICAL = {
     EVENT_TYPE_MOOD: EVENT_TYPE_MOOD,
     EVENT_TYPE_SUGGESTION: EVENT_TYPE_SUGGESTION,
     EVENT_TYPE_NEURON: EVENT_TYPE_NEURON,
+    EVENT_TYPE_MODULE_DATA: EVENT_TYPE_MODULE_DATA,
+    EVENT_TYPE_ZONE_UPDATE: EVENT_TYPE_ZONE_UPDATE,
 }
 
 _EVENT_TYPE_LEGACY_ALIASES = {
@@ -278,13 +283,13 @@ async def _nonce_seen_or_mark(*, scope: str, nonce: str, now_epoch: int, ttl_sec
     key = (scope, nonce)
 
     async with _SIGNING_NONCE_CACHE_LOCK:
-        deleted = 0
-        for cache_key, expiry in list(_SIGNING_NONCE_CACHE.items()):
-            if expiry <= now_epoch:
-                _SIGNING_NONCE_CACHE.pop(cache_key, None)
-                deleted += 1
-                if deleted >= _SIGNING_NONCE_CACHE_CLEANUP_MAX_DELETES:
-                    break
+        expired_keys = [
+            cache_key
+            for cache_key, expiry in _SIGNING_NONCE_CACHE.items()
+            if expiry <= now_epoch
+        ]
+        for cache_key in expired_keys:
+            del _SIGNING_NONCE_CACHE[cache_key]
 
         existing = _SIGNING_NONCE_CACHE.get(key)
         if existing is not None and existing > now_epoch:
@@ -672,6 +677,30 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 {"suggestion": data},
             )
             _LOGGER.debug("Webhook: suggestion push received")
+
+        elif event_type == EVENT_TYPE_MODULE_DATA:
+            # Core pushes smart home module data (licht, helligkeit, heiz, bewegung, praesenz)
+            modules = data.get("modules", {})
+            if modules:
+                updates = {"modules": modules}
+                merged = _merge_coordinator_data(coordinator, updates)
+                coordinator.async_set_updated_data(merged)
+
+                # Feed into HA module stubs via coordinator method
+                if hasattr(coordinator, "_update_smart_home_modules"):
+                    hass.async_create_task(
+                        coordinator._update_smart_home_modules(data)
+                    )
+            _LOGGER.debug("Webhook: module_data push received (%s)", list(modules.keys()))
+
+        elif event_type == EVENT_TYPE_ZONE_UPDATE:
+            # Core pushes per-zone data update (from zone automation evaluation)
+            zone_id = data.get("zone_id", "")
+            if zone_id:
+                updates = {"zone_updates": {zone_id: data}}
+                merged = _merge_coordinator_data(coordinator, updates)
+                coordinator.async_set_updated_data(merged)
+            _LOGGER.debug("Webhook: zone_update push received (zone=%s)", zone_id)
 
         else:
             # Legacy status push (online/version)

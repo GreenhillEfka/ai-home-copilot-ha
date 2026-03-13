@@ -37,18 +37,59 @@ class CopilotRuntime:
         return runtime
 
     async def async_setup_entry(self, entry: ConfigEntry, modules: Iterable[str]) -> None:
+        """Set up modules for a config entry with rollback on critical failure.
+
+        Modules are set up in order.  If a module fails, previously
+        set-up modules are rolled back (unloaded) so the entry is not
+        left in a partially-initialised state.
+        """
         ctx = ModuleContext(hass=self.hass, entry=entry)
         entry_modules: dict[str, CopilotModule] = {}
+        failed: list[str] = []
+
         for name in modules:
             try:
                 mod = self.registry.create(name)
                 await mod.async_setup_entry(ctx)
                 entry_modules[name] = mod
             except Exception:
-                _LOGGER.exception("Module %s failed to set up — skipping", name)
-        self._live_modules[entry.entry_id] = entry_modules
+                _LOGGER.exception("Module %s failed to set up", name)
+                failed.append(name)
+
+        if failed:
+            _LOGGER.warning(
+                "Modules failed to set up: %s — rolling back %d loaded modules",
+                ", ".join(failed),
+                len(entry_modules),
+            )
+            # Roll back already-loaded modules so we don't leave partial state
+            for rollback_name in reversed(list(entry_modules)):
+                try:
+                    await entry_modules[rollback_name].async_unload_entry(ctx)
+                except Exception:
+                    _LOGGER.exception("Rollback of module %s also failed", rollback_name)
+
+            # Retry only the modules that succeeded (graceful degradation)
+            entry_modules_retry: dict[str, CopilotModule] = {}
+            for name in modules:
+                if name in failed:
+                    _LOGGER.info("Skipping failed module %s", name)
+                    continue
+                try:
+                    mod = self.registry.create(name)
+                    await mod.async_setup_entry(ctx)
+                    entry_modules_retry[name] = mod
+                except Exception:
+                    _LOGGER.exception("Module %s failed on retry — skipping", name)
+            self._live_modules[entry.entry_id] = entry_modules_retry
+        else:
+            self._live_modules[entry.entry_id] = entry_modules
 
     async def async_unload_entry(self, entry: ConfigEntry, modules: Iterable[str]) -> bool:
+        """Unload all modules for a config entry.
+
+        Always attempts to unload every module even if earlier ones fail.
+        """
         ctx = ModuleContext(hass=self.hass, entry=entry)
         entry_modules = self._live_modules.pop(entry.entry_id, {})
         unload_ok = True

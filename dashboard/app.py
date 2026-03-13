@@ -111,11 +111,26 @@ def get_status():
 
 @app.route('/api/overview')
 def get_overview():
-    """Get overview data"""
+    """Get overview data with real-time metrics."""
+    from widgets.system_status import get_system_metrics
+    sys_metrics = get_system_metrics()
+
+    uptime = time.time() - performance_metrics['start_time']
+    avg_latency = (performance_metrics['total_latency_ms'] /
+                   max(1, performance_metrics['messages_sent']))
+
     return jsonify({
         'system_status': 'online',
-        'active_services': 3,
-        'pending_tasks': 0
+        'active_services': 5,
+        'pending_tasks': 0,
+        'dashboard_uptime_seconds': round(uptime, 1),
+        'clients_connected': performance_metrics['clients_connected'],
+        'messages_sent': performance_metrics['messages_sent'],
+        'avg_latency_ms': round(avg_latency, 2),
+        'cpu_percent': sys_metrics['cpu']['percent'],
+        'memory_percent': sys_metrics['memory']['percent'],
+        'disk_percent': sys_metrics['disk']['percent'],
+        'last_update': performance_metrics.get('last_update'),
     })
 
 @app.route('/api/v1/performance')
@@ -189,11 +204,13 @@ def handle_performance_ping(data):
 @socketio.on('request_zone_data')
 def handle_request_zone_data(data):
     """Handle zone data requests from dashboard client"""
+    if not isinstance(data, dict):
+        return
     zones = data.get('zones', [])
     print(f'[Dashboard] Zone data requested for: {zones}')
     
     # Return current zone data from store
-    from api.v1.dashboard import zone_data_store, DEFAULT_ZONES_CONFIG
+    from api.v1.dashboard import zone_data_store, FALLBACK_ZONES_CONFIG
     
     for zone_id in zones:
         zone_data = zone_data_store.get(zone_id, {})

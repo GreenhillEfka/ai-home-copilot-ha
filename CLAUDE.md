@@ -179,6 +179,10 @@ Entities erben von `CopilotStyxEntity` (in `entity.py`) und definieren:
 | `custom_components/copilot_ha/conversation.py` | HA Conversation Agent |
 | `custom_components/copilot_ha/services_setup.py` | HA Service-Registration |
 | `custom_components/copilot_ha/manifest.json` | HACS/HA Manifest |
-| `custom_components/copilot_ha/dashboard/pilotsuite_dashboard_v13.yaml` | Dashboard YAML |
+| `custom_components/copilot_ha/dashboard/pilotsuite_dashboard_v14.yaml` | Dashboard YAML (3-Tab) |
+| `custom_components/copilot_ha/dashboard/card_generator.py` | Dashboard YAML Generator (6-Tab) |
+| `custom_components/copilot_ha/sensors/zone_presence_trigger.py` | Zone Praesenz Trigger Sensoren |
+| `custom_components/copilot_ha/config_options_flow.py` | Options Flow (inkl. Automation-Modi) |
+| `custom_components/copilot_ha/coordinator.py` | Coordinator mit Sonos/Zone/Presence APIs |
 | `hacs.json` | HACS Repository Config |
 | `VERSION` | Aktuelle Version (muss mit Core synchron sein) |

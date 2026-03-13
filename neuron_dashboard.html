@@ -125,9 +125,10 @@
       border: 2px solid rgba(255, 255, 255, 0.2);
     }
 
-    .legend-color.inactive { background: #666666; }
+    .legend-color.inactive { background: #444c55; }
     .legend-color.active { background: var(--accent-green); }
     .legend-color.firing { background: var(--accent-orange); }
+    .legend-color.inhibited { background: #7B1FA2; }
 
     .legend-label {
       font-size: 0.875rem;
@@ -263,7 +264,7 @@
   <header class="dashboard-header">
     <div class="dashboard-title">
       <h1>🧠 Neuron Dashboard</h1>
-      <p>PilotSuite Neural Network Visualization</p>
+      <p>PilotSuite Living Neural Network v2.0</p>
     </div>
     <div class="status-indicator">
       <div class="status-dot"></div>
@@ -292,17 +293,21 @@
           <div class="legend-color firing"></div>
           <span class="legend-label">Feuernd</span>
         </div>
+        <div class="legend-item">
+          <div class="legend-color inhibited"></div>
+          <span class="legend-label">Inhibiert</span>
+        </div>
       </div>
 
       <div class="stats-panel">
         <h3>Netzwerk Statistik</h3>
         <div class="stat-item">
           <span class="stat-label">Neuronen</span>
-          <span class="stat-value" id="neuronCount">14</span>
+          <span class="stat-value" id="neuronCount">25</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">Verbindungen</span>
-          <span class="stat-value" id="connectionCount">24</span>
+          <span class="stat-value" id="connectionCount">51</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">Aktiv</span>
@@ -312,6 +317,14 @@
           <span class="stat-label">Feuernd</span>
           <span class="stat-value" id="firingCount">0</span>
         </div>
+        <div class="stat-item">
+          <span class="stat-label">Inhibiert</span>
+          <span class="stat-value" id="inhibitedCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Cross-Deps</span>
+          <span class="stat-value" id="crossDepCount">0</span>
+        </div>
       </div>
 
       <div class="controls">
@@ -319,14 +332,17 @@
         <button class="btn btn-primary" id="toggleDemoBtn">Demo Pause/Start</button>
         <button class="btn" id="resetLayoutBtn">Layout Reset</button>
         <button class="btn" id="fireRandomBtn">Random Fire</button>
+        <button class="btn btn-primary" id="fireCascadeBtn" style="background:#FF9800;border-color:#FF9800">Cascade Fire</button>
       </div>
 
       <div class="connection-info">
-        <p><strong>Legende:</strong><br>
-        🟦 Input (Blau) → 🟣 Hidden (Lila) → 🟠 Output (Orange)<br><br>
+        <p><strong>5-Layer Architektur:</strong><br>
+        🟦 Input → 🔷 Context → 🔴 State → 🟣 Hidden → 🟠 Output<br><br>
         <strong>Verbindungen:</strong><br>
-        Grün: positiv (+) | Rot: negativ (-)<br>
-        Dicke = Stärke</p>
+        Gruen: positiv | Rot: inhibitorisch | Cyan: Cross-Dep<br>
+        Dicke = Staerke | Partikel = Signalfluss<br><br>
+        <strong>Interaktion:</strong><br>
+        Klick = Neuron feuern | Hover = Cross-Dependencies</p>
       </div>
     </aside>
   </main>

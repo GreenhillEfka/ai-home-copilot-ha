@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.components import persistent_notification
-
-from .entity import CopilotBaseEntity
+from .button_base import CopilotButtonBase
 
 
-class CopilotEnableDebug30mButton(CopilotBaseEntity, ButtonEntity):
+class CopilotEnableDebug30mButton(CopilotButtonBase):
     _attr_entity_registry_enabled_default = False
     _attr_entity_category = None
-    _attr_has_entity_name = False
     _attr_name = "PilotSuite enable debug for 30m"
     _attr_unique_id = "copilot_ha_enable_debug_30m"
     _attr_icon = "mdi:bug"
@@ -19,24 +15,20 @@ class CopilotEnableDebug30mButton(CopilotBaseEntity, ButtonEntity):
         self._entry_id = entry_id
 
     async def async_press(self) -> None:
-        await self.hass.services.async_call(
-            "copilot_ha",
+        await self._call_service(
             "enable_debug_for",
             {"entry_id": self._entry_id, "minutes": 30},
-            blocking=False,
         )
-        persistent_notification.async_create(
-            self.hass,
+        self._notify(
             "Debug enabled for 30 minutes (auto-disable).",
             title="PilotSuite debug",
             notification_id="copilot_ha_debug",
         )
 
 
-class CopilotDisableDebugButton(CopilotBaseEntity, ButtonEntity):
+class CopilotDisableDebugButton(CopilotButtonBase):
     _attr_entity_registry_enabled_default = False
     _attr_entity_category = None
-    _attr_has_entity_name = False
     _attr_name = "PilotSuite disable debug"
     _attr_unique_id = "copilot_ha_disable_debug"
     _attr_icon = "mdi:bug-off"
@@ -46,24 +38,20 @@ class CopilotDisableDebugButton(CopilotBaseEntity, ButtonEntity):
         self._entry_id = entry_id
 
     async def async_press(self) -> None:
-        await self.hass.services.async_call(
-            "copilot_ha",
+        await self._call_service(
             "disable_debug",
             {"entry_id": self._entry_id},
-            blocking=False,
         )
-        persistent_notification.async_create(
-            self.hass,
+        self._notify(
             "Debug disabled.",
             title="PilotSuite debug",
             notification_id="copilot_ha_debug",
         )
 
 
-class CopilotClearErrorDigestButton(CopilotBaseEntity, ButtonEntity):
+class CopilotClearErrorDigestButton(CopilotButtonBase):
     _attr_entity_registry_enabled_default = False
     _attr_entity_category = None
-    _attr_has_entity_name = False
     _attr_name = "PilotSuite clear error digest"
     _attr_unique_id = "copilot_ha_clear_error_digest"
     _attr_icon = "mdi:broom"
@@ -73,24 +61,20 @@ class CopilotClearErrorDigestButton(CopilotBaseEntity, ButtonEntity):
         self._entry_id = entry_id
 
     async def async_press(self) -> None:
-        await self.hass.services.async_call(
-            "copilot_ha",
+        await self._call_service(
             "clear_error_digest",
             {"entry_id": self._entry_id},
-            blocking=False,
         )
-        persistent_notification.async_create(
-            self.hass,
+        self._notify(
             "Error digest cleared.",
             title="PilotSuite dev surface",
             notification_id="copilot_ha_dev_surface",
         )
 
 
-class CopilotClearAllLogsButton(CopilotBaseEntity, ButtonEntity):
+class CopilotClearAllLogsButton(CopilotButtonBase):
     _attr_entity_registry_enabled_default = False
     _attr_entity_category = None
-    _attr_has_entity_name = False
     _attr_name = "PilotSuite clear all logs"
     _attr_unique_id = "copilot_ha_clear_all_logs"
     _attr_icon = "mdi:trash-can-outline"
@@ -100,14 +84,11 @@ class CopilotClearAllLogsButton(CopilotBaseEntity, ButtonEntity):
         self._entry_id = entry_id
 
     async def async_press(self) -> None:
-        await self.hass.services.async_call(
-            "copilot_ha",
+        await self._call_service(
             "clear_all_logs",
             {"entry_id": self._entry_id},
-            blocking=False,
         )
-        persistent_notification.async_create(
-            self.hass,
+        self._notify(
             "All logs cleared (devlog + error digest).",
             title="PilotSuite dev surface",
             notification_id="copilot_ha_dev_surface",

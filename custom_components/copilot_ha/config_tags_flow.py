@@ -188,4 +188,4 @@ def _reload_module(flow) -> None:
         if mod and hasattr(mod, "reload_from_storage"):
             flow.hass.async_create_task(mod.reload_from_storage())
     except Exception:
-        pass
+        _LOGGER.debug("Failed to reload entity_tags_module", exc_info=True)

@@ -1,8 +1,10 @@
 /**
- * PilotSuite Mood Card v2.0.0
+ * PilotSuite Mood Card v2.1.0
  *
  * Lovelace custom card showing circular gauges for Comfort, Joy, and
  * Frugality per zone, reading from sensor.pilotsuite_mood_* entities.
+ *
+ * Requires: styx-card-base.js (StyxCardBase, registerStyxCard)
  */
 
 const MOOD_GAUGE_DEFS = [
@@ -11,15 +13,17 @@ const MOOD_GAUGE_DEFS = [
   { key: "frugality", label: "Frugality", start: "#9c27b0", end: "#00bcd4" },
 ];
 
-class StyxMoodCard extends HTMLElement {
+// Fallback: use StyxCardBase if loaded, otherwise plain HTMLElement
+const _Base = window.StyxCardBase || HTMLElement;
+
+class StyxMoodCard extends _Base {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
-    this._config = {};
-  }
-
-  static getConfigElement() {
-    return document.createElement("hui-generic-entity-row");
+    // StyxCardBase already creates shadow DOM; only create if missing
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: "open" });
+      this._config = {};
+    }
   }
 
   static getStubConfig() {
@@ -31,11 +35,6 @@ class StyxMoodCard extends HTMLElement {
       throw new Error("Please define an entity");
     }
     this._config = config;
-  }
-
-  set hass(hass) {
-    this._hass = hass;
-    this._render();
   }
 
   getCardSize() {
@@ -50,40 +49,6 @@ class StyxMoodCard extends HTMLElement {
     return isNaN(val) ? 0 : Math.max(0, Math.min(100, val));
   }
 
-  _buildGaugeSvg(value, startColor, endColor, label) {
-    const size = 100;
-    const cx = size / 2;
-    const cy = size / 2;
-    const r = 38;
-    const circumference = 2 * Math.PI * r;
-    const pct = Math.max(0, Math.min(100, value));
-    const offset = circumference - (circumference * pct) / 100;
-    const gradId = `g_${label.toLowerCase()}`;
-
-    return `
-      <svg viewBox="0 0 ${size} ${size}" class="gauge">
-        <defs>
-          <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="${startColor}"/>
-            <stop offset="100%" stop-color="${endColor}"/>
-          </linearGradient>
-        </defs>
-        <circle cx="${cx}" cy="${cy}" r="${r}"
-          fill="none" stroke="#1e2a36" stroke-width="7"/>
-        <circle cx="${cx}" cy="${cy}" r="${r}"
-          fill="none" stroke="url(#${gradId})" stroke-width="7"
-          stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
-          stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"
-          style="transition: stroke-dashoffset 0.6s ease;"/>
-        <text x="${cx}" y="${cy - 4}" text-anchor="middle"
-          fill="var(--primary-text-color, #e6eef6)" font-size="16" font-weight="700"
-          font-family="system-ui,sans-serif">${Math.round(pct)}%</text>
-        <text x="${cx}" y="${cy + 12}" text-anchor="middle"
-          fill="var(--secondary-text-color, #9fb1c3)" font-size="10"
-          font-family="system-ui,sans-serif">${label}</text>
-      </svg>`;
-  }
-
   _render() {
     const baseEntity = this._config.entity || "sensor.pilotsuite_mood_comfort";
     const prefix = baseEntity.replace(/_comfort$/, "").replace(/_joy$/, "").replace(/_frugality$/, "");
@@ -91,7 +56,11 @@ class StyxMoodCard extends HTMLElement {
     const gauges = MOOD_GAUGE_DEFS.map((def) => {
       const entityId = `${prefix}_${def.key}`;
       const value = this._gaugeValue(entityId);
-      return this._buildGaugeSvg(value, def.start, def.end, def.label);
+      // Use inherited _buildGaugeSvg if available (from StyxCardBase), else inline
+      if (typeof this._buildGaugeSvg === 'function') {
+        return this._buildGaugeSvg(value, def.start, def.end, def.label);
+      }
+      return _buildGaugeSvgFallback(value, def.start, def.end, def.label);
     }).join("");
 
     const zone = this._config.zone || "";
@@ -120,12 +89,48 @@ class StyxMoodCard extends HTMLElement {
   }
 }
 
-customElements.define("styx-mood-card", StyxMoodCard);
+/** Inline fallback when styx-card-base.js is not loaded. */
+function _buildGaugeSvgFallback(value, startColor, endColor, label) {
+  const size = 100, cx = 50, cy = 50, r = 38;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, value));
+  const offset = circ - (circ * pct) / 100;
+  const gid = `g_${label.toLowerCase()}`;
+  return `
+    <svg viewBox="0 0 ${size} ${size}" class="gauge">
+      <defs>
+        <linearGradient id="${gid}" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="${startColor}"/>
+          <stop offset="100%" stop-color="${endColor}"/>
+        </linearGradient>
+      </defs>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e2a36" stroke-width="7"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="url(#${gid})" stroke-width="7"
+        stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+        stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"
+        style="transition: stroke-dashoffset 0.6s ease;"/>
+      <text x="${cx}" y="${cy - 4}" text-anchor="middle"
+        fill="var(--primary-text-color, #e6eef6)" font-size="16" font-weight="700"
+        font-family="system-ui,sans-serif">${Math.round(pct)}%</text>
+      <text x="${cx}" y="${cy + 12}" text-anchor="middle"
+        fill="var(--secondary-text-color, #9fb1c3)" font-size="10"
+        font-family="system-ui,sans-serif">${label}</text>
+    </svg>`;
+}
 
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "styx-mood-card",
-  name: "PilotSuite Mood Gauges",
-  description: "Circular gauges for Comfort, Joy, and Frugality mood dimensions.",
-  preview: true,
-});
+// Registration: use registerStyxCard if available, else manual
+if (typeof registerStyxCard === 'function') {
+  registerStyxCard("styx-mood-card", StyxMoodCard, {
+    name: "PilotSuite Mood Gauges",
+    description: "Circular gauges for Comfort, Joy, and Frugality mood dimensions.",
+  });
+} else {
+  customElements.define("styx-mood-card", StyxMoodCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: "styx-mood-card",
+    name: "PilotSuite Mood Gauges",
+    description: "Circular gauges for Comfort, Joy, and Frugality mood dimensions.",
+    preview: true,
+  });
+}

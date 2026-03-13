@@ -5,7 +5,7 @@ Shows all neuron states, mood, and suggestions in a visual dashboard.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -33,7 +33,7 @@ class NeuronDashboardSensor(CoordinatorEntity, SensorEntity):
         self._attr_extra_state_attributes = {}
     
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return all neuron data."""
         if not self.coordinator.data:
             return {}
@@ -77,36 +77,40 @@ class MoodHistorySensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: CopilotDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_native_value = "ok"
-        self._history: List[Dict[str, Any]] = []
+        self._history: list[dict[str, Any]] = []
         self._max_history = 20
-    
-    @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
-        """Return mood history."""
+        self._current_mood: str = "unknown"
+        self._current_confidence: float = 0.0
+
+    def _handle_coordinator_update(self) -> None:
+        """Append mood entry on coordinator update (not in property getter)."""
         if not self.coordinator.data:
-            return {"history": []}
-        
+            self.async_write_ha_state()
+            return
+
+        from datetime import datetime, timezone
+
         mood = self.coordinator.data.get("dominant_mood", "unknown")
         confidence = self.coordinator.data.get("mood_confidence", 0.0)
-        
-        # Add to history
-        from datetime import datetime, timezone
-        entry = {
+        self._current_mood = mood
+        self._current_confidence = confidence
+
+        self._history.append({
             "mood": mood,
             "confidence": confidence,
             "time": datetime.now(timezone.utc).isoformat(),
-        }
-        self._history.append(entry)
+        })
         self._history = self._history[-self._max_history:]
-        
+        self.async_write_ha_state()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return mood history."""
         return {
             "history": self._history,
-            "current_mood": mood,
-            "current_confidence": confidence,
+            "current_mood": self._current_mood,
+            "current_confidence": self._current_confidence,
         }
-    
-    def _handle_coordinator_update(self) -> None:
-        self.async_write_ha_state()
 
 
 class SuggestionSensor(CoordinatorEntity, SensorEntity):
@@ -130,14 +134,15 @@ class SuggestionSensor(CoordinatorEntity, SensorEntity):
         suggestions = self.coordinator.data.get("suggestions", [])
         if not suggestions:
             return "none"
-        
+
         # Return top suggestion type
-        if suggestions:
-            return suggestions[0].get("action_type", "none")
+        first = suggestions[0]
+        if isinstance(first, dict):
+            return first.get("action_type", "none")
         return "none"
     
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         """Return all suggestions."""
         if not self.coordinator.data:
             return {"suggestions": []}

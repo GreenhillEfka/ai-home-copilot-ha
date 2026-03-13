@@ -1,28 +1,9 @@
-"""Pytest configuration for PilotSuite Styx tests."""
+"""Pytest configuration for PilotSuite Styx tests.
 
-import sys
-import os
-from pathlib import Path
+Note: Path setup and HA stubs are handled by the root conftest.py.
+Do NOT add custom_components/copilot_ha directly to sys.path here —
+it causes `import core` to find copilot_ha/core/ instead of the
+project root core/ package.
+"""
 
-# Add project root to Python path
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT / "custom_components" / "copilot_ha"))
-
-# Configure test fixtures
 pytest_plugins = []
-
-# Pytest configuration
-def pytest_configure(config):
-    """Configure pytest settings."""
-    config.addinivalue_line(
-        "markers", "e2e: end-to-end integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "unit: unit tests"
-    )
-    config.addinivalue_line(
-        "markers", "integration: integration tests"
-    )
-    config.addinivalue_line(
-        "markers", "visual: visual regression tests"
-    )

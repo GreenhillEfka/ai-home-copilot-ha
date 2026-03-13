@@ -7,12 +7,14 @@ from flask_socketio import emit
 from datetime import datetime
 import requests
 import json
+import threading
 
 # Create blueprint
 chat_widget_bp = Blueprint('chat_widget', __name__, url_prefix='/widget/chat')
 
 # Message history (in-memory, would use database in production)
 message_history = []
+_history_lock = threading.Lock()
 MAX_HISTORY = 50
 
 def get_rag_api_url(app_config):
@@ -34,29 +36,32 @@ def send_to_rag_api(message, api_url):
         return {'error': f'Connection failed: {str(e)}'}
 
 def add_message(role, content, metadata=None):
-    """Add message to history"""
-    message = {
-        'id': len(message_history) + 1,
-        'role': role,  # 'user' or 'assistant'
-        'content': content,
-        'timestamp': datetime.now().isoformat(),
-        'metadata': metadata or {}
-    }
-    message_history.append(message)
-    
-    # Trim history if too long
-    if len(message_history) > MAX_HISTORY:
-        message_history.pop(0)
-    
-    return message
+    """Add message to history (thread-safe)."""
+    with _history_lock:
+        message = {
+            'id': len(message_history) + 1,
+            'role': role,  # 'user' or 'assistant'
+            'content': content,
+            'timestamp': datetime.now().isoformat(),
+            'metadata': metadata or {}
+        }
+        message_history.append(message)
+
+        # Trim history if too long
+        if len(message_history) > MAX_HISTORY:
+            message_history.pop(0)
+
+        return message
 
 def get_recent_messages(limit=20):
-    """Get recent message history"""
-    return message_history[-limit:]
+    """Get recent message history (thread-safe)."""
+    with _history_lock:
+        return list(message_history[-limit:])
 
 def clear_history():
-    """Clear message history"""
-    message_history.clear()
+    """Clear message history (thread-safe)."""
+    with _history_lock:
+        message_history.clear()
     return {'status': 'cleared'}
 
 @chat_widget_bp.route('/')

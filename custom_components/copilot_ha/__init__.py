@@ -68,6 +68,11 @@ _MODULE_IMPORTS = {
     "scene_module": (".core.modules.scene_module", "SceneModule"),
     "homekit_bridge": (".core.modules.homekit_bridge", "HomeKitBridgeModule"),
     "calendar_module": (".core.modules.calendar_module", "CalendarModule"),
+    "licht_module": (".core.modules.licht_module", "LichtModule"),
+    "helligkeit_module": (".core.modules.helligkeit_module", "HelligkeitModule"),
+    "heiz_module": (".core.modules.heiz_module", "HeizModule"),
+    "bewegung_module": (".core.modules.bewegung_module", "BewegungModule"),
+    "praesenz_module": (".core.modules.praesenz_module", "PraesenzModule"),
 }
 
 _MODULES = [
@@ -102,6 +107,11 @@ _MODULES = [
     "scene_module",
     "homekit_bridge",
     "calendar_module",
+    "licht_module",
+    "helligkeit_module",
+    "heiz_module",
+    "bewegung_module",
+    "praesenz_module",
 ]
 
 _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
@@ -432,6 +442,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to set up ZoneDetector")
 
+    # Register Core → HA webhook receiver for real-time push events (mood, neuron, suggestion)
+    try:
+        from .webhook import async_register_webhook
+        entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+        coord = entry_store.get("coordinator") if isinstance(entry_store, dict) else None
+        if coord:
+            webhook_id = await async_register_webhook(hass, entry, coord)
+            if isinstance(entry_store, dict):
+                entry_store["webhook_id"] = webhook_id
+            _LOGGER.info("PilotSuite webhook receiver registered (id=%s)", webhook_id)
+        else:
+            _LOGGER.warning("Skipping webhook registration: coordinator not available")
+    except Exception:
+        _LOGGER.exception("Failed to register PilotSuite webhook receiver")
+
     # Register PilotSuite conversation agent (v3.10.0)
     try:
         from .conversation import async_setup_conversation
@@ -570,6 +595,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     zone_detector = entry_data.get("zone_detector")
     if zone_detector:
         await zone_detector.async_unload()
+
+    # Unregister webhook receiver
+    webhook_id = entry_data.get("webhook_id")
+    if webhook_id:
+        try:
+            from .webhook import async_unregister_webhook
+            await async_unregister_webhook(hass, webhook_id)
+        except Exception:
+            _LOGGER.exception("Failed to unregister webhook")
 
     # Unregister conversation agent (v3.10.0)
     try:

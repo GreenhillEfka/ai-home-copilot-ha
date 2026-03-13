@@ -150,8 +150,8 @@ test.describe('Partial-Failure Badges (isolated styx-zone-card)', () => {
               state: 'ok',
               attributes: {
                 nodes: [
-                  { zone: 'wohn', state: 'on', score: null },
-                  { zone: 'wohn', state: 'off', score: undefined },
+                  { zone: 'living', state: 'on', score: null },
+                  { zone: 'living', state: 'off', score: undefined },
                 ]
               }
             }

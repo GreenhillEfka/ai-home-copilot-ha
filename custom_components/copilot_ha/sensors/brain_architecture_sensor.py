@@ -9,7 +9,6 @@ import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from ..entity import CopilotBaseEntity
 
@@ -27,21 +26,8 @@ class BrainArchitectureSensor(CopilotBaseEntity, SensorEntity):
         super().__init__(coordinator)
         self._data: dict[str, Any] = {}
 
-    async def _fetch(self) -> dict | None:
-        import aiohttp
-        try:
-            url = f"{self._core_base_url()}/api/v1/hub/brain"
-            headers = self._core_headers()
-            session = async_get_clientsession(self.hass)
-            async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-        except Exception:
-            logger.debug("Failed to fetch brain architecture data")
-        return None
-
     async def async_update(self) -> None:
-        data = await self._fetch()
+        data = await self._fetch("/api/v1/hub/brain")
         if data and data.get("ok"):
             self._data = data
 
@@ -88,14 +74,15 @@ class BrainArchitectureSensor(CopilotBaseEntity, SensorEntity):
                     "health": r.get("health"),
                 }
                 for r in regions
+                if isinstance(r, dict)
             ]
 
         synapses = self._data.get("synapses", [])
         if synapses:
             attrs["synapse_summary"] = {
-                "active": sum(1 for s in synapses if s.get("state") == "active"),
-                "dormant": sum(1 for s in synapses if s.get("state") == "dormant"),
-                "total_fires": sum(s.get("fire_count", 0) for s in synapses),
+                "active": sum(1 for s in synapses if isinstance(s, dict) and s.get("state") == "active"),
+                "dormant": sum(1 for s in synapses if isinstance(s, dict) and s.get("state") == "dormant"),
+                "total_fires": sum(s.get("fire_count", 0) for s in synapses if isinstance(s, dict)),
             }
 
         graph = self._data.get("graph", {})

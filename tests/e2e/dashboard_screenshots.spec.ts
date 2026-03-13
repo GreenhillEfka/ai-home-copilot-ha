@@ -44,8 +44,8 @@ test.describe('Tab Navigation', () => {
     await expect(tabs).toHaveCount(10);
 
     const expectedZones = [
-      'wohn', 'bad', 'koch', 'buero', 'gang',
-      'schlaf', 'mira', 'paul', 'terrasse', 'aussen'
+      'living', 'bath', 'kitchen', 'office', 'hallway',
+      'bedroom', 'room_mira', 'room_paul', 'terrace', 'outside'
     ];
 
     for (let i = 0; i < 10; i++) {
@@ -59,20 +59,20 @@ test.describe('Tab Navigation', () => {
   test('should switch between tabs', async ({ dashboardPage }) => {
     // Start with first tab
     const activeTab = await dashboardPage.getActiveTab();
-    expect(activeTab).toBe('wohn');
+    expect(activeTab).toBe('living');
 
     // Switch to different tabs
-    await dashboardPage.switchToZone('koch');
+    await dashboardPage.switchToZone('kitchen');
     let newActiveTab = await dashboardPage.getActiveTab();
-    expect(newActiveTab).toBe('koch');
+    expect(newActiveTab).toBe('kitchen');
 
-    await dashboardPage.switchToZone('schlaf');
+    await dashboardPage.switchToZone('bedroom');
     newActiveTab = await dashboardPage.getActiveTab();
-    expect(newActiveTab).toBe('schlaf');
+    expect(newActiveTab).toBe('bedroom');
   });
 
   test('should take screenshot of each tab', async ({ dashboardPage, page }) => {
-    const zones = ['wohn', 'bad', 'koch', 'buero', 'gang', 'schlaf', 'mira', 'paul', 'terrasse', 'aussen'];
+    const zones = ['living', 'bath', 'kitchen', 'office', 'hallway', 'bedroom', 'room_mira', 'room_paul', 'terrace', 'outside'];
     
     for (const zone of zones) {
       await dashboardPage.switchToZone(zone);
@@ -106,7 +106,7 @@ test.describe('Tab Navigation', () => {
  */
 test.describe('Zone Cards', () => {
   test('should load zone cards for each tab', async ({ dashboardPage, page }) => {
-    const zones = ['wohn', 'bad', 'koch', 'buero', 'gang'];
+    const zones = ['living', 'bath', 'kitchen', 'office', 'hallway'];
     
     for (const zone of zones) {
       await dashboardPage.switchToZone(zone);
@@ -127,7 +127,7 @@ test.describe('Zone Cards', () => {
   });
 
   test('should display zone header with correct icon', async ({ dashboardPage, page }) => {
-    await dashboardPage.switchToZone('wohn');
+    await dashboardPage.switchToZone('living');
     
     const header = page.locator('.tab-pane-header h2');
     await expect(header).toBeVisible();
@@ -144,10 +144,10 @@ test.describe('Zone Cards', () => {
  */
 test.describe('Widgets', () => {
   test('should display widgets in zone grid', async ({ dashboardPage, page }) => {
-    await dashboardPage.switchToZone('wohn');
-    await dashboardPage.waitForZoneCards('wohn');
+    await dashboardPage.switchToZone('living');
+    await dashboardPage.waitForZoneCards('living');
     
-    const zoneGrid = page.locator('#grid-wohn');
+    const zoneGrid = page.locator('#grid-living');
     
     // Wait for widgets to load (check for widget classes)
     const widgets = zoneGrid.locator('.widget, .card, .zone-item');
@@ -160,9 +160,9 @@ test.describe('Widgets', () => {
   });
 
   test('should show quick action buttons', async ({ dashboardPage, page }) => {
-    await dashboardPage.switchToZone('koch');
+    await dashboardPage.switchToZone('kitchen');
     
-    const actionsContainer = page.locator('#actions-koch');
+    const actionsContainer = page.locator('#actions-kitchen');
     await expect(actionsContainer).toBeVisible();
     
     const refreshBtn = actionsContainer.locator('button').first();
@@ -215,7 +215,7 @@ test.describe('Theme Toggle', () => {
   });
 
   test('should take screenshots in both themes', async ({ dashboardPage, page }) => {
-    const zones = ['wohn', 'schlaf'];
+    const zones = ['living', 'bedroom'];
     
     for (const zone of zones) {
       await dashboardPage.switchToZone(zone);

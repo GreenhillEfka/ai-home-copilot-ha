@@ -32,6 +32,8 @@ class UserTogetherData:
     users_home: int
     together_count: int  # number of users in groups of 2+
     most_common_zone: str | None = None
+    together_since: float | None = None  # timestamp when current togetherness started
+    total_together_minutes_today: float = 0.0  # accumulated minutes together today
 
 
 def create_user_together_card(
@@ -113,10 +115,12 @@ def _create_together_groups_card(together_data: UserTogetherData) -> dict[str, A
 
 
 def _create_together_time_card(together_data: UserTogetherData) -> dict[str, Any]:
-    """Create together time card."""
+    """Create together time card with real duration tracking."""
+    import time as _time
+
     time_items = []
-    
-    # Total time together (placeholder - would need tracking logic)
+
+    # Persons at home
     time_items.append({
         "type": "custom:hui-stat-card",
         "name": "Zeit zu Hause",
@@ -124,8 +128,38 @@ def _create_together_time_card(together_data: UserTogetherData) -> dict[str, Any
         "unit": "Personen",
         "icon": "mdi:home-clock",
     })
-    
-    # Together stat
+
+    # Current together duration (live, based on together_since timestamp)
+    if together_data.together_count >= 2 and together_data.together_since:
+        elapsed_minutes = (_time.time() - together_data.together_since) / 60.0
+        if elapsed_minutes >= 60:
+            duration_text = f"{elapsed_minutes / 60:.1f} h"
+        else:
+            duration_text = f"{int(elapsed_minutes)} min"
+        time_items.append({
+            "type": "custom:hui-stat-card",
+            "name": "Gemeinsam seit",
+            "value": duration_text,
+            "unit": "",
+            "icon": "mdi:timer-outline",
+        })
+
+    # Accumulated today
+    if together_data.total_together_minutes_today > 0:
+        total_min = together_data.total_together_minutes_today
+        if total_min >= 60:
+            total_text = f"{total_min / 60:.1f} h"
+        else:
+            total_text = f"{int(total_min)} min"
+        time_items.append({
+            "type": "custom:hui-stat-card",
+            "name": "Gemeinsam heute",
+            "value": total_text,
+            "unit": "",
+            "icon": "mdi:calendar-clock",
+        })
+
+    # Together count stat
     if together_data.together_count >= 2:
         time_items.append({
             "type": "custom:hui-stat-card",
