@@ -122,8 +122,8 @@ class ZonePresenceTriggerSensor(CopilotBaseEntity, BinarySensorEntity):
                 self._zone_config = zone.get("config", {})
                 break
 
-    def set_automation_mode(self, mode: str) -> bool:
-        """Set the automation mode for this zone.
+    async def async_set_automation_mode(self, mode: str) -> bool:
+        """Set the automation mode for this zone and persist to Core.
 
         Returns True if mode was changed successfully.
         """
@@ -140,6 +140,33 @@ class ZonePresenceTriggerSensor(CopilotBaseEntity, BinarySensorEntity):
             "Zone %s automation mode: %s → %s",
             self._zone_id, old_mode, mode,
         )
+        self.async_write_ha_state()
+
+        # Persist mode change to Core API
+        if self.coordinator and hasattr(self.coordinator, "api"):
+            try:
+                await self.coordinator.api.async_set_zone_automation_mode(
+                    self._zone_id, mode
+                )
+                logger.debug(
+                    "Zone %s mode '%s' persisted to Core", self._zone_id, mode
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to persist zone %s mode to Core", self._zone_id,
+                    exc_info=True,
+                )
+
+        return True
+
+    def set_automation_mode(self, mode: str) -> bool:
+        """Set the automation mode (sync wrapper, no Core persistence).
+
+        Prefer async_set_automation_mode() for full persistence.
+        """
+        if mode not in AUTOMATION_MODES:
+            return False
+        self._automation_mode = mode
         self.async_write_ha_state()
         return True
 

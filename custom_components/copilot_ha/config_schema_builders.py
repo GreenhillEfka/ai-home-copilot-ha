@@ -134,6 +134,15 @@ from .const import (
     CONF_ENTITY_PROFILE,
     DEFAULT_ENTITY_PROFILE,
     ENTITY_PROFILES,
+    CONF_ANOMALY_ENABLED,
+    CONF_ANOMALY_SENSITIVITY,
+    DEFAULT_ANOMALY_ENABLED,
+    DEFAULT_ANOMALY_SENSITIVITY,
+    ANOMALY_SENSITIVITIES,
+    CONF_HABITUS_ENABLED,
+    CONF_HABITUS_MIN_CONFIDENCE,
+    DEFAULT_HABITUS_ENABLED,
+    DEFAULT_HABITUS_MIN_CONFIDENCE,
 )
 
 
@@ -500,6 +509,28 @@ def build_birthday_schema(data: dict) -> dict:
     }
 
 
+def build_anomaly_habitus_schema(data: dict) -> dict:
+    """Build schema fields for anomaly detection and habitus mining toggles."""
+    return {
+        vol.Optional(
+            CONF_ANOMALY_ENABLED,
+            default=data.get(CONF_ANOMALY_ENABLED, DEFAULT_ANOMALY_ENABLED),
+        ): bool,
+        vol.Optional(
+            CONF_ANOMALY_SENSITIVITY,
+            default=data.get(CONF_ANOMALY_SENSITIVITY, DEFAULT_ANOMALY_SENSITIVITY),
+        ): vol.In(ANOMALY_SENSITIVITIES),
+        vol.Optional(
+            CONF_HABITUS_ENABLED,
+            default=data.get(CONF_HABITUS_ENABLED, DEFAULT_HABITUS_ENABLED),
+        ): bool,
+        vol.Optional(
+            CONF_HABITUS_MIN_CONFIDENCE,
+            default=data.get(CONF_HABITUS_MIN_CONFIDENCE, DEFAULT_HABITUS_MIN_CONFIDENCE),
+        ): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1.0)),
+    }
+
+
 def build_modules_schema(data: dict) -> dict:
     """Build schema for the modules options step (all module toggles + settings)."""
     fields: dict = {}
@@ -517,6 +548,7 @@ def build_modules_schema(data: dict) -> dict:
     fields.update(build_user_prefs_schema(data))
     fields.update(build_waste_schema(data))
     fields.update(build_birthday_schema(data))
+    fields.update(build_anomaly_habitus_schema(data))
     return fields
 
 

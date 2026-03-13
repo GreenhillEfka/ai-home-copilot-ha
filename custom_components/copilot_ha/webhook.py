@@ -48,6 +48,7 @@ EVENT_TYPE_SUGGESTION = "suggestion"
 EVENT_TYPE_NEURON = "neuron"
 EVENT_TYPE_MODULE_DATA = "module_data"
 EVENT_TYPE_ZONE_UPDATE = "zone_update"
+EVENT_TYPE_ANOMALY = "anomaly"
 
 _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_STATUS,
@@ -56,6 +57,7 @@ _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_NEURON,
     EVENT_TYPE_MODULE_DATA,
     EVENT_TYPE_ZONE_UPDATE,
+    EVENT_TYPE_ANOMALY,
 }
 
 # Canonical aliases should continue to map directly; legacy aliases are only accepted in
@@ -67,6 +69,7 @@ _EVENT_TYPE_CANONICAL_TO_CANONICAL = {
     EVENT_TYPE_NEURON: EVENT_TYPE_NEURON,
     EVENT_TYPE_MODULE_DATA: EVENT_TYPE_MODULE_DATA,
     EVENT_TYPE_ZONE_UPDATE: EVENT_TYPE_ZONE_UPDATE,
+    EVENT_TYPE_ANOMALY: EVENT_TYPE_ANOMALY,
 }
 
 _EVENT_TYPE_LEGACY_ALIASES = {
@@ -701,6 +704,40 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 merged = _merge_coordinator_data(coordinator, updates)
                 coordinator.async_set_updated_data(merged)
             _LOGGER.debug("Webhook: zone_update push received (zone=%s)", zone_id)
+
+        elif event_type == EVENT_TYPE_ANOMALY:
+            # Core pushes anomaly detection event
+            severity = data.get("severity", "info")
+            entity_id = data.get("entity_id", "unknown")
+
+            # Merge into coordinator alert_history
+            current = coordinator.data if isinstance(coordinator.data, dict) else {}
+            alert_history = list(current.get("alert_history", []))
+            alert_history.insert(0, data)
+            alert_history = alert_history[:50]  # Keep last 50
+
+            anomaly_status = {
+                "status": "active",
+                "summary": {
+                    "count": len(alert_history),
+                    "last_anomaly": data.get("detected_at"),
+                    "peak_score": max((a.get("score", 0) for a in alert_history), default=0),
+                },
+                "features": list({a.get("anomaly_type", "") for a in alert_history if a.get("anomaly_type")}),
+            }
+
+            updates = {"anomaly_status": anomaly_status, "alert_history": alert_history}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+
+            # Fire HA event for automations
+            if severity in ("warning", "critical"):
+                hass.bus.async_fire(
+                    f"{DOMAIN}_anomaly_detected",
+                    {"entity_id": entity_id, "severity": severity, "data": data},
+                )
+
+            _LOGGER.debug("Webhook: anomaly push received (entity=%s, severity=%s)", entity_id, severity)
 
         else:
             # Legacy status push (online/version)

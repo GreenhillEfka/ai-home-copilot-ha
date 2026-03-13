@@ -370,6 +370,14 @@ class CopilotApiClient(SharedCopilotApiClient):
             label="Module dashboards API",
         )
 
+    async def async_get_anomaly_status(self) -> dict[str, Any]:
+        """Get anomaly detection status and history from Core."""
+        return await self._safe_get(
+            "/api/v1/anomaly/history?limit=50&level=low",
+            {"history": [], "total": 0},
+            label="Anomaly API",
+        )
+
     async def async_get_module_zone_detail(self, zone_id: str) -> dict[str, Any]:
         """Get aggregated zone detail for all 5 modules."""
         return await self._safe_get(
@@ -609,6 +617,19 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 # Feed module data into HA module stubs
                 await self._update_smart_home_modules(module_data)
 
+                # Get anomaly detection data from Core
+                anomaly_data = await self.api.async_get_anomaly_status()
+                anomaly_history = anomaly_data.get("history", [])
+                anomaly_status = {
+                    "status": "active" if anomaly_history else "idle",
+                    "summary": {
+                        "count": len(anomaly_history),
+                        "last_anomaly": anomaly_history[0].get("detected_at") if anomaly_history else None,
+                        "peak_score": max((a.get("score", 0) for a in anomaly_history), default=0),
+                    },
+                    "features": list({a.get("anomaly_type", "") for a in anomaly_history if a.get("anomaly_type")}),
+                }
+
                 return {
                     "ok": bool(status.ok) if status.ok is not None else True,
                     "version": status.version or "unknown",
@@ -620,6 +641,8 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     "predictions": habit_data.get("predictions", []),
                     "sequences": habit_data.get("sequences", []),
                     "modules": module_data.get("modules", {}),
+                    "anomaly_status": anomaly_status,
+                    "alert_history": anomaly_history,
                 }
             except CopilotApiError as err:
                 last_err = err
