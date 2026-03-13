@@ -32,6 +32,7 @@ LOCAL_CARD_FILES = [
     "styx-brain-card.js",
     "styx-habitus-card.js",
     "styx-zone-card.js",
+    "styx-neural-card.js",
 ]
 
 
