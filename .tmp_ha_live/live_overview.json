@@ -1,0 +1,5095 @@
+{
+  "snapshot_date": "2026-02-27",
+  "summary": {
+    "entity_total": 4520,
+    "domains_top30": [
+      [
+        "sensor",
+        1650
+      ],
+      [
+        "switch",
+        551
+      ],
+      [
+        "binary_sensor",
+        457
+      ],
+      [
+        "button",
+        350
+      ],
+      [
+        "update",
+        266
+      ],
+      [
+        "light",
+        176
+      ],
+      [
+        "scene",
+        160
+      ],
+      [
+        "device_tracker",
+        141
+      ],
+      [
+        "automation",
+        110
+      ],
+      [
+        "select",
+        95
+      ],
+      [
+        "number",
+        81
+      ],
+      [
+        "input_number",
+        78
+      ],
+      [
+        "input_boolean",
+        75
+      ],
+      [
+        "event",
+        72
+      ],
+      [
+        "media_player",
+        51
+      ],
+      [
+        "calendar",
+        37
+      ],
+      [
+        "input_text",
+        18
+      ],
+      [
+        "text",
+        18
+      ],
+      [
+        "image",
+        16
+      ],
+      [
+        "script",
+        11
+      ],
+      [
+        "zone",
+        10
+      ],
+      [
+        "remote",
+        10
+      ],
+      [
+        "counter",
+        9
+      ],
+      [
+        "input_select",
+        8
+      ],
+      [
+        "climate",
+        8
+      ],
+      [
+        "fan",
+        7
+      ],
+      [
+        "person",
+        7
+      ],
+      [
+        "weather",
+        6
+      ],
+      [
+        "camera",
+        6
+      ],
+      [
+        "tag",
+        5
+      ]
+    ],
+    "areas_total": 47,
+    "zones_total": 10,
+    "automations_total": 110,
+    "scenes_total": 160,
+    "scripts_total": 11,
+    "media_players_total": 51,
+    "sensors_total": 1650,
+    "binary_sensors_total": 457,
+    "climate_total": 8,
+    "lights_total": 176,
+    "switches_total": 551,
+    "cover_total": 2,
+    "persons_total": 7,
+    "config_location_name": "SmartHome",
+    "config_latitude": 48.43510369837402,
+    "config_longitude": 12.941875755786898,
+    "config_unit_system": null
+  },
+  "areas": [
+    {
+      "area_id": "kontrollraum",
+      "name": "Kontrollraum",
+      "entity_count": 664,
+      "device_count": 200,
+      "domains_top": [
+        [
+          "switch",
+          185
+        ],
+        [
+          "update",
+          162
+        ],
+        [
+          "sensor",
+          119
+        ],
+        [
+          "binary_sensor",
+          89
+        ],
+        [
+          "button",
+          57
+        ],
+        [
+          "number",
+          9
+        ],
+        [
+          "select",
+          7
+        ],
+        [
+          "device_tracker",
+          5
+        ],
+        [
+          "automation",
+          3
+        ],
+        [
+          "input_boolean",
+          3
+        ]
+      ],
+      "lights": 3,
+      "sensors": 119,
+      "binary_sensors": 89,
+      "media_players": 3,
+      "climate": 0
+    },
+    {
+      "area_id": "wohnzimmer",
+      "name": "Wohnzimmer",
+      "entity_count": 273,
+      "device_count": 43,
+      "domains_top": [
+        [
+          "sensor",
+          68
+        ],
+        [
+          "light",
+          30
+        ],
+        [
+          "binary_sensor",
+          26
+        ],
+        [
+          "switch",
+          23
+        ],
+        [
+          "select",
+          23
+        ],
+        [
+          "scene",
+          22
+        ],
+        [
+          "button",
+          22
+        ],
+        [
+          "input_number",
+          8
+        ],
+        [
+          "media_player",
+          8
+        ],
+        [
+          "event",
+          7
+        ]
+      ],
+      "lights": 30,
+      "sensors": 68,
+      "binary_sensors": 26,
+      "media_players": 8,
+      "climate": 3
+    },
+    {
+      "area_id": "arbeitszimmer",
+      "name": "Arbeitszimmer",
+      "entity_count": 176,
+      "device_count": 24,
+      "domains_top": [
+        [
+          "sensor",
+          31
+        ],
+        [
+          "binary_sensor",
+          16
+        ],
+        [
+          "button",
+          15
+        ],
+        [
+          "select",
+          14
+        ],
+        [
+          "event",
+          14
+        ],
+        [
+          "switch",
+          12
+        ],
+        [
+          "scene",
+          10
+        ],
+        [
+          "media_player",
+          9
+        ],
+        [
+          "light",
+          8
+        ],
+        [
+          "input_boolean",
+          7
+        ]
+      ],
+      "lights": 8,
+      "sensors": 31,
+      "binary_sensors": 16,
+      "media_players": 9,
+      "climate": 0
+    },
+    {
+      "area_id": "kuche",
+      "name": "Küche",
+      "entity_count": 171,
+      "device_count": 18,
+      "domains_top": [
+        [
+          "sensor",
+          67
+        ],
+        [
+          "binary_sensor",
+          14
+        ],
+        [
+          "light",
+          12
+        ],
+        [
+          "button",
+          12
+        ],
+        [
+          "switch",
+          11
+        ],
+        [
+          "event",
+          9
+        ],
+        [
+          "scene",
+          7
+        ],
+        [
+          "input_number",
+          6
+        ],
+        [
+          "input_boolean",
+          6
+        ],
+        [
+          "automation",
+          4
+        ]
+      ],
+      "lights": 12,
+      "sensors": 67,
+      "binary_sensors": 14,
+      "media_players": 2,
+      "climate": 1
+    },
+    {
+      "area_id": "kinderzimmer",
+      "name": "Zimmer Mira",
+      "entity_count": 164,
+      "device_count": 15,
+      "domains_top": [
+        [
+          "sensor",
+          57
+        ],
+        [
+          "binary_sensor",
+          42
+        ],
+        [
+          "light",
+          12
+        ],
+        [
+          "button",
+          9
+        ],
+        [
+          "switch",
+          9
+        ],
+        [
+          "scene",
+          7
+        ],
+        [
+          "event",
+          6
+        ],
+        [
+          "select",
+          4
+        ],
+        [
+          "update",
+          4
+        ],
+        [
+          "input_boolean",
+          3
+        ]
+      ],
+      "lights": 12,
+      "sensors": 57,
+      "binary_sensors": 42,
+      "media_players": 1,
+      "climate": 1
+    },
+    {
+      "area_id": "schlafzimmer",
+      "name": "Schlafzimmer",
+      "entity_count": 156,
+      "device_count": 12,
+      "domains_top": [
+        [
+          "sensor",
+          49
+        ],
+        [
+          "scene",
+          19
+        ],
+        [
+          "binary_sensor",
+          19
+        ],
+        [
+          "input_number",
+          10
+        ],
+        [
+          "input_boolean",
+          10
+        ],
+        [
+          "switch",
+          9
+        ],
+        [
+          "button",
+          8
+        ],
+        [
+          "event",
+          7
+        ],
+        [
+          "light",
+          5
+        ],
+        [
+          "number",
+          4
+        ]
+      ],
+      "lights": 5,
+      "sensors": 49,
+      "binary_sensors": 19,
+      "media_players": 2,
+      "climate": 0
+    },
+    {
+      "area_id": "toilette",
+      "name": "Toilette",
+      "entity_count": 148,
+      "device_count": 13,
+      "domains_top": [
+        [
+          "sensor",
+          55
+        ],
+        [
+          "binary_sensor",
+          18
+        ],
+        [
+          "switch",
+          13
+        ],
+        [
+          "button",
+          11
+        ],
+        [
+          "select",
+          8
+        ],
+        [
+          "scene",
+          7
+        ],
+        [
+          "light",
+          6
+        ],
+        [
+          "fan",
+          5
+        ],
+        [
+          "input_boolean",
+          4
+        ],
+        [
+          "counter",
+          4
+        ]
+      ],
+      "lights": 6,
+      "sensors": 55,
+      "binary_sensors": 18,
+      "media_players": 2,
+      "climate": 0
+    },
+    {
+      "area_id": "gang",
+      "name": "Gang",
+      "entity_count": 137,
+      "device_count": 16,
+      "domains_top": [
+        [
+          "sensor",
+          39
+        ],
+        [
+          "switch",
+          14
+        ],
+        [
+          "binary_sensor",
+          13
+        ],
+        [
+          "button",
+          10
+        ],
+        [
+          "automation",
+          9
+        ],
+        [
+          "light",
+          9
+        ],
+        [
+          "input_number",
+          8
+        ],
+        [
+          "scene",
+          8
+        ],
+        [
+          "input_boolean",
+          6
+        ],
+        [
+          "counter",
+          4
+        ]
+      ],
+      "lights": 9,
+      "sensors": 39,
+      "binary_sensors": 13,
+      "media_players": 2,
+      "climate": 1
+    },
+    {
+      "area_id": "bad",
+      "name": "Bad",
+      "entity_count": 107,
+      "device_count": 8,
+      "domains_top": [
+        [
+          "sensor",
+          56
+        ],
+        [
+          "binary_sensor",
+          7
+        ],
+        [
+          "input_boolean",
+          6
+        ],
+        [
+          "input_number",
+          6
+        ],
+        [
+          "automation",
+          6
+        ],
+        [
+          "light",
+          5
+        ],
+        [
+          "switch",
+          5
+        ],
+        [
+          "button",
+          4
+        ],
+        [
+          "input_text",
+          2
+        ],
+        [
+          "calendar",
+          2
+        ]
+      ],
+      "lights": 5,
+      "sensors": 56,
+      "binary_sensors": 7,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "umwelt",
+      "name": "Umwelt",
+      "entity_count": 103,
+      "device_count": 8,
+      "domains_top": [
+        [
+          "sensor",
+          92
+        ],
+        [
+          "binary_sensor",
+          6
+        ],
+        [
+          "weather",
+          3
+        ],
+        [
+          "input_number",
+          1
+        ],
+        [
+          "button",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 92,
+      "binary_sensors": 6,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "energie",
+      "name": "Energie",
+      "entity_count": 102,
+      "device_count": 5,
+      "domains_top": [
+        [
+          "sensor",
+          85
+        ],
+        [
+          "button",
+          8
+        ],
+        [
+          "binary_sensor",
+          5
+        ],
+        [
+          "update",
+          2
+        ],
+        [
+          "light",
+          2
+        ]
+      ],
+      "lights": 2,
+      "sensors": 85,
+      "binary_sensors": 5,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "netzwerk",
+      "name": "Netzwerk",
+      "entity_count": 76,
+      "device_count": 18,
+      "domains_top": [
+        [
+          "sensor",
+          52
+        ],
+        [
+          "binary_sensor",
+          21
+        ],
+        [
+          "button",
+          2
+        ],
+        [
+          "update",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 52,
+      "binary_sensors": 21,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "terrasse",
+      "name": "Terrasse",
+      "entity_count": 74,
+      "device_count": 5,
+      "domains_top": [
+        [
+          "sensor",
+          45
+        ],
+        [
+          "binary_sensor",
+          8
+        ],
+        [
+          "switch",
+          7
+        ],
+        [
+          "input_boolean",
+          3
+        ],
+        [
+          "input_number",
+          3
+        ],
+        [
+          "light",
+          3
+        ],
+        [
+          "automation",
+          1
+        ],
+        [
+          "device_tracker",
+          1
+        ],
+        [
+          "camera",
+          1
+        ],
+        [
+          "button",
+          1
+        ]
+      ],
+      "lights": 3,
+      "sensors": 45,
+      "binary_sensors": 8,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "zimmer_paul",
+      "name": "Zimmer Paul",
+      "entity_count": 59,
+      "device_count": 3,
+      "domains_top": [
+        [
+          "binary_sensor",
+          23
+        ],
+        [
+          "sensor",
+          22
+        ],
+        [
+          "switch",
+          6
+        ],
+        [
+          "button",
+          3
+        ],
+        [
+          "select",
+          2
+        ],
+        [
+          "update",
+          2
+        ],
+        [
+          "number",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 22,
+      "binary_sensors": 23,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "loft",
+      "name": "Loft",
+      "entity_count": 57,
+      "device_count": 6,
+      "domains_top": [
+        [
+          "sensor",
+          16
+        ],
+        [
+          "switch",
+          8
+        ],
+        [
+          "binary_sensor",
+          4
+        ],
+        [
+          "light",
+          4
+        ],
+        [
+          "update",
+          4
+        ],
+        [
+          "button",
+          4
+        ],
+        [
+          "scene",
+          3
+        ],
+        [
+          "input_number",
+          3
+        ],
+        [
+          "media_player",
+          3
+        ],
+        [
+          "input_boolean",
+          2
+        ]
+      ],
+      "lights": 4,
+      "sensors": 16,
+      "binary_sensors": 4,
+      "media_players": 3,
+      "climate": 0
+    },
+    {
+      "area_id": "medienkontrolle",
+      "name": "Medienkontrolle",
+      "entity_count": 55,
+      "device_count": 8,
+      "domains_top": [
+        [
+          "sensor",
+          40
+        ],
+        [
+          "automation",
+          3
+        ],
+        [
+          "button",
+          3
+        ],
+        [
+          "input_boolean",
+          2
+        ],
+        [
+          "binary_sensor",
+          2
+        ],
+        [
+          "switch",
+          1
+        ],
+        [
+          "media_player",
+          1
+        ],
+        [
+          "number",
+          1
+        ],
+        [
+          "event",
+          1
+        ],
+        [
+          "calendar",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 40,
+      "binary_sensors": 2,
+      "media_players": 1,
+      "climate": 0
+    },
+    {
+      "area_id": "garten",
+      "name": "Garten",
+      "entity_count": 42,
+      "device_count": 6,
+      "domains_top": [
+        [
+          "sensor",
+          32
+        ],
+        [
+          "light",
+          4
+        ],
+        [
+          "event",
+          4
+        ],
+        [
+          "scene",
+          1
+        ],
+        [
+          "binary_sensor",
+          1
+        ]
+      ],
+      "lights": 4,
+      "sensors": 32,
+      "binary_sensors": 1,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "vordereingang",
+      "name": "Vordereingang",
+      "entity_count": 35,
+      "device_count": 6,
+      "domains_top": [
+        [
+          "sensor",
+          8
+        ],
+        [
+          "scene",
+          7
+        ],
+        [
+          "light",
+          5
+        ],
+        [
+          "binary_sensor",
+          4
+        ],
+        [
+          "input_number",
+          3
+        ],
+        [
+          "input_boolean",
+          2
+        ],
+        [
+          "automation",
+          2
+        ],
+        [
+          "switch",
+          2
+        ],
+        [
+          "camera",
+          1
+        ],
+        [
+          "event",
+          1
+        ]
+      ],
+      "lights": 5,
+      "sensors": 8,
+      "binary_sensors": 4,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "vorraum",
+      "name": "Vorraum",
+      "entity_count": 29,
+      "device_count": 2,
+      "domains_top": [
+        [
+          "sensor",
+          13
+        ],
+        [
+          "button",
+          4
+        ],
+        [
+          "binary_sensor",
+          4
+        ],
+        [
+          "event",
+          2
+        ],
+        [
+          "select",
+          2
+        ],
+        [
+          "switch",
+          2
+        ],
+        [
+          "update",
+          1
+        ],
+        [
+          "light",
+          1
+        ]
+      ],
+      "lights": 1,
+      "sensors": 13,
+      "binary_sensors": 4,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "pv_anlage",
+      "name": "PV-Anlage",
+      "entity_count": 23,
+      "device_count": 2,
+      "domains_top": [
+        [
+          "sensor",
+          23
+        ]
+      ],
+      "lights": 0,
+      "sensors": 23,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "gangbereich",
+      "name": "Gangbereich",
+      "entity_count": 22,
+      "device_count": 3,
+      "domains_top": [
+        [
+          "sensor",
+          11
+        ],
+        [
+          "button",
+          3
+        ],
+        [
+          "light",
+          3
+        ],
+        [
+          "binary_sensor",
+          2
+        ],
+        [
+          "event",
+          1
+        ],
+        [
+          "select",
+          1
+        ],
+        [
+          "update",
+          1
+        ]
+      ],
+      "lights": 3,
+      "sensors": 11,
+      "binary_sensors": 2,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "hintereingang",
+      "name": "Hintereingang",
+      "entity_count": 21,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "scene",
+          9
+        ],
+        [
+          "sensor",
+          4
+        ],
+        [
+          "input_number",
+          3
+        ],
+        [
+          "binary_sensor",
+          3
+        ],
+        [
+          "input_boolean",
+          1
+        ],
+        [
+          "light",
+          1
+        ]
+      ],
+      "lights": 1,
+      "sensors": 4,
+      "binary_sensors": 3,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "personen",
+      "name": "Personen",
+      "entity_count": 19,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "sensor",
+          8
+        ],
+        [
+          "person",
+          7
+        ],
+        [
+          "zone",
+          3
+        ],
+        [
+          "automation",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 8,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "werkstatt",
+      "name": "Werkstatt",
+      "entity_count": 19,
+      "device_count": 3,
+      "domains_top": [
+        [
+          "sensor",
+          7
+        ],
+        [
+          "switch",
+          5
+        ],
+        [
+          "select",
+          2
+        ],
+        [
+          "media_player",
+          1
+        ],
+        [
+          "button",
+          1
+        ],
+        [
+          "climate",
+          1
+        ],
+        [
+          "number",
+          1
+        ],
+        [
+          "update",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 7,
+      "binary_sensors": 0,
+      "media_players": 1,
+      "climate": 1
+    },
+    {
+      "area_id": "kalender",
+      "name": "Kalender",
+      "entity_count": 17,
+      "device_count": 3,
+      "domains_top": [
+        [
+          "calendar",
+          8
+        ],
+        [
+          "sensor",
+          7
+        ],
+        [
+          "binary_sensor",
+          2
+        ]
+      ],
+      "lights": 0,
+      "sensors": 7,
+      "binary_sensors": 2,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "gartenbereich",
+      "name": "Gartenbereich",
+      "entity_count": 16,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "scene",
+          13
+        ],
+        [
+          "light",
+          1
+        ],
+        [
+          "binary_sensor",
+          1
+        ],
+        [
+          "sensor",
+          1
+        ]
+      ],
+      "lights": 1,
+      "sensors": 1,
+      "binary_sensors": 1,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "speisekammer",
+      "name": "Speisekammer",
+      "entity_count": 14,
+      "device_count": 0,
+      "domains_top": [
+        [
+          "input_number",
+          4
+        ],
+        [
+          "sensor",
+          4
+        ],
+        [
+          "input_boolean",
+          2
+        ],
+        [
+          "automation",
+          2
+        ],
+        [
+          "binary_sensor",
+          2
+        ]
+      ],
+      "lights": 0,
+      "sensors": 4,
+      "binary_sensors": 2,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "haupthaus",
+      "name": "Haupthaus",
+      "entity_count": 12,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "input_number",
+          3
+        ],
+        [
+          "sensor",
+          2
+        ],
+        [
+          "binary_sensor",
+          2
+        ],
+        [
+          "input_boolean",
+          2
+        ],
+        [
+          "automation",
+          1
+        ],
+        [
+          "media_player",
+          1
+        ],
+        [
+          "device_tracker",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 2,
+      "binary_sensors": 2,
+      "media_players": 1,
+      "climate": 0
+    },
+    {
+      "area_id": "kochbereich",
+      "name": "Kochbereich",
+      "entity_count": 11,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "sensor",
+          6
+        ],
+        [
+          "light",
+          2
+        ],
+        [
+          "binary_sensor",
+          2
+        ],
+        [
+          "button",
+          1
+        ]
+      ],
+      "lights": 2,
+      "sensors": 6,
+      "binary_sensors": 2,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "move",
+      "name": "Move",
+      "entity_count": 11,
+      "device_count": 0,
+      "domains_top": [
+        [
+          "input_boolean",
+          4
+        ],
+        [
+          "input_number",
+          3
+        ],
+        [
+          "input_text",
+          2
+        ],
+        [
+          "sensor",
+          1
+        ],
+        [
+          "input_select",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 1,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "erdkeller",
+      "name": "Erdkeller",
+      "entity_count": 10,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "sensor",
+          3
+        ],
+        [
+          "binary_sensor",
+          2
+        ],
+        [
+          "automation",
+          2
+        ],
+        [
+          "input_boolean",
+          1
+        ],
+        [
+          "input_number",
+          1
+        ],
+        [
+          "light",
+          1
+        ]
+      ],
+      "lights": 1,
+      "sensors": 3,
+      "binary_sensors": 2,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "kosten",
+      "name": "Kosten",
+      "entity_count": 9,
+      "device_count": 3,
+      "domains_top": [
+        [
+          "sensor",
+          4
+        ],
+        [
+          "input_number",
+          2
+        ],
+        [
+          "calendar",
+          2
+        ],
+        [
+          "automation",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 4,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "flur",
+      "name": "Flur",
+      "entity_count": 7,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "sensor",
+          3
+        ],
+        [
+          "light",
+          2
+        ],
+        [
+          "binary_sensor",
+          1
+        ],
+        [
+          "button",
+          1
+        ]
+      ],
+      "lights": 2,
+      "sensors": 3,
+      "binary_sensors": 1,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "wohnimmer",
+      "name": "Wohnimmer",
+      "entity_count": 7,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "button",
+          2
+        ],
+        [
+          "sensor",
+          1
+        ],
+        [
+          "switch",
+          1
+        ],
+        [
+          "binary_sensor",
+          1
+        ],
+        [
+          "update",
+          1
+        ],
+        [
+          "light",
+          1
+        ]
+      ],
+      "lights": 1,
+      "sensors": 1,
+      "binary_sensors": 1,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "ai_factory",
+      "name": "AI-Factory",
+      "entity_count": 6,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "sensor",
+          6
+        ]
+      ],
+      "lights": 0,
+      "sensors": 6,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "elternhaus",
+      "name": "Elternhaus",
+      "entity_count": 6,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "scene",
+          3
+        ],
+        [
+          "light",
+          1
+        ],
+        [
+          "binary_sensor",
+          1
+        ],
+        [
+          "sensor",
+          1
+        ]
+      ],
+      "lights": 1,
+      "sensors": 1,
+      "binary_sensors": 1,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "viture_luma_ultra",
+      "name": "Viture Luma Ultra",
+      "entity_count": 3,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "media_player",
+          1
+        ],
+        [
+          "remote",
+          1
+        ],
+        [
+          "binary_sensor",
+          1
+        ]
+      ],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 1,
+      "media_players": 1,
+      "climate": 0
+    },
+    {
+      "area_id": "badezimmer",
+      "name": "Badezimmer",
+      "entity_count": 2,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "light",
+          1
+        ],
+        [
+          "scene",
+          1
+        ]
+      ],
+      "lights": 1,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "zimmer_pauli",
+      "name": "Zimmer Pauli",
+      "entity_count": 1,
+      "device_count": 1,
+      "domains_top": [
+        [
+          "light",
+          1
+        ]
+      ],
+      "lights": 1,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "ai_lounge",
+      "name": "AI Lounge",
+      "entity_count": 0,
+      "device_count": 0,
+      "domains_top": [],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "buro",
+      "name": "Büro",
+      "entity_count": 0,
+      "device_count": 0,
+      "domains_top": [],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "entspannungsbereich",
+      "name": "Entspannungsbereich",
+      "entity_count": 0,
+      "device_count": 0,
+      "domains_top": [],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "firetv_airplay",
+      "name": "FireTV[AirPlay]",
+      "entity_count": 0,
+      "device_count": 0,
+      "domains_top": [],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "free_devices",
+      "name": "Free Devices",
+      "entity_count": 0,
+      "device_count": 0,
+      "domains_top": [],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "serverraum",
+      "name": "Serverraum",
+      "entity_count": 0,
+      "device_count": 0,
+      "domains_top": [],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "speise",
+      "name": "Speise",
+      "entity_count": 0,
+      "device_count": 0,
+      "domains_top": [],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    },
+    {
+      "area_id": "toilettte",
+      "name": "Toilettte",
+      "entity_count": 0,
+      "device_count": 0,
+      "domains_top": [],
+      "lights": 0,
+      "sensors": 0,
+      "binary_sensors": 0,
+      "media_players": 0,
+      "climate": 0
+    }
+  ],
+  "zones": [
+    {
+      "entity_id": "zone.arbeit_ranshofen",
+      "latitude": 48.22764599508648,
+      "longitude": 13.035106658935549,
+      "name": "Arbeit Ranshofen",
+      "radius": 1013.0,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.realschule_simbach",
+      "latitude": 48.26516010441768,
+      "longitude": 13.027124404907228,
+      "name": "Realschule Simbach",
+      "radius": 498.4631673223608,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.oma_leni_und_opa_herbert",
+      "latitude": 48.44185845058624,
+      "longitude": 12.930728495121002,
+      "name": "Oma Leni und Opa Herbert ",
+      "radius": 25.780513543955333,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.arbeit_braunau",
+      "latitude": 48.24819023563149,
+      "longitude": 13.064782619476318,
+      "name": "Arbeit Braunau ",
+      "radius": 250.0,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.butze_bachi",
+      "latitude": 48.44151059726889,
+      "longitude": 12.929914444684984,
+      "name": "Butze Bachi",
+      "radius": 28.852784198225653,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.cafe_lazy_cat",
+      "latitude": 48.430610111022894,
+      "longitude": 12.938246726989748,
+      "name": "Cafe Lazy Cat",
+      "radius": 29.0,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.oma_kathe_und_opa_gustl",
+      "latitude": 48.435018278941754,
+      "longitude": 12.942109107971193,
+      "name": "Oma Käthe und Opa Gustl",
+      "radius": 11.0,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.cafe_il2",
+      "latitude": 48.43225454297014,
+      "longitude": 12.938673198223114,
+      "name": "Cafe Il2",
+      "radius": 23.327967361675764,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.stadtkern_parrkirchen",
+      "latitude": 48.43189149114386,
+      "longitude": 12.938718795776369,
+      "name": "Stadtkern Parrkirchen",
+      "radius": 267.0,
+      "state": "0"
+    },
+    {
+      "entity_id": "zone.home",
+      "latitude": 48.43510369837402,
+      "longitude": 12.941875755786898,
+      "name": "SmartHome",
+      "radius": 41,
+      "state": "2"
+    }
+  ],
+  "automations": [
+    {
+      "entity_id": "automation.sonos_badbereich_autoplay_selector",
+      "name": " Sonos Badbereich Autoplay Selector",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117467+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_move_autoplay_selector",
+      "name": " Sonos Move Autoplay Selector",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117091+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_schlafbereich_autoplay_selector",
+      "name": " Sonos Schlafbereich Autoplay Selector",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117281+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_wohnbereich_autoplay_selector",
+      "name": " Sonos Wohnbereich Autoplay Selector",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117373+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_andreas",
+      "name": "[Netatmo Welcome] Andreas",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120273+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_christoph",
+      "name": "[Netatmo Welcome] Christoph",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121754+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_clemens",
+      "name": "[Netatmo Welcome] Clemens",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.122113+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_ela",
+      "name": "[Netatmo Welcome] Ela",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.122025+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_eva",
+      "name": "[Netatmo Welcome] Eva",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120917+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_gustav",
+      "name": "[Netatmo Welcome] Gustav",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120819+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_hannerl",
+      "name": "[Netatmo Welcome] Hannerl",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121211+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_jonni",
+      "name": "[Netatmo Welcome] Jonni",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121395+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_judith",
+      "name": "[Netatmo Welcome] Judith",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121008+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_kaddl",
+      "name": "[Netatmo Welcome] Kaddl",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121304+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_katharina",
+      "name": "[Netatmo Welcome] Katharina",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120090+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_matthias",
+      "name": "[Netatmo Welcome] Matthias",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121577+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_mira",
+      "name": "[Netatmo Welcome] Mira",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120182+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_paul",
+      "name": "[Netatmo Welcome] Paul",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120725+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_pia",
+      "name": "[Netatmo Welcome] Pia",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121936+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_resl",
+      "name": "[Netatmo Welcome] Resl",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121486+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_schmiedl",
+      "name": "[Netatmo Welcome] Schmiedl",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121842+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_steffi",
+      "name": "[Netatmo Welcome] Steffi",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120363+00:00"
+    },
+    {
+      "entity_id": "automation.netatmo_welcome_toni",
+      "name": "[Netatmo Welcome] Toni",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.121667+00:00"
+    },
+    {
+      "entity_id": "automation.ai_suggestions_new_entity_detection",
+      "name": "AI Suggestions - New Entity Detection",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.122482+00:00"
+    },
+    {
+      "entity_id": "automation.ai_suggestions_weekly_reviews",
+      "name": "AI Suggestions - Weekly Reviews",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.122390+00:00"
+    },
+    {
+      "entity_id": "automation.alexa_actionable_notification_rooms_presence_loft",
+      "name": "Alexa actionable notification rooms presence Loft",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.122295+00:00"
+    },
+    {
+      "entity_id": "automation.arbeitszimmer_automatisierung_anwesenheit",
+      "name": "Arbeitszimmer Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116189+00:00"
+    },
+    {
+      "entity_id": "automation.automation_handzeichen",
+      "name": "Automation AI Handzeichen",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:51:12.739773+00:00"
+    },
+    {
+      "entity_id": "automation.automation_licht_spassecke",
+      "name": "Automation Licht Spassecke",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:05.122917+00:00"
+    },
+    {
+      "entity_id": "automation.automation_schlafmodus",
+      "name": "Automation Schlafmodus",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113405+00:00"
+    },
+    {
+      "entity_id": "automation.bad_automatisierung_anwesenheit",
+      "name": "Bad Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.115800+00:00"
+    },
+    {
+      "entity_id": "automation.bad_automatisierung_duschventilation",
+      "name": "Bad Automatisierung Duschventilation",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113598+00:00"
+    },
+    {
+      "entity_id": "automation.bad_automatisierung_licht",
+      "name": "Bad Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113306+00:00"
+    },
+    {
+      "entity_id": "automation.bad_musik_cloud_automatisierung",
+      "name": "Bad Musik Cloud Automatisierung",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117652+00:00"
+    },
+    {
+      "entity_id": "automation.bad_szenen_schalter",
+      "name": "Bad Szenenschalter",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116515+00:00"
+    },
+    {
+      "entity_id": "automation.buerobereich_musik_cloud_automatisierung",
+      "name": "Buerobereich Musik Cloud Automatisierung",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117744+00:00"
+    },
+    {
+      "entity_id": "automation.buerobereich_sonos_autoplay_selector",
+      "name": "Buerobereich Sonos Autoplay Selector",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118116+00:00"
+    },
+    {
+      "entity_id": "automation.erdkeller_automatisierung_anwesenheit",
+      "name": "Erdkeller Automatisierung Anwesenheit",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:05.122704+00:00"
+    },
+    {
+      "entity_id": "automation.erdkeller_automatisierung_licht",
+      "name": "Erdkeller Automatisierung Licht",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:05.115328+00:00"
+    },
+    {
+      "entity_id": "automation.fibaro_remote_control",
+      "name": "Fibaro Remote Control",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.112997+00:00"
+    },
+    {
+      "entity_id": "automation.gang_automatisierung_anwesenheit",
+      "name": "Gang Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114694+00:00"
+    },
+    {
+      "entity_id": "automation.gang_automatisierung_licht",
+      "name": "Gang Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114791+00:00"
+    },
+    {
+      "entity_id": "automation.gang_musik_cloud_automatisierung",
+      "name": "Gang Musik Cloud Automatisierung",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.115704+00:00"
+    },
+    {
+      "entity_id": "automation.gang_toggle_ganglicht",
+      "name": "Gang Toggle Ganglicht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119385+00:00"
+    },
+    {
+      "entity_id": "automation.gaszahler",
+      "name": "Gaszähler",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.112405+00:00"
+    },
+    {
+      "entity_id": "automation.grillplatz_automatisierung_licht",
+      "name": "Grillplatz Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.115422+00:00"
+    },
+    {
+      "entity_id": "automation.handzeichen_5_finger",
+      "name": "Handzeichen 5 Finger",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:05.123225+00:00"
+    },
+    {
+      "entity_id": "automation.haupthaus_automatisierung_anwesenheit",
+      "name": "Haupthaus Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119903+00:00"
+    },
+    {
+      "entity_id": "automation.haupthaus_automatisierung_licht",
+      "name": "Haupthaus Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118842+00:00"
+    },
+    {
+      "entity_id": "automation.hintereingang_automatisierung_anwesenheit",
+      "name": "Hintereingang Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119796+00:00"
+    },
+    {
+      "entity_id": "automation.hue_schalter_kuche",
+      "name": "hue Schalter Küche",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:05.123016+00:00"
+    },
+    {
+      "entity_id": "automation.kaffee_kaffeemaschine_ecosystem",
+      "name": "Kaffee - Kaffeemaschine EcoSystem",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114989+00:00"
+    },
+    {
+      "entity_id": "automation.kaffee_kaffeemaschine_reset_reinigung",
+      "name": "Kaffee - Kaffeemaschine reset Reinigung",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116613+00:00"
+    },
+    {
+      "entity_id": "automation.kaffee_kaffeezahler",
+      "name": "Kaffee - Kaffeezähler",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.112890+00:00"
+    },
+    {
+      "entity_id": "automation.kaffee_reset_taglicher_konsum",
+      "name": "Kaffee - Reset täglicher Konsum",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113895+00:00"
+    },
+    {
+      "entity_id": "automation.kaffee_synchronisation_kaffeemuhle",
+      "name": "Kaffee - Synchronisation Kaffeemühle",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.112613+00:00"
+    },
+    {
+      "entity_id": "automation.kaffeemaschine_ecosaver",
+      "name": "Kaffeemaschine EcoSaver",
+      "state": "off",
+      "last_changed": "2026-02-27T09:46:05.118663+00:00"
+    },
+    {
+      "entity_id": "automation.kuche_automatisierung_anwesenheit",
+      "name": "Küche Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114598+00:00"
+    },
+    {
+      "entity_id": "automation.kuche_automatisierung_licht",
+      "name": "Küche Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.115516+00:00"
+    },
+    {
+      "entity_id": "automation.kuche_musik_cloud_automatisierung",
+      "name": "Küche Musik Cloud Automatisierung",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117833+00:00"
+    },
+    {
+      "entity_id": "automation.loft_automation_licht_spassecke",
+      "name": "Loft Automation Licht Spassecke",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:05.122810+00:00"
+    },
+    {
+      "entity_id": "automation.loft_automatisierung_anwesenheit",
+      "name": "Loft Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119998+00:00"
+    },
+    {
+      "entity_id": "automation.loft_automatisierung_licht",
+      "name": "Loft Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118304+00:00"
+    },
+    {
+      "entity_id": "automation.loft_quick_button",
+      "name": "Loft Quick Button ",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118752+00:00"
+    },
+    {
+      "entity_id": "automation.magic_cube",
+      "name": "Magic Cube",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:05.115119+00:00"
+    },
+    {
+      "entity_id": "automation.nfc_unlock_vordereingang",
+      "name": "NFC - Unlock Vordereingang",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113499+00:00"
+    },
+    {
+      "entity_id": "automation.nfc_scan_tag_unlock_hintereingang",
+      "name": "NFC Scan Tag Unlock Hintereingang",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.122201+00:00"
+    },
+    {
+      "entity_id": "automation.notify_post_ist_da",
+      "name": "Notify - Post ist da",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119120+00:00"
+    },
+    {
+      "entity_id": "automation.pre_sleeptimer",
+      "name": "Pre-Sleeptimer",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118023+00:00"
+    },
+    {
+      "entity_id": "automation.schlafzimmer_automatisierung_anwesenheit",
+      "name": "Schlafzimmer Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116008+00:00"
+    },
+    {
+      "entity_id": "automation.schlafzimmer_automatisierung_licht",
+      "name": "Schlafzimmer Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120548+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_auto_yamaha",
+      "name": "Sonos Auto Yamaha",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113097+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_daytime_volumen_automatisierung",
+      "name": "Sonos Daytime Volumen Automatisierung",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117930+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_gangbereich_autoplay_selector",
+      "name": "Sonos Gangbereich Autoplay Selector",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116997+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_kochbereich_autoplay_selector",
+      "name": "Sonos Kochbereich Autoplay Selector",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117187+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_master_buerobereich",
+      "name": "Sonos Master Buerobereich",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.123412+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_smarttv_auto_linein",
+      "name": "Sonos SmartTV Auto LineIn",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113201+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_volume_management",
+      "name": "Sonos Volume Management",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.115611+00:00"
+    },
+    {
+      "entity_id": "automation.sonos_multiroom_buerobereich",
+      "name": "Sonos – Multiroom Buerobereich",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.123318+00:00"
+    },
+    {
+      "entity_id": "automation.sound_syncronisation_detection",
+      "name": "Sound Syncronisation Detection",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:05.112776+00:00"
+    },
+    {
+      "entity_id": "automation.speisekammer_automatisierung_anwesenheit",
+      "name": "Speisekammer Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116419+00:00"
+    },
+    {
+      "entity_id": "automation.speisekammer_automatisierung_licht",
+      "name": "Speisekammer Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116803+00:00"
+    },
+    {
+      "entity_id": "automation.szenenschalter_kuche",
+      "name": "Szenenschalter Küche",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.123112+00:00"
+    },
+    {
+      "entity_id": "automation.szenenschalter_zimmer_mira",
+      "name": "Szenenschalter Zimmer Mira",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118574+00:00"
+    },
+    {
+      "entity_id": "automation.tab_dial_wohnzimmer",
+      "name": "Tab Dial Wohnzimmer",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119213+00:00"
+    },
+    {
+      "entity_id": "automation.terrasse_automatisierung_anwesenheit",
+      "name": "Terrasse Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116097+00:00"
+    },
+    {
+      "entity_id": "automation.terrasse_automatisierung_licht",
+      "name": "Terrasse Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119030+00:00"
+    },
+    {
+      "entity_id": "automation.terrasse_automatisierung_spotlight_greif",
+      "name": "Terrasse Automatisierung Spotlight Greif",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114162+00:00"
+    },
+    {
+      "entity_id": "automation.toilette_automatisierung_anwesenheit",
+      "name": "Toilette Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.115916+00:00"
+    },
+    {
+      "entity_id": "automation.toilette_automatisierung_licht",
+      "name": "Toilette Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118213+00:00"
+    },
+    {
+      "entity_id": "automation.toilette_shwizzle_management",
+      "name": "Toilette Shwizzle Management",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114406+00:00"
+    },
+    {
+      "entity_id": "automation.touchpanel_wohnzimmer",
+      "name": "TouchPanel Wohnzimmer",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.115219+00:00"
+    },
+    {
+      "entity_id": "automation.tts_reinigung_kaffeemaschine",
+      "name": "TTS - Reinigung Kaffeemaschine",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113991+00:00"
+    },
+    {
+      "entity_id": "automation.tts_announcement_buerobereich",
+      "name": "TTS Announcement Buerobereich",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.122574+00:00"
+    },
+    {
+      "entity_id": "automation.tts_kaffeemaschine",
+      "name": "TTS Kaffeemaschine",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114895+00:00"
+    },
+    {
+      "entity_id": "automation.tts_kuhlschrank",
+      "name": "TTS Kühlschrank",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114299+00:00"
+    },
+    {
+      "entity_id": "automation.tts_mullmanagement",
+      "name": "TTS Müllmanagement",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.114504+00:00"
+    },
+    {
+      "entity_id": "automation.tts_neutralizer",
+      "name": "TTS Neutralizer",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113695+00:00"
+    },
+    {
+      "entity_id": "automation.tts_waschmaschine",
+      "name": "TTS Waschmaschine",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119515+00:00"
+    },
+    {
+      "entity_id": "automation.vordereingang_automation_klingel",
+      "name": "Vordereingang Automation Klingel",
+      "state": "off",
+      "last_changed": "2026-02-27T09:46:05.118482+00:00"
+    },
+    {
+      "entity_id": "automation.vordereingang_automatisierung_anwesenheit",
+      "name": "Vordereingang Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119706+00:00"
+    },
+    {
+      "entity_id": "automation.vordereingang_automatisierung_licht",
+      "name": "Vordereingang Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118939+00:00"
+    },
+    {
+      "entity_id": "automation.vordereingang_automatisierung_lichtschalter",
+      "name": "Vordereingang Automatisierung Lichtschalter",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.118394+00:00"
+    },
+    {
+      "entity_id": "automation.wohnzimmer_automatisierung_anwesenheit",
+      "name": "Wohnzimmer Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.113792+00:00"
+    },
+    {
+      "entity_id": "automation.wohnzimmer_automatisierung_licht",
+      "name": "Wohnzimmer Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116709+00:00"
+    },
+    {
+      "entity_id": "automation.wohnzimmer_automatisierung_licht_serverraum",
+      "name": "Wohnzimmer Automatisierung Licht Serverraum",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.116902+00:00"
+    },
+    {
+      "entity_id": "automation.wohnzimmer_durchgangsbereich_automatisierung_licht",
+      "name": "Wohnzimmer Durchgangsbereich Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120456+00:00"
+    },
+    {
+      "entity_id": "automation.wohnzimmer_musik_cloud_automatisierung",
+      "name": "Wohnzimmer Musik Cloud Automatisierung",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.117558+00:00"
+    },
+    {
+      "entity_id": "automation.zimmer_mira_automatisierung_anwesenheit",
+      "name": "Zimmer Mira Automatisierung Anwesenheit",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.119614+00:00"
+    },
+    {
+      "entity_id": "automation.zimmer_mira_automatisierung_licht",
+      "name": "Zimmer Mira Automatisierung Licht",
+      "state": "on",
+      "last_changed": "2026-02-27T09:46:05.120634+00:00"
+    }
+  ],
+  "scenes": [
+    {
+      "entity_id": "scene.arbeitszimmer_energie_tanken",
+      "name": "Arbeitszimmer Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.020666+00:00"
+    },
+    {
+      "entity_id": "scene.arbeitszimmer_entspannen",
+      "name": "Arbeitszimmer Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.010906+00:00"
+    },
+    {
+      "entity_id": "scene.arbeitszimmer_konzentrieren",
+      "name": "Arbeitszimmer Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.032139+00:00"
+    },
+    {
+      "entity_id": "scene.arbeitszimmer_lesen",
+      "name": "Arbeitszimmer Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.037387+00:00"
+    },
+    {
+      "entity_id": "scene.arbeitszimmer_marchenbuch",
+      "name": "Arbeitszimmer Märchenbuch",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.034601+00:00"
+    },
+    {
+      "entity_id": "scene.arbeitszimmer_nachtlicht",
+      "name": "Arbeitszimmer Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.029407+00:00"
+    },
+    {
+      "entity_id": "scene.arbeitszimmer_naturliches_licht_6",
+      "name": "Arbeitszimmer Natürliches Licht 6",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.045423+00:00"
+    },
+    {
+      "entity_id": "scene.arbeitszimmer_ruhephase",
+      "name": "Arbeitszimmer Ruhephase",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.031992+00:00"
+    },
+    {
+      "entity_id": "scene.arbeitszimmer_toil_and_trouble",
+      "name": "Arbeitszimmer Toil and trouble",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.022402+00:00"
+    },
+    {
+      "entity_id": "scene.bad_sanfte_hugel",
+      "name": "Bad Sanfte Hügel",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.038110+00:00"
+    },
+    {
+      "entity_id": "scene.badbereich_konzentrieren",
+      "name": "Badbereich Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.035894+00:00"
+    },
+    {
+      "entity_id": "scene.badbereich_lesen",
+      "name": "Badbereich Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.028944+00:00"
+    },
+    {
+      "entity_id": "scene.badbereich_nachtlicht",
+      "name": "Badbereich Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.025940+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_abschalten",
+      "name": "Durchgang Terrasse Abschalten",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.043687+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_aufgehen",
+      "name": "Durchgang Terrasse Aufgehen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.037671+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_glanz",
+      "name": "Durchgang Terrasse Glanz",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.038539+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_goldene_stunden_2",
+      "name": "Durchgang Terrasse Goldene Stunden",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.044811+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_ibiza",
+      "name": "Durchgang Terrasse Ibiza",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.028324+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_konzentrieren",
+      "name": "Durchgang Terrasse Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.037531+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_lesen",
+      "name": "Durchgang Terrasse Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.027697+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_marchenbuch",
+      "name": "Durchgang Terrasse Märchenbuch",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.026265+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_nachtlicht",
+      "name": "Durchgang Terrasse Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.025614+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_nachts",
+      "name": "Durchgang Terrasse Nachts",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.036065+00:00"
+    },
+    {
+      "entity_id": "scene.durchgang_terrasse_schlafrig",
+      "name": "Durchgang Terrasse Schläfrig",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.023538+00:00"
+    },
+    {
+      "entity_id": "scene.elternhaus_gedimmt",
+      "name": "Elternhaus Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.019962+00:00"
+    },
+    {
+      "entity_id": "scene.elternhaus_hell",
+      "name": "Elternhaus Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.036896+00:00"
+    },
+    {
+      "entity_id": "scene.elternhaus_nachtlicht",
+      "name": "Elternhaus Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.021034+00:00"
+    },
+    {
+      "entity_id": "scene.erdkellerbereich_energie_tanken",
+      "name": "Erdkellerbereich Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.028175+00:00"
+    },
+    {
+      "entity_id": "scene.erdkellerbereich_entspannen",
+      "name": "Erdkellerbereich Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.019181+00:00"
+    },
+    {
+      "entity_id": "scene.erdkellerbereich_entspannen_2",
+      "name": "Erdkellerbereich Entspannen 2",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.040840+00:00"
+    },
+    {
+      "entity_id": "scene.erdkellerbereich_gedimmt",
+      "name": "Erdkellerbereich Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.035342+00:00"
+    },
+    {
+      "entity_id": "scene.erdkellerbereich_hell",
+      "name": "Erdkellerbereich Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.022073+00:00"
+    },
+    {
+      "entity_id": "scene.erdkellerbereich_konzentrieren",
+      "name": "Erdkellerbereich Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.028617+00:00"
+    },
+    {
+      "entity_id": "scene.erdkellerbereich_lesen",
+      "name": "Erdkellerbereich Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.023884+00:00"
+    },
+    {
+      "entity_id": "scene.erdkellerbereich_nachtlicht",
+      "name": "Erdkellerbereich Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.019650+00:00"
+    },
+    {
+      "entity_id": "scene.gang_entspannen_2",
+      "name": "Gang Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.043836+00:00"
+    },
+    {
+      "entity_id": "scene.gang_hell",
+      "name": "Gang Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.023072+00:00"
+    },
+    {
+      "entity_id": "scene.gang_konzentrieren_2",
+      "name": "Gang Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.034462+00:00"
+    },
+    {
+      "entity_id": "scene.gang_lesen_3",
+      "name": "Gang Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.027370+00:00"
+    },
+    {
+      "entity_id": "scene.gang_nachtlicht_2",
+      "name": "Gang Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.043994+00:00"
+    },
+    {
+      "entity_id": "scene.gang_all_day_lightsync_scene_2",
+      "name": "Gangbereich All-day Lightsync Scene 2",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.044512+00:00"
+    },
+    {
+      "entity_id": "scene.gang_entspannen",
+      "name": "Gangbereich Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.010657+00:00"
+    },
+    {
+      "entity_id": "scene.gang_konzentrieren",
+      "name": "Gangbereich Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.038825+00:00"
+    },
+    {
+      "entity_id": "scene.gang_lesen",
+      "name": "Gangbereich Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.022728+00:00"
+    },
+    {
+      "entity_id": "scene.gang_lesen_2",
+      "name": "Gangbereich Lesen 2",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.039240+00:00"
+    },
+    {
+      "entity_id": "scene.gang_nachtlicht",
+      "name": "Gangbereich Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.039975+00:00"
+    },
+    {
+      "entity_id": "scene.gang_ruhephase",
+      "name": "Gangbereich Ruhephase",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.038682+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_abschalten",
+      "name": "Garten Abschalten",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.033442+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_aufgehen",
+      "name": "Garten Aufgehen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.040267+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_gedimmt",
+      "name": "Garten Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.028024+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_glanz",
+      "name": "Garten Glanz",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.022563+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_goldene_stunden_2",
+      "name": "Garten Goldene Stunden",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.044352+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_hell",
+      "name": "Garten Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.039820+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_ibiza",
+      "name": "Garten Ibiza",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.036499+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_konzentrieren",
+      "name": "Garten Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.037238+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_lesen",
+      "name": "Garten Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.009788+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_marchenbuch",
+      "name": "Garten Märchenbuch",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.040999+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_nachtlicht",
+      "name": "Garten Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.024529+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_nachts",
+      "name": "Garten Nachts",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.035727+00:00"
+    },
+    {
+      "entity_id": "scene.gartenbereich_schlafrig",
+      "name": "Garten Schläfrig",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.024053+00:00"
+    },
+    {
+      "entity_id": "scene.hausturbereich_hell",
+      "name": "Haustürbereich Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.023233+00:00"
+    },
+    {
+      "entity_id": "scene.hausturbereich_konzentrieren",
+      "name": "Haustürbereich Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.043249+00:00"
+    },
+    {
+      "entity_id": "scene.hausturbereich_lesen",
+      "name": "Haustürbereich Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.026576+00:00"
+    },
+    {
+      "entity_id": "scene.hausturbereich_nachtlicht",
+      "name": "Haustürbereich Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.040122+00:00"
+    },
+    {
+      "entity_id": "scene.hausturbereich_ruhephase",
+      "name": "Haustürbereich Ruhephase",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.034180+00:00"
+    },
+    {
+      "entity_id": "scene.hausturbereich_sonnenuntergang_savanne",
+      "name": "Haustürbereich Sonnenuntergang Savanne",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.021878+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_energie_tanken",
+      "name": "Hintereingang Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.043540+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_entspannen",
+      "name": "Hintereingang Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.042943+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_gedimmt",
+      "name": "Hintereingang Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.035487+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_hell",
+      "name": "Hintereingang Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.020502+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_konzentrieren",
+      "name": "Hintereingang Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.027861+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_lesen",
+      "name": "Hintereingang Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.040407+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_nachtlicht",
+      "name": "Hintereingang Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.038399+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_naturliches_licht_2",
+      "name": "Hintereingang Natürliches Licht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.044974+00:00"
+    },
+    {
+      "entity_id": "scene.hintereingang_ruhephase",
+      "name": "Hintereingang Ruhephase",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.036211+00:00"
+    },
+    {
+      "entity_id": "scene.kuche_energie_tanken",
+      "name": "Küche Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.025454+00:00"
+    },
+    {
+      "entity_id": "scene.kuche_entspannen",
+      "name": "Küche Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.020333+00:00"
+    },
+    {
+      "entity_id": "scene.kuche_hell",
+      "name": "Küche Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.028769+00:00"
+    },
+    {
+      "entity_id": "scene.kuche_konzentrieren",
+      "name": "Küche Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.022897+00:00"
+    },
+    {
+      "entity_id": "scene.kuche_lesen",
+      "name": "Küche Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.023709+00:00"
+    },
+    {
+      "entity_id": "scene.kuche_nachtlicht",
+      "name": "Küche Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.027071+00:00"
+    },
+    {
+      "entity_id": "scene.schlafen_im_loft",
+      "name": "Schlafen im Loft",
+      "state": "2023-04-16T10:41:58.855532+00:00",
+      "last_changed": "2026-02-27T09:45:36.927759+00:00"
+    },
+    {
+      "entity_id": "scene.schlaflicht_mira_gedimmt",
+      "name": "Schlaflicht Mira Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.024791+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_bernsteinblute",
+      "name": "Schlafzimmer Bernsteinblüte",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.033009+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_besinnlich",
+      "name": "Schlafzimmer Besinnlich",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.039676+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_blossom",
+      "name": "Schlafzimmer Blossom",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.021198+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_charme_des_sonnenuntergangs",
+      "name": "Schlafzimmer Charme des Sonnenuntergangs",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.020157+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_die_farben_der_natur_2",
+      "name": "Schlafzimmer Die Farben der Natur 2",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.045568+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_energie_tanken",
+      "name": "Schlafzimmer Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.037812+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_entspannen",
+      "name": "Schlafzimmer Entspannen",
+      "state": "2025-10-03T17:49:26.761469+00:00",
+      "last_changed": "2026-02-27T09:45:57.032848+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_galaxie",
+      "name": "Schlafzimmer Galaxie",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.034888+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_glanz",
+      "name": "Schlafzimmer Glanz",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.010403+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_hell",
+      "name": "Schlafzimmer Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.010111+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_konzentrieren",
+      "name": "Schlafzimmer Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.025141+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_lesen",
+      "name": "Schlafzimmer Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.029106+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_nachtlicht",
+      "name": "Schlafzimmer Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.024981+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_nachts",
+      "name": "Schlafzimmer Nachts",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.031818+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_sanfte_hugel",
+      "name": "Schlafzimmer Sanfte Hügel",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.025768+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_schleierkraut",
+      "name": "Schlafzimmer Schleierkraut",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.032427+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_stadtregen",
+      "name": "Schlafzimmer Stadtregen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.042774+00:00"
+    },
+    {
+      "entity_id": "scene.schlafzimmer_vertraumter_sonnenuntergang",
+      "name": "Schlafzimmer Verträumter Sonnenuntergang",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.040550+00:00"
+    },
+    {
+      "entity_id": "scene.shutdown_badbereich",
+      "name": "Shutdown Badbereich",
+      "state": "2026-02-27T19:51:02.404891+00:00",
+      "last_changed": "2026-02-27T19:51:02.404912+00:00"
+    },
+    {
+      "entity_id": "scene.shutdown_deepsleep",
+      "name": "Shutdown DeepSleep",
+      "state": "2023-04-16T10:44:47.175525+00:00",
+      "last_changed": "2026-02-27T09:45:36.929006+00:00"
+    },
+    {
+      "entity_id": "scene.shutdown_gangbereich",
+      "name": "Shutdown Gangbereich",
+      "state": "2023-08-18T23:21:13.459004+00:00",
+      "last_changed": "2026-02-27T09:45:36.929570+00:00"
+    },
+    {
+      "entity_id": "scene.shutdown_garten",
+      "name": "Shutdown Garten",
+      "state": "2023-04-16T10:44:59.051457+00:00",
+      "last_changed": "2026-02-27T09:45:36.929705+00:00"
+    },
+    {
+      "entity_id": "scene.shutdown_kochbereich",
+      "name": "Shutdown Kochbereich",
+      "state": "2025-03-14T00:14:58.948620+00:00",
+      "last_changed": "2026-02-27T09:45:36.929295+00:00"
+    },
+    {
+      "entity_id": "scene.shutdown_loft",
+      "name": "Shutdown Loft",
+      "state": "2023-08-18T23:32:29.770891+00:00",
+      "last_changed": "2026-02-27T09:45:36.928787+00:00"
+    },
+    {
+      "entity_id": "scene.shutdown_schlafbereich",
+      "name": "Shutdown Schlafbereich",
+      "state": "2023-04-16T10:33:38.491729+00:00",
+      "last_changed": "2026-02-27T09:45:36.930056+00:00"
+    },
+    {
+      "entity_id": "scene.shutdown_wohnbereich",
+      "name": "Shutdown Wohnbereich",
+      "state": "2023-04-16T10:36:04.560127+00:00",
+      "last_changed": "2026-02-27T09:45:36.929433+00:00"
+    },
+    {
+      "entity_id": "scene.starte_diablo_4_auf_der_series_x",
+      "name": "Starte Diablo 4 auf der Series X",
+      "state": "2025-05-14T21:10:55.123232+00:00",
+      "last_changed": "2026-02-27T09:45:36.930333+00:00"
+    },
+    {
+      "entity_id": "scene.starte_rtl_plus",
+      "name": "Starte RTL Plus",
+      "state": "2023-05-02T06:15:33.008776+00:00",
+      "last_changed": "2026-02-27T09:45:36.930199+00:00"
+    },
+    {
+      "entity_id": "scene.startup_loft",
+      "name": "StartUp Loft",
+      "state": "2023-05-07T21:08:38.226986+00:00",
+      "last_changed": "2026-02-27T09:45:36.929841+00:00"
+    },
+    {
+      "entity_id": "scene.terrassenbereich_entspannen",
+      "name": "Terrassenbereich Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.031489+00:00"
+    },
+    {
+      "entity_id": "scene.terrassenbereich_gedimmt",
+      "name": "Terrassenbereich Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.034037+00:00"
+    },
+    {
+      "entity_id": "scene.terrassenbereich_hell",
+      "name": "Terrassenbereich Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.028469+00:00"
+    },
+    {
+      "entity_id": "scene.terrassenbereich_konzentrieren",
+      "name": "Terrassenbereich Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.038254+00:00"
+    },
+    {
+      "entity_id": "scene.terrassenbereich_lesen",
+      "name": "Terrassenbereich Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.026902+00:00"
+    },
+    {
+      "entity_id": "scene.terrassenbereich_nachtlicht",
+      "name": "Terrassenbereich Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.041152+00:00"
+    },
+    {
+      "entity_id": "scene.toilette_energie_tanken",
+      "name": "Toilette Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.041443+00:00"
+    },
+    {
+      "entity_id": "scene.toilette_entspannen",
+      "name": "Toilette Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.035194+00:00"
+    },
+    {
+      "entity_id": "scene.toilette_konzentrieren",
+      "name": "Toilette Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.021531+00:00"
+    },
+    {
+      "entity_id": "scene.toilette_lesen",
+      "name": "Toilette Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.037085+00:00"
+    },
+    {
+      "entity_id": "scene.toilette_nachtlicht",
+      "name": "Toilette Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.033297+00:00"
+    },
+    {
+      "entity_id": "scene.toilette_naturliches_licht_4",
+      "name": "Toilette Natürliches Licht 4",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.044660+00:00"
+    },
+    {
+      "entity_id": "scene.toilette_ruhephase",
+      "name": "Toilette Ruhephase",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.037961+00:00"
+    },
+    {
+      "entity_id": "scene.vordereingang_energie_tanken",
+      "name": "Vordereingang Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.040691+00:00"
+    },
+    {
+      "entity_id": "scene.vordereingang_entspannen",
+      "name": "Vordereingang Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.020841+00:00"
+    },
+    {
+      "entity_id": "scene.vordereingang_gedimmt",
+      "name": "Vordereingang Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.034740+00:00"
+    },
+    {
+      "entity_id": "scene.vordereingang_hell",
+      "name": "Vordereingang Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.043100+00:00"
+    },
+    {
+      "entity_id": "scene.vordereingang_konzentrieren",
+      "name": "Vordereingang Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.039533+00:00"
+    },
+    {
+      "entity_id": "scene.vordereingang_lesen",
+      "name": "Vordereingang Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.025296+00:00"
+    },
+    {
+      "entity_id": "scene.vordereingang_nachtlicht",
+      "name": "Vordereingang Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.033584+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_abschalten",
+      "name": "Wohnzimmer Abschalten",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.027543+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_aufgehen",
+      "name": "Wohnzimmer Aufgehen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.032699+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_energie_tanken",
+      "name": "Wohnzimmer Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.033154+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_entspannen",
+      "name": "Wohnzimmer Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.043395+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_gedimmt",
+      "name": "Wohnzimmer Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.026731+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_glanz",
+      "name": "Wohnzimmer Glanz",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.021690+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_goldene_stunden",
+      "name": "Wohnzimmer Goldene Stunden",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.045276+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_hell",
+      "name": "Wohnzimmer Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.042320+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_honolulu",
+      "name": "Wohnzimmer Honolulu",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.035047+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_ibiza",
+      "name": "Wohnzimmer Ibiza",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.029258+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_konzentrieren",
+      "name": "Wohnzimmer Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.009436+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_lesen",
+      "name": "Wohnzimmer Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.041732+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_marchenbuch",
+      "name": "Wohnzimmer Märchenbuch",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.032284+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_nachtlicht",
+      "name": "Wohnzimmer Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.042508+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_nachts",
+      "name": "Wohnzimmer Nachts",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.021367+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_naturliches_licht_5",
+      "name": "Wohnzimmer Natürliches Licht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.045127+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_nachte_am_meer",
+      "name": "Wohnzimmer Nächte am Meer",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.044148+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_ruhephase",
+      "name": "Wohnzimmer Ruhephase",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.038980+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_schlafrig",
+      "name": "Wohnzimmer Schläfrig",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.039388+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_tokio_2",
+      "name": "Wohnzimmer Tokio",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.026107+00:00"
+    },
+    {
+      "entity_id": "scene.wohnzimmer_tokio",
+      "name": "Wohnzimmer Tokio",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.033724+00:00"
+    },
+    {
+      "entity_id": "scene.zimmer_mira_energie_tanken",
+      "name": "Zimmer Mira Energie tanken",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.034321+00:00"
+    },
+    {
+      "entity_id": "scene.zimmer_mira_entspannen",
+      "name": "Zimmer Mira Entspannen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.026420+00:00"
+    },
+    {
+      "entity_id": "scene.zimmer_mira_gedimmt",
+      "name": "Zimmer Mira Gedimmt",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.041298+00:00"
+    },
+    {
+      "entity_id": "scene.zimmer_mira_hell",
+      "name": "Zimmer Mira Hell",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.033882+00:00"
+    },
+    {
+      "entity_id": "scene.zimmer_mira_konzentrieren",
+      "name": "Zimmer Mira Konzentrieren",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.041587+00:00"
+    },
+    {
+      "entity_id": "scene.zimmer_mira_lesen",
+      "name": "Zimmer Mira Lesen",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.036358+00:00"
+    },
+    {
+      "entity_id": "scene.zimmer_mira_nachtlicht",
+      "name": "Zimmer Mira Nachtlicht",
+      "state": "unknown",
+      "last_changed": "2026-02-27T09:45:57.022245+00:00"
+    }
+  ],
+  "scripts": [
+    {
+      "entity_id": "script.activate_alexa_actionable_notification",
+      "name": "activate_alexa_actionable_notification",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.954894+00:00"
+    },
+    {
+      "entity_id": "script.call_of_duty_auf_xbox_starten",
+      "name": "Call of Duty auf Xbox Starten",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955730+00:00"
+    },
+    {
+      "entity_id": "script.internetradio_bassdrive",
+      "name": "Internetradio Bassdrive",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955817+00:00"
+    },
+    {
+      "entity_id": "script.set_andreas_away",
+      "name": "Set Andreas Away",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955123+00:00"
+    },
+    {
+      "entity_id": "script.set_andreas_home",
+      "name": "Set Andreas Home",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955027+00:00"
+    },
+    {
+      "entity_id": "script.sonnenaufgang",
+      "name": "Sonnenaufgang",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955297+00:00"
+    },
+    {
+      "entity_id": "script.sonnenuntergang",
+      "name": "Sonnenuntergang",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955209+00:00"
+    },
+    {
+      "entity_id": "script.starte_plex_im_wohnzimmer",
+      "name": "Starte Plex im Wohnzimmer",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955383+00:00"
+    },
+    {
+      "entity_id": "script.starte_rtl_im_wohnzimmer",
+      "name": "Starte RTL im Wohnzimmer",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955471+00:00"
+    },
+    {
+      "entity_id": "script.stream_deck_shapes",
+      "name": "Stream Deck + Shapes",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955647+00:00"
+    },
+    {
+      "entity_id": "script.stream_deck_sonos_burobereich_volume",
+      "name": "Stream Deck + Sonos Bürobereich Volume",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:38.955558+00:00"
+    }
+  ],
+  "media_players": [
+    {
+      "entity_id": "media_player.ai_360_lautsprecher",
+      "name": "AI 360 Lautsprecher",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:00.248871+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_kuche",
+      "name": "Alexa Küche",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.169366+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_loft",
+      "name": "Alexa Loft",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:06.168933+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_schlafzimmer",
+      "name": "Alexa Schlafzimmer",
+      "state": "idle",
+      "last_changed": "2026-02-27T12:27:06.629931+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_sonos_gang",
+      "name": "Alexa Sonos Gang",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.168542+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_sonos_move",
+      "name": "Alexa Sonos Move",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T15:18:16.616399+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_toilette",
+      "name": "Alexa Toilette",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.169081+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_wohnzimmer",
+      "name": "Alexa Wohnzimmer",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.169648+00:00"
+    },
+    {
+      "entity_id": "media_player.andreas_s_fire_tv",
+      "name": "Andreas's Fire TV",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.170485+00:00"
+    },
+    {
+      "entity_id": "media_player.apple_tv_wohnzimmer",
+      "name": "Apple-TV",
+      "state": "off",
+      "last_changed": "2026-02-27T18:30:11.988303+00:00"
+    },
+    {
+      "entity_id": "media_player.badbereich",
+      "name": "Badbereich",
+      "state": "paused",
+      "last_changed": "2026-02-27T19:15:06.677582+00:00"
+    },
+    {
+      "entity_id": "media_player.buerobereich",
+      "name": "Buerobereich",
+      "state": "playing",
+      "last_changed": "2026-02-27T17:40:41.012363+00:00"
+    },
+    {
+      "entity_id": "media_player.fernseher",
+      "name": "Fernseher",
+      "state": "on",
+      "last_changed": "2026-02-27T18:30:25.456044+00:00"
+    },
+    {
+      "entity_id": "media_player.fernseher_im_wohnzimmer",
+      "name": "Fernseher im Wohnzimmer",
+      "state": "on",
+      "last_changed": "2026-02-27T18:30:59.534768+00:00"
+    },
+    {
+      "entity_id": "media_player.fire_tv_2",
+      "name": "Fire TV",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.168792+00:00"
+    },
+    {
+      "entity_id": "media_player.aeohy_155_cast",
+      "name": "FireShow[Cast]",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:58.174322+00:00"
+    },
+    {
+      "entity_id": "media_player.fireshow_dlna",
+      "name": "FireShow[DLNA]",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:12.728590+00:00"
+    },
+    {
+      "entity_id": "media_player.kftrwi_112_cast",
+      "name": "FireTablet",
+      "state": "off",
+      "last_changed": "2026-02-27T09:46:02.595698+00:00"
+    },
+    {
+      "entity_id": "media_player.firetv_airplay",
+      "name": "FireTV[AirPlay]",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:45:56.170521+00:00"
+    },
+    {
+      "entity_id": "media_player.aftkrt_146_cast",
+      "name": "FireTV[Cast]",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:58.174800+00:00"
+    },
+    {
+      "entity_id": "media_player.gangbereich",
+      "name": "Gangbereich",
+      "state": "paused",
+      "last_changed": "2026-02-27T09:46:05.930455+00:00"
+    },
+    {
+      "entity_id": "media_player.homeassistant_shareport",
+      "name": "HomeAssistant Shareport",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:01.404988+00:00"
+    },
+    {
+      "entity_id": "media_player.kochbereich",
+      "name": "Kochbereich",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:05.774476+00:00"
+    },
+    {
+      "entity_id": "media_player.m2_pro_andreas",
+      "name": "M2 Pro Andreas",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:56.162718+00:00"
+    },
+    {
+      "entity_id": "media_player.macbook_air_andreas",
+      "name": "MacBook Air Andreas",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:56.161825+00:00"
+    },
+    {
+      "entity_id": "media_player.20_f8_3b_09_a7_ea",
+      "name": "media_player.20_f8_3b_09_a7_ea",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:51:12.756788+00:00"
+    },
+    {
+      "entity_id": "media_player.as_aeohy_cast",
+      "name": "media_player.as_aeohy_cast",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:51:12.758452+00:00"
+    },
+    {
+      "entity_id": "media_player.srs_x77",
+      "name": "media_player.srs_x77",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:51:12.758666+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_zimmer_mira",
+      "name": "Miras Alexa",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.170079+00:00"
+    },
+    {
+      "entity_id": "media_player.miras_tablet",
+      "name": "Miras Tablet",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.169231+00:00"
+    },
+    {
+      "entity_id": "media_player.alexa_buro",
+      "name": "Pauls Alexa",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.169945+00:00"
+    },
+    {
+      "entity_id": "media_player.schlafbereich",
+      "name": "Schlafbereich",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.129713+00:00"
+    },
+    {
+      "entity_id": "media_player.siri_wohnzimmer",
+      "name": "Siri Wohnzimmer",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:45:56.160715+00:00"
+    },
+    {
+      "entity_id": "media_player.smart_tv",
+      "name": "Smart TV",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:56.932464+00:00"
+    },
+    {
+      "entity_id": "media_player.sonos_move",
+      "name": "Sonos Move",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T15:14:16.726327+00:00"
+    },
+    {
+      "entity_id": "media_player.sony_x77",
+      "name": "Sony X77",
+      "state": "off",
+      "last_changed": "2026-02-27T09:46:02.802844+00:00"
+    },
+    {
+      "entity_id": "media_player.spotify_efka",
+      "name": "Spotify Efka",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:01.325944+00:00"
+    },
+    {
+      "entity_id": "media_player.srs_x77_2",
+      "name": "SRS-X77",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:45:55.994653+00:00"
+    },
+    {
+      "entity_id": "media_player.verstarker",
+      "name": "Verstarker",
+      "state": "on",
+      "last_changed": "2026-02-27T18:30:27.191729+00:00"
+    },
+    {
+      "entity_id": "media_player.verstarker_rx_v573",
+      "name": "Verstärker RX-V573",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:45:55.189941+00:00"
+    },
+    {
+      "entity_id": "media_player.viture_luma_ultra",
+      "name": "Viture Luma Ultra",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:56.164470+00:00"
+    },
+    {
+      "entity_id": "media_player.vlc_telnet",
+      "name": "VLC-TELNET",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:00.058722+00:00"
+    },
+    {
+      "entity_id": "media_player.20_f8_3b_09_99_54",
+      "name": "Voice Arbeitszimmer",
+      "state": "idle",
+      "last_changed": "2026-02-27T17:58:25.507525+00:00"
+    },
+    {
+      "entity_id": "media_player.voice_arbeitszimmer",
+      "name": "Voice Arbeitszimmer",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:01.106814+00:00"
+    },
+    {
+      "entity_id": "media_player.voice_wohnzimmer",
+      "name": "Voice Wohnzimmer",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:00.775717+00:00"
+    },
+    {
+      "entity_id": "media_player.vorraum",
+      "name": "Vorraum",
+      "state": "unavailable",
+      "last_changed": "2026-02-27T09:46:06.169770+00:00"
+    },
+    {
+      "entity_id": "media_player.werkstatt",
+      "name": "Werkstatt",
+      "state": "idle",
+      "last_changed": "2026-02-27T09:46:06.170347+00:00"
+    },
+    {
+      "entity_id": "media_player.wohnbereich",
+      "name": "Wohnbereich",
+      "state": "paused",
+      "last_changed": "2026-02-27T18:29:44.355195+00:00"
+    },
+    {
+      "entity_id": "media_player.xbox_series_s",
+      "name": "Xbox Series S",
+      "state": "off",
+      "last_changed": "2026-02-27T21:51:34.965090+00:00"
+    },
+    {
+      "entity_id": "media_player.xbox_series_x",
+      "name": "Xbox Series X",
+      "state": "off",
+      "last_changed": "2026-02-27T21:51:34.965246+00:00"
+    },
+    {
+      "entity_id": "media_player.yamaha_rx573",
+      "name": "Yamaha RX573",
+      "state": "off",
+      "last_changed": "2026-02-27T09:45:35.858360+00:00"
+    }
+  ],
+  "generated_zone_candidates": [
+    {
+      "zone_id": "zone:kontrollraum",
+      "name": "Kontrollraum",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.kontrollraum"
+      ],
+      "entities": {
+        "lights": [
+          "light.camera_hub_g5pro_4497_lightbulb",
+          "light.gesamtbeleuchtung",
+          "light.kontrollraum"
+        ],
+        "media": [
+          "media_player.ai_360_lautsprecher",
+          "media_player.sonos_move",
+          "media_player.spotify_efka"
+        ],
+        "door": [
+          "binary_sensor.agip_eni_landstr_3_status",
+          "binary_sensor.esso_sudeinfahrt_4_status",
+          "binary_sensor.freie_kosslarner_str_30_32",
+          "binary_sensor.freie_tankstelle_haselbacher_str_1_status",
+          "binary_sensor.kaufland_franz_stelzenberger_str_1_status"
+        ],
+        "camera": [
+          "camera.ai360",
+          "camera.camera_hub_g5pro_4497"
+        ],
+        "motion": [
+          "binary_sensor.ai_home_copilot_motion_detection",
+          "binary_sensor.ai_home_copilot_motion_detection_10",
+          "binary_sensor.ai_home_copilot_motion_detection_11",
+          "binary_sensor.ai_home_copilot_motion_detection_2",
+          "binary_sensor.ai_home_copilot_motion_detection_3",
+          "binary_sensor.ai_home_copilot_motion_detection_4",
+          "binary_sensor.ai_home_copilot_motion_detection_5",
+          "binary_sensor.ai_home_copilot_motion_detection_6",
+          "binary_sensor.ai_home_copilot_motion_detection_7",
+          "binary_sensor.ai_home_copilot_motion_detection_8",
+          "binary_sensor.ai_home_copilot_motion_detection_9",
+          "binary_sensor.ai_home_copilot_presence_detected",
+          "binary_sensor.ai_home_copilot_presence_detected_10",
+          "binary_sensor.ai_home_copilot_presence_detected_11",
+          "binary_sensor.ai_home_copilot_presence_detected_2",
+          "binary_sensor.ai_home_copilot_presence_detected_3",
+          "binary_sensor.ai_home_copilot_presence_detected_4",
+          "binary_sensor.ai_home_copilot_presence_detected_5",
+          "binary_sensor.ai_home_copilot_presence_detected_6",
+          "binary_sensor.ai_home_copilot_presence_detected_7"
+        ],
+        "temperature": [
+          "sensor.dream_machine_special_edition_cpu_temperatur",
+          "sensor.dream_machine_special_edition_dream_machine_special_edition_cpu_temperature",
+          "sensor.dream_machine_special_edition_dream_machine_special_edition_local_temperature",
+          "sensor.dream_machine_special_edition_dream_machine_special_edition_phy_temperature",
+          "sensor.system_monitor_prozessortemperatur"
+        ],
+        "power": [
+          "sensor.dream_machine_special_edition_ap20_wifi6_1g_u6_mesh_eingang_poe_power",
+          "sensor.dream_machine_special_edition_port_1_poe_power",
+          "sensor.dream_machine_special_edition_port_2_poe_power",
+          "sensor.dream_machine_special_edition_port_3_poe_power",
+          "sensor.dream_machine_special_edition_port_7_poe_power",
+          "sensor.dream_machine_special_edition_sw20_arbeitszimmer_1gx8_poe_usw_lite_poe_power",
+          "sensor.dream_machine_special_edition_sw20_wohnzimmer_1gx5_usw_flex_mini_poe_power",
+          "sensor.dream_machine_special_edition_unas_pro_poe_power",
+          "sensor.shelly_long_range_electric_consumption_kwh",
+          "sensor.shelly_long_range_electric_consumption_w"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:wohnzimmer",
+      "name": "Wohnzimmer",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.wohnzimmer"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.bewegung_durchgang_terrasse",
+          "binary_sensor.bewegung_durchgangsbereich_wohnbereich",
+          "binary_sensor.bewegung_grosse_couch",
+          "binary_sensor.bewegung_kleine_couch",
+          "binary_sensor.bewegung_schnapsschrank",
+          "binary_sensor.bewegung_spielwiese",
+          "binary_sensor.bewegung_wohnzimmer",
+          "binary_sensor.bewegungsbereich",
+          "binary_sensor.wohnzimmer_anwesenheit"
+        ],
+        "lights": [
+          "light.beleuchtung_bett",
+          "light.beleuchtung_durchgangsbereich",
+          "light.beleuchtung_terrassentur",
+          "light.beleuchtung_wohnzimmer",
+          "light.candle_wohnzimmerwand_links",
+          "light.candle_wohnzimmerwand_rechts",
+          "light.deckenlicht",
+          "light.deckenlicht_links",
+          "light.deckenlicht_links_1",
+          "light.deckenlicht_links_2",
+          "light.deckenlicht_links_3",
+          "light.deckenlicht_links_4",
+          "light.deckenlicht_links_5",
+          "light.deckenlicht_links_6",
+          "light.deckenlicht_rechts",
+          "light.deckenlicht_rechts_1",
+          "light.deckenlicht_rechts_2",
+          "light.deckenlicht_rechts_3",
+          "light.deckenlicht_rechts_4",
+          "light.deckenlicht_rechts_5"
+        ],
+        "temperature": [
+          "sensor.alexa_wohnzimmer_temperature",
+          "sensor.luftreiniger_current_temperature",
+          "sensor.sensor_durchschnitt_temperatur_aufenthaltsbereich",
+          "sensor.temperatur_wohnbereich_messstation",
+          "sensor.thermostat_wohnzimmer_links_temperatur",
+          "sensor.thermostat_wohnzimmer_rechts_temperatur",
+          "sensor.touchpanel_wohnzimmer_touchpanel_wohnzimmer_temperature"
+        ],
+        "media": [
+          "media_player.alexa_wohnzimmer",
+          "media_player.apple_tv_wohnzimmer",
+          "media_player.fernseher",
+          "media_player.fernseher_im_wohnzimmer",
+          "media_player.siri_wohnzimmer",
+          "media_player.voice_wohnzimmer",
+          "media_player.wohnbereich",
+          "media_player.xbox_series_s"
+        ],
+        "heating": [
+          "climate.luftreiniger",
+          "climate.thermostat_wohnzimmer_links",
+          "climate.thermostat_wohnzimmer_rechts"
+        ],
+        "co2": [
+          "sensor.co2_wohnbereich_messstation"
+        ],
+        "noise": [
+          "sensor.larm_wohnbereich_messstation"
+        ],
+        "humidity": [
+          "sensor.luftfeuchtigkeit_wohnbereich_messstation",
+          "sensor.thermostat_wohnzimmer_links_luftfeuchtigkeit",
+          "sensor.thermostat_wohnzimmer_rechts_luftfeuchtigkeit"
+        ],
+        "brightness": [
+          "sensor.helligkeit_wohnzimmer"
+        ],
+        "power": [
+          "sensor.deckenlicht_links_electric_consumption_kwh",
+          "sensor.deckenlicht_links_electric_consumption_w",
+          "sensor.deckenlicht_links_power",
+          "sensor.deckenlicht_rechts_electric_consumption_kwh",
+          "sensor.deckenlicht_rechts_electric_consumption_w",
+          "sensor.deckenlicht_rechts_power",
+          "sensor.licht_terrasse_electric_consumption_kwh",
+          "sensor.licht_terrasse_electric_consumption_kwh_2",
+          "sensor.licht_terrasse_electric_consumption_w",
+          "sensor.licht_terrasse_electric_consumption_w_2",
+          "sensor.licht_terrasse_power",
+          "sensor.rollo_terrassentur_electric_consumption_kwh_2",
+          "sensor.rollo_terrassentur_electric_consumption_w_2",
+          "sensor.rollo_terrassentur_power_2",
+          "sensor.steckerleiste_wohnzimmer_electric_consumption_kwh",
+          "sensor.steckerleiste_wohnzimmer_electric_consumption_kwh_2",
+          "sensor.steckerleiste_wohnzimmer_electric_consumption_kwh_3",
+          "sensor.steckerleiste_wohnzimmer_electric_consumption_kwh_4",
+          "sensor.steckerleiste_wohnzimmer_electric_consumption_kwh_5",
+          "sensor.steckerleiste_wohnzimmer_electric_consumption_kwh_6"
+        ],
+        "cover": [
+          "cover.rollo_terrassentur"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:arbeitszimmer",
+      "name": "Arbeitszimmer",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.arbeitszimmer"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.ai360_anwesenheit",
+          "binary_sensor.arbeitszimmer_anwesenheit",
+          "binary_sensor.camera_hub_g3_2ed9_motion_sensor",
+          "binary_sensor.sensor_arbeitszimmer_presence"
+        ],
+        "lights": [
+          "light.arbeitszimmer_beleuchtung",
+          "light.hue_lightguide",
+          "light.lindu",
+          "light.retrolampe",
+          "light.retroventilator",
+          "light.schreibtischlampe",
+          "light.shapes",
+          "light.voice_arbeitszimmer_led_ring"
+        ],
+        "media": [
+          "media_player.buerobereich",
+          "media_player.fire_tv_2",
+          "media_player.fireshow_dlna",
+          "media_player.firetv_airplay",
+          "media_player.homeassistant_shareport",
+          "media_player.m2_pro_andreas",
+          "media_player.macbook_air_andreas",
+          "media_player.voice_arbeitszimmer",
+          "media_player.xbox_series_x"
+        ],
+        "brightness": [
+          "sensor.sensor_arbeitszimmer_helligkeit"
+        ],
+        "camera": [
+          "camera.camera_hub_g3_2ed9"
+        ],
+        "power": [
+          "sensor.retroventilator_electric_consumption_kwh",
+          "sensor.retroventilator_electric_consumption_w",
+          "sensor.retroventilator_power"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:küche",
+      "name": "Küche",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.küche"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.kuche_anwesenheit",
+          "binary_sensor.sammelsensor_bewegung_kuche",
+          "binary_sensor.sensor_presence_kuche_bewegung"
+        ],
+        "lights": [
+          "light.beleuchtung_kuche",
+          "light.hue_kochplatz",
+          "light.licht_anrichte",
+          "light.licht_anrichte_2",
+          "light.licht_anrichte_3",
+          "light.licht_anrichte_4",
+          "light.licht_anrichte_5",
+          "light.licht_kuche",
+          "light.licht_kuche_2_2",
+          "light.licht_kuchenschrank",
+          "light.licht_kuchenzeile",
+          "light.licht_spule"
+        ],
+        "brightness": [
+          "sensor.sensor_presence_kuche_helligkeit"
+        ],
+        "media": [
+          "media_player.alexa_kuche",
+          "media_player.kochbereich"
+        ],
+        "humidity": [
+          "sensor.thermostat_kochbereich_luftfeuchtigkeit"
+        ],
+        "temperature": [
+          "sensor.thermostat_kochbereich_temperatur"
+        ],
+        "heating": [
+          "climate.thermostat_kochbereich"
+        ],
+        "power": [
+          "sensor.coca_cola_kuhlschrank_electric_consumption_kwh",
+          "sensor.coca_cola_kuhlschrank_electric_consumption_w",
+          "sensor.coca_cola_kuhlschrank_power",
+          "sensor.licht_anrichte_electric_consumption_kwh",
+          "sensor.licht_anrichte_electric_consumption_w",
+          "sensor.licht_kuche_electric_consumption_kwh",
+          "sensor.licht_kuche_electric_kwh",
+          "sensor.licht_kuche_power",
+          "sensor.spulmaschine_electric_consumption_kwh",
+          "sensor.spulmaschine_electric_consumption_w",
+          "sensor.spulmaschine_electric_kwh",
+          "sensor.spulmaschine_power"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:zimmer_mira",
+      "name": "Zimmer Mira",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.zimmer_mira"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.sensor_zimmerture_mira_bewegung",
+          "binary_sensor.zimmer_mira_anwesenheit"
+        ],
+        "lights": [
+          "light.beleuchtung_zimmer_mira",
+          "light.bettbeleuchtung_mira",
+          "light.bettlicht_mira",
+          "light.hue_go",
+          "light.hue_go_links",
+          "light.hue_go_rechts",
+          "light.hue_zimmer_mira",
+          "light.licht_zimmer_mira",
+          "light.licht_zimmer_mira_2_2",
+          "light.miras_zelt",
+          "light.sensor_zimmer_mira_basic",
+          "light.stimmungslicht_vocolina"
+        ],
+        "humidity": [
+          "sensor.luftfeuchtigkeit_vocolina",
+          "sensor.sensor_zimmerture_mira_luftfeuchtigkeit",
+          "sensor.thermostat_zimmer_mira_luftfeuchtigkeit"
+        ],
+        "brightness": [
+          "sensor.sensor_zimmer_mira_illuminance",
+          "sensor.sensor_zimmerture_mira_helligkeit"
+        ],
+        "door": [
+          "binary_sensor.sensor_fenster_links_window_door_is_open",
+          "binary_sensor.sensor_fenster_links_window_door_is_open_2",
+          "binary_sensor.sensor_fenster_rechts_window_door_is_open",
+          "binary_sensor.sensor_fenster_rechts_window_door_is_open_2",
+          "binary_sensor.sensor_zimmerture_mira"
+        ],
+        "temperature": [
+          "sensor.feuermelder_zimmer_mira_air_temperature",
+          "sensor.sensor_fenster_links_air_temperature",
+          "sensor.sensor_fenster_rechts_air_temperature",
+          "sensor.sensor_zimmer_mira_air_temperature",
+          "sensor.sensor_zimmerture_mira_temperatur",
+          "sensor.thermostat_zimmer_mira_temperatur"
+        ],
+        "media": [
+          "media_player.alexa_zimmer_mira"
+        ],
+        "heating": [
+          "climate.thermostat_zimmer_mira"
+        ],
+        "power": [
+          "sensor.licht_zimmer_mira_electric_consumption_kwh",
+          "sensor.licht_zimmer_mira_electric_consumption_w",
+          "sensor.licht_zimmer_mira_power"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:schlafzimmer",
+      "name": "Schlafzimmer",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.schlafzimmer"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.schlafzimmer_anwesenheit",
+          "binary_sensor.sensor_aussenlager_motion_detection",
+          "binary_sensor.sensor_schlafzimmer_motion_detection"
+        ],
+        "humidity": [
+          "sensor.luftfeuchtigkeit_vocolino",
+          "sensor.luftqualitat_schlafzimmer_humidity",
+          "sensor.sensor_aussenlager_humidity",
+          "sensor.sensor_schlafzimmer_humidity"
+        ],
+        "temperature": [
+          "sensor.luftqualitat_schlafzimmer_temperature",
+          "sensor.sensor_aussenlager_air_temperature",
+          "sensor.sensor_fenster_schlafzimmer_air_temperature",
+          "sensor.sensor_schlafzimmer_air_temperature"
+        ],
+        "lights": [
+          "light.beleuchtung_schlafzimmer",
+          "light.licht_schlafzimmer",
+          "light.lichtstreifen_garten",
+          "light.nachttischlampe",
+          "light.stimmungslicht_vocolino"
+        ],
+        "media": [
+          "media_player.alexa_schlafzimmer",
+          "media_player.schlafbereich"
+        ],
+        "power": [
+          "sensor.licht_schlafzimmer_electric_consumption_kwh",
+          "sensor.licht_schlafzimmer_electric_consumption_kwh_2",
+          "sensor.licht_schlafzimmer_electric_consumption_w_2",
+          "sensor.licht_schlafzimmer_electric_consumption_w_2_2",
+          "sensor.licht_schlafzimmer_electric_kwh",
+          "sensor.licht_schlafzimmer_electric_kwh_2"
+        ],
+        "brightness": [
+          "sensor.sensor_aussenlager_illuminance",
+          "sensor.sensor_schlafzimmer_illuminance"
+        ],
+        "door": [
+          "binary_sensor.sensor_fenster_schlafzimmer_window_door_is_open",
+          "binary_sensor.sensor_fenster_schlafzimmer_window_door_is_open_2"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:toilette",
+      "name": "Toilette",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.toilette"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.sensor_toilette_bewegung",
+          "binary_sensor.toilette_anwesenheit",
+          "binary_sensor.toilette_bewegung"
+        ],
+        "lights": [
+          "light.hue_toilette",
+          "light.hue_toilette_2",
+          "light.licht_toilette",
+          "light.licht_toilette_2",
+          "light.licht_toilette_3",
+          "light.toilette"
+        ],
+        "media": [
+          "media_player.alexa_toilette",
+          "media_player.badbereich"
+        ],
+        "temperature": [
+          "sensor.sensor_toilette_temperatur",
+          "sensor.sensor_waschmaschine_air_temperature"
+        ],
+        "brightness": [
+          "sensor.sensor_toilette_helligkeit",
+          "sensor.toilette_beleuchtungsstarke"
+        ],
+        "power": [
+          "sensor.licht_toilette_electric_consumption_kwh",
+          "sensor.licht_toilette_electric_consumption_kwh_2",
+          "sensor.licht_toilette_electric_consumption_w",
+          "sensor.licht_toilette_electric_consumption_w_2",
+          "sensor.waschmaschine_electric_consumption_kwh",
+          "sensor.waschmaschine_electric_consumption_w",
+          "sensor.waschmaschine_power"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:gang",
+      "name": "Gang",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.gang"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.bewegungsbereich_gang",
+          "binary_sensor.bewegungsbereich_gang_2",
+          "binary_sensor.gang_anwesenheit",
+          "binary_sensor.kaffeemuhle_motion_detection",
+          "binary_sensor.sammelsensor_bewegung_gang",
+          "binary_sensor.sensor_gang_presence"
+        ],
+        "lights": [
+          "light.beleuchtung_gang",
+          "light.edisonlampe",
+          "light.gang",
+          "light.hue_gang",
+          "light.hue_gang_hinten",
+          "light.hue_gang_vorne",
+          "light.licht_gang",
+          "light.licht_gang_2",
+          "light.treppenlicht"
+        ],
+        "camera": [
+          "camera.netatmo_welcome"
+        ],
+        "temperature": [
+          "sensor.thermostat_gangbereich_temperatur",
+          "sensor.touchpanel_gang_touchpanel_gang_temperature"
+        ],
+        "brightness": [
+          "sensor.kaffeemuhle_illuminance",
+          "sensor.sensor_gang_helligkeit"
+        ],
+        "media": [
+          "media_player.alexa_sonos_gang",
+          "media_player.gangbereich"
+        ],
+        "humidity": [
+          "sensor.kaffeemaschine_humidity",
+          "sensor.thermostat_gangbereich_luftfeuchtigkeit"
+        ],
+        "heating": [
+          "climate.thermostat_gangbereich"
+        ],
+        "power": [
+          "sensor.kaffeemaschine_electric_consumption_kwh",
+          "sensor.kaffeemaschine_electric_consumption_w",
+          "sensor.kaffeemaschine_electric_kwh",
+          "sensor.kaffeemaschine_power",
+          "sensor.kaffeemuhle_electric_consumption_kwh",
+          "sensor.kaffeemuhle_electric_consumption_w",
+          "sensor.kaffeemuhle_power"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:bad",
+      "name": "Bad",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.bad"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.bad_anwesenheit",
+          "binary_sensor.sensor_bad_bewegung",
+          "binary_sensor.sensor_badbereich"
+        ],
+        "lights": [
+          "light.beleuchtung_bad",
+          "light.beleuchtung_badbereich",
+          "light.hue_badspiegel",
+          "light.licht_badspiegel",
+          "light.licht_badspiegel_2"
+        ],
+        "temperature": [
+          "sensor.sensor_bad_temperatur"
+        ],
+        "brightness": [
+          "sensor.sensor_bad_helligkeit"
+        ],
+        "power": [
+          "sensor.licht_badspiegel_electric_consumption_kwh",
+          "sensor.licht_badspiegel_electric_consumption_kwh_2",
+          "sensor.licht_badspiegel_electric_consumption_w",
+          "sensor.licht_badspiegel_electric_consumption_w_2",
+          "sensor.licht_badspiegel_electric_kwh",
+          "sensor.licht_badspiegel_electric_kwh_2"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:umwelt",
+      "name": "Umwelt",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.umwelt"
+      ],
+      "entities": {
+        "humidity": [
+          "sensor.astroweather_backyard_2m_relative_humidity",
+          "sensor.wetter_pfarrkirchen_dwd_relative_luftfeuchtigkeit"
+        ],
+        "temperature": [
+          "sensor.astroweather_backyard_2m_dewpoint",
+          "sensor.astroweather_backyard_2m_temperature",
+          "sensor.astroweather_backyard_lifted_index",
+          "sensor.wetter_pfarrkirchen_dwd_taupunkt",
+          "sensor.wetter_pfarrkirchen_dwd_temperatur"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:energie",
+      "name": "Energie",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.energie"
+      ],
+      "entities": {
+        "temperature": [
+          "sensor.agf_flue_gas_sensor",
+          "sensor.common_settings_day_temperature",
+          "sensor.common_settings_set_dhw_temperature_adjusted",
+          "sensor.dhw_dhw_outlet_temperature",
+          "sensor.direct_heating_circuit_average_outside_temperature",
+          "sensor.direct_heating_circuit_day_temperature",
+          "sensor.direct_heating_circuit_flow_temperature",
+          "sensor.direct_heating_circuit_room_temperature",
+          "sensor.heat_generator_1_boiler_water_temperature",
+          "sensor.heat_generator_1_outside_temperature",
+          "sensor.heat_generator_1_return_temperature",
+          "sensor.heat_generator_1_set_boiler_temperature",
+          "sensor.sensor_gang_air_temperature",
+          "sensor.sensor_wohnzimmer_air_temperature"
+        ],
+        "brightness": [
+          "sensor.sensor_gang_illuminance",
+          "sensor.sensor_wohnzimmer_illuminance"
+        ],
+        "motion": [
+          "binary_sensor.sensor_gang_motion_detection"
+        ],
+        "lights": [
+          "light.sensor_wohnzimmer_basic",
+          "light.stromverbrauch_paradiesgarten_21"
+        ],
+        "power": [
+          "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_kwh",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_kwh_1",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_kwh_2",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_kwh_3",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_w",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_w_1",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_w_2",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_w_3",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_production_w",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_production_w_1",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_production_w_2",
+          "sensor.stromverbrauch_paradiesgarten_21_electric_production_w_3"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:netzwerk",
+      "name": "Netzwerk",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.netzwerk"
+      ],
+      "entities": {
+        "temperature": [
+          "sensor.ds1515_laufwerk_1_dx517_1_temperatur",
+          "sensor.ds1515_laufwerk_1_temperatur",
+          "sensor.ds1515_laufwerk_2_dx517_1_temperatur",
+          "sensor.ds1515_laufwerk_2_temperatur",
+          "sensor.ds1515_laufwerk_3_dx517_1_temperatur",
+          "sensor.ds1515_laufwerk_3_temperatur",
+          "sensor.ds1515_laufwerk_4_dx517_1_temperatur",
+          "sensor.ds1515_laufwerk_4_temperatur",
+          "sensor.ds1515_laufwerk_5_dx517_1_temperatur",
+          "sensor.ds1515_laufwerk_5_temperatur",
+          "sensor.ds1515_temperatur",
+          "sensor.ds1515_volume_1_durchschnittliche_festplattentemperatur",
+          "sensor.ds1515_volume_2_durchschnittliche_festplattentemperatur",
+          "sensor.ds1515_volume_3_durchschnittliche_festplattentemperatur",
+          "sensor.ds1515_volume_4_durchschnittliche_festplattentemperatur",
+          "sensor.ds1515_volume_5_durchschnittliche_festplattentemperatur"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:terrasse",
+      "name": "Terrasse",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.terrasse"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.doorbell_repeater_5851_motion_sensor",
+          "binary_sensor.terrasse_anwesenheit"
+        ],
+        "lights": [
+          "light.beleuchtung_terrasse",
+          "light.licht_aussenlager",
+          "light.licht_blumenkasten"
+        ],
+        "power": [
+          "sensor.steckerleiste_aussenlager_energy_power",
+          "sensor.steckerleiste_aussenlager_energy_today",
+          "sensor.steckerleiste_aussenlager_energy_total",
+          "sensor.steckerleiste_aussenlager_energy_yesterday"
+        ],
+        "humidity": [
+          "sensor.terrasse_luftfeuchtigkeit"
+        ],
+        "temperature": [
+          "sensor.terrasse_temperatur"
+        ],
+        "camera": [
+          "camera.doorbell_repeater_5851"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:zimmer_paul",
+      "name": "Zimmer Paul",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.zimmer_paul"
+      ],
+      "entities": {
+        "brightness": [
+          "sensor.sensor_unifi_1_beleuchtungsstarke"
+        ],
+        "motion": [
+          "binary_sensor.sensor_unifi_1_bewegung"
+        ],
+        "door": [
+          "binary_sensor.sensor_dachfenster_window_door_is_open",
+          "binary_sensor.sensor_dachfenster_window_door_is_open_2",
+          "binary_sensor.sensor_unifi_1_kontakt"
+        ],
+        "humidity": [
+          "sensor.sensor_unifi_1_luftfeuchtigkeit"
+        ],
+        "temperature": [
+          "sensor.feuermelder_zimmer_paul_air_temperature",
+          "sensor.sensor_dachfenster_air_temperature",
+          "sensor.sensor_unifi_1_temperatur"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:loft",
+      "name": "Loft",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.loft"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.loft_anwesenheit"
+        ],
+        "lights": [
+          "light.beleuchtung_loft",
+          "light.flutlicht_loft",
+          "light.licht_loft",
+          "light.licht_spassecke"
+        ],
+        "power": [
+          "sensor.flutlicht_loft_electric_consumption_kwh",
+          "sensor.flutlicht_loft_electric_consumption_w",
+          "sensor.flutlicht_loft_power",
+          "sensor.smart_plug_netzwerkdienste_energie",
+          "sensor.smart_plug_netzwerkdienste_leistung"
+        ],
+        "media": [
+          "media_player.alexa_loft",
+          "media_player.sony_x77",
+          "media_player.srs_x77_2"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:medienkontrolle",
+      "name": "Medienkontrolle",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.medienkontrolle"
+      ],
+      "entities": {
+        "media": [
+          "media_player.vlc_telnet"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:garten",
+      "name": "Garten",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.garten"
+      ],
+      "entities": {
+        "lights": [
+          "light.beleuchtung_aussenbereich",
+          "light.gartenscheinwerfer",
+          "light.gartenspots",
+          "light.hue_lichterkette"
+        ],
+        "temperature": [
+          "sensor.gefuhlte_wetterwahrnehmung_frostpunkt",
+          "sensor.gefuhlte_wetterwahrnehmung_hitzeindex",
+          "sensor.gefuhlte_wetterwahrnehmung_humidex",
+          "sensor.gefuhlte_wetterwahrnehmung_sommer_simmer_index",
+          "sensor.gefuhlte_wetterwahrnehmung_taupunkt"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:vordereingang",
+      "name": "Vordereingang",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.vordereingang"
+      ],
+      "entities": {
+        "lights": [
+          "light.hue_vordereingang_1",
+          "light.hue_vordereingang_2",
+          "light.licht_vordereingang",
+          "light.netatmo_presence_flutlicht",
+          "light.vordereingang"
+        ],
+        "motion": [
+          "binary_sensor.bewegung_vordereingang_bewegung",
+          "binary_sensor.vordereingang_anwesenheit",
+          "binary_sensor.vordereingang_bewegung"
+        ],
+        "camera": [
+          "camera.netatmo_presence"
+        ],
+        "temperature": [
+          "sensor.bewegung_vordereingang_temperatur"
+        ],
+        "brightness": [
+          "sensor.bewegung_vordereingang_beleuchtungsstarke",
+          "sensor.vordereingang_beleuchtungsstarke"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:vorraum",
+      "name": "Vorraum",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.vorraum"
+      ],
+      "entities": {
+        "power": [
+          "sensor.licht_vorraum_electric_consumption_kwh",
+          "sensor.licht_vorraum_electric_consumption_kwh_2",
+          "sensor.licht_vorraum_electric_consumption_w",
+          "sensor.licht_vorraum_electric_consumption_w_2"
+        ],
+        "lights": [
+          "light.sensor_hintereingang_basic"
+        ],
+        "temperature": [
+          "sensor.sensor_hintereingang_air_temperature"
+        ],
+        "brightness": [
+          "sensor.sensor_hintereingang_illuminance"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:pv_anlage",
+      "name": "PV-Anlage",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.pv_anlage"
+      ],
+      "entities": {
+        "power": [
+          "sensor.ostausrichtung_estimated_energy_production_next_hour",
+          "sensor.ostausrichtung_estimated_energy_production_this_hour",
+          "sensor.ostausrichtung_estimated_energy_production_today",
+          "sensor.ostausrichtung_estimated_energy_production_tomorrow",
+          "sensor.ostausrichtung_estimated_power_production_now",
+          "sensor.ostausrichtung_geschatzte_energieerzeugung_resttag_heute",
+          "sensor.solar_ac_generator_1_leistung",
+          "sensor.solar_ac_generator_2_leistung",
+          "sensor.solar_ac_generator_3_leistung",
+          "sensor.solar_ac_generator_gesamtleistung",
+          "sensor.solar_dc_generator_1_leistung",
+          "sensor.solar_dc_generator_2_leistung",
+          "sensor.solar_dc_generator_gesamtleistung",
+          "sensor.westausrichtung_geschatzte_energieerzeugung_diese_stunde",
+          "sensor.westausrichtung_geschatzte_energieerzeugung_heute",
+          "sensor.westausrichtung_geschatzte_energieerzeugung_morgen",
+          "sensor.westausrichtung_geschatzte_energieerzeugung_nachste_stunde",
+          "sensor.westausrichtung_geschatzte_energieerzeugung_resttag_heute",
+          "sensor.westausrichtung_geschatzte_erzeugungsleistung_jetzt"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:gangbereich",
+      "name": "Gangbereich",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.gangbereich"
+      ],
+      "entities": {
+        "lights": [
+          "light.licht_speise",
+          "light.sensor_abstellraum_basic",
+          "light.sensor_toilettentur_basic"
+        ],
+        "temperature": [
+          "sensor.sensor_abstellraum_air_temperature",
+          "sensor.sensor_toilettentur_air_temperature"
+        ],
+        "brightness": [
+          "sensor.sensor_abstellraum_illuminance"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:hintereingang",
+      "name": "Hintereingang",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.hintereingang"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.hintereingang_anwesenheit",
+          "binary_sensor.hintereingang_bewegung"
+        ],
+        "lights": [
+          "light.hintereingang"
+        ],
+        "brightness": [
+          "sensor.hintereingang_beleuchtungsstarke"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:personen",
+      "name": "Personen",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.personen"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:werkstatt",
+      "name": "Werkstatt",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.werkstatt"
+      ],
+      "entities": {
+        "media": [
+          "media_player.werkstatt"
+        ],
+        "humidity": [
+          "sensor.thermostat_werkstatt_luftfeuchtigkeit"
+        ],
+        "heating": [
+          "climate.thermostat_werkstatt"
+        ],
+        "temperature": [
+          "sensor.thermostat_werkstatt_temperatur"
+        ],
+        "power": [
+          "sensor.3d_drucker_energy",
+          "sensor.3d_drucker_power"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:kalender",
+      "name": "Kalender",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.kalender"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:gartenbereich",
+      "name": "Gartenbereich",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.gartenbereich"
+      ],
+      "entities": {
+        "lights": [
+          "light.gartenbereich"
+        ],
+        "motion": [
+          "binary_sensor.gartenbereich_bewegung"
+        ],
+        "brightness": [
+          "sensor.gartenbereich_beleuchtungsstarke"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:speisekammer",
+      "name": "Speisekammer",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.speisekammer"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.speisekammer_anwesenheit"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:haupthaus",
+      "name": "Haupthaus",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.haupthaus"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.haupthaus_anwesenheit"
+        ],
+        "media": [
+          "media_player.verstarker_rx_v573"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:kochbereich",
+      "name": "Kochbereich",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.kochbereich"
+      ],
+      "entities": {
+        "lights": [
+          "light.sensor_kochbereich",
+          "light.sensor_kochbereich_basic"
+        ],
+        "temperature": [
+          "sensor.sensor_kochbereich_air_temperature"
+        ],
+        "brightness": [
+          "sensor.sensor_kochbereich_illuminance"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:move",
+      "name": "Move",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.move"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:erdkeller",
+      "name": "Erdkeller",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.erdkeller"
+      ],
+      "entities": {
+        "motion": [
+          "binary_sensor.erdkeller_anwesenheit",
+          "binary_sensor.erdkeller_bewegung"
+        ],
+        "lights": [
+          "light.beleuchtung_erdkeller"
+        ],
+        "brightness": [
+          "sensor.erdkeller_beleuchtungsstarke"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:kosten",
+      "name": "Kosten",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.kosten"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:flur",
+      "name": "Flur",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.flur"
+      ],
+      "entities": {
+        "lights": [
+          "light.hue_flur",
+          "light.licht_flur"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:wohnimmer",
+      "name": "Wohnimmer",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.wohnimmer"
+      ],
+      "entities": {
+        "lights": [
+          "light.licht_klemmkammerl"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:ai_factory",
+      "name": "AI-Factory",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.ai_factory"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:elternhaus",
+      "name": "Elternhaus",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.elternhaus"
+      ],
+      "entities": {
+        "lights": [
+          "light.elternhaus"
+        ],
+        "motion": [
+          "binary_sensor.elternhaus_bewegung"
+        ],
+        "brightness": [
+          "sensor.elternhaus_beleuchtungsstarke"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:viture_luma_ultra",
+      "name": "Viture Luma Ultra",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.viture_luma_ultra"
+      ],
+      "entities": {
+        "media": [
+          "media_player.viture_luma_ultra"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:badezimmer",
+      "name": "Badezimmer",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.badezimmer"
+      ],
+      "entities": {
+        "lights": [
+          "light.badezimmer"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:zimmer_pauli",
+      "name": "Zimmer Pauli",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.zimmer_pauli"
+      ],
+      "entities": {
+        "lights": [
+          "light.zimmer_pauli"
+        ]
+      }
+    },
+    {
+      "zone_id": "zone:ai_lounge",
+      "name": "AI Lounge",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.ai_lounge"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:büro",
+      "name": "Büro",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.büro"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:entspannungsbereich",
+      "name": "Entspannungsbereich",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.entspannungsbereich"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:firetv_airplay",
+      "name": "FireTV[AirPlay]",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.firetv_airplay"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:free_devices",
+      "name": "Free Devices",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.free_devices"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:serverraum",
+      "name": "Serverraum",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.serverraum"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:speise",
+      "name": "Speise",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.speise"
+      ],
+      "entities": {}
+    },
+    {
+      "zone_id": "zone:toilettte",
+      "name": "Toilettte",
+      "zone_type": "room",
+      "priority": 5,
+      "tags": [
+        "aicp.place.toilettte"
+      ],
+      "entities": {}
+    }
+  ]
+}

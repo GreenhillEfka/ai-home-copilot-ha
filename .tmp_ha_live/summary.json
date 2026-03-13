@@ -1,0 +1,142 @@
+{
+  "entity_total": 4520,
+  "domains_top30": [
+    [
+      "sensor",
+      1650
+    ],
+    [
+      "switch",
+      551
+    ],
+    [
+      "binary_sensor",
+      457
+    ],
+    [
+      "button",
+      350
+    ],
+    [
+      "update",
+      266
+    ],
+    [
+      "light",
+      176
+    ],
+    [
+      "scene",
+      160
+    ],
+    [
+      "device_tracker",
+      141
+    ],
+    [
+      "automation",
+      110
+    ],
+    [
+      "select",
+      95
+    ],
+    [
+      "number",
+      81
+    ],
+    [
+      "input_number",
+      78
+    ],
+    [
+      "input_boolean",
+      75
+    ],
+    [
+      "event",
+      72
+    ],
+    [
+      "media_player",
+      51
+    ],
+    [
+      "calendar",
+      37
+    ],
+    [
+      "input_text",
+      18
+    ],
+    [
+      "text",
+      18
+    ],
+    [
+      "image",
+      16
+    ],
+    [
+      "script",
+      11
+    ],
+    [
+      "zone",
+      10
+    ],
+    [
+      "remote",
+      10
+    ],
+    [
+      "counter",
+      9
+    ],
+    [
+      "input_select",
+      8
+    ],
+    [
+      "climate",
+      8
+    ],
+    [
+      "fan",
+      7
+    ],
+    [
+      "person",
+      7
+    ],
+    [
+      "weather",
+      6
+    ],
+    [
+      "camera",
+      6
+    ],
+    [
+      "tag",
+      5
+    ]
+  ],
+  "areas_total": 47,
+  "zones_total": 10,
+  "automations_total": 110,
+  "scenes_total": 160,
+  "scripts_total": 11,
+  "media_players_total": 51,
+  "sensors_total": 1650,
+  "binary_sensors_total": 457,
+  "climate_total": 8,
+  "lights_total": 176,
+  "switches_total": 551,
+  "cover_total": 2,
+  "persons_total": 7,
+  "config_location_name": "SmartHome",
+  "config_latitude": 48.43510369837402,
+  "config_longitude": 12.941875755786898,
+  "config_unit_system": null
+}

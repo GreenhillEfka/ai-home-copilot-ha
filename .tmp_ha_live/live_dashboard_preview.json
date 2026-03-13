@@ -1,0 +1,1779 @@
+{
+  "title": "PilotSuite",
+  "views": [
+    {
+      "title": "Habitus",
+      "path": "habitus",
+      "icon": "mdi:home-heart",
+      "badges": [],
+      "cards": [
+        {
+          "type": "horizontal-stack",
+          "cards": [
+            {
+              "type": "gauge",
+              "entity": "sensor.ai_home_copilot_mood_comfort",
+              "name": "Komfort",
+              "min": 0,
+              "max": 100,
+              "severity": {
+                "green": 70,
+                "yellow": 40,
+                "red": 0
+              }
+            },
+            {
+              "type": "gauge",
+              "entity": "sensor.ai_home_copilot_mood_joy",
+              "name": "Freude",
+              "min": 0,
+              "max": 100,
+              "severity": {
+                "green": 60,
+                "yellow": 30,
+                "red": 0
+              }
+            },
+            {
+              "type": "gauge",
+              "entity": "sensor.ai_home_copilot_mood_frugality",
+              "name": "Sparsamkeit",
+              "min": 0,
+              "max": 100,
+              "severity": {
+                "green": 60,
+                "yellow": 30,
+                "red": 0
+              }
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "columns": 3,
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Kontrollraum\n{{ states('sensor.dream_machine_special_edition_cpu_temperatur') }}°C\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.ai_home_copilot_motion_detection",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.ai_360_lautsprecher",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.camera_hub_g5pro_4497_lightbulb",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.dream_machine_special_edition_ap20_wifi6_1g_u6_mesh_eingang_poe_power",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Wohnzimmer\n{{ states('sensor.alexa_wohnzimmer_temperature') }}°C | {{ states('sensor.luftfeuchtigkeit_wohnbereich_messstation') }}% | CO2: {{ states('sensor.co2_wohnbereich_messstation') }} ppm | Laerm: {{ states('sensor.larm_wohnbereich_messstation') }}\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.bewegung_durchgang_terrasse",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.alexa_wohnzimmer",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.beleuchtung_bett",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "climate.luftreiniger",
+                      "name": "Heizung"
+                    },
+                    {
+                      "entity": "sensor.co2_wohnbereich_messstation",
+                      "name": "CO2"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Arbeitszimmer\n{{ states('sensor.sensor_arbeitszimmer_helligkeit') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.ai360_anwesenheit",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.buerobereich",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.arbeitszimmer_beleuchtung",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.retroventilator_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Küche\n{{ states('sensor.thermostat_kochbereich_temperatur') }}°C | {{ states('sensor.thermostat_kochbereich_luftfeuchtigkeit') }}% | {{ states('sensor.sensor_presence_kuche_helligkeit') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.kuche_anwesenheit",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.alexa_kuche",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.beleuchtung_kuche",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "climate.thermostat_kochbereich",
+                      "name": "Heizung"
+                    },
+                    {
+                      "entity": "sensor.coca_cola_kuhlschrank_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Zimmer Mira\n{{ states('sensor.feuermelder_zimmer_mira_air_temperature') }}°C | {{ states('sensor.luftfeuchtigkeit_vocolina') }}% | {{ states('sensor.sensor_zimmer_mira_illuminance') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.sensor_zimmerture_mira_bewegung",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.alexa_zimmer_mira",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.beleuchtung_zimmer_mira",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "climate.thermostat_zimmer_mira",
+                      "name": "Heizung"
+                    },
+                    {
+                      "entity": "sensor.licht_zimmer_mira_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Schlafzimmer\n{{ states('sensor.luftqualitat_schlafzimmer_temperature') }}°C | {{ states('sensor.luftfeuchtigkeit_vocolino') }}% | {{ states('sensor.sensor_aussenlager_illuminance') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.schlafzimmer_anwesenheit",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.alexa_schlafzimmer",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.beleuchtung_schlafzimmer",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.licht_schlafzimmer_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "columns": 3,
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Toilette\n{{ states('sensor.sensor_toilette_temperatur') }}°C | {{ states('sensor.sensor_toilette_helligkeit') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.sensor_toilette_bewegung",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.alexa_toilette",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.hue_toilette",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.licht_toilette_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Gang\n{{ states('sensor.thermostat_gangbereich_temperatur') }}°C | {{ states('sensor.kaffeemaschine_humidity') }}% | {{ states('sensor.kaffeemuhle_illuminance') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.bewegungsbereich_gang",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.alexa_sonos_gang",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.beleuchtung_gang",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "climate.thermostat_gangbereich",
+                      "name": "Heizung"
+                    },
+                    {
+                      "entity": "sensor.kaffeemaschine_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Bad\n{{ states('sensor.sensor_bad_temperatur') }}°C | {{ states('sensor.sensor_bad_helligkeit') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.bad_anwesenheit",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "light.beleuchtung_bad",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.licht_badspiegel_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Umwelt\n{{ states('sensor.astroweather_backyard_2m_dewpoint') }}°C | {{ states('sensor.astroweather_backyard_2m_relative_humidity') }}%\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Energie\n{{ states('sensor.agf_flue_gas_sensor') }}°C | {{ states('sensor.sensor_gang_illuminance') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.sensor_gang_motion_detection",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "light.sensor_wohnzimmer_basic",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.stromverbrauch_paradiesgarten_21_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Netzwerk\n{{ states('sensor.ds1515_laufwerk_1_dx517_1_temperatur') }}°C\n"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "columns": 3,
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Terrasse\n{{ states('sensor.terrasse_temperatur') }}°C | {{ states('sensor.terrasse_luftfeuchtigkeit') }}%\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.doorbell_repeater_5851_motion_sensor",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "light.beleuchtung_terrasse",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.steckerleiste_aussenlager_energy_power",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Zimmer Paul\n{{ states('sensor.feuermelder_zimmer_paul_air_temperature') }}°C | {{ states('sensor.sensor_unifi_1_luftfeuchtigkeit') }}% | {{ states('sensor.sensor_unifi_1_beleuchtungsstarke') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.sensor_unifi_1_bewegung",
+                      "name": "Anwesenheit"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Loft\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.loft_anwesenheit",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.alexa_loft",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "light.beleuchtung_loft",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.flutlicht_loft_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Medienkontrolle\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "media_player.vlc_telnet",
+                      "name": "Sonos"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Garten\n{{ states('sensor.gefuhlte_wetterwahrnehmung_frostpunkt') }}°C\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "light.beleuchtung_aussenbereich",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Vordereingang\n{{ states('sensor.bewegung_vordereingang_temperatur') }}°C | {{ states('sensor.bewegung_vordereingang_beleuchtungsstarke') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.bewegung_vordereingang_bewegung",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "light.hue_vordereingang_1",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "columns": 3,
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Vorraum\n{{ states('sensor.sensor_hintereingang_air_temperature') }}°C | {{ states('sensor.sensor_hintereingang_illuminance') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "light.sensor_hintereingang_basic",
+                      "name": "Licht"
+                    },
+                    {
+                      "entity": "sensor.licht_vorraum_electric_consumption_kwh",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## PV-Anlage\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "sensor.ostausrichtung_estimated_energy_production_next_hour",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Gangbereich\n{{ states('sensor.sensor_abstellraum_air_temperature') }}°C | {{ states('sensor.sensor_abstellraum_illuminance') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "light.licht_speise",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Hintereingang\n{{ states('sensor.hintereingang_beleuchtungsstarke') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.hintereingang_anwesenheit",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "light.hintereingang",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Personen\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Werkstatt\n{{ states('sensor.thermostat_werkstatt_temperatur') }}°C | {{ states('sensor.thermostat_werkstatt_luftfeuchtigkeit') }}%\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "media_player.werkstatt",
+                      "name": "Sonos"
+                    },
+                    {
+                      "entity": "climate.thermostat_werkstatt",
+                      "name": "Heizung"
+                    },
+                    {
+                      "entity": "sensor.3d_drucker_energy",
+                      "name": "Verbrauch"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "columns": 3,
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Kalender\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Gartenbereich\n{{ states('sensor.gartenbereich_beleuchtungsstarke') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.gartenbereich_bewegung",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "light.gartenbereich",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Speisekammer\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.speisekammer_anwesenheit",
+                      "name": "Anwesenheit"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Haupthaus\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.haupthaus_anwesenheit",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "media_player.verstarker_rx_v573",
+                      "name": "Sonos"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Kochbereich\n{{ states('sensor.sensor_kochbereich_air_temperature') }}°C | {{ states('sensor.sensor_kochbereich_illuminance') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "light.sensor_kochbereich",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Move\n"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "columns": 3,
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Erdkeller\n{{ states('sensor.erdkeller_beleuchtungsstarke') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.erdkeller_anwesenheit",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "light.beleuchtung_erdkeller",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Kosten\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Flur\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "light.hue_flur",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Wohnimmer\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "light.licht_klemmkammerl",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## AI-Factory\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Elternhaus\n{{ states('sensor.elternhaus_beleuchtungsstarke') }} lux\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "binary_sensor.elternhaus_bewegung",
+                      "name": "Anwesenheit"
+                    },
+                    {
+                      "entity": "light.elternhaus",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "columns": 3,
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Viture Luma Ultra\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "media_player.viture_luma_ultra",
+                      "name": "Sonos"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Badezimmer\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "light.badezimmer",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Zimmer Pauli\n"
+                },
+                {
+                  "type": "entities",
+                  "entities": [
+                    {
+                      "entity": "light.zimmer_pauli",
+                      "name": "Licht"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## AI Lounge\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Büro\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Entspannungsbereich\n"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "grid",
+          "columns": 3,
+          "cards": [
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## FireTV[AirPlay]\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Free Devices\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Serverraum\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Speise\n"
+                }
+              ]
+            },
+            {
+              "type": "vertical-stack",
+              "cards": [
+                {
+                  "type": "markdown",
+                  "content": "## Toilettte\n"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Personen",
+          "entities": [
+            {
+              "entity": "person.andreas",
+              "name": "andreas"
+            },
+            {
+              "entity": "person.efka",
+              "name": "efka"
+            },
+            {
+              "entity": "person.gustav",
+              "name": "gustav"
+            },
+            {
+              "entity": "person.katharina",
+              "name": "katharina"
+            },
+            {
+              "entity": "person.mira",
+              "name": "mira"
+            },
+            {
+              "entity": "person.pauli",
+              "name": "pauli"
+            },
+            {
+              "entity": "person.steffi",
+              "name": "steffi"
+            }
+          ]
+        },
+        {
+          "type": "history-graph",
+          "title": "Luftqualitaet (24h)",
+          "hours_to_show": 24,
+          "entities": [
+            {
+              "entity": "sensor.co2_wohnbereich_messstation",
+              "name": "Wohnzimmer CO2"
+            },
+            {
+              "entity": "sensor.larm_wohnbereich_messstation",
+              "name": "Wohnzimmer Laerm"
+            }
+          ]
+        },
+        {
+          "type": "history-graph",
+          "title": "Raumtemperaturen (24h)",
+          "hours_to_show": 24,
+          "entities": [
+            {
+              "entity": "sensor.dream_machine_special_edition_cpu_temperatur",
+              "name": "Kontrollraum"
+            },
+            {
+              "entity": "sensor.alexa_wohnzimmer_temperature",
+              "name": "Wohnzimmer"
+            },
+            {
+              "entity": "sensor.thermostat_kochbereich_temperatur",
+              "name": "Küche"
+            },
+            {
+              "entity": "sensor.feuermelder_zimmer_mira_air_temperature",
+              "name": "Zimmer Mira"
+            },
+            {
+              "entity": "sensor.luftqualitat_schlafzimmer_temperature",
+              "name": "Schlafzimmer"
+            },
+            {
+              "entity": "sensor.sensor_toilette_temperatur",
+              "name": "Toilette"
+            },
+            {
+              "entity": "sensor.thermostat_gangbereich_temperatur",
+              "name": "Gang"
+            },
+            {
+              "entity": "sensor.sensor_bad_temperatur",
+              "name": "Bad"
+            },
+            {
+              "entity": "sensor.astroweather_backyard_2m_dewpoint",
+              "name": "Umwelt"
+            },
+            {
+              "entity": "sensor.agf_flue_gas_sensor",
+              "name": "Energie"
+            },
+            {
+              "entity": "sensor.ds1515_laufwerk_1_dx517_1_temperatur",
+              "name": "Netzwerk"
+            },
+            {
+              "entity": "sensor.terrasse_temperatur",
+              "name": "Terrasse"
+            },
+            {
+              "entity": "sensor.feuermelder_zimmer_paul_air_temperature",
+              "name": "Zimmer Paul"
+            },
+            {
+              "entity": "sensor.gefuhlte_wetterwahrnehmung_frostpunkt",
+              "name": "Garten"
+            },
+            {
+              "entity": "sensor.bewegung_vordereingang_temperatur",
+              "name": "Vordereingang"
+            },
+            {
+              "entity": "sensor.sensor_hintereingang_air_temperature",
+              "name": "Vorraum"
+            },
+            {
+              "entity": "sensor.sensor_abstellraum_air_temperature",
+              "name": "Gangbereich"
+            },
+            {
+              "entity": "sensor.thermostat_werkstatt_temperatur",
+              "name": "Werkstatt"
+            },
+            {
+              "entity": "sensor.sensor_kochbereich_air_temperature",
+              "name": "Kochbereich"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Hausverwaltung",
+      "path": "hausverwaltung",
+      "icon": "mdi:home-city",
+      "badges": [],
+      "cards": [
+        {
+          "type": "markdown",
+          "content": "### Zonenuebersicht (Habitus)\n- **Kontrollraum**: Licht 3, Heizung 0, Medien 3, CO2 0, Laerm 0, Temp 5\n- **Wohnzimmer**: Licht 20, Heizung 3, Medien 8, CO2 1, Laerm 1, Temp 7\n- **Arbeitszimmer**: Licht 8, Heizung 0, Medien 9, CO2 0, Laerm 0, Temp 0\n- **Küche**: Licht 12, Heizung 1, Medien 2, CO2 0, Laerm 0, Temp 1\n- **Zimmer Mira**: Licht 12, Heizung 1, Medien 1, CO2 0, Laerm 0, Temp 6\n- **Schlafzimmer**: Licht 5, Heizung 0, Medien 2, CO2 0, Laerm 0, Temp 4\n- **Toilette**: Licht 6, Heizung 0, Medien 2, CO2 0, Laerm 0, Temp 2\n- **Gang**: Licht 9, Heizung 1, Medien 2, CO2 0, Laerm 0, Temp 2\n- **Bad**: Licht 5, Heizung 0, Medien 0, CO2 0, Laerm 0, Temp 1\n- **Umwelt**: Licht 0, Heizung 0, Medien 0, CO2 0, Laerm 0, Temp 5\n- **Energie**: Licht 2, Heizung 0, Medien 0, CO2 0, Laerm 0, Temp 14\n- **Netzwerk**: Licht 0, Heizung 0, Medien 0, CO2 0, Laerm 0, Temp 16\n- **Terrasse**: Licht 3, Heizung 0, Medien 0, CO2 0, Laerm 0, Temp 1\n- **Zimmer Paul**: Licht 0, Heizung 0, Medien 0, CO2 0, Laerm 0, Temp 3"
+        },
+        {
+          "type": "entities",
+          "title": "Energie",
+          "entities": [
+            {
+              "entity": "button.shelly_long_range_reset_electric_consumption_kwh",
+              "name": "button.shelly_long_range_reset_electric_consumption_kwh"
+            },
+            {
+              "entity": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_1_power_cycle",
+              "name": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_1_power_cycle"
+            },
+            {
+              "entity": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_2_power_cycle",
+              "name": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_2_power_cycle"
+            },
+            {
+              "entity": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_3_power_cycle",
+              "name": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_3_power_cycle"
+            },
+            {
+              "entity": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_4_power_cycle",
+              "name": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_4_power_cycle"
+            },
+            {
+              "entity": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_ai_360_power_cycle",
+              "name": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_ai_360_power_cycle"
+            },
+            {
+              "entity": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_ap21_arbeitszimmer_25g_wifi7_u7_professional_power_cycle",
+              "name": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_ap21_arbeitszimmer_25g_wifi7_u7_professional_power_cycle"
+            },
+            {
+              "entity": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_apple_mac_mini_m2_pro_power_cycle",
+              "name": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_apple_mac_mini_m2_pro_power_cycle"
+            },
+            {
+              "entity": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_port_2_power_cycle",
+              "name": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_port_2_power_cycle"
+            },
+            {
+              "entity": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_port_3_power_cycle",
+              "name": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_port_3_power_cycle"
+            },
+            {
+              "entity": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_port_4_power_cycle",
+              "name": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_port_4_power_cycle"
+            },
+            {
+              "entity": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_port_6_power_cycle",
+              "name": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_port_6_power_cycle"
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Heizung",
+          "entities": [
+            {
+              "entity": "climate.luftreiniger",
+              "name": "climate.luftreiniger"
+            },
+            {
+              "entity": "climate.smart_radiator_thermostat_x",
+              "name": "climate.smart_radiator_thermostat_x"
+            },
+            {
+              "entity": "climate.thermostat_gangbereich",
+              "name": "climate.thermostat_gangbereich"
+            },
+            {
+              "entity": "climate.thermostat_kochbereich",
+              "name": "climate.thermostat_kochbereich"
+            },
+            {
+              "entity": "climate.thermostat_werkstatt",
+              "name": "climate.thermostat_werkstatt"
+            },
+            {
+              "entity": "climate.thermostat_wohnzimmer_links",
+              "name": "climate.thermostat_wohnzimmer_links"
+            },
+            {
+              "entity": "climate.thermostat_wohnzimmer_rechts",
+              "name": "climate.thermostat_wohnzimmer_rechts"
+            },
+            {
+              "entity": "climate.thermostat_zimmer_mira",
+              "name": "climate.thermostat_zimmer_mira"
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "CO2",
+          "entities": [
+            {
+              "entity": "sensor.co2_wohnbereich_messstation",
+              "name": "sensor.co2_wohnbereich_messstation"
+            },
+            {
+              "entity": "sensor.electricity_maps_co2_intensitat",
+              "name": "sensor.electricity_maps_co2_intensitat"
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Laerm",
+          "entities": [
+            {
+              "entity": "alarm_control_panel.alarm_vorraum",
+              "name": "alarm_control_panel.alarm_vorraum"
+            },
+            {
+              "entity": "alarm_control_panel.camera_hub_g3_2ed9_security_system",
+              "name": "alarm_control_panel.camera_hub_g3_2ed9_security_system"
+            },
+            {
+              "entity": "alarm_control_panel.camera_hub_g5pro_4497_security_system",
+              "name": "alarm_control_panel.camera_hub_g5pro_4497_security_system"
+            },
+            {
+              "entity": "binary_sensor.ai_360_autoalarm_erkannt",
+              "name": "binary_sensor.ai_360_autoalarm_erkannt"
+            },
+            {
+              "entity": "binary_sensor.ai_360_co_alarm_erkannt",
+              "name": "binary_sensor.ai_360_co_alarm_erkannt"
+            },
+            {
+              "entity": "binary_sensor.ai_360_rauchalarm_erkannt",
+              "name": "binary_sensor.ai_360_rauchalarm_erkannt"
+            },
+            {
+              "entity": "binary_sensor.feuermelder_zimmer_mira_smoke_alarm_test",
+              "name": "binary_sensor.feuermelder_zimmer_mira_smoke_alarm_test"
+            },
+            {
+              "entity": "binary_sensor.feuermelder_zimmer_paul_smoke_alarm_test",
+              "name": "binary_sensor.feuermelder_zimmer_paul_smoke_alarm_test"
+            },
+            {
+              "entity": "binary_sensor.kaltealarm",
+              "name": "binary_sensor.kaltealarm"
+            },
+            {
+              "entity": "binary_sensor.sensor_hitzealarm",
+              "name": "binary_sensor.sensor_hitzealarm"
+            },
+            {
+              "entity": "binary_sensor.sensor_larm_wohnzimmer",
+              "name": "binary_sensor.sensor_larm_wohnzimmer"
+            },
+            {
+              "entity": "sensor.alexa_buro_next_alarm",
+              "name": "sensor.alexa_buro_next_alarm"
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Sicherheit",
+          "entities": [
+            {
+              "entity": "camera.ai360",
+              "name": "camera.ai360"
+            },
+            {
+              "entity": "camera.camera_hub_g3_2ed9",
+              "name": "camera.camera_hub_g3_2ed9"
+            },
+            {
+              "entity": "camera.camera_hub_g5pro_4497",
+              "name": "camera.camera_hub_g5pro_4497"
+            },
+            {
+              "entity": "camera.doorbell_repeater_5851",
+              "name": "camera.doorbell_repeater_5851"
+            },
+            {
+              "entity": "camera.netatmo_presence",
+              "name": "camera.netatmo_presence"
+            },
+            {
+              "entity": "camera.netatmo_welcome",
+              "name": "camera.netatmo_welcome"
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Medien & Player",
+          "entities": [
+            {
+              "entity": "media_player.20_f8_3b_09_99_54",
+              "name": "media_player.20_f8_3b_09_99_54"
+            },
+            {
+              "entity": "media_player.20_f8_3b_09_a7_ea",
+              "name": "media_player.20_f8_3b_09_a7_ea"
+            },
+            {
+              "entity": "media_player.aeohy_155_cast",
+              "name": "media_player.aeohy_155_cast"
+            },
+            {
+              "entity": "media_player.aftkrt_146_cast",
+              "name": "media_player.aftkrt_146_cast"
+            },
+            {
+              "entity": "media_player.ai_360_lautsprecher",
+              "name": "media_player.ai_360_lautsprecher"
+            },
+            {
+              "entity": "media_player.alexa_buro",
+              "name": "media_player.alexa_buro"
+            },
+            {
+              "entity": "media_player.alexa_kuche",
+              "name": "media_player.alexa_kuche"
+            },
+            {
+              "entity": "media_player.alexa_loft",
+              "name": "media_player.alexa_loft"
+            },
+            {
+              "entity": "media_player.alexa_schlafzimmer",
+              "name": "media_player.alexa_schlafzimmer"
+            },
+            {
+              "entity": "media_player.alexa_sonos_gang",
+              "name": "media_player.alexa_sonos_gang"
+            },
+            {
+              "entity": "media_player.alexa_sonos_move",
+              "name": "media_player.alexa_sonos_move"
+            },
+            {
+              "entity": "media_player.alexa_toilette",
+              "name": "media_player.alexa_toilette"
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Netzwerk",
+          "entities": [
+            {
+              "entity": "binary_sensor.dream_machine_special_edition_ssd_1",
+              "name": "binary_sensor.dream_machine_special_edition_ssd_1"
+            },
+            {
+              "entity": "binary_sensor.pilotsuite_unifi_roaming_activity",
+              "name": "binary_sensor.pilotsuite_unifi_roaming_activity"
+            },
+            {
+              "entity": "binary_sensor.pilotsuite_unifi_wan_online",
+              "name": "binary_sensor.pilotsuite_unifi_wan_online"
+            },
+            {
+              "entity": "binary_sensor.sensor_unifi_1_batteriestand",
+              "name": "binary_sensor.sensor_unifi_1_batteriestand"
+            },
+            {
+              "entity": "binary_sensor.sensor_unifi_1_bewegung",
+              "name": "binary_sensor.sensor_unifi_1_bewegung"
+            },
+            {
+              "entity": "binary_sensor.sensor_unifi_1_feuchte",
+              "name": "binary_sensor.sensor_unifi_1_feuchte"
+            },
+            {
+              "entity": "binary_sensor.sensor_unifi_1_kontakt",
+              "name": "binary_sensor.sensor_unifi_1_kontakt"
+            },
+            {
+              "entity": "binary_sensor.sensor_unifi_1_manipulation",
+              "name": "binary_sensor.sensor_unifi_1_manipulation"
+            },
+            {
+              "entity": "button.dream_machine_special_edition_ap20_wifi6_1g_u6_mesh_eingang_power_cycle",
+              "name": "button.dream_machine_special_edition_ap20_wifi6_1g_u6_mesh_eingang_power_cycle"
+            },
+            {
+              "entity": "button.dream_machine_special_edition_port_1_power_cycle",
+              "name": "button.dream_machine_special_edition_port_1_power_cycle"
+            },
+            {
+              "entity": "button.dream_machine_special_edition_port_2_power_cycle",
+              "name": "button.dream_machine_special_edition_port_2_power_cycle"
+            },
+            {
+              "entity": "button.dream_machine_special_edition_port_3_power_cycle",
+              "name": "button.dream_machine_special_edition_port_3_power_cycle"
+            }
+          ]
+        },
+        {
+          "type": "entities",
+          "title": "Wetter",
+          "entities": [
+            {
+              "entity": "weather.astroweather_backyard",
+              "name": "weather.astroweather_backyard"
+            },
+            {
+              "entity": "weather.met_io_pfarrkirchen",
+              "name": "weather.met_io_pfarrkirchen"
+            },
+            {
+              "entity": "weather.nspanel_pfarrkirchen",
+              "name": "weather.nspanel_pfarrkirchen"
+            },
+            {
+              "entity": "weather.pirateweather",
+              "name": "weather.pirateweather"
+            },
+            {
+              "entity": "weather.wetter_open_meteo_pfarrkirchen",
+              "name": "weather.wetter_open_meteo_pfarrkirchen"
+            },
+            {
+              "entity": "weather.wetter_pfarrkirchen",
+              "name": "weather.wetter_pfarrkirchen"
+            }
+          ]
+        },
+        {
+          "type": "history-graph",
+          "title": "Energie-Verlauf (24h)",
+          "hours_to_show": 24,
+          "entities": [
+            {
+              "entity": "button.shelly_long_range_reset_electric_consumption_kwh",
+              "name": "button.shelly_long_range_reset_electric_consumption_kwh"
+            },
+            {
+              "entity": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_1_power_cycle",
+              "name": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_1_power_cycle"
+            },
+            {
+              "entity": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_2_power_cycle",
+              "name": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_2_power_cycle"
+            },
+            {
+              "entity": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_3_power_cycle",
+              "name": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_3_power_cycle"
+            },
+            {
+              "entity": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_4_power_cycle",
+              "name": "button.sw20_arbeitszimmer_1gx8_poe_usw_lite_port_4_power_cycle"
+            },
+            {
+              "entity": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_ai_360_power_cycle",
+              "name": "button.sw21_arbeitszimmer_10gx2_2_5gx8_poe_enterprise_ai_360_power_cycle"
+            }
+          ]
+        },
+        {
+          "type": "history-graph",
+          "title": "CO2/Laerm Verlauf (24h)",
+          "hours_to_show": 24,
+          "entities": [
+            {
+              "entity": "sensor.co2_wohnbereich_messstation",
+              "name": "sensor.co2_wohnbereich_messstation"
+            },
+            {
+              "entity": "sensor.electricity_maps_co2_intensitat",
+              "name": "sensor.electricity_maps_co2_intensitat"
+            },
+            {
+              "entity": "alarm_control_panel.alarm_vorraum",
+              "name": "alarm_control_panel.alarm_vorraum"
+            },
+            {
+              "entity": "alarm_control_panel.camera_hub_g3_2ed9_security_system",
+              "name": "alarm_control_panel.camera_hub_g3_2ed9_security_system"
+            },
+            {
+              "entity": "alarm_control_panel.camera_hub_g5pro_4497_security_system",
+              "name": "alarm_control_panel.camera_hub_g5pro_4497_security_system"
+            },
+            {
+              "entity": "binary_sensor.ai_360_autoalarm_erkannt",
+              "name": "binary_sensor.ai_360_autoalarm_erkannt"
+            },
+            {
+              "entity": "binary_sensor.ai_360_co_alarm_erkannt",
+              "name": "binary_sensor.ai_360_co_alarm_erkannt"
+            },
+            {
+              "entity": "binary_sensor.ai_360_rauchalarm_erkannt",
+              "name": "binary_sensor.ai_360_rauchalarm_erkannt"
+            }
+          ]
+        },
+        {
+          "type": "vertical-stack",
+          "title": "Haushaltsgeraete",
+          "cards": [
+            {
+              "type": "grid",
+              "columns": 2,
+              "cards": [
+                {
+                  "type": "entities",
+                  "title": "Kueche",
+                  "entities": [
+                    {
+                      "entity": "switch.kaffeemaschine",
+                      "name": "Kaffeemaschine"
+                    },
+                    {
+                      "entity": "counter.kaffeemaschine_bezuge",
+                      "name": "Bezuege total"
+                    },
+                    {
+                      "entity": "switch.spulmaschine",
+                      "name": "Spuelmaschine"
+                    },
+                    {
+                      "entity": "switch.coca_cola_kuhlschrank",
+                      "name": "Kuehlschrank"
+                    }
+                  ]
+                },
+                {
+                  "type": "entities",
+                  "title": "Reinigung & Waesche",
+                  "entities": [
+                    {
+                      "entity": "vacuum.saugi",
+                      "name": "Saugroboter"
+                    },
+                    {
+                      "entity": "vacuum.wischi",
+                      "name": "Wischroboter"
+                    },
+                    {
+                      "entity": "sensor.waschmaschine",
+                      "name": "Waschmaschine"
+                    },
+                    {
+                      "entity": "sensor.waschmaschine_pre_state",
+                      "name": "WM Status"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "weather-forecast",
+          "entity": "weather.astroweather_backyard",
+          "show_forecast": true
+        }
+      ]
+    },
+    {
+      "title": "Styx",
+      "path": "styx",
+      "icon": "mdi:brain",
+      "badges": [],
+      "cards": [
+        {
+          "type": "vertical-stack",
+          "title": "Neural Pipeline",
+          "cards": [
+            {
+              "type": "grid",
+              "columns": 4,
+              "cards": [
+                {
+                  "type": "entity",
+                  "entity": "sensor.ai_home_copilot_neuron_activity",
+                  "name": "Neuronen",
+                  "icon": "mdi:brain"
+                },
+                {
+                  "type": "entity",
+                  "entity": "sensor.ai_home_copilot_mood",
+                  "name": "Stimmung",
+                  "icon": "mdi:emoticon"
+                },
+                {
+                  "type": "entity",
+                  "entity": "sensor.ai_home_copilot_suggestion_queue",
+                  "name": "Vorschlaege",
+                  "icon": "mdi:lightbulb-on"
+                },
+                {
+                  "type": "entity",
+                  "entity": "sensor.ai_home_copilot_brain_graph_summary",
+                  "name": "Brain Graph",
+                  "icon": "mdi:graph"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "iframe",
+          "url": "/api/ai_home_copilot/brain_graph/vis",
+          "aspect_ratio": "16:9",
+          "title": "Brain Graph"
+        },
+        {
+          "type": "vertical-stack",
+          "title": "Stimmung pro Zone",
+          "cards": [
+            {
+              "type": "history-graph",
+              "title": "Comfort (24h)",
+              "hours_to_show": 24,
+              "entities": [
+                {
+                  "entity": "sensor.ai_home_copilot_mood_comfort",
+                  "name": "Gesamt Comfort"
+                }
+              ]
+            },
+            {
+              "type": "history-graph",
+              "title": "Joy (24h)",
+              "hours_to_show": 24,
+              "entities": [
+                {
+                  "entity": "sensor.ai_home_copilot_mood_joy",
+                  "name": "Gesamt Joy"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "vertical-stack",
+          "title": "Aktive Vorschlaege",
+          "cards": [
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "sensor.ai_home_copilot_suggestion_queue",
+                  "name": "Warteschlange"
+                },
+                {
+                  "entity": "button.ai_home_copilot_generate_overview",
+                  "name": "Uebersicht generieren"
+                },
+                {
+                  "entity": "button.ai_home_copilot_demo_suggestion",
+                  "name": "Demo-Vorschlag"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "vertical-stack",
+          "title": "Habitus-Muster",
+          "cards": [
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "sensor.ai_home_copilot_habit_summary",
+                  "name": "Muster-Zusammenfassung"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "vertical-stack",
+          "title": "PilotSuite Aktionen",
+          "cards": [
+            {
+              "type": "grid",
+              "columns": 2,
+              "cards": [
+                {
+                  "type": "button",
+                  "entity": "button.ai_home_copilot_generate_overview",
+                  "name": "Uebersicht",
+                  "icon": "mdi:file-document",
+                  "show_state": false
+                },
+                {
+                  "type": "button",
+                  "entity": "button.ai_home_copilot_config_snapshot",
+                  "name": "Snapshot",
+                  "icon": "mdi:camera",
+                  "show_state": false
+                },
+                {
+                  "type": "button",
+                  "entity": "button.ai_home_copilot_log_analysis",
+                  "name": "Log-Analyse",
+                  "icon": "mdi:text-search",
+                  "show_state": false
+                },
+                {
+                  "type": "button",
+                  "entity": "button.ai_home_copilot_core_capabilities",
+                  "name": "Capabilities",
+                  "icon": "mdi:rocket-launch",
+                  "show_state": false
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "vertical-stack",
+          "title": "System Status",
+          "cards": [
+            {
+              "type": "entities",
+              "entities": [
+                {
+                  "entity": "sensor.ai_home_copilot_status",
+                  "name": "PilotSuite Status"
+                },
+                {
+                  "entity": "update.ai_home_copilot_update",
+                  "name": "Update verfuegbar"
+                },
+                {
+                  "entity": "sensor.ai_home_copilot_forwarder_status",
+                  "name": "Event Forwarder"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
