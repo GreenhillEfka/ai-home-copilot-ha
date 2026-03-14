@@ -63,7 +63,16 @@ async def async_register_card_resources(
             )
             return
 
-        existing = await resources.async_get_items()
+        # HA 2026.x: async_get_items() may not exist; try async_items() or .data
+        if hasattr(resources, "async_get_items"):
+            existing = await resources.async_get_items()
+        elif hasattr(resources, "async_items"):
+            existing = await resources.async_items()
+        elif hasattr(resources, "data"):
+            existing = list(resources.data.values()) if isinstance(resources.data, dict) else []
+        else:
+            _LOGGER.info("Lovelace resources API incompatible — skip card registration")
+            return
         existing_urls = set()
         for item in existing:
             if isinstance(item, Mapping):

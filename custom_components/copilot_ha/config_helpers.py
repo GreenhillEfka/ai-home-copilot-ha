@@ -209,30 +209,35 @@ async def discover_reachable_core_endpoint(
     if DEFAULT_PORT not in port_candidates:
         port_candidates.append(DEFAULT_PORT)
 
+    # Try /health first (unauthenticated), then /api/v1/status as fallback
+    probe_paths = ["/health", "/api/v1/status"]
+
     for candidate_host in candidates:
         for candidate_port in port_candidates:
             base = build_base_url(candidate_host, candidate_port)
-            try:
-                async with session.get(
-                    f"{base}/api/v1/status",
-                    timeout=aiohttp.ClientTimeout(total=timeout_s),
-                ) as resp:
-                    if resp.status != 200:
-                        continue
-                    ctype = (resp.headers.get("Content-Type", "") or "").lower()
-                    if "json" not in ctype:
-                        continue
-                    payload = await resp.json()
-                    if isinstance(payload, dict) and payload.get("ok") is True:
-                        _LOGGER.info(
-                            "Discovered reachable PilotSuite Core endpoint at %s:%s",
-                            candidate_host,
-                            candidate_port,
-                        )
-                        return candidate_host, candidate_port
-            except (aiohttp.ClientError, asyncio.TimeoutError):
-                continue
-            except Exception:
-                continue
+            for probe_path in probe_paths:
+                try:
+                    async with session.get(
+                        f"{base}{probe_path}",
+                        timeout=aiohttp.ClientTimeout(total=timeout_s),
+                    ) as resp:
+                        if resp.status != 200:
+                            continue
+                        ctype = (resp.headers.get("Content-Type", "") or "").lower()
+                        if "json" not in ctype:
+                            continue
+                        payload = await resp.json()
+                        if isinstance(payload, dict) and payload.get("ok") is True:
+                            _LOGGER.info(
+                                "Discovered reachable PilotSuite Core at %s:%s (via %s)",
+                                candidate_host,
+                                candidate_port,
+                                probe_path,
+                            )
+                            return candidate_host, candidate_port
+                except (aiohttp.ClientError, asyncio.TimeoutError):
+                    continue
+                except Exception:
+                    continue
 
     return None
