@@ -104,10 +104,24 @@ class CopilotBaseEntity(CoordinatorEntity["CopilotDataUpdateCoordinator"]):
 
     @property
     def device_info(self) -> DeviceInfo:
+        # Build configuration URL pointing to Styx Dashboard
+        config_url = None
+        try:
+            cfg = self.coordinator._config
+            host = cfg.get("host", "homeassistant.local")
+            port = cfg.get("port", 8909)
+            token = cfg.get("auth_token") or cfg.get("token") or ""
+            config_url = f"http://{host}:{port}/styx"
+            if token:
+                config_url += f"?token={token}"
+        except Exception:
+            pass
+
         return DeviceInfo(
             identifiers=build_main_device_identifiers(self.coordinator._config),
             name="PilotSuite - Styx",
             manufacturer="PilotSuite",
-            model="Home Assistant Integration",
+            model="Styx AI Home Assistant",
             sw_version=VERSION,
+            configuration_url=config_url,
         )
