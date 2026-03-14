@@ -522,6 +522,67 @@ class HomeAlertsModule(CopilotModule):
         self._update_alert_counts()
         _LOGGER.debug("Presence alert: %s", alert.title)
 
+    async def _async_handle_battery_change(self, entity_id: str, new_state) -> None:
+        """Handle real-time battery state changes."""
+        if not new_state:
+            return
+
+        battery_value = None
+        if "battery" in new_state.attributes:
+            battery_value = new_state.attributes["battery"]
+        elif "battery_level" in new_state.attributes:
+            battery_value = new_state.attributes["battery_level"]
+        elif new_state.state not in (STATE_UNKNOWN, STATE_UNAVAILABLE, "None", "none", ""):
+            try:
+                battery_value = float(new_state.state)
+            except (ValueError, TypeError):
+                pass
+
+        if battery_value is None:
+            return
+
+        try:
+            battery_pct = float(battery_value)
+        except (ValueError, TypeError):
+            return
+
+        alert_id = f"battery_{entity_id}"
+
+        # Remove existing alert for this entity
+        self._state.alerts = [a for a in self._state.alerts if a.alert_id != alert_id]
+
+        name = new_state.name or entity_id
+
+        if battery_pct <= BATTERY_CRITICAL_THRESHOLD:
+            alert = Alert(
+                alert_id=alert_id,
+                category="battery",
+                severity=SEVERITY_CRITICAL,
+                title=f"Kritischer Batteriestand: {name}",
+                message=f"{name} hat nur noch {battery_pct:.0f}% Batterie",
+                entity_id=entity_id,
+                value=battery_pct,
+                acknowledged=alert_id in self._acknowledged_ids,
+                actions=[{"action": "acknowledge", "title": "Bestätigt"}],
+            )
+            self._state.alerts.append(alert)
+        elif battery_pct <= BATTERY_WARNING_THRESHOLD:
+            alert = Alert(
+                alert_id=alert_id,
+                category="battery",
+                severity=SEVERITY_MEDIUM,
+                title=f"Niedriger Batteriestand: {name}",
+                message=f"{name} hat {battery_pct:.0f}% Batterie",
+                entity_id=entity_id,
+                value=battery_pct,
+                acknowledged=alert_id in self._acknowledged_ids,
+                actions=[{"action": "acknowledge", "title": "Bestätigt"}],
+            )
+            self._state.alerts.append(alert)
+
+        self._update_alert_counts()
+        self._update_health_score()
+
 
 # Module registration helper
 def get_home_alerts_module(hass: HomeAssistant, entry_id: str) -> Optional[HomeAlertsModule]:
