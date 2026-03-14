@@ -12,11 +12,14 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
 from .blueprints import async_install_blueprints
+from .config_helpers import fetch_setup_token
 from .connection_config import merged_entry_config, resolve_core_connection_from_mapping
 from .const import (
     CONF_HOST,
     CONF_PORT,
     CONF_TOKEN,
+    DEFAULT_HOST,
+    DEFAULT_PORT,
     DOMAIN,
     INTEGRATION_UNIQUE_ID,
     MAIN_DEVICE_IDENTIFIER,
@@ -369,6 +372,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_migrate_connection_config(hass, entry)
     except Exception:
         _LOGGER.exception("Failed to normalize connection config")
+
+    # Auto-fetch token from Core if missing (1-Key-Flow)
+    try:
+        merged = merged_entry_config(entry)
+        token = str(merged.get(CONF_TOKEN, "") or "").strip()
+        if not token:
+            host = str(merged.get(CONF_HOST, DEFAULT_HOST) or DEFAULT_HOST)
+            port = int(merged.get(CONF_PORT, DEFAULT_PORT) or DEFAULT_PORT)
+            fetched = await fetch_setup_token(hass, host, port)
+            if fetched:
+                new_data = dict(entry.data) if isinstance(entry.data, dict) else {}
+                new_data[CONF_TOKEN] = fetched
+                hass.config_entries.async_update_entry(entry, data=new_data)
+                _LOGGER.info(
+                    "Auto-fetched token from Core at %s:%s (1-Key-Flow)",
+                    host, port,
+                )
+            else:
+                _LOGGER.warning(
+                    "No token configured and auto-fetch from Core at %s:%s failed — "
+                    "API calls will fail with 401. Configure token via "
+                    "Settings > Integrations > PilotSuite > Configure",
+                    host, port,
+                )
+    except Exception:
+        _LOGGER.exception("Failed to auto-fetch token from Core")
 
     try:
         await _async_migrate_entry_identity(hass, entry)
