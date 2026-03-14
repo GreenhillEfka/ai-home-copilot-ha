@@ -840,13 +840,16 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
 
         return _ok_response()
 
-    webhook.async_register(
-        hass,
-        DOMAIN,
-        f"PilotSuite webhook ({entry.entry_id})",
-        webhook_id,
-        _handle,
-    )
+    try:
+        webhook.async_register(
+            hass,
+            DOMAIN,
+            f"PilotSuite webhook ({entry.entry_id})",
+            webhook_id,
+            _handle,
+        )
+    except ValueError:
+        _LOGGER.debug("Webhook %s already registered — reusing", webhook_id)
 
     return webhook_id
 

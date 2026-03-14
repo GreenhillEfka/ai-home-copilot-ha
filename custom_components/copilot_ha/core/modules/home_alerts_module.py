@@ -23,7 +23,7 @@ from typing import Any, Optional
 
 from homeassistant.core import HomeAssistant, Event, callback
 from homeassistant.const import STATE_HOME, STATE_NOT_HOME, STATE_UNKNOWN, STATE_UNAVAILABLE
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_interval
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.storage import Store
 
@@ -134,9 +134,10 @@ class HomeAlertsModule(CopilotModule):
         await self._async_scan_all()
 
         # Set up periodic scanning (every 5 minutes)
-        unsub = ctx.hass.helpers.event.async_track_time_interval(
+        unsub = async_track_time_interval(
+            ctx.hass,
             self._async_periodic_scan,
-            timedelta(minutes=5)
+            timedelta(minutes=5),
         )
         self._unsub_callbacks.append(unsub)
 
