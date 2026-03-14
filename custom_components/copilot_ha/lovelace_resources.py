@@ -9,6 +9,7 @@ The JS file is served by the Core Add-on at:
 
 from __future__ import annotations
 
+import inspect
 import logging
 from collections.abc import Mapping
 
@@ -64,15 +65,26 @@ async def async_register_card_resources(
             return
 
         # HA 2026.x: async_get_items() may not exist; try async_items() or .data
-        if hasattr(resources, "async_get_items"):
-            existing = await resources.async_get_items()
-        elif hasattr(resources, "async_items"):
-            existing = await resources.async_items()
-        elif hasattr(resources, "data"):
-            existing = list(resources.data.values()) if isinstance(resources.data, dict) else []
-        else:
-            _LOGGER.info("Lovelace resources API incompatible — skip card registration")
-            return
+        existing = None
+        for method_name in ("async_get_items", "async_items"):
+            method = getattr(resources, method_name, None)
+            if method is not None and callable(method):
+                result = method()
+                existing = (await result) if inspect.isawaitable(result) else result
+                break
+
+        if existing is None:
+            if hasattr(resources, "data"):
+                data = resources.data
+                if isinstance(data, dict):
+                    existing = list(data.values())
+                elif isinstance(data, list):
+                    existing = data
+                else:
+                    existing = []
+            else:
+                _LOGGER.info("Lovelace resources API incompatible — skip card registration")
+                return
         existing_urls = set()
         for item in existing:
             if isinstance(item, Mapping):
