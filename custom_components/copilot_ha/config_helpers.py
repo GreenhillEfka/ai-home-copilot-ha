@@ -68,6 +68,44 @@ def merge_config_data(
     return merged
 
 
+async def fetch_setup_token(
+    hass: HomeAssistant,
+    host: str,
+    port: int,
+    *,
+    timeout_s: float = 3.0,
+) -> str:
+    """Fetch the auto-generated setup token from Core (1-Key-Flow).
+
+    Returns the token string if Core provides one, empty string otherwise.
+    """
+    from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+    base = build_base_url(host, port)
+    url = f"{base}/api/v1/auth/setup-token"
+    session = async_get_clientsession(hass)
+    try:
+        async with session.get(
+            url, timeout=aiohttp.ClientTimeout(total=timeout_s)
+        ) as resp:
+            if resp.status != 200:
+                return ""
+            payload = await resp.json()
+            if isinstance(payload, dict) and payload.get("ok") is True:
+                token = str(payload.get("token") or "").strip()
+                if token:
+                    _LOGGER.info(
+                        "Auto-fetched setup token from Core (%s...%s)",
+                        token[:8], token[-4:],
+                    )
+                    return token
+    except (aiohttp.ClientError, asyncio.TimeoutError):
+        _LOGGER.debug("Could not fetch setup token from %s", url)
+    except Exception:
+        _LOGGER.debug("Unexpected error fetching setup token from %s", url, exc_info=True)
+    return ""
+
+
 async def validate_input(hass: HomeAssistant, data: dict) -> None:
     """Validate config input: host, port, and critical numeric bounds."""
     from homeassistant.exceptions import HomeAssistantError

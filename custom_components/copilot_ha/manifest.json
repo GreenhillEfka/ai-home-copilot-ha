@@ -19,6 +19,7 @@
     "webhook"
   ],
   "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha#readme",
+  "icon": "mdi:brain",
   "integration_type": "hub",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",

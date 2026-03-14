@@ -27,6 +27,7 @@ from .config_helpers import (
     STEP_REVIEW,
     validate_input,
     discover_reachable_core_endpoint,
+    fetch_setup_token,
 )
 from .config_options_flow import OptionsFlowHandler  # noqa: F401 - used by HA via async_get_options_flow
 from .config_wizard_steps import (
@@ -114,10 +115,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 DEFAULT_PORT,
             )
 
+        # Auto-fetch token from Core (1-Key-Flow)
+        token = ""
+        if host and port:
+            token = await fetch_setup_token(self.hass, host, port)
+
         config = {
             CONF_HOST: host,
             CONF_PORT: port,
-            CONF_TOKEN: "",
+            CONF_TOKEN: token,
             CONF_ENTITY_PROFILE: DEFAULT_ENTITY_PROFILE,
             "assistant_name": "Styx",
         }
@@ -125,7 +131,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Best-effort connectivity check (non-blocking)
         try:
             await validate_input(self.hass, config)
-            _LOGGER.info("Zero-config: Core reachable at %s:%s", host, port)
+            _LOGGER.info("Zero-config: Core reachable at %s:%s (token=%s)",
+                         host, port, "auto" if token else "none")
         except Exception:
             _LOGGER.warning(
                 "Zero-config: Core Add-on not reachable at %s:%s — "
@@ -170,6 +177,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     self.hass.config_entries.async_update_entry(reauth_entry, data=updated)
                     await self.hass.config_entries.async_reload(reauth_entry.entry_id)
                     return self.async_abort(reason="reauth_successful")
+
+            # Auto-fetch token if user left it empty
+            if not str(user_input.get(CONF_TOKEN) or "").strip():
+                user_input[CONF_TOKEN] = await fetch_setup_token(
+                    self.hass,
+                    str(user_input.get(CONF_HOST, DEFAULT_HOST)),
+                    int(user_input.get(CONF_PORT, DEFAULT_PORT)),
+                )
 
             name = user_input.get("assistant_name", "Styx")
             title = f"{name} — PilotSuite ({user_input[CONF_HOST]}:{user_input[CONF_PORT]})"
@@ -318,6 +333,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             if resolved is not None:
                 final_config[CONF_HOST], final_config[CONF_PORT] = resolved
+
+            # Auto-fetch token if not set (Quick Start / Wizard without manual token)
+            if not str(final_config.get(CONF_TOKEN) or "").strip():
+                host = str(final_config.get(CONF_HOST, DEFAULT_HOST))
+                port = int(final_config.get(CONF_PORT, DEFAULT_PORT))
+                final_config[CONF_TOKEN] = await fetch_setup_token(
+                    self.hass, host, port
+                )
+
             await self.async_set_unique_id(INTEGRATION_UNIQUE_ID)
             self._abort_if_unique_id_configured()
             return self.async_create_entry(title=title, data=final_config)
