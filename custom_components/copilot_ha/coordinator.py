@@ -711,6 +711,13 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 except Exception:
                     _LOGGER.debug("Zone health fetch skipped")
 
+                # Preserve webhook-pushed data across coordinator refreshes
+                if self.data:
+                    if "autonomy_history" in self.data:
+                        result["autonomy_history"] = self.data["autonomy_history"]
+                    if "zone_module_states" in self.data:
+                        result["zone_module_states"] = self.data["zone_module_states"]
+
                 return result
             except CopilotApiError as err:
                 last_err = err
