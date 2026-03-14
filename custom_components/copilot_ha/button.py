@@ -121,6 +121,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     async_add_entities(entities, True)
 
+    # Zone scene capture buttons (v14.2.0)
+    try:
+        from .autonomy_entities import create_zone_autonomy_entities, ZoneSceneCaptureButton
+        from .habitus_zones_store_v2 import async_get_zones_v2
+        zones = await async_get_zones_v2(hass, entry.entry_id)
+        zone_list = [{"zone_id": z.zone_id, "name": getattr(z, "name_de", None) or z.name} for z in zones]
+        scene_buttons = [e for e in create_zone_autonomy_entities(coordinator, zone_list) if isinstance(e, ZoneSceneCaptureButton)]
+        if scene_buttons:
+            async_add_entities(scene_buttons, True)
+    except Exception:
+        _LOGGER.debug("Zone scene buttons skipped (zones not configured)")
+
 
 # Re-export all button classes
 # button_debug.py is the canonical source for debug/dev buttons

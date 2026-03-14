@@ -25,7 +25,7 @@ class TestZoneCardConfig:
         content = card_path.read_text()
         
         # Check for basic JS structure
-        assert "class StyxZoneCard extends HTMLElement" in content, "Card should define HTMLElement class"
+        assert "class StyxZoneCard extends" in content, "Card should define StyxZoneCard class"
         assert "customElements.define" in content, "Card should register custom element"
         assert "styx-zone-card" in content, "Card should use correct element name"
         

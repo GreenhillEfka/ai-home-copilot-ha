@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import DOMAIN, SIGNAL_CONTEXT_ENTITIES_REFRESH
@@ -183,6 +184,9 @@ from .sensors.notification_sensor import NotificationSensor
 from .sensors.regional_context_sensor import RegionalContextSensor
 from .sensors.weather_optimizer_sensor import WeatherOptimizerSensor
 from .sensors.zone_presence_trigger import ZonePresenceOverviewSensor
+
+# Autonomy sensors (v14.2.0)
+from .sensors.autonomy_status_sensor import AUTONOMY_SENSORS
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
@@ -459,6 +463,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         ZonePresenceOverviewSensor(coordinator),
     ])
 
+    # Autonomy sensors (v14.2.0)
+    for sensor_cls in AUTONOMY_SENSORS:
+        entities.append(sensor_cls(coordinator))
+
     # Camera Context Sensors (Habitus Camera Integration)
     entities.extend([
         CameraMotionHistorySensor(coordinator, entry),
@@ -596,6 +604,7 @@ class CopilotVersionSensor(CopilotBaseEntity, SensorEntity):
     _attr_name = "Version"
     _attr_unique_id = "copilot_ha_version"
     _attr_icon = "mdi:tag"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def native_value(self) -> str | None:

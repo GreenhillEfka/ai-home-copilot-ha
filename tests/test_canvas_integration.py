@@ -176,8 +176,7 @@ class TestCanvasDataHandling:
         brain_card_path = PROJECT_ROOT / "custom_components" / "copilot_ha" / "www" / "styx-brain-card.js"
         content = brain_card_path.read_text()
 
-        assert "JSON.stringify" in content, "Brain card should optimize renders"
-        assert "!== JSON.stringify" in content, "Brain card should compare states"
+        assert "_hasDataChanged" in content, "Brain card should use optimized data comparison"
 
     def test_brain_card_entity_extraction(self):
         """Test brain card extracts data from entities."""

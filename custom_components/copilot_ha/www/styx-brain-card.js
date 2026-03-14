@@ -57,7 +57,6 @@ class StyxBrainCard extends HTMLElement {
     this._phase = 0;
     this._hoveredNode = null;
     this._svgEl = null;
-    this._initialized = false;
   }
 
   static getConfigElement() {
@@ -89,14 +88,26 @@ class StyxBrainCard extends HTMLElement {
       ? edgeEntity.attributes.edges || edgeEntity.attributes.graph_edges || []
       : [];
 
-    if (
-      JSON.stringify(nodes) !== JSON.stringify(this._nodes) ||
-      JSON.stringify(edges) !== JSON.stringify(this._edges)
-    ) {
+    if (this._hasDataChanged(nodes, edges)) {
       this._nodes = nodes;
       this._edges = edges;
       this._render();
     }
+  }
+
+  _hasDataChanged(newNodes, newEdges) {
+    if (newNodes.length !== this._nodes.length || newEdges.length !== this._edges.length) {
+      return true;
+    }
+    if (newNodes.length === 0) return false;
+    // Compare score sums as a fast hash
+    const sumScore = arr => arr.reduce((s, n) => s + (n.score || 0), 0);
+    if (Math.abs(sumScore(newNodes) - sumScore(this._nodes)) > 0.01) return true;
+    // Compare first/last node ids
+    const nid = n => n.id || n.node_id || '';
+    if (nid(newNodes[0]) !== nid(this._nodes[0])) return true;
+    if (nid(newNodes[newNodes.length - 1]) !== nid(this._nodes[this._nodes.length - 1])) return true;
+    return false;
   }
 
   disconnectedCallback() {
@@ -195,12 +206,29 @@ class StyxBrainCard extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; }
+        :host {
+          display: block;
+          /* ── PilotSuite Design Tokens ─────────────── */
+          --ps-accent: var(--accent-color, #4fc3f7);
+          --ps-green: #81c784; --ps-orange: #ffb74d;
+          --ps-red: #ef5350; --ps-purple: #ce93d8;
+          /* Surfaces */
+          --ps-bg: var(--card-background-color, var(--ha-card-background, #1a1a2e));
+          --ps-surface: var(--secondary-background-color, #222240);
+          --ps-border: var(--divider-color, rgba(255,255,255,0.08));
+          /* Text */
+          --ps-text: var(--primary-text-color, #e0e0f0);
+          --ps-text-secondary: var(--secondary-text-color, #9e9eb8);
+          --ps-text-disabled: var(--disabled-text-color, #666);
+          /* Radius */
+          --ps-radius: var(--ha-card-border-radius, 12px);
+          --ps-radius-sm: 8px;
+        }
         .card {
-          background: var(--card-background-color, #0a0e14);
-          border-radius: var(--ha-card-border-radius, 12px);
+          background: var(--ps-bg);
+          border-radius: var(--ps-radius);
           padding: 16px;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text);
           font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
         }
         .header {
@@ -210,26 +238,26 @@ class StyxBrainCard extends HTMLElement {
         .title { font-size: 16px; font-weight: 600; }
         .pulse-dot {
           display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-          background: #4caf50; margin-right: 6px; vertical-align: middle;
+          background: var(--ps-green); margin-right: 6px; vertical-align: middle;
           animation: pulseDot 2s ease-in-out infinite;
         }
         @keyframes pulseDot {
-          0%, 100% { opacity: 1; box-shadow: 0 0 4px #4caf50; }
-          50% { opacity: 0.4; box-shadow: 0 0 12px #4caf50; }
+          0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--ps-green); }
+          50% { opacity: 0.4; box-shadow: 0 0 12px var(--ps-green); }
         }
-        .meta { font-size: 11px; color: var(--secondary-text-color, #9fb1c3); }
+        .meta { font-size: 0.75rem; color: var(--ps-text-secondary); }
         .stats {
           display: flex; gap: 12px; margin-bottom: 8px; flex-wrap: wrap;
         }
         .stat {
           background: rgba(74, 163, 223, 0.08);
-          padding: 4px 10px; border-radius: 12px; font-size: 11px;
+          padding: 4px 10px; border-radius: 12px; font-size: 0.75rem;
           border: 1px solid rgba(74, 163, 223, 0.15);
         }
-        .stat b { color: #4aa3df; }
+        .stat b { color: var(--ps-accent); }
         svg {
           width: 100%; height: auto;
-          background: #0b121a; border: 1px solid #263343; border-radius: 8px;
+          background: var(--ps-surface); border: 1px solid var(--ps-border); border-radius: var(--ps-radius-sm);
         }
         .edge-line { transition: stroke-opacity 0.3s, stroke-width 0.3s; }
         .node-g { cursor: pointer; }
@@ -257,7 +285,7 @@ class StyxBrainCard extends HTMLElement {
         /* Legend */
         .legend {
           display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
-          font-size: 10px; color: var(--secondary-text-color, #8ba3b8);
+          font-size: 0.75rem; color: var(--ps-text-secondary);
         }
         .legend-item { display: flex; align-items: center; gap: 3px; }
         .legend-dot {
@@ -265,14 +293,14 @@ class StyxBrainCard extends HTMLElement {
         }
         .tooltip-panel {
           position: absolute; top: 8px; right: 8px; max-width: 200px;
-          background: rgba(15, 23, 32, 0.95); border: 1px solid #263343;
-          border-radius: 8px; padding: 10px; font-size: 11px; display: none;
+          background: rgba(15, 23, 32, 0.95); border: 1px solid var(--ps-border);
+          border-radius: var(--ps-radius-sm); padding: 10px; font-size: var(--ps-fs-xs, 0.75rem); display: none;
           z-index: 10; pointer-events: none;
         }
         .tooltip-panel.visible { display: block; }
         .tooltip-panel .tp-title { font-weight: 600; margin-bottom: 4px; }
-        .tooltip-panel .tp-row { display: flex; justify-content: space-between; color: #8ba3b8; padding: 1px 0; }
-        .tooltip-panel .tp-val { color: #e6eef6; }
+        .tooltip-panel .tp-row { display: flex; justify-content: space-between; color: var(--ps-text-secondary); padding: 1px 0; }
+        .tooltip-panel .tp-val { color: var(--ps-text); }
         .graph-wrap { position: relative; }
       </style>
       <ha-card>
@@ -287,7 +315,8 @@ class StyxBrainCard extends HTMLElement {
             <span class="stat"><b>${crossDeps}</b> Cross-Deps</span>
           </div>
           <div class="graph-wrap">
-            <svg id="brain-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="Living brain graph">
+            <svg id="brain-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="PilotSuite Brain-Graph Visualisierung">
+              <title>Brain-Graph: Neuronale Verbindungen</title>
               <defs>
                 <radialGradient id="bg-grad" cx="50%" cy="50%" r="55%">
                   <stop offset="0%" stop-color="#101820"/>
@@ -499,13 +528,18 @@ class StyxBrainCard extends HTMLElement {
   }
 }
 
-customElements.define("styx-brain-card", StyxBrainCard);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "styx-brain-card",
-  name: "PilotSuite Living Brain Graph",
-  description:
-    "Living, pulsing brain graph with multi-colored neurons, synaptic flow animations, and neural cross-dependency highlighting.",
-  preview: true,
-});
+if (typeof registerStyxCard === 'function') {
+  registerStyxCard("styx-brain-card", StyxBrainCard, {
+    name: "PilotSuite Brain Graph",
+    description: "Lebendiger, pulsierender Brain Graph mit neuronalen Cross-Dependencies.",
+  });
+} else {
+  customElements.define("styx-brain-card", StyxBrainCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: "styx-brain-card",
+    name: "PilotSuite Brain Graph",
+    description: "Lebendiger, pulsierender Brain Graph mit neuronalen Cross-Dependencies.",
+    preview: true,
+  });
+}

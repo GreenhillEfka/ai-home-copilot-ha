@@ -234,6 +234,17 @@ class CandidatePollerModule:
             if cand is None:
                 continue
 
+            # Autonomy mode governance: skip candidates for zones not in autonomy mode
+            zone_id = (raw.get("metadata") or {}).get("zone_id")
+            if zone_id:
+                accepting = await self._is_zone_accepting_suggestions(hass, entry, zone_id)
+                if not accepting:
+                    _LOGGER.debug(
+                        "CandidatePoller: skipping %s — zone %s not in autonomy mode",
+                        cand.candidate_id, zone_id,
+                    )
+                    continue
+
             try:
                 await async_offer_candidate(hass, entry.entry_id, cand)
             except Exception:  # noqa: BLE001
@@ -252,6 +263,19 @@ class CandidatePollerModule:
                     _LOGGER.debug("CandidatePoller: could not mark %s as offered in Core", core_id)
 
         st.polling = False
+
+    async def _is_zone_accepting_suggestions(
+        self, hass: HomeAssistant, entry: ConfigEntry, zone_id: str
+    ) -> bool:
+        """Check if zone automation mode allows suggestions (autonomy only)."""
+        api = self._get_api(hass, entry)
+        if api is None:
+            return True  # Permissive fallback
+        try:
+            mode = await api.async_get_zone_automation_mode(zone_id)
+            return mode == "autonomy"
+        except Exception:  # noqa: BLE001
+            return True  # Permissive fallback on API error
 
     async def async_setup_entry(self, ctx: ModuleContext) -> None:
         self._entry_id = ctx.entry.entry_id

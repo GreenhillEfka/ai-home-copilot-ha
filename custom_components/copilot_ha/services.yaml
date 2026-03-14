@@ -4,7 +4,7 @@
 # ─── Installation Guide ──────────────────────────────────────────────────────
 
 show_installation_guide:
-  name: PilotSuite – Show Installation Guide
+  name: PilotSuite – Installationsanleitung anzeigen
   description: Zeigt die exakte Installations- und Startanleitung als persistente Benachrichtigung an.
   fields:
     entry_id:
@@ -134,7 +134,7 @@ media_context_v2_clear_overrides:
 # ─── Suggestion Panel Actions ────────────────────────────────────────────────
 
 suggestion_accept:
-  name: Suggestion Panel – Accept
+  name: Suggestion Panel – Annehmen
   description: Akzeptiert einen offenen Vorschlag aus dem Suggestion Panel.
   fields:
     suggestion_id:
@@ -150,7 +150,7 @@ suggestion_accept:
         text:
 
 suggestion_reject:
-  name: Suggestion Panel – Reject
+  name: Suggestion Panel – Ablehnen
   description: Lehnt einen offenen Vorschlag ab.
   fields:
     suggestion_id:
@@ -171,8 +171,8 @@ suggestion_reject:
         text:
 
 suggestion_snooze:
-  name: Suggestion Panel – Snooze
-  description: Schiebt einen Vorschlag für eine Anzahl Stunden auf.
+  name: Suggestion Panel – Zurückstellen
+  description: Schiebt einen Vorschlag fuer eine bestimmte Anzahl Stunden auf.
   fields:
     suggestion_id:
       name: Suggestion ID
@@ -262,8 +262,8 @@ ops_runbook_run_checklist:
 # ─── Dev Surface (Debug) ─────────────────────────────────────────────────────
 
 enable_debug_for:
-  name: Debug – Enable for Entity
-  description: Aktiviert erweiterte Debug-Logs für eine bestimmte Entity.
+  name: Debug – Fuer Entity aktivieren
+  description: Aktiviert erweiterte Debug-Logs fuer eine bestimmte Entity.
   fields:
     entity_id:
       name: Entity ID
@@ -274,12 +274,12 @@ enable_debug_for:
         entity:
 
 disable_debug:
-  name: Debug – Disable
+  name: Debug – Deaktivieren
   description: Deaktiviert erweiterte Debug-Logs.
 
 clear_error_digest:
-  name: Debug – Clear Error Digest
-  description: Löscht den gesammelten Error-Digest (Fehlerübersicht zurücksetzen).
+  name: Debug – Error-Digest leeren
+  description: Loescht den gesammelten Error-Digest (Fehleruebersicht zuruecksetzen).
 
 ping:
   name: Debug – Ping
@@ -325,17 +325,17 @@ trigger_mining:
 # ─── UniFi Network Module ────────────────────────────────────────────────────
 
 copilot_ha_unifi_run_diagnostics:
-  name: UniFi – Run Diagnostics
-  description: Führt Netzwerk-Diagnostik über die UniFi-Integration aus.
+  name: UniFi – Diagnostik starten
+  description: Fuehrt Netzwerk-Diagnostik ueber die UniFi-Integration aus.
 
 copilot_ha_unifi_get_report:
-  name: UniFi – Get Report
+  name: UniFi – Report abrufen
   description: Ruft den letzten UniFi-Netzwerk-Report ab.
 
 # ─── Habitus Miner (Local) ───────────────────────────────────────────────────
 
 habitus_mine_rules:
-  name: Habitus – Mine Rules
+  name: Habitus – Regeln erkennen
   description: Startet lokales Pattern-Mining auf gesammelten Events.
   fields:
     days_back:
@@ -381,7 +381,7 @@ habitus_mine_rules:
           mode: slider
 
 habitus_get_rules:
-  name: Habitus – Get Rules
+  name: Habitus – Regeln abrufen
   description: Ruft die aktuell erkannten Habitus-Regeln ab.
   fields:
     limit:
@@ -411,11 +411,11 @@ habitus_get_rules:
           mode: slider
 
 habitus_reset_cache:
-  name: Habitus – Reset Cache
-  description: Löscht den Mining-Cache (erzwingt Neuberechnung beim nächsten Lauf).
+  name: Habitus – Cache leeren
+  description: Loescht den Mining-Cache (erzwingt Neuberechnung beim naechsten Lauf).
 
 habitus_configure_mining:
-  name: Habitus – Configure Mining
+  name: Habitus – Mining konfigurieren
   description: Konfiguriert Mining-Parameter zur Laufzeit.
   fields:
     auto_mining_enabled:
@@ -443,8 +443,8 @@ habitus_configure_mining:
 # ─── Multi-User Preference Learning (MUPL) ────────────────────────────────────
 
 mupl_learn_preference:
-  name: MUPL – Learn Preference
-  description: Lernt eine Präferenz für einen bestimmten User.
+  name: MUPL – Praeferenz lernen
+  description: Lernt eine Praeferenz fuer einen bestimmten User.
   fields:
     user_id:
       name: User ID
@@ -480,8 +480,8 @@ mupl_learn_preference:
         text:
 
 mupl_set_user_priority:
-  name: MUPL – Set User Priority
-  description: Setzt die Priorität eines Users für Multi-User Konfliktauflösung.
+  name: MUPL – User-Prioritaet setzen
+  description: Setzt die Prioritaet eines Users fuer Multi-User Konfliktaufloesung.
   fields:
     user_id:
       name: User ID
@@ -503,8 +503,8 @@ mupl_set_user_priority:
           mode: slider
 
 mupl_delete_user_data:
-  name: MUPL – Delete User Data
-  description: Löscht alle gespeicherten Daten eines Users (Privacy/GDPR).
+  name: MUPL – Userdaten loeschen
+  description: Loescht alle gespeicherten Daten eines Users (Privacy/GDPR).
   fields:
     user_id:
       name: User ID
@@ -515,7 +515,7 @@ mupl_delete_user_data:
         text:
 
 mupl_export_user_data:
-  name: MUPL – Export User Data
+  name: MUPL – Userdaten exportieren
   description: Exportiert alle gespeicherten Daten eines Users (Privacy/GDPR).
   fields:
     user_id:
@@ -527,11 +527,11 @@ mupl_export_user_data:
         text:
 
 mupl_detect_active_users:
-  name: MUPL – Detect Active Users
-  description: Erkennt aktuell anwesende User und gibt sie zurück.
+  name: MUPL – Aktive User erkennen
+  description: Erkennt aktuell anwesende User und gibt sie zurueck.
 
 mupl_get_aggregated_mood:
-  name: MUPL – Get Aggregated Mood
+  name: MUPL – Aggregierten Mood abrufen
   description: Aggregiert den Mood aller aktiven User.
   fields:
     user_ids:
@@ -541,11 +541,11 @@ mupl_get_aggregated_mood:
       selector:
         object:
 
-# ─── Debug Mode ──────────────────────────────────────────────────────────────
+# ─── Debug Mode (Legacy) ──────────────────────────────────────────────────────
 
 set_debug:
-  name: Set Debug Mode
-  description: Aktiviert oder deaktiviert den Debug-Modus für erweiterte Logs.
+  name: Debug – Modus setzen
+  description: Aktiviert oder deaktiviert den Debug-Modus fuer erweiterte Logs.
   fields:
     enabled:
       name: Enabled
@@ -558,12 +558,12 @@ set_debug:
 # ─── Debug Mode ──────────────────────────────────────────────────────────────
 
 enable_debug:
-  name: Enable Debug Mode
-  description: Enable debug mode for PilotSuite with optional log level.
+  name: Debug – Aktivieren
+  description: Aktiviert den Debug-Modus fuer PilotSuite mit optionalem Log-Level.
   fields:
     log_level:
-      name: Log Level
-      description: Log level for debug mode (DEBUG, INFO, WARNING, ERROR).
+      name: Log-Level
+      description: Log-Level fuer den Debug-Modus (DEBUG, INFO, WARNING, ERROR).
       required: false
       example: "DEBUG"
       selector:
@@ -575,19 +575,19 @@ enable_debug:
             - "ERROR"
 
 toggle_debug:
-  name: Toggle Debug Mode
-  description: Toggle debug mode on/off for PilotSuite.
+  name: Debug – Umschalten
+  description: Schaltet den Debug-Modus fuer PilotSuite ein/aus.
 
 clear_debug_buffer:
-  name: Clear Debug Buffer
-  description: Clear the debug message buffer.
+  name: Debug – Buffer leeren
+  description: Leert den Debug-Nachrichten-Buffer.
 
 
 # ─── Predictive Automation ───────────────────────────────────────────────────
 
 predictive_automation_suggest_automation:
-  name: Predictive Automation – Suggest Automation
-  description: Schlägt eine Automatisierung auf Basis von ML-Mustern vor.
+  name: Predictive Automation – Automatisierung vorschlagen
+  description: Schlaegt eine Automatisierung auf Basis von ML-Mustern vor.
   fields:
     pattern:
       name: Pattern
@@ -616,8 +616,8 @@ predictive_automation_suggest_automation:
 # ─── Anomaly Alert ───────────────────────────────────────────────────────────
 
 anomaly_alert_check_and_alert:
-  name: Anomaly Alert – Check and Alert
-  description: Prüft aktuelle Daten auf Anomalien und sendet Alarme.
+  name: Anomaly Alert – Pruefen und Alarmieren
+  description: Prueft aktuelle Daten auf Anomalien und sendet Alarme.
   fields:
     device_id:
       name: Device ID
@@ -638,13 +638,13 @@ anomaly_alert_check_and_alert:
           mode: slider
 
 anomaly_alert_clear_history:
-  name: Anomaly Alert – Clear History
-  description: Löscht die Anomalie-Verlaufsdaten.
+  name: Anomaly Alert – Verlauf loeschen
+  description: Loescht die Anomalie-Verlaufsdaten.
 
 # ─── Energy Insights ───────────────────────────────────────────────────────
 
 energy_insights_get:
-  name: Energy Insights – Get Insights
+  name: Energy Insights – Insights abrufen
   description: Ruft aktuelle Energie-Insights und Empfehlungen ab.
   fields:
     device_id:
@@ -666,8 +666,8 @@ energy_insights_get:
 # ─── Habit Learning v2 ─────────────────────────────────────────────────────
 
 habit_learning_learn:
-  name: Habit Learning – Learn
-  description: Lernet ein neues Muster durch Beobachtung.
+  name: Habit Learning – Muster lernen
+  description: Lernt ein neues Muster durch Beobachtung.
   fields:
     device_id:
       name: Device ID
@@ -691,8 +691,8 @@ habit_learning_learn:
         object:
 
 habit_learning_predict:
-  name: Habit Learning – Predict
-  description: Vorhersage eines zukünftigen Events oder einer Sequenz.
+  name: Habit Learning – Vorhersage
+  description: Vorhersage eines zukuenftigen Events oder einer Sequenz.
   fields:
     device_id:
       name: Device ID
@@ -718,8 +718,8 @@ habit_learning_predict:
 # ─── HomeKit Bridge (per-zone) ──────────────────────────────────────────────
 
 homekit_enable_zone:
-  name: HomeKit – Enable Zone
-  description: Aktiviert HomeKit für eine Habitus-Zone (exponiert Entities an Apple Home).
+  name: HomeKit – Zone aktivieren
+  description: Aktiviert HomeKit fuer eine Habitus-Zone (exponiert Entities an Apple Home).
   fields:
     zone_id:
       name: Zone ID
@@ -736,8 +736,8 @@ homekit_enable_zone:
         text:
 
 homekit_disable_zone:
-  name: HomeKit – Disable Zone
-  description: Deaktiviert HomeKit für eine Habitus-Zone.
+  name: HomeKit – Zone deaktivieren
+  description: Deaktiviert HomeKit fuer eine Habitus-Zone.
   fields:
     zone_id:
       name: Zone ID
@@ -750,7 +750,7 @@ homekit_disable_zone:
 # ─── Voice Context ──────────────────────────────────────────────────────────
 
 parse_command:
-  name: Voice – Parse Command
+  name: Voice – Befehl parsen
   description: Parst einen Sprachbefehl in Intent, Entities und Confidence.
   fields:
     text:
@@ -762,7 +762,7 @@ parse_command:
         text:
 
 speak:
-  name: Voice – Speak
+  name: Voice – Sprechen
   description: Gibt Text via TTS auf einem Media-Player aus.
   fields:
     text:
@@ -786,7 +786,7 @@ speak:
         text:
 
 execute_command:
-  name: Voice – Execute Command
+  name: Voice – Befehl ausfuehren
   description: Parst und fuehrt einen Sprachbefehl aus (parse + execute).
   fields:
     text:
@@ -798,11 +798,11 @@ execute_command:
         text:
 
 get_voice_state:
-  name: Voice – Get State
+  name: Voice – Status abrufen
   description: Gibt den aktuellen Voice-Context-Status zurueck (letzter Befehl, TTS-Entity, Tone).
 
 set_voice_tone:
-  name: Voice – Set Tone
+  name: Voice – Sprachstil setzen
   description: Setzt den Sprachstil (formal, casual, friendly, professional).
   fields:
     tone:
@@ -821,7 +821,7 @@ set_voice_tone:
 # ─── Musikwolke / Zone Media Control ──────────────────────────────────────
 
 musikwolke_create:
-  name: Musikwolke – Create Group
+  name: Musikwolke – Gruppe erstellen
   description: Erstellt eine Musikwolke-Gruppe ueber mehrere Zonen (synchronisierte Wiedergabe).
   fields:
     zone_ids:
@@ -833,7 +833,7 @@ musikwolke_create:
         object:
 
 musikwolke_dissolve:
-  name: Musikwolke – Dissolve Group
+  name: Musikwolke – Gruppe aufloesen
   description: Loest eine Musikwolke-Gruppe auf.
   fields:
     zone_ids:
@@ -845,7 +845,7 @@ musikwolke_dissolve:
         object:
 
 musikwolke_play:
-  name: Musikwolke – Play Zone
+  name: Musikwolke – Zone abspielen
   description: Startet Wiedergabe in einer Zone.
   fields:
     zone_id:
@@ -865,7 +865,7 @@ musikwolke_play:
           mode: slider
 
 musikwolke_pause:
-  name: Musikwolke – Pause Zone
+  name: Musikwolke – Zone pausieren
   description: Pausiert Wiedergabe in einer Zone.
   fields:
     zone_id:
@@ -877,7 +877,7 @@ musikwolke_pause:
         text:
 
 musikwolke_volume:
-  name: Musikwolke – Set Volume
+  name: Musikwolke – Lautstaerke setzen
   description: Setzt die Lautstaerke fuer eine Zone.
   fields:
     zone_id:
@@ -899,7 +899,7 @@ musikwolke_volume:
           mode: slider
 
 musikwolke_start_follow:
-  name: Musikwolke – Start Follow
+  name: Musikwolke – Follow starten
   description: Startet eine Musikwolke-Follow-Session (Musik folgt Person durch Raeume).
   fields:
     person_id:
@@ -919,7 +919,7 @@ musikwolke_start_follow:
         text:
 
 musikwolke_stop_follow:
-  name: Musikwolke – Stop Follow
+  name: Musikwolke – Follow stoppen
   description: Stoppt eine Musikwolke-Follow-Session.
   fields:
     session_id:
@@ -931,7 +931,7 @@ musikwolke_stop_follow:
         text:
 
 zone_automation_set_mode:
-  name: Zone Automation – Set Mode
+  name: Zone Automation – Modus setzen
   description: Setzt den Automatisierungsmodus einer Zone (off/learning/autonomy).
   fields:
     zone_id:
@@ -956,11 +956,11 @@ zone_automation_set_mode:
 # ─── Conversation Memory ────────────────────────────────────────────────────
 
 get_memory_stats:
-  name: Conversation Memory – Statistics
+  name: Conversation Memory – Statistiken
   description: Ruft Statistiken und gelernte Praeferenzen aus dem ConversationMemory ab.
 
 get_memory_history:
-  name: Conversation Memory – History
+  name: Conversation Memory – Verlauf abrufen
   description: Ruft den Gespraechsverlauf fuer einen bestimmten Thread ab.
   fields:
     conversation_id:

@@ -5,6 +5,7 @@ from typing import Any
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import EntityCategory
 
 from .core_v1 import (
     SIGNAL_CORE_CAPABILITIES_UPDATED,
@@ -20,6 +21,7 @@ class CoreApiV1StatusSensor(CopilotBaseEntity, SensorEntity):
     _attr_name = "PilotSuite core API v1"
     _attr_unique_id = "copilot_ha_core_api_v1"
     _attr_icon = "mdi:api"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator, entry: ConfigEntry):
         super().__init__(coordinator)

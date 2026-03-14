@@ -64,6 +64,18 @@ views:
           - entity: sensor.copilot_ha_zone_scenes
             name: "Zonen-Szenen"
 
+      # v14.2.0: Autonomy System Status
+      - type: entities
+        title: "🤖 Autonomie-System"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.pilotsuite_autonomie_status
+            name: "Status"
+          - entity: sensor.pilotsuite_autonomie_verlauf
+            name: "Aktionen"
+          - entity: sensor.pilotsuite_zonen_gesundheit
+            name: "Zonen-Gesundheit"
+
   # ────────────────────────────────────────────────────────────────────────
   # TAB 2: HAUSHALT — Household Overview
   # ────────────────────────────────────────────────────────────────────────
@@ -124,6 +136,14 @@ views:
             name: "Mood zuruecksetzen"
           - entity: input_button.ai_copilot_sync_graph
             name: "Graph synchronisieren"
+
+      # v14.2.0: Zone Health Overview
+      - type: entities
+        title: "🏥 Zonen-Gesundheit"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.pilotsuite_zonen_gesundheit
+            name: "Durchschnitt"
 
       # Media Overview
       - type: entities

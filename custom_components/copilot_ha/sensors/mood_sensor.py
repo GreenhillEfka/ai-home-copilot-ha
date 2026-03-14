@@ -128,6 +128,7 @@ class NeuronActivitySensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._attr_native_value = 0
         self._history: list[dict] = []
+        self._history_initialized = False
 
     @property
     def native_value(self) -> int:
@@ -177,6 +178,35 @@ class NeuronActivitySensor(CoordinatorEntity, SensorEntity):
             "history": list(self._history),
         }
     
+    async def async_added_to_hass(self) -> None:
+        """Load neuron history from Core API on first add."""
+        await super().async_added_to_hass()
+        if not self._history_initialized:
+            self._history_initialized = True
+            await self._load_initial_history()
+
+    async def _load_initial_history(self) -> None:
+        """Fetch initial neuron history from Core API to survive restarts."""
+        try:
+            api = self.coordinator.api
+            data = await api._safe_get(
+                "/api/v1/neurons/mood/history",
+                {"history": []},
+                key="history",
+                label="Neuron mood history",
+            )
+            if isinstance(data, list):
+                self._history = [
+                    {"value": entry.get("active_count", 0)}
+                    for entry in data[-24:]
+                ]
+                _LOGGER.debug(
+                    "Loaded %d neuron history entries from Core API",
+                    len(self._history),
+                )
+        except Exception:
+            _LOGGER.debug("Could not load neuron history from Core API")
+
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self.async_write_ha_state()

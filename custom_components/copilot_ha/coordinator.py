@@ -370,12 +370,70 @@ class CopilotApiClient(SharedCopilotApiClient):
             label="Module dashboards API",
         )
 
+    async def async_get_anomaly_status(self) -> dict[str, Any]:
+        """Get anomaly detection status and history from Core."""
+        return await self._safe_get(
+            "/api/v1/anomaly/history?limit=50&level=low",
+            {"history": [], "total": 0},
+            label="Anomaly API",
+        )
+
     async def async_get_module_zone_detail(self, zone_id: str) -> dict[str, Any]:
         """Get aggregated zone detail for all 5 modules."""
         return await self._safe_get(
             f"/api/v1/modules/zones/{zone_id}",
             {"ok": False, "zone_id": zone_id, "modules": {}},
             label=f"Module zone detail {zone_id}",
+        )
+
+    # ── Autonomy / Zone Health (v14.2.0) ────────────────────────────
+
+    async def async_get_autonomy_dashboard(self) -> dict[str, Any]:
+        """Fetch autonomy executor dashboard from Core."""
+        return await self._safe_get(
+            "/api/v1/autonomy/dashboard",
+            {},
+            label="Autonomy dashboard",
+        )
+
+    async def async_get_zone_health(self) -> dict[str, Any]:
+        """Fetch zone health overview from Core."""
+        return await self._safe_get(
+            "/api/v1/zone/health",
+            {},
+            label="Zone health",
+        )
+
+    async def async_get_zone_aggregates(self, zone_id: str) -> dict[str, Any]:
+        """Fetch device-class aggregates for a zone."""
+        return await self._safe_get(
+            f"/api/v1/zone/aggregates/{zone_id}",
+            {},
+            label=f"Zone aggregates {zone_id}",
+        )
+
+    async def async_set_zone_module_state(self, zone_id: str, module_id: str, state: str) -> dict[str, Any]:
+        """Set per-zone module state via Core API."""
+        return await self._safe_post(
+            f"/api/v1/autonomy/zones/{zone_id}/module",
+            {"module_id": module_id, "state": state},
+            label=f"Zone module state {zone_id}/{module_id}",
+        )
+
+    async def async_capture_zone_scene(self, zone_id: str, name: str) -> dict[str, Any]:
+        """Capture current zone state as a scene via Core API."""
+        return await self._safe_post(
+            f"/api/v1/zone/aggregates/{zone_id}/scene/capture",
+            {"name": name},
+            label=f"Zone scene capture {zone_id}",
+        )
+
+    async def async_apply_zone_scene(self, zone_id: str, scene_id: str) -> dict[str, Any]:
+        """Apply a saved zone scene via Core API."""
+        return await self._safe_post(
+            f"/api/v1/zone/aggregates/{zone_id}/scene/apply",
+            {"scene_id": scene_id},
+            label=f"Zone scene apply {scene_id} in {zone_id}",
         )
 
     # ── Memory / Conversation ────────────────────────────────────────
@@ -609,7 +667,20 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 # Feed module data into HA module stubs
                 await self._update_smart_home_modules(module_data)
 
-                return {
+                # Get anomaly detection data from Core
+                anomaly_data = await self.api.async_get_anomaly_status()
+                anomaly_history = anomaly_data.get("history", [])
+                anomaly_status = {
+                    "status": "active" if anomaly_history else "idle",
+                    "summary": {
+                        "count": len(anomaly_history),
+                        "last_anomaly": anomaly_history[0].get("detected_at") if anomaly_history else None,
+                        "peak_score": max((a.get("score", 0) for a in anomaly_history), default=0),
+                    },
+                    "features": list({a.get("anomaly_type", "") for a in anomaly_history if a.get("anomaly_type")}),
+                }
+
+                result = {
                     "ok": bool(status.ok) if status.ok is not None else True,
                     "version": status.version or "unknown",
                     "mood": mood_data,
@@ -620,7 +691,27 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     "predictions": habit_data.get("predictions", []),
                     "sequences": habit_data.get("sequences", []),
                     "modules": module_data.get("modules", {}),
+                    "anomaly_status": anomaly_status,
+                    "alert_history": anomaly_history,
                 }
+
+                # Autonomy dashboard (v14.2.0)
+                try:
+                    autonomy_data = await self.api.async_get_autonomy_dashboard()
+                    if autonomy_data:
+                        result["autonomy"] = autonomy_data
+                except Exception:
+                    _LOGGER.debug("Autonomy dashboard fetch skipped")
+
+                # Zone health (v14.2.0)
+                try:
+                    zone_health = await self.api.async_get_zone_health()
+                    if zone_health:
+                        result["zone_health"] = zone_health
+                except Exception:
+                    _LOGGER.debug("Zone health fetch skipped")
+
+                return result
             except CopilotApiError as err:
                 last_err = err
                 if attempt < 2:
@@ -667,6 +758,10 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 break
 
         if not entry_store:
+            _LOGGER.warning(
+                "Smart home module entry store nicht gefunden — "
+                "Module-Updates uebersprungen (Module noch nicht geladen?)"
+            )
             return
 
         # Also fetch zone automation data for per-zone detail
@@ -839,6 +934,32 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         # Evaluate
         return await self.api.async_evaluate_neurons(context)
     
+    # ── Autonomy / Zone API wrappers (v14.2.0) ─────────────────────
+
+    async def async_get_autonomy_dashboard(self) -> dict:
+        """Fetch autonomy executor dashboard from Core."""
+        return await self.api.async_get_autonomy_dashboard()
+
+    async def async_get_zone_health(self) -> dict:
+        """Fetch zone health overview from Core."""
+        return await self.api.async_get_zone_health()
+
+    async def async_get_zone_aggregates(self, zone_id: str) -> dict:
+        """Fetch device-class aggregates for a zone."""
+        return await self.api.async_get_zone_aggregates(zone_id)
+
+    async def async_set_zone_module_state(self, zone_id: str, module_id: str, state: str) -> dict:
+        """Set per-zone module state via Core API."""
+        return await self.api.async_set_zone_module_state(zone_id, module_id, state)
+
+    async def async_capture_zone_scene(self, zone_id: str, name: str) -> dict:
+        """Capture current zone state as a scene via Core API."""
+        return await self.api.async_capture_zone_scene(zone_id, name)
+
+    async def async_apply_zone_scene(self, zone_id: str, scene_id: str) -> dict:
+        """Apply a saved zone scene via Core API."""
+        return await self.api.async_apply_zone_scene(zone_id, scene_id)
+
     # ========== Camera State Management ==========
     
     def register_camera(

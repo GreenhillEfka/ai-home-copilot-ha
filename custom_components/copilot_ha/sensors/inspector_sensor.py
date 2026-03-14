@@ -31,12 +31,15 @@ class InspectorSensor(SensorEntity):
     """Inspector sensor showing CoPilot state."""
     
     def __init__(self, coordinator, sensor_type: str, name: str, icon: str):
+        from homeassistant.helpers.entity import EntityCategory
+
         self._coordinator = coordinator
         self._sensor_type = sensor_type
         self._attr_name = f"PilotSuite {name}"
         self._attr_unique_id = f"ai_copilot_inspector_{sensor_type}"
         self._attr_icon = icon
         self._attr_should_poll = False
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
     
     @property
     def state(self):

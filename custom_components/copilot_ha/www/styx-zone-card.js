@@ -1,14 +1,22 @@
 /**
- * PilotSuite Zone Dashboard Card v1.0.0
+ * PilotSuite Zone Dashboard Card v2.0.0
  *
  * Lovelace custom card showing zone status, mood, neuron activity,
  * and quick actions. Reads from sensor.pilotsuite_habitus_zones and
  * sensor.pilotsuite_zone_modes entities.
  *
+ * v14.2.0 additions:
+ * - Health Score Badge (from sensor.pilotsuite_zone_health_overview)
+ * - Module State Indicators (from sensor.pilotsuite_autonomy_status)
+ * - Autonomy Action Mini-Log (from sensor.pilotsuite_autonomy_history)
+ *
  * Features:
  * - Zone Status (active/inactive indicator)
+ * - Health Score Badge (color-coded 0-100)
+ * - Module State Indicators (licht, musik, etc.)
  * - Mood gauges (Comfort, Joy, Frugality per zone)
  * - Neuron Activity visualization
+ * - Autonomy Action Mini-Log (last 3 actions)
  * - Quick Actions (toggle, scene selection)
  */
 
@@ -41,13 +49,14 @@ const MODE_ICONS = {
   focus_work: 'mdi:briefcase',
 };
 
-class StyxZoneCard extends HTMLElement {
+const _ZoneBase = window.StyxCardBase || HTMLElement;
+
+class StyxZoneCard extends _ZoneBase {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this._config = {};
     this._hass = null;
-    this._selectedZone = null;
   }
 
   static getConfigElement() {
@@ -60,6 +69,9 @@ class StyxZoneCard extends HTMLElement {
       show_mood: true,
       show_neuron_activity: true,
       show_quick_actions: true,
+      show_health_score: true,
+      show_module_states: true,
+      show_autonomy_log: true,
     };
   }
 
@@ -72,6 +84,9 @@ class StyxZoneCard extends HTMLElement {
       show_mood: config.show_mood !== false,
       show_neuron_activity: config.show_neuron_activity !== false,
       show_quick_actions: config.show_quick_actions !== false,
+      show_health_score: config.show_health_score !== false,
+      show_module_states: config.show_module_states !== false,
+      show_autonomy_log: config.show_autonomy_log !== false,
     };
   }
 
@@ -167,12 +182,120 @@ class StyxZoneCard extends HTMLElement {
     };
   }
 
+  _getHealthScore(zoneId) {
+    const healthEntity = this._hass?.states['sensor.pilotsuite_zone_health_overview'];
+    if (!healthEntity) return null;
+
+    const zones = healthEntity.attributes?.zones;
+    if (!zones || typeof zones !== 'object') return null;
+
+    // Try direct key match, then normalized match
+    const score = zones[zoneId] ?? zones[zoneId.replace(/_/g, ' ')];
+    if (score !== undefined && score !== null) {
+      const parsed = Number(score);
+      return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : null;
+    }
+
+    // Try matching by zone_id or name keys in array format
+    if (Array.isArray(zones)) {
+      const match = zones.find(z =>
+        z.zone_id === zoneId || z.name?.toLowerCase().replace(/\s+/g, '_') === zoneId
+      );
+      if (match && match.health_score !== undefined) {
+        const parsed = Number(match.health_score);
+        return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : null;
+      }
+    }
+
+    return null;
+  }
+
+  _getHealthColor(score) {
+    if (score >= 80) return 'var(--ps-green, #22c55e)';
+    if (score >= 50) return 'var(--ps-orange, #f59e0b)';
+    return 'var(--ps-red, #ef4444)';
+  }
+
+  _getHealthLabel(score) {
+    if (score >= 80) return 'healthy';
+    if (score >= 50) return 'degraded';
+    return 'critical';
+  }
+
+  _getModuleStates(zoneId) {
+    const autonomyEntity = this._hass?.states['sensor.pilotsuite_autonomy_status'];
+    if (!autonomyEntity) return [];
+
+    const attrs = autonomyEntity.attributes || {};
+    // Try zone-specific module states
+    const zoneModules = attrs.zone_modules?.[zoneId] || attrs.modules?.[zoneId];
+    if (zoneModules && typeof zoneModules === 'object') {
+      return Object.entries(zoneModules).map(([name, state]) => ({
+        name,
+        state: typeof state === 'string' ? state : (state?.state || 'off'),
+      }));
+    }
+
+    // Fallback: global modules (same for all zones)
+    const globalModules = attrs.modules;
+    if (globalModules && typeof globalModules === 'object' && !Array.isArray(globalModules)) {
+      // Only use if it's a flat module->state map (not zone-keyed)
+      const firstValue = Object.values(globalModules)[0];
+      if (typeof firstValue === 'string') {
+        return Object.entries(globalModules).map(([name, state]) => ({ name, state }));
+      }
+    }
+
+    return [];
+  }
+
+  _getModuleChipColor(state) {
+    switch (state) {
+      case 'active': return 'var(--ps-green, #22c55e)';
+      case 'learning': return 'var(--ps-orange, #f59e0b)';
+      default: return '#6b7280';
+    }
+  }
+
+  _getAutonomyActions(zoneId) {
+    const historyEntity = this._hass?.states['sensor.pilotsuite_autonomy_history'];
+    if (!historyEntity) return [];
+
+    const actions = historyEntity.attributes?.recent_actions;
+    if (!Array.isArray(actions)) return [];
+
+    // Filter for this zone and take last 3
+    const zoneActions = actions
+      .filter(a => a.zone === zoneId || a.zone_id === zoneId || !a.zone)
+      .slice(0, 3);
+
+    return zoneActions;
+  }
+
+  _formatActionTime(timestamp) {
+    if (!timestamp) return '';
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'gerade eben';
+      if (diffMins < 60) return `vor ${diffMins}m`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `vor ${diffHours}h`;
+      return `vor ${Math.floor(diffHours / 24)}d`;
+    } catch {
+      return '';
+    }
+  }
+
   _buildMissingTileValue(label, subtitle = '') {
-    const subtitleHtml = subtitle ? `<div class="value-subtitle">${subtitle}</div>` : '';
+    const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
+    const subtitleHtml = subtitle ? `<div class="value-subtitle">${esc(subtitle)}</div>` : '';
     return `
       <div class="missing-value">
         <div class="value-na">n/a</div>
-        <div class="value-title">${label}</div>
+        <div class="value-title">${esc(label)}</div>
         ${subtitleHtml}
       </div>`;
   }
@@ -207,6 +330,7 @@ class StyxZoneCard extends HTMLElement {
   }
 
   _buildGaugeSvg(value, startColor, endColor, label, size = 70) {
+    const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
     const cx = size / 2;
     const cy = size / 2;
     const r = size * 0.35;
@@ -216,24 +340,26 @@ class StyxZoneCard extends HTMLElement {
     const gradId = `zg_${label.toLowerCase()}_${Math.random().toString(36).substr(2, 9)}`;
 
     return `
-      <svg viewBox="0 0 ${size} ${size}" class="mood-gauge">
+      <svg viewBox="0 0 ${size} ${size}" class="mood-gauge"
+        role="img" aria-label="${esc(label)} Anzeige: ${Math.round(pct)} Prozent">
+        <title>${esc(label)}: ${Math.round(pct)}%</title>
         <defs>
           <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stop-color="${startColor}"/>
             <stop offset="100%" stop-color="${endColor}"/>
           </linearGradient>
         </defs>
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1e2a36" stroke-width="5"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--ps-surface, #1e2a36)" stroke-width="5"/>
         <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="url(#${gradId})" stroke-width="5"
           stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
           stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"
           style="transition: stroke-dashoffset 0.5s ease;"/>
         <text x="${cx}" y="${cy - 2}" text-anchor="middle"
-          fill="var(--primary-text-color, #e6eef6)" font-size="12" font-weight="600"
+          fill="var(--ps-text, var(--primary-text-color, #e6eef6))" font-size="12" font-weight="600"
           font-family="system-ui,sans-serif">${Math.round(pct)}</text>
         <text x="${cx}" y="${cy + 10}" text-anchor="middle"
-          fill="var(--secondary-text-color, #9fb1c3)" font-size="7"
-          font-family="system-ui,sans-serif">${label}</text>
+          fill="var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8))" font-size="0.75rem"
+          font-family="system-ui,sans-serif">${esc(label)}</text>
       </svg>`;
   }
 
@@ -250,12 +376,12 @@ class StyxZoneCard extends HTMLElement {
     const scoreLabel = scorePct === null ? 'n/a' : `${Math.round(scorePct)}%`;
 
     return `
-      <div class="neuron-bar-container">
+      <div class="neuron-bar-container" role="group" aria-label="Neuronenaktivitaet: ${activeLabel}, Score ${scoreLabel}">
         <div class="neuron-bar-label">
           <span class="mdi-icon">🧠</span>
           <span>Neuronen</span>
         </div>
-        <div class="neuron-bar-track">
+        <div class="neuron-bar-track" role="progressbar" aria-valuenow="${Math.round(pct)}" aria-valuemin="0" aria-valuemax="100" aria-label="Aktive Neuronen: ${activeLabel}">
           <div class="neuron-bar-fill" style="width: ${pct}%"></div>
           ${scoreMissing ? '' : `<div class="neuron-score-marker" style="left: ${scorePct}%"></div>`}
         </div>
@@ -267,8 +393,62 @@ class StyxZoneCard extends HTMLElement {
     `;
   }
 
+  _buildHealthBadge(zoneId) {
+    const score = this._getHealthScore(zoneId);
+    if (score === null) return '';
+
+    const color = this._getHealthColor(score);
+    const label = this._getHealthLabel(score);
+
+    return `<span class="health-badge" style="--health-color: ${color}" title="Gesundheit: ${score}% (${label})" aria-label="Zonen-Gesundheit: ${score} Prozent, ${label}">${score}</span>`;
+  }
+
+  _buildModuleChips(zoneId) {
+    const modules = this._getModuleStates(zoneId);
+    if (modules.length === 0) return '';
+
+    const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
+    const chips = modules.map(m => {
+      const color = this._getModuleChipColor(m.state);
+      return `<span class="module-chip" style="--chip-color: ${color}" title="${esc(m.name)}: ${esc(m.state)}" aria-label="${esc(m.name)} ${esc(m.state)}">
+        <span class="module-chip-dot"></span>
+        <span class="module-chip-label">${esc(m.name)}</span>
+      </span>`;
+    }).join('');
+
+    return `<div class="module-chips">${chips}</div>`;
+  }
+
+  _buildAutonomyLog(zoneId) {
+    const actions = this._getAutonomyActions(zoneId);
+    if (actions.length === 0) return '';
+
+    const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
+    const actionItems = actions.map(a => {
+      const timeStr = this._formatActionTime(a.timestamp || a.time);
+      const desc = a.description || a.action || 'Aktion';
+      return `<div class="action-log-item">
+        <span class="action-log-desc">${esc(desc)}</span>
+        <span class="action-log-time">${esc(timeStr)}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <details class="autonomy-log">
+        <summary class="autonomy-log-header">
+          <span class="mdi-icon">🤖</span>
+          <span>Autonomie-Log (${actions.length})</span>
+        </summary>
+        <div class="action-log-items">
+          ${actionItems}
+        </div>
+      </details>`;
+  }
+
   _buildZoneCard(zone) {
+    const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
     const zoneId = zone.name?.toLowerCase().replace(/\s+/g, '_') || zone.zone_id || 'unknown';
+    const zoneName = zone.name || zoneId;
     const isActive = zone.mode && zone.mode !== 'inactive';
     const hasMode = Boolean(zone.mode);
     const moodData = this._config.show_mood ? this._getMoodData(zoneId) : [];
@@ -284,15 +464,20 @@ class StyxZoneCard extends HTMLElement {
       ? this._buildNeuronBar(neuronActivity)
       : '';
 
+    const healthBadge = this._config.show_health_score ? this._buildHealthBadge(zoneId) : '';
+    const moduleChips = this._config.show_module_states ? this._buildModuleChips(zoneId) : '';
+    const autonomyLog = this._config.show_autonomy_log ? this._buildAutonomyLog(zoneId) : '';
+
     const modeIcon = hasMode ? this._getModeIcon(zone.mode) : 'mdi:home';
     const modeLabel = zone.mode || 'inaktiv';
 
     return `
-      <div class="zone-card ${isActive ? 'active' : 'inactive'} ${hasPartialData ? 'partial' : ''}" data-zone="${zoneId}">
+      <div class="zone-card ${isActive ? 'active' : 'inactive'} ${hasPartialData ? 'partial' : ''}" data-zone="${esc(zoneId)}" role="region" aria-label="Zone ${esc(zoneName)}">
         <div class="zone-header">
           <div class="zone-info">
             <span class="zone-icon mdi-icon">${this._getZoneIcon(zoneId)}</span>
-            <span class="zone-name">${zone.name || zoneId}</span>
+            <span class="zone-name">${esc(zoneName)}</span>
+            ${healthBadge}
           </div>
           <div class="zone-status ${isActive ? 'active' : ''} ${hasPartialData ? 'partial' : ''}">
             <span class="status-dot"></span>
@@ -305,9 +490,11 @@ class StyxZoneCard extends HTMLElement {
         ${isActive ? `
           <div class="zone-mode">
             <span class="mdi-icon">${modeIcon}</span>
-            <span class="mode-label">${modeLabel}</span>
+            <span class="mode-label">${esc(modeLabel)}</span>
           </div>
         ` : ''}
+
+        ${moduleChips}
 
         ${moodGauges ? `
           <div class="mood-gauges">
@@ -317,15 +504,17 @@ class StyxZoneCard extends HTMLElement {
 
         ${neuronBar}
 
+        ${autonomyLog}
+
         ${this._config.show_quick_actions ? `
           <div class="quick-actions">
-            <button class="action-btn light-toggle" data-action="light" title="Licht">
+            <button class="action-btn light-toggle" data-action="light" title="Licht umschalten" aria-label="Licht umschalten in ${esc(zoneName)}">
               <span class="mdi-icon">💡</span>
             </button>
-            <button class="action-btn scene-btn" data-action="scene" title="Szene">
+            <button class="action-btn scene-btn" data-action="scene" title="Szene waehlen" aria-label="Szene waehlen fuer ${esc(zoneName)}">
               <span class="mdi-icon">🎬</span>
             </button>
-            <button class="action-btn thermostat-btn" data-action="thermostat" title="Thermostat">
+            <button class="action-btn thermostat-btn" data-action="thermostat" title="Thermostat anpassen" aria-label="Thermostat anpassen in ${esc(zoneName)}">
               <span class="mdi-icon">🌡️</span>
             </button>
           </div>
@@ -342,14 +531,17 @@ class StyxZoneCard extends HTMLElement {
       ? zones.map(z => this._buildZoneCard(z)).join('')
       : '<div class="no-zones">Keine Zonen konfiguriert</div>';
 
+    const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
+
     this.shadowRoot.innerHTML = `
       <style>
+        ${typeof this._designTokens === 'function' ? this._designTokens() : ''}
         :host { display: block; }
         .card {
-          background: var(--card-background-color, #0a0e14);
-          border-radius: var(--ha-card-border-radius, 12px);
+          background: var(--ps-bg, var(--card-background-color, #0a0e14));
+          border-radius: var(--ps-radius, var(--ha-card-border-radius, 12px));
           padding: 16px;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
           font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
         }
         .header {
@@ -358,7 +550,7 @@ class StyxZoneCard extends HTMLElement {
           align-items: center;
           margin-bottom: 16px;
           padding-bottom: 12px;
-          border-bottom: 1px solid #263343;
+          border-bottom: 1px solid var(--ps-border, #263343);
         }
         .title {
           font-size: 18px;
@@ -366,10 +558,10 @@ class StyxZoneCard extends HTMLElement {
         }
         .zone-count {
           font-size: 12px;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
         }
         .zone-count .active {
-          color: #22c55e;
+          color: var(--ps-green, #22c55e);
           font-weight: 600;
         }
         .zones-grid {
@@ -378,10 +570,10 @@ class StyxZoneCard extends HTMLElement {
           gap: 12px;
         }
         .zone-card {
-          background: #0f1419;
-          border-radius: 10px;
+          background: var(--ps-surface, #0f1419);
+          border-radius: var(--ps-radius-sm, 10px);
           padding: 14px;
-          border: 1px solid #1e2a36;
+          border: 1px solid var(--ps-border, #1e2a36);
           transition: all 0.2s ease;
         }
         .zone-card:hover {
@@ -389,14 +581,14 @@ class StyxZoneCard extends HTMLElement {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         .zone-card.active {
-          border-left: 3px solid #22c55e;
+          border-left: 3px solid var(--ps-green, #22c55e);
         }
         .zone-card.inactive {
           border-left: 3px solid #4b5563;
           opacity: 0.7;
         }
         .zone-card.partial {
-          border-left: 3px solid #f59e0b;
+          border-left: 3px solid var(--ps-orange, #f59e0b);
         }
         .zone-header {
           display: flex;
@@ -420,14 +612,14 @@ class StyxZoneCard extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
-          color: #6b7280;
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
         }
         .zone-status.active {
-          color: #22c55e;
+          color: var(--ps-green, #22c55e);
         }
         .zone-status.partial {
-          color: #f59e0b;
+          color: var(--ps-orange, #f59e0b);
         }
         .status-dot {
           width: 8px;
@@ -436,12 +628,12 @@ class StyxZoneCard extends HTMLElement {
           background: #4b5563;
         }
         .zone-status.active .status-dot {
-          background: #22c55e;
-          box-shadow: 0 0 6px #22c55e;
+          background: var(--ps-green, #22c55e);
+          box-shadow: 0 0 6px var(--ps-green, #22c55e);
         }
         .zone-status.partial .status-dot {
-          background: #f59e0b;
-          box-shadow: 0 0 6px #f59e0b;
+          background: var(--ps-orange, #f59e0b);
+          box-shadow: 0 0 6px var(--ps-orange, #f59e0b);
         }
         .partial-badges {
           display: flex;
@@ -450,8 +642,8 @@ class StyxZoneCard extends HTMLElement {
           margin-bottom: 10px;
         }
         .partial-badge {
-          font-size: 11px;
-          color: #f59e0b;
+          font-size: 0.75rem;
+          color: var(--ps-orange, #f59e0b);
           background: rgba(245, 158, 11, 0.12);
           border: 1px solid rgba(245, 158, 11, 0.4);
           border-radius: 999px;
@@ -466,7 +658,7 @@ class StyxZoneCard extends HTMLElement {
           align-items: center;
           gap: 6px;
           font-size: 12px;
-          color: #fbbf24;
+          color: var(--ps-orange, #fbbf24);
           margin-bottom: 10px;
           padding: 6px 10px;
           background: rgba(251, 191, 36, 0.1);
@@ -479,7 +671,7 @@ class StyxZoneCard extends HTMLElement {
           margin: 12px 0;
           padding: 10px;
           background: rgba(30, 42, 54, 0.5);
-          border-radius: 8px;
+          border-radius: var(--ps-radius-sm, 8px);
         }
         .mood-gauge {
           width: 70px;
@@ -492,7 +684,7 @@ class StyxZoneCard extends HTMLElement {
           border: 1px dashed rgba(245, 158, 11, 0.35);
           border-radius: 50%;
           background: rgba(30, 42, 54, 0.35);
-          color: #f59e0b;
+          color: var(--ps-orange, #f59e0b);
         }
         .missing-value {
           text-align: center;
@@ -507,13 +699,13 @@ class StyxZoneCard extends HTMLElement {
           font-weight: 700;
         }
         .value-title {
-          font-size: 10px;
-          color: var(--secondary-text-color, #9fb1c3);
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
           font-weight: 500;
         }
         .value-subtitle {
-          font-size: 10px;
-          color: #fbbf24;
+          font-size: 0.75rem;
+          color: var(--ps-orange, #fbbf24);
         }
         .neuron-bar-container.neuron-missing {
           min-height: 42px;
@@ -531,20 +723,20 @@ class StyxZoneCard extends HTMLElement {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 11px;
-          color: var(--secondary-text-color, #9fb1c3);
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
           margin-bottom: 4px;
         }
         .neuron-bar-track {
           height: 6px;
-          background: #1e2a36;
+          background: var(--ps-surface, #1e2a36);
           border-radius: 3px;
           position: relative;
           overflow: hidden;
         }
         .neuron-bar-fill {
           height: 100%;
-          background: linear-gradient(90deg, #2196f3, #22c55e);
+          background: linear-gradient(90deg, var(--ps-accent, #2196f3), var(--ps-green, #22c55e));
           border-radius: 3px;
           transition: width 0.5s ease;
         }
@@ -553,14 +745,14 @@ class StyxZoneCard extends HTMLElement {
           top: -2px;
           width: 2px;
           height: 10px;
-          background: #f59e0b;
+          background: var(--ps-orange, #f59e0b);
           transform: translateX(-50%);
         }
         .neuron-bar-stats {
           display: flex;
           justify-content: space-between;
-          font-size: 10px;
-          color: #6b7280;
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
           margin-top: 4px;
         }
         .quick-actions {
@@ -568,15 +760,15 @@ class StyxZoneCard extends HTMLElement {
           gap: 8px;
           margin-top: 12px;
           padding-top: 10px;
-          border-top: 1px solid #1e2a36;
+          border-top: 1px solid var(--ps-border, #1e2a36);
         }
         .action-btn {
           flex: 1;
           padding: 8px;
           border: none;
           border-radius: 6px;
-          background: #1e2a36;
-          color: #e6eef6;
+          background: var(--ps-surface, #1e2a36);
+          color: var(--ps-text, #e6eef6);
           cursor: pointer;
           font-size: 16px;
           transition: all 0.2s ease;
@@ -591,10 +783,116 @@ class StyxZoneCard extends HTMLElement {
         .action-btn:active {
           transform: scale(0.95);
         }
+        /* v14.2.0: Health Score Badge */
+        .health-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 28px;
+          height: 20px;
+          padding: 0 5px;
+          border-radius: 10px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #fff;
+          background: var(--health-color, #6b7280);
+          line-height: 1;
+          margin-left: 4px;
+          box-shadow: 0 0 6px color-mix(in srgb, var(--health-color, #6b7280) 50%, transparent);
+        }
+
+        /* v14.2.0: Module State Chips */
+        .module-chips {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+        }
+        .module-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 8px;
+          border-radius: 999px;
+          font-size: 11px;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          background: rgba(30, 42, 54, 0.6);
+          border: 1px solid color-mix(in srgb, var(--chip-color, #6b7280) 40%, transparent);
+        }
+        .module-chip-dot {
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--chip-color, #6b7280);
+          box-shadow: 0 0 4px color-mix(in srgb, var(--chip-color, #6b7280) 60%, transparent);
+        }
+        .module-chip-label {
+          text-transform: capitalize;
+        }
+
+        /* v14.2.0: Autonomy Action Mini-Log */
+        .autonomy-log {
+          margin: 10px 0 0;
+          border-radius: 6px;
+          overflow: hidden;
+        }
+        .autonomy-log-header {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          cursor: pointer;
+          padding: 6px 8px;
+          background: rgba(30, 42, 54, 0.5);
+          border-radius: 6px;
+          user-select: none;
+          list-style: none;
+        }
+        .autonomy-log-header::-webkit-details-marker {
+          display: none;
+        }
+        .autonomy-log[open] .autonomy-log-header {
+          border-radius: 6px 6px 0 0;
+        }
+        .autonomy-log-header:hover {
+          background: rgba(30, 42, 54, 0.8);
+        }
+        .action-log-items {
+          background: rgba(30, 42, 54, 0.3);
+          padding: 4px 8px;
+          border-radius: 0 0 6px 6px;
+        }
+        .action-log-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 4px 0;
+          font-size: 11px;
+          border-bottom: 1px solid rgba(38, 51, 67, 0.5);
+        }
+        .action-log-item:last-child {
+          border-bottom: none;
+        }
+        .action-log-desc {
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          margin-right: 8px;
+        }
+        .action-log-time {
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          white-space: nowrap;
+          font-size: 10px;
+        }
+
         .no-zones {
           text-align: center;
           padding: 40px;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
         }
         .mdi-icon {
           font-family: 'Material Design Icons', sans-serif;
@@ -604,7 +902,7 @@ class StyxZoneCard extends HTMLElement {
       <ha-card>
         <div class="card">
           <div class="header">
-            <span class="title">${title}</span>
+            <span class="title">${esc(title)}</span>
             <span class="zone-count">
               <span class="active">${active_zones}</span> / ${total_zones} aktiv
             </span>
@@ -634,6 +932,16 @@ class StyxZoneCard extends HTMLElement {
           this._showSceneSelector(zoneId);
         } else if (action === 'thermostat') {
           this._adjustThermostat(zoneId);
+        }
+      });
+    });
+
+    // Close other autonomy logs when one opens (accordion behavior)
+    const details = this.shadowRoot.querySelectorAll('.autonomy-log');
+    details.forEach(d => {
+      d.addEventListener('toggle', () => {
+        if (d.open) {
+          details.forEach(other => { if (other !== d) other.open = false; });
         }
       });
     });
@@ -671,13 +979,18 @@ class StyxZoneCard extends HTMLElement {
   }
 }
 
-customElements.define('styx-zone-card', StyxZoneCard);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'styx-zone-card',
-  name: 'PilotSuite Zone Dashboard',
-  description: 'Zone status card with mood gauges, neuron activity, and quick actions.',
-  preview: true,
-  required_features: ['x'],
-});
+if (typeof registerStyxCard === 'function') {
+  registerStyxCard('styx-zone-card', StyxZoneCard, {
+    name: 'PilotSuite Zonen-Dashboard',
+    description: 'Zonen-Status mit Health Score, Module States, Mood Gauges, Neuronenaktivitaet, Autonomie-Log und Schnellaktionen.',
+  });
+} else {
+  customElements.define('styx-zone-card', StyxZoneCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: 'styx-zone-card',
+    name: 'PilotSuite Zonen-Dashboard',
+    description: 'Zonen-Status mit Health Score, Module States, Mood Gauges, Neuronenaktivitaet, Autonomie-Log und Schnellaktionen.',
+    preview: true,
+  });
+}

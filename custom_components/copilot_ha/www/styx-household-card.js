@@ -15,12 +15,16 @@
  * - sensor.copilot_habitus_zones
  */
 
-class StyxHouseholdCard extends HTMLElement {
+const _HouseholdBase = window.StyxCardBase || HTMLElement;
+
+class StyxHouseholdCard extends _HouseholdBase {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
-    this._config = {};
-    this._hass = null;
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: 'open' });
+      this._config = {};
+      this._hass = null;
+    }
   }
 
   static getConfigElement() {
@@ -52,15 +56,18 @@ class StyxHouseholdCard extends HTMLElement {
     return 5;
   }
 
+  /* _esc and _sensorVal inherited from StyxCardBase when available */
   _esc(s) {
+    if (typeof super._esc === 'function') return super._esc(s);
+    if (typeof window.styxEsc === 'function') return window.styxEsc(s);
     const el = document.createElement('span');
     el.textContent = s || '';
     return el.innerHTML;
   }
 
   _sensorVal(entityId, fallback) {
+    if (typeof super._sensorVal === 'function') return super._sensorVal(entityId, fallback);
     if (!this._hass) return fallback;
-    // Try multiple naming patterns
     const prefixes = ['sensor.copilot_ha_', 'sensor.copilot_', 'sensor.pilotsuite_'];
     const suffixes = entityId.startsWith('sensor.') ? [entityId] :
       prefixes.map(p => p + entityId);
@@ -81,9 +88,10 @@ class StyxHouseholdCard extends HTMLElement {
     else if (score < 75) { color = '#ff9800'; label = 'Achtung'; }
 
     return `
-      <div class="section health-section">
+      <div class="section health-section" role="region" aria-label="Haus-Gesundheit">
         <div class="health-ring" style="--score:${score};--color:${color}">
-          <svg viewBox="0 0 100 100">
+          <svg viewBox="0 0 100 100" role="img" aria-labelledby="health-gauge-title">
+            <title id="health-gauge-title">Haushaltsdaten-Anzeige</title>
             <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
             <circle cx="50" cy="50" r="42" fill="none" stroke="${color}" stroke-width="8"
               stroke-dasharray="${2 * Math.PI * 42}" stroke-dashoffset="${2 * Math.PI * 42 * (1 - score / 100)}"
@@ -151,7 +159,7 @@ class StyxHouseholdCard extends HTMLElement {
 
     if (!weatherHtml && !warningHtml) return '';
     return `
-      <div class="section">
+      <div class="section" role="region" aria-label="Wetter und Umwelt">
         <div class="section-title">Wetter & Umwelt</div>
         ${weatherHtml}
         ${warningHtml}
@@ -168,7 +176,7 @@ class StyxHouseholdCard extends HTMLElement {
     const priorityColors = { critical: '#f44336', warning: '#ff9800', advisory: '#2196f3', info: '#4caf50' };
 
     return `
-      <div class="section">
+      <div class="section" role="region" aria-label="Warnungen und Hinweise">
         <div class="section-title">Warnungen & Hinweise</div>
         ${alertList.map(a => {
           const pColor = priorityColors[a.priority] || '#607d8b';
@@ -218,7 +226,7 @@ class StyxHouseholdCard extends HTMLElement {
     }
 
     return `
-      <div class="section">
+      <div class="section" role="region" aria-label="Preise und Tarife">
         <div class="section-title">Preise & Tarife</div>
         <div class="prices-grid">${elecHtml}${fuelHtml}</div>
       </div>`;
@@ -239,7 +247,7 @@ class StyxHouseholdCard extends HTMLElement {
     };
 
     return `
-      <div class="section">
+      <div class="section" role="region" aria-label="Zonen-Status">
         <div class="section-title">Zonen-Status</div>
         <div class="zones-grid">
           ${zoneList.slice(0, 12).map(z => {
@@ -262,8 +270,10 @@ class StyxHouseholdCard extends HTMLElement {
   }
 
   _render() {
+    const designTokens = typeof this._designTokens === 'function' ? this._designTokens() : '';
     this.shadowRoot.innerHTML = `
       <style>
+        ${designTokens}
         :host { display: block; }
         .card {
           background: var(--card-background-color, #1a1a2e);
@@ -443,11 +453,17 @@ class StyxHouseholdCard extends HTMLElement {
   }
 }
 
-customElements.define('styx-household-card', StyxHouseholdCard);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'styx-household-card',
-  name: 'PilotSuite Haushaltsuebersicht',
-  description: 'Household overview with health score, weather, prices, and zone status',
-});
+if (typeof registerStyxCard === 'function') {
+  registerStyxCard('styx-household-card', StyxHouseholdCard, {
+    name: 'PilotSuite Haushaltsuebersicht',
+    description: 'Haushaltsuebersicht mit Gesundheits-Score, Wetter, Preise und Zonen-Status',
+  });
+} else {
+  customElements.define('styx-household-card', StyxHouseholdCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: 'styx-household-card',
+    name: 'PilotSuite Haushaltsuebersicht',
+    description: 'Haushaltsuebersicht mit Gesundheits-Score, Wetter, Preise und Zonen-Status',
+  });
+}

@@ -9,10 +9,10 @@
  */
 
 const SEVERITY_CONFIG = {
-  critical: { color: '#f44336', icon: 'mdi:alert-circle', label: 'Kritisch' },
-  high:     { color: '#ff5722', icon: 'mdi:alert', label: 'Hoch' },
-  medium:   { color: '#ff9800', icon: 'mdi:alert-outline', label: 'Mittel' },
-  low:      { color: '#4caf50', icon: 'mdi:information', label: 'Niedrig' },
+  critical: { color: 'var(--ps-red, #f44336)', icon: 'mdi:alert-circle', label: 'Kritisch' },
+  high:     { color: 'var(--ps-orange, #ff5722)', icon: 'mdi:alert', label: 'Hoch' },
+  medium:   { color: 'var(--ps-orange, #ff9800)', icon: 'mdi:alert-outline', label: 'Mittel' },
+  low:      { color: 'var(--ps-green, #4caf50)', icon: 'mdi:information', label: 'Niedrig' },
 };
 
 const CATEGORY_LABELS = {
@@ -26,25 +26,24 @@ const CATEGORY_LABELS = {
   other:         'Sonstige',
 };
 
-// Central UI telemetry event names (prefer constants over ad-hoc strings).
-// Uses shared UiState constants when available; falls back to canonical names.
-const UI_TELEMETRY_EVENTS = (window.UiState && window.UiState.EventKeys)
-  ? window.UiState.EventKeys
-  : Object.freeze({
-      LOADING_SHOWN: 'ui_state_loading_shown',
-      EMPTY_SHOWN: 'ui_state_empty_shown',
-      ERROR_SHOWN: 'ui_state_error_shown',
-      GLOBAL_DEGRADED_ON: 'ui_global_degraded_on',
-      GLOBAL_DEGRADED_OFF: 'ui_global_degraded_off',
-      RETRY_CLICKED: 'ui_state_retry_clicked',
-      RETRY_SUCCEEDED: 'ui_state_retry_succeeded',
-      RETRY_FAILED: 'ui_state_retry_failed',
-    });
+// Use shared STYX_UI_EVENTS from styx-card-base.js if available.
+const UI_TELEMETRY_EVENTS_ERR = window.STYX_UI_EVENTS || Object.freeze({
+  LOADING_SHOWN: 'ui_state_loading_shown',
+  EMPTY_SHOWN: 'ui_state_empty_shown',
+  ERROR_SHOWN: 'ui_state_error_shown',
+  GLOBAL_DEGRADED_ON: 'ui_global_degraded_on',
+  GLOBAL_DEGRADED_OFF: 'ui_global_degraded_off',
+  RETRY_CLICKED: 'ui_state_retry_clicked',
+  RETRY_SUCCEEDED: 'ui_state_retry_succeeded',
+  RETRY_FAILED: 'ui_state_retry_failed',
+});
 
-class StyxErrorCard extends HTMLElement {
+const _ErrBase = window.StyxCardBase || HTMLElement;
+
+class StyxErrorCard extends _ErrBase {
   constructor() {
     super();
-    this.attachShadow({ mode: 'open' });
+    if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this._config = {};
     this._hass = null;
     this._errors = [];
@@ -104,7 +103,7 @@ class StyxErrorCard extends HTMLElement {
         return;
       }
 
-      const resolvedName = UI_TELEMETRY_EVENTS[eventKeyOrName] || eventKeyOrName;
+      const resolvedName = UI_TELEMETRY_EVENTS_ERR[eventKeyOrName] || eventKeyOrName;
       window.dispatchEvent(new CustomEvent(resolvedName, { detail: payload }));
     } catch (_e) {
       // ignore
@@ -199,7 +198,7 @@ class StyxErrorCard extends HTMLElement {
       this._render();
     } catch (e) {
       clearTimeout(timer);
-      this._loadError = e.name === 'AbortError' ? 'Zeitueberschreitung' : 'Verbindungsfehler';
+      this._loadError = e.name === 'AbortError' ? 'Zeitüberschreitung' : 'Verbindungsfehler';
       this._stale = this._loadFromSensors();
 
       this._emitUi('ERROR_SHOWN', {
@@ -240,6 +239,7 @@ class StyxErrorCard extends HTMLElement {
   }
 
   _esc(s) {
+    if (typeof window.styxEsc === 'function') return window.styxEsc(s);
     const el = document.createElement('span');
     el.textContent = s || '';
     return el.innerHTML;
@@ -264,9 +264,9 @@ class StyxErrorCard extends HTMLElement {
 
     const showStaleBanner = !!this._loadError;
     const bannerHtml = showStaleBanner ? `
-      <div class="banner ${this._stale ? 'warn' : 'err'}">
+      <div class="banner ${this._stale ? 'warn' : 'err'}" role="alert">
         ${this._esc(this._loadError)}${this._stale ? ' — letzte bekannte Daten.' : ''}
-        <button class="retry" data-action="retry">Erneut versuchen</button>
+        <button class="retry" data-action="retry" aria-label="Erneut versuchen">Erneut versuchen</button>
       </div>` : '';
 
     const showHardError = !!this._loadError && !this._stale && errors.length === 0 && totalErrors === 0;
@@ -289,10 +289,10 @@ class StyxErrorCard extends HTMLElement {
     let errorsHtml = '';
     if (showHardError) {
       errorsHtml = `
-        <div class="state-error">
+        <div class="state-error" role="alert">
           <div class="state-title">Fehlerliste konnte nicht geladen werden</div>
           <div class="state-msg">${this._esc(this._loadError)}</div>
-          <button class="retry" data-action="retry">Erneut versuchen</button>
+          <button class="retry" data-action="retry" aria-label="Erneut versuchen">Erneut versuchen</button>
         </div>`;
     } else if (errors.length === 0) {
       errorsHtml = `<div class="empty">${this._loadError && this._stale ? 'Details derzeit nicht verfuegbar.' : `Keine Fehler in den letzten ${this._config.hours}h.`}</div>`;
@@ -317,7 +317,7 @@ class StyxErrorCard extends HTMLElement {
         }
 
         return `
-          <div class="error-item" data-idx="${idx}">
+          <div class="error-item" data-idx="${idx}" role="listitem">
             <div class="err-header">
               <span class="err-sev" style="color:${sev.color}">${sev.label}</span>
               <span class="err-cat">${this._esc(cat)}</span>
@@ -331,14 +331,17 @@ class StyxErrorCard extends HTMLElement {
       }).join('');
     }
 
+    const _dt = typeof this._designTokens === 'function' ? this._designTokens() : '';
+
     this.shadowRoot.innerHTML = `
       <style>
+        ${_dt}
         :host { display: block; }
         .card {
-          background: var(--card-background-color, #1a1a2e);
-          border-radius: var(--ha-card-border-radius, 12px);
+          background: var(--ps-bg, var(--card-background-color, #1a1a2e));
+          border-radius: var(--ps-radius, var(--ha-card-border-radius, 12px));
           padding: 16px;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
           font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
           max-height: 500px;
           overflow-y: auto;
@@ -356,9 +359,9 @@ class StyxErrorCard extends HTMLElement {
           border-radius: 10px;
           font-weight: 600;
         }
-        .total-ok { background: rgba(76,175,80,0.15); color: #4caf50; }
-        .total-warn { background: rgba(255,152,0,0.15); color: #ff9800; }
-        .total-err { background: rgba(244,67,54,0.15); color: #f44336; }
+        .total-ok { background: rgba(76,175,80,0.15); color: var(--ps-green, #4caf50); }
+        .total-warn { background: rgba(255,152,0,0.15); color: var(--ps-orange, #ff9800); }
+        .total-err { background: rgba(244,67,54,0.15); color: var(--ps-red, #f44336); }
         .summary {
           display: flex;
           flex-wrap: wrap;
@@ -366,21 +369,21 @@ class StyxErrorCard extends HTMLElement {
           margin-bottom: 12px;
         }
         .chip {
-          font-size: 10px;
+          font-size: 0.75rem;
           padding: 2px 8px;
           border-radius: 6px;
           background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.08);
-          color: var(--secondary-text-color, #9fb1c3);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.08));
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
         }
         .error-item {
           padding: 10px 12px;
           margin-bottom: 6px;
-          background: rgba(255,255,255,0.03);
-          border-radius: 8px;
+          background: var(--ps-surface, rgba(255,255,255,0.03));
+          border-radius: var(--ps-radius-sm, 8px);
           border-left: 3px solid rgba(255,255,255,0.1);
           cursor: pointer;
-          transition: background 0.15s;
+          transition: background var(--ps-transition, 0.15s ease);
         }
         .error-item:hover { background: rgba(255,255,255,0.06); }
         .err-header {
@@ -390,37 +393,37 @@ class StyxErrorCard extends HTMLElement {
           margin-bottom: 4px;
           flex-wrap: wrap;
         }
-        .err-sev { font-size: 11px; font-weight: 700; }
+        .err-sev { font-size: 0.75rem; font-weight: 700; }
         .err-cat {
-          font-size: 10px;
+          font-size: 0.75rem;
           padding: 1px 6px;
           border-radius: 4px;
           background: rgba(255,255,255,0.06);
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
         }
         .err-time {
-          font-size: 10px;
-          color: var(--secondary-text-color, #9fb1c3);
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           opacity: 0.6;
           margin-left: auto;
         }
         .err-repair-badge {
-          font-size: 10px;
+          font-size: 0.75rem;
           padding: 1px 6px;
           border-radius: 4px;
           background: rgba(76,175,80,0.15);
-          color: #4caf50;
+          color: var(--ps-green, #4caf50);
           font-weight: 600;
         }
         .err-msg {
           font-size: 12px;
           line-height: 1.4;
           word-break: break-word;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
         }
         .err-source {
-          font-size: 10px;
-          color: var(--secondary-text-color, #9fb1c3);
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           opacity: 0.5;
           margin-top: 2px;
         }
@@ -432,9 +435,9 @@ class StyxErrorCard extends HTMLElement {
           border: 1px solid rgba(76,175,80,0.15);
         }
         .repair-title {
-          font-size: 11px;
+          font-size: 0.75rem;
           font-weight: 600;
-          color: #4caf50;
+          color: var(--ps-green, #4caf50);
           margin-bottom: 6px;
         }
         .repair {
@@ -443,7 +446,7 @@ class StyxErrorCard extends HTMLElement {
         .repair-text {
           font-size: 12px;
           line-height: 1.4;
-          color: var(--primary-text-color, #e6eef6);
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
         }
         .repair-actions {
           display: flex;
@@ -452,11 +455,11 @@ class StyxErrorCard extends HTMLElement {
           margin-top: 4px;
         }
         .action-tag {
-          font-size: 9px;
+          font-size: 0.75rem;
           padding: 1px 6px;
           border-radius: 4px;
           background: rgba(79,195,247,0.1);
-          color: #4fc3f7;
+          color: var(--ps-accent, #4fc3f7);
           border: 1px solid rgba(79,195,247,0.2);
         }
         .banner {
@@ -468,16 +471,16 @@ class StyxErrorCard extends HTMLElement {
           margin: 10px 0 10px 0;
           border-radius: 10px;
           font-size: 12px;
-          border: 1px solid rgba(255,255,255,0.08);
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.08));
         }
-        .banner.warn { background: rgba(255,152,0,0.12); color: #ffb74d; border-color: rgba(255,152,0,0.25); }
-        .banner.err { background: rgba(244,67,54,0.12); color: #ff8a80; border-color: rgba(244,67,54,0.25); }
+        .banner.warn { background: rgba(255,152,0,0.12); color: var(--ps-orange, #ffb74d); border-color: rgba(255,152,0,0.25); }
+        .banner.err { background: rgba(244,67,54,0.12); color: var(--ps-red, #ff8a80); border-color: rgba(244,67,54,0.25); }
         button.retry {
           padding: 6px 10px;
-          border-radius: 8px;
+          border-radius: var(--ps-radius-sm, 8px);
           border: 1px solid rgba(255,255,255,0.14);
           background: rgba(79,195,247,0.12);
-          color: #4fc3f7;
+          color: var(--ps-accent, #4fc3f7);
           cursor: pointer;
           font-weight: 700;
           font-size: 12px;
@@ -495,12 +498,12 @@ class StyxErrorCard extends HTMLElement {
         }
         .state-msg {
           font-size: 12px;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           margin-bottom: 10px;
         }
         .empty {
           text-align: center;
-          color: var(--secondary-text-color, #9fb1c3);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           padding: 24px 0;
           font-size: 13px;
         }
@@ -535,11 +538,17 @@ class StyxErrorCard extends HTMLElement {
   }
 }
 
-customElements.define('styx-error-card', StyxErrorCard);
-
-window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'styx-error-card',
-  name: 'PilotSuite Styx Fehler',
-  description: 'Error digest with categorization and repair suggestions',
-});
+if (typeof registerStyxCard === 'function') {
+  registerStyxCard('styx-error-card', StyxErrorCard, {
+    name: 'PilotSuite Fehler & Reparatur',
+    description: 'Fehleruebersicht mit Kategorisierung und Reparaturvorschlaegen',
+  });
+} else {
+  customElements.define('styx-error-card', StyxErrorCard);
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: 'styx-error-card',
+    name: 'PilotSuite Fehler & Reparatur',
+    description: 'Fehleruebersicht mit Kategorisierung und Reparaturvorschlaegen',
+  });
+}

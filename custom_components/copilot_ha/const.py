@@ -281,6 +281,29 @@ DEFAULT_BIRTHDAY_TTS_ENABLED = True
 DEFAULT_BIRTHDAY_TTS_ENTITY = ""
 DEFAULT_BIRTHDAY_REMINDER_HOUR = 8
 
+# Anomaly Detection (v14.1.0)
+CONF_ANOMALY_ENABLED = "anomaly_enabled"
+CONF_ANOMALY_SENSITIVITY = "anomaly_sensitivity"
+DEFAULT_ANOMALY_ENABLED = True
+DEFAULT_ANOMALY_SENSITIVITY = "medium"
+ANOMALY_SENSITIVITIES = ["low", "medium", "high"]
+
+# Habitus Mining (v14.1.0)
+CONF_HABITUS_ENABLED = "habitus_enabled"
+CONF_HABITUS_MIN_CONFIDENCE = "habitus_min_confidence"
+DEFAULT_HABITUS_ENABLED = True
+DEFAULT_HABITUS_MIN_CONFIDENCE = 0.6
+
+# Autonomy System (v14.2.0)
+CONF_AUTONOMY_ENABLED = "autonomy_enabled"
+CONF_AUTONOMY_AUTO_EXECUTE = "autonomy_auto_execute"
+DEFAULT_AUTONOMY_ENABLED = True
+DEFAULT_AUTONOMY_AUTO_EXECUTE = False
+
+# Zone Health Polling (v14.2.0)
+CONF_ZONE_HEALTH_POLL_ENABLED = "zone_health_poll_enabled"
+DEFAULT_ZONE_HEALTH_POLL_ENABLED = True
+
 # Entity Tags (v3.2.2)
 ENTITY_TAGS_STORE_KEY = "copilot_ha.entity_tags"
 ENTITY_TAGS_STORE_VERSION = 1

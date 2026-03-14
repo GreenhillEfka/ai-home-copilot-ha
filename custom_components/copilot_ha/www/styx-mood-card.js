@@ -66,25 +66,34 @@ class StyxMoodCard extends _Base {
     const zone = this._config.zone || "";
     const title = zone ? `Mood \u2013 ${zone}` : "Mood";
 
+    const designTokens = typeof this._designTokens === 'function' ? this._designTokens() : '';
+
     this.shadowRoot.innerHTML = `
       <style>
+        ${designTokens}
         :host { display: block; }
-        .card {
-          background: var(--card-background-color, #0a0e14);
-          border-radius: var(--ha-card-border-radius, 12px);
-          padding: 16px;
-          color: var(--primary-text-color, #e6eef6);
-          font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
+        ha-card { padding: var(--ps-sp-lg, 16px); }
+        .title {
+          font-size: var(--ps-fs-md, 0.9375rem);
+          font-weight: 600;
+          margin-bottom: var(--ps-sp-md, 12px);
         }
-        .title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
-        .gauges { display: flex; justify-content: space-around; gap: 8px; }
+        .gauges {
+          display: flex;
+          justify-content: space-around;
+          gap: var(--ps-sp-sm, 8px);
+        }
         .gauge { width: 110px; height: 110px; }
+        .no-data {
+          text-align: center;
+          padding: var(--ps-sp-lg, 16px);
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          font-size: var(--ps-fs-sm, 0.8125rem);
+        }
       </style>
       <ha-card>
-        <div class="card">
-          <div class="title">${title}</div>
-          <div class="gauges">${gauges}</div>
-        </div>
+        <div class="title">${title}</div>
+        ${gauges ? `<div class="gauges" role="img" aria-label="Stimmungs-Anzeige: Comfort, Joy, Frugality">${gauges}</div>` : '<div class="no-data">Keine Mood-Daten verfuegbar</div>'}
       </ha-card>`;
   }
 }
@@ -97,7 +106,8 @@ function _buildGaugeSvgFallback(value, startColor, endColor, label) {
   const offset = circ - (circ * pct) / 100;
   const gid = `g_${label.toLowerCase()}`;
   return `
-    <svg viewBox="0 0 ${size} ${size}" class="gauge">
+    <svg viewBox="0 0 ${size} ${size}" class="gauge" role="img" aria-labelledby="title_${gid}">
+      <title id="title_${gid}">Stimmungs-Anzeige</title>
       <defs>
         <linearGradient id="${gid}" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stop-color="${startColor}"/>

@@ -48,6 +48,12 @@ EVENT_TYPE_SUGGESTION = "suggestion"
 EVENT_TYPE_NEURON = "neuron"
 EVENT_TYPE_MODULE_DATA = "module_data"
 EVENT_TYPE_ZONE_UPDATE = "zone_update"
+EVENT_TYPE_ANOMALY = "anomaly"
+EVENT_TYPE_AUTONOMY_EXECUTED = "autonomy_executed"
+EVENT_TYPE_AUTONOMY_FAILED = "autonomy_failed"
+EVENT_TYPE_SCENE_CAPTURED = "scene_captured"
+EVENT_TYPE_SCENE_APPLIED = "scene_applied"
+EVENT_TYPE_MODULE_ZONE_STATE = "module_zone_state_changed"
 
 _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_STATUS,
@@ -56,6 +62,12 @@ _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_NEURON,
     EVENT_TYPE_MODULE_DATA,
     EVENT_TYPE_ZONE_UPDATE,
+    EVENT_TYPE_ANOMALY,
+    EVENT_TYPE_AUTONOMY_EXECUTED,
+    EVENT_TYPE_AUTONOMY_FAILED,
+    EVENT_TYPE_SCENE_CAPTURED,
+    EVENT_TYPE_SCENE_APPLIED,
+    EVENT_TYPE_MODULE_ZONE_STATE,
 }
 
 # Canonical aliases should continue to map directly; legacy aliases are only accepted in
@@ -67,6 +79,12 @@ _EVENT_TYPE_CANONICAL_TO_CANONICAL = {
     EVENT_TYPE_NEURON: EVENT_TYPE_NEURON,
     EVENT_TYPE_MODULE_DATA: EVENT_TYPE_MODULE_DATA,
     EVENT_TYPE_ZONE_UPDATE: EVENT_TYPE_ZONE_UPDATE,
+    EVENT_TYPE_ANOMALY: EVENT_TYPE_ANOMALY,
+    EVENT_TYPE_AUTONOMY_EXECUTED: EVENT_TYPE_AUTONOMY_EXECUTED,
+    EVENT_TYPE_AUTONOMY_FAILED: EVENT_TYPE_AUTONOMY_FAILED,
+    EVENT_TYPE_SCENE_CAPTURED: EVENT_TYPE_SCENE_CAPTURED,
+    EVENT_TYPE_SCENE_APPLIED: EVENT_TYPE_SCENE_APPLIED,
+    EVENT_TYPE_MODULE_ZONE_STATE: EVENT_TYPE_MODULE_ZONE_STATE,
 }
 
 _EVENT_TYPE_LEGACY_ALIASES = {
@@ -701,6 +719,109 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 merged = _merge_coordinator_data(coordinator, updates)
                 coordinator.async_set_updated_data(merged)
             _LOGGER.debug("Webhook: zone_update push received (zone=%s)", zone_id)
+
+        elif event_type == EVENT_TYPE_ANOMALY:
+            # Core pushes anomaly detection event
+            severity = data.get("severity", "info")
+            entity_id = data.get("entity_id", "unknown")
+
+            # Merge into coordinator alert_history
+            current = coordinator.data if isinstance(coordinator.data, dict) else {}
+            alert_history = list(current.get("alert_history", []))
+            alert_history.insert(0, data)
+            alert_history = alert_history[:50]  # Keep last 50
+
+            anomaly_status = {
+                "status": "active",
+                "summary": {
+                    "count": len(alert_history),
+                    "last_anomaly": data.get("detected_at"),
+                    "peak_score": max((a.get("score", 0) for a in alert_history), default=0),
+                },
+                "features": list({a.get("anomaly_type", "") for a in alert_history if a.get("anomaly_type")}),
+            }
+
+            updates = {"anomaly_status": anomaly_status, "alert_history": alert_history}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+
+            # Fire HA event for automations
+            if severity in ("warning", "critical"):
+                hass.bus.async_fire(
+                    f"{DOMAIN}_anomaly_detected",
+                    {"entity_id": entity_id, "severity": severity, "data": data},
+                )
+
+            _LOGGER.debug("Webhook: anomaly push received (entity=%s, severity=%s)", entity_id, severity)
+
+        elif event_type == EVENT_TYPE_AUTONOMY_EXECUTED:
+            # Core pushes when autonomy auto-executed an action
+            zone_id = data.get("zone_id", "")
+            module_id = data.get("module_id", "")
+
+            # Merge into coordinator autonomy history
+            current = coordinator.data if isinstance(coordinator.data, dict) else {}
+            autonomy_history = list(current.get("autonomy_history", []))
+            autonomy_history.insert(0, data)
+            autonomy_history = autonomy_history[:50]
+
+            updates = {"autonomy_history": autonomy_history}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+
+            # Fire HA event for automations
+            hass.bus.async_fire(
+                f"{DOMAIN}_autonomy_executed",
+                {"zone_id": zone_id, "module_id": module_id, "data": data},
+            )
+            _LOGGER.debug("Webhook: autonomy_executed (zone=%s, module=%s)", zone_id, module_id)
+
+        elif event_type == EVENT_TYPE_AUTONOMY_FAILED:
+            zone_id = data.get("zone_id", "")
+            current = coordinator.data if isinstance(coordinator.data, dict) else {}
+            autonomy_errors = list(current.get("autonomy_errors", []))
+            autonomy_errors.insert(0, data)
+            autonomy_errors = autonomy_errors[:20]
+
+            updates = {"autonomy_errors": autonomy_errors}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+
+            hass.bus.async_fire(
+                f"{DOMAIN}_autonomy_failed",
+                {"zone_id": zone_id, "data": data},
+            )
+            _LOGGER.debug("Webhook: autonomy_failed (zone=%s)", zone_id)
+
+        elif event_type == EVENT_TYPE_SCENE_CAPTURED:
+            hass.bus.async_fire(
+                f"{DOMAIN}_scene_captured",
+                {"zone_id": data.get("zone_id", ""), "scene": data},
+            )
+            _LOGGER.debug("Webhook: scene_captured (zone=%s)", data.get("zone_id"))
+
+        elif event_type == EVENT_TYPE_SCENE_APPLIED:
+            hass.bus.async_fire(
+                f"{DOMAIN}_scene_applied",
+                {"zone_id": data.get("zone_id", ""), "scene_id": data.get("scene_id", "")},
+            )
+            _LOGGER.debug("Webhook: scene_applied (zone=%s)", data.get("zone_id"))
+
+        elif event_type == EVENT_TYPE_MODULE_ZONE_STATE:
+            zone_id = data.get("zone_id", "")
+            module_id = data.get("module_id", "")
+            new_state = data.get("new_state", "")
+
+            current = coordinator.data if isinstance(coordinator.data, dict) else {}
+            zone_module_states = dict(current.get("zone_module_states", {}))
+            if zone_id not in zone_module_states:
+                zone_module_states[zone_id] = {}
+            zone_module_states[zone_id][module_id] = new_state
+
+            updates = {"zone_module_states": zone_module_states}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+            _LOGGER.debug("Webhook: module_zone_state_changed (zone=%s, module=%s → %s)", zone_id, module_id, new_state)
 
         else:
             # Legacy status push (online/version)

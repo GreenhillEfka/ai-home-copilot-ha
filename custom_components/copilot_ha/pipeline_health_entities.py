@@ -14,6 +14,7 @@ import logging
 from typing import Any, TYPE_CHECKING
 
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.entity import EntityCategory
 
 from .entity import CopilotBaseEntity
 
@@ -28,6 +29,7 @@ class PipelineHealthSensor(CopilotBaseEntity, SensorEntity):
 
     _attr_name = "Pipeline Health"
     _attr_unique_id = "pipeline_health"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:heart-pulse"
 
     def __init__(self, coordinator: CopilotDataUpdateCoordinator) -> None:
