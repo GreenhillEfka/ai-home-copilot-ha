@@ -41,6 +41,13 @@ class AutonomyStatusSensor(CopilotBaseEntity, SensorEntity):
         else:
             self._attr_native_value = "inaktiv"
 
+        # Extract per-zone module states from dashboard data
+        zone_modules: dict[str, Any] = {}
+        for zone_id, zone_data in zones.items():
+            ms = zone_data.get("module_states")
+            if ms and isinstance(ms, dict):
+                zone_modules[zone_id] = ms
+
         self._attr_extra_state_attributes = {
             "active_zones": active_zones,
             "total_zones": len(zones),
@@ -49,6 +56,7 @@ class AutonomyStatusSensor(CopilotBaseEntity, SensorEntity):
             "total_skipped": stats.get("skipped", 0),
             "total_errors": stats.get("errors", 0),
             "total_events": stats.get("total_events", 0),
+            "zone_modules": zone_modules,
         }
         self.async_write_ha_state()
 
@@ -117,7 +125,7 @@ class ZoneHealthOverviewSensor(CopilotBaseEntity, SensorEntity):
             }
 
         self._attr_extra_state_attributes = {
-            "total_zones": summary.get("total", 0),
+            "total_zones": summary.get("total_zones", 0),
             "healthy": summary.get("healthy", 0),
             "degraded": summary.get("degraded", 0),
             "critical": summary.get("critical", 0),

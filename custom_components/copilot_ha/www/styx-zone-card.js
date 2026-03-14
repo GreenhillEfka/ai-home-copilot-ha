@@ -1,14 +1,14 @@
 /**
- * PilotSuite Zone Dashboard Card v2.0.0
+ * PilotSuite Zone Dashboard Card v2.1.0
  *
  * Lovelace custom card showing zone status, mood, neuron activity,
  * and quick actions. Reads from sensor.pilotsuite_habitus_zones and
  * sensor.pilotsuite_zone_modes entities.
  *
  * v14.2.0 additions:
- * - Health Score Badge (from sensor.pilotsuite_zone_health_overview)
- * - Module State Indicators (from sensor.pilotsuite_autonomy_status)
- * - Autonomy Action Mini-Log (from sensor.pilotsuite_autonomy_history)
+ * - Health Score Badge (from sensor.pilotsuite_zonen_gesundheit)
+ * - Module State Indicators (from sensor.pilotsuite_autonomie_status)
+ * - Autonomy Action Mini-Log (from sensor.pilotsuite_autonomie_verlauf)
  *
  * Features:
  * - Zone Status (active/inactive indicator)
@@ -183,27 +183,56 @@ class StyxZoneCard extends _ZoneBase {
   }
 
   _getHealthScore(zoneId) {
-    const healthEntity = this._hass?.states['sensor.pilotsuite_zone_health_overview'];
+    const healthEntity = this._hass?.states['sensor.pilotsuite_zonen_gesundheit'];
     if (!healthEntity) return null;
 
     const zones = healthEntity.attributes?.zones;
     if (!zones || typeof zones !== 'object') return null;
 
-    // Try direct key match, then normalized match
-    const score = zones[zoneId] ?? zones[zoneId.replace(/_/g, ' ')];
-    if (score !== undefined && score !== null) {
-      const parsed = Number(score);
+    // Helper to clamp and validate a score value
+    const _clamp = (v) => {
+      const parsed = Number(v);
       return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : null;
+    };
+
+    // Try object format: zones[key] = { score, status, zone_name }
+    // Keys may or may not have "zone:" prefix
+    const candidates = [zoneId, `zone:${zoneId}`, zoneId.replace(/_/g, ' ')];
+    for (const key of candidates) {
+      const entry = zones[key];
+      if (entry !== undefined && entry !== null) {
+        // Object format with .score property
+        if (typeof entry === 'object' && entry.score !== undefined) {
+          return _clamp(entry.score);
+        }
+        // Direct numeric value (legacy fallback)
+        const direct = _clamp(entry);
+        if (direct !== null) return direct;
+      }
+    }
+
+    // Also try stripping "zone:" from zoneId if it already has the prefix
+    if (zoneId.startsWith('zone:')) {
+      const stripped = zoneId.slice(5);
+      const entry = zones[stripped];
+      if (entry !== undefined && entry !== null) {
+        if (typeof entry === 'object' && entry.score !== undefined) {
+          return _clamp(entry.score);
+        }
+        const direct = _clamp(entry);
+        if (direct !== null) return direct;
+      }
     }
 
     // Try matching by zone_id or name keys in array format
     if (Array.isArray(zones)) {
       const match = zones.find(z =>
-        z.zone_id === zoneId || z.name?.toLowerCase().replace(/\s+/g, '_') === zoneId
+        z.zone_id === zoneId || z.zone_id === `zone:${zoneId}` ||
+        z.name?.toLowerCase().replace(/\s+/g, '_') === zoneId
       );
-      if (match && match.health_score !== undefined) {
-        const parsed = Number(match.health_score);
-        return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : null;
+      if (match) {
+        const s = match.score ?? match.health_score;
+        if (s !== undefined) return _clamp(s);
       }
     }
 
@@ -223,26 +252,42 @@ class StyxZoneCard extends _ZoneBase {
   }
 
   _getModuleStates(zoneId) {
-    const autonomyEntity = this._hass?.states['sensor.pilotsuite_autonomy_status'];
+    const autonomyEntity = this._hass?.states['sensor.pilotsuite_autonomie_status'];
     if (!autonomyEntity) return [];
 
     const attrs = autonomyEntity.attributes || {};
-    // Try zone-specific module states
-    const zoneModules = attrs.zone_modules?.[zoneId] || attrs.modules?.[zoneId];
-    if (zoneModules && typeof zoneModules === 'object') {
-      return Object.entries(zoneModules).map(([name, state]) => ({
-        name,
-        state: typeof state === 'string' ? state : (state?.state || 'off'),
-      }));
+    // Try zone-specific module states with various key formats
+    const zm = attrs.zone_modules;
+    if (zm && typeof zm === 'object') {
+      const zoneModules = zm[zoneId] || zm[`zone:${zoneId}`]
+        || (zoneId.startsWith('zone:') ? zm[zoneId.slice(5)] : null);
+      if (zoneModules && typeof zoneModules === 'object') {
+        return Object.entries(zoneModules).map(([name, state]) => ({
+          name,
+          state: typeof state === 'string' ? state : (state?.state || 'off'),
+        }));
+      }
+    }
+
+    // Try modules attribute with zone keys
+    const modules = attrs.modules;
+    if (modules && typeof modules === 'object') {
+      const zoneModules = modules[zoneId] || modules[`zone:${zoneId}`]
+        || (zoneId.startsWith('zone:') ? modules[zoneId.slice(5)] : null);
+      if (zoneModules && typeof zoneModules === 'object') {
+        return Object.entries(zoneModules).map(([name, state]) => ({
+          name,
+          state: typeof state === 'string' ? state : (state?.state || 'off'),
+        }));
+      }
     }
 
     // Fallback: global modules (same for all zones)
-    const globalModules = attrs.modules;
-    if (globalModules && typeof globalModules === 'object' && !Array.isArray(globalModules)) {
+    if (modules && typeof modules === 'object' && !Array.isArray(modules)) {
       // Only use if it's a flat module->state map (not zone-keyed)
-      const firstValue = Object.values(globalModules)[0];
+      const firstValue = Object.values(modules)[0];
       if (typeof firstValue === 'string') {
-        return Object.entries(globalModules).map(([name, state]) => ({ name, state }));
+        return Object.entries(modules).map(([name, state]) => ({ name, state }));
       }
     }
 
@@ -258,7 +303,7 @@ class StyxZoneCard extends _ZoneBase {
   }
 
   _getAutonomyActions(zoneId) {
-    const historyEntity = this._hass?.states['sensor.pilotsuite_autonomy_history'];
+    const historyEntity = this._hass?.states['sensor.pilotsuite_autonomie_verlauf'];
     if (!historyEntity) return [];
 
     const actions = historyEntity.attributes?.recent_actions;
@@ -447,7 +492,7 @@ class StyxZoneCard extends _ZoneBase {
 
   _buildZoneCard(zone) {
     const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
-    const zoneId = zone.name?.toLowerCase().replace(/\s+/g, '_') || zone.zone_id || 'unknown';
+    const zoneId = zone.zone_id || zone.name?.toLowerCase().replace(/\s+/g, '_') || 'unknown';
     const zoneName = zone.name || zoneId;
     const isActive = zone.mode && zone.mode !== 'inactive';
     const hasMode = Boolean(zone.mode);

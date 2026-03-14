@@ -66,9 +66,15 @@ class ZoneModuleStateSelect(CopilotBaseEntity, SelectEntity):
             return
         coordinator = self.coordinator
         if hasattr(coordinator, "async_set_zone_module_state"):
-            await coordinator.async_set_zone_module_state(
+            result = await coordinator.async_set_zone_module_state(
                 self._zone_id, self._module_id, option
             )
+            if not isinstance(result, dict) or not result.get("ok"):
+                _LOGGER.warning(
+                    "Failed to set module state %s/%s to %s: %s",
+                    self._zone_id, self._module_id, option, result,
+                )
+                return
         self._attr_current_option = option
         self.async_write_ha_state()
 
