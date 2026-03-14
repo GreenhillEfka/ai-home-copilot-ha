@@ -185,6 +185,9 @@ from .sensors.regional_context_sensor import RegionalContextSensor
 from .sensors.weather_optimizer_sensor import WeatherOptimizerSensor
 from .sensors.zone_presence_trigger import ZonePresenceOverviewSensor
 
+# Autonomy sensors (v14.2.0)
+from .sensors.autonomy_status_sensor import AUTONOMY_SENSORS
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
@@ -459,6 +462,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         WeatherOptimizerSensor(coordinator),
         ZonePresenceOverviewSensor(coordinator),
     ])
+
+    # Autonomy sensors (v14.2.0)
+    for sensor_cls in AUTONOMY_SENSORS:
+        entities.append(sensor_cls(coordinator))
 
     # Camera Context Sensors (Habitus Camera Integration)
     entities.extend([

@@ -1,14 +1,22 @@
 /**
- * PilotSuite Zone Dashboard Card v1.0.0
+ * PilotSuite Zone Dashboard Card v2.0.0
  *
  * Lovelace custom card showing zone status, mood, neuron activity,
  * and quick actions. Reads from sensor.pilotsuite_habitus_zones and
  * sensor.pilotsuite_zone_modes entities.
  *
+ * v14.2.0 additions:
+ * - Health Score Badge (from sensor.pilotsuite_zone_health_overview)
+ * - Module State Indicators (from sensor.pilotsuite_autonomy_status)
+ * - Autonomy Action Mini-Log (from sensor.pilotsuite_autonomy_history)
+ *
  * Features:
  * - Zone Status (active/inactive indicator)
+ * - Health Score Badge (color-coded 0-100)
+ * - Module State Indicators (licht, musik, etc.)
  * - Mood gauges (Comfort, Joy, Frugality per zone)
  * - Neuron Activity visualization
+ * - Autonomy Action Mini-Log (last 3 actions)
  * - Quick Actions (toggle, scene selection)
  */
 
@@ -61,6 +69,9 @@ class StyxZoneCard extends _ZoneBase {
       show_mood: true,
       show_neuron_activity: true,
       show_quick_actions: true,
+      show_health_score: true,
+      show_module_states: true,
+      show_autonomy_log: true,
     };
   }
 
@@ -73,6 +84,9 @@ class StyxZoneCard extends _ZoneBase {
       show_mood: config.show_mood !== false,
       show_neuron_activity: config.show_neuron_activity !== false,
       show_quick_actions: config.show_quick_actions !== false,
+      show_health_score: config.show_health_score !== false,
+      show_module_states: config.show_module_states !== false,
+      show_autonomy_log: config.show_autonomy_log !== false,
     };
   }
 
@@ -166,6 +180,113 @@ class StyxZoneCard extends _ZoneBase {
         : null,
       scoreMissing: scoreValues.length === 0,
     };
+  }
+
+  _getHealthScore(zoneId) {
+    const healthEntity = this._hass?.states['sensor.pilotsuite_zone_health_overview'];
+    if (!healthEntity) return null;
+
+    const zones = healthEntity.attributes?.zones;
+    if (!zones || typeof zones !== 'object') return null;
+
+    // Try direct key match, then normalized match
+    const score = zones[zoneId] ?? zones[zoneId.replace(/_/g, ' ')];
+    if (score !== undefined && score !== null) {
+      const parsed = Number(score);
+      return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : null;
+    }
+
+    // Try matching by zone_id or name keys in array format
+    if (Array.isArray(zones)) {
+      const match = zones.find(z =>
+        z.zone_id === zoneId || z.name?.toLowerCase().replace(/\s+/g, '_') === zoneId
+      );
+      if (match && match.health_score !== undefined) {
+        const parsed = Number(match.health_score);
+        return Number.isFinite(parsed) ? Math.max(0, Math.min(100, Math.round(parsed))) : null;
+      }
+    }
+
+    return null;
+  }
+
+  _getHealthColor(score) {
+    if (score >= 80) return 'var(--ps-green, #22c55e)';
+    if (score >= 50) return 'var(--ps-orange, #f59e0b)';
+    return 'var(--ps-red, #ef4444)';
+  }
+
+  _getHealthLabel(score) {
+    if (score >= 80) return 'healthy';
+    if (score >= 50) return 'degraded';
+    return 'critical';
+  }
+
+  _getModuleStates(zoneId) {
+    const autonomyEntity = this._hass?.states['sensor.pilotsuite_autonomy_status'];
+    if (!autonomyEntity) return [];
+
+    const attrs = autonomyEntity.attributes || {};
+    // Try zone-specific module states
+    const zoneModules = attrs.zone_modules?.[zoneId] || attrs.modules?.[zoneId];
+    if (zoneModules && typeof zoneModules === 'object') {
+      return Object.entries(zoneModules).map(([name, state]) => ({
+        name,
+        state: typeof state === 'string' ? state : (state?.state || 'off'),
+      }));
+    }
+
+    // Fallback: global modules (same for all zones)
+    const globalModules = attrs.modules;
+    if (globalModules && typeof globalModules === 'object' && !Array.isArray(globalModules)) {
+      // Only use if it's a flat module->state map (not zone-keyed)
+      const firstValue = Object.values(globalModules)[0];
+      if (typeof firstValue === 'string') {
+        return Object.entries(globalModules).map(([name, state]) => ({ name, state }));
+      }
+    }
+
+    return [];
+  }
+
+  _getModuleChipColor(state) {
+    switch (state) {
+      case 'active': return 'var(--ps-green, #22c55e)';
+      case 'learning': return 'var(--ps-orange, #f59e0b)';
+      default: return '#6b7280';
+    }
+  }
+
+  _getAutonomyActions(zoneId) {
+    const historyEntity = this._hass?.states['sensor.pilotsuite_autonomy_history'];
+    if (!historyEntity) return [];
+
+    const actions = historyEntity.attributes?.recent_actions;
+    if (!Array.isArray(actions)) return [];
+
+    // Filter for this zone and take last 3
+    const zoneActions = actions
+      .filter(a => a.zone === zoneId || a.zone_id === zoneId || !a.zone)
+      .slice(0, 3);
+
+    return zoneActions;
+  }
+
+  _formatActionTime(timestamp) {
+    if (!timestamp) return '';
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'gerade eben';
+      if (diffMins < 60) return `vor ${diffMins}m`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `vor ${diffHours}h`;
+      return `vor ${Math.floor(diffHours / 24)}d`;
+    } catch {
+      return '';
+    }
   }
 
   _buildMissingTileValue(label, subtitle = '') {
@@ -272,6 +393,58 @@ class StyxZoneCard extends _ZoneBase {
     `;
   }
 
+  _buildHealthBadge(zoneId) {
+    const score = this._getHealthScore(zoneId);
+    if (score === null) return '';
+
+    const color = this._getHealthColor(score);
+    const label = this._getHealthLabel(score);
+
+    return `<span class="health-badge" style="--health-color: ${color}" title="Gesundheit: ${score}% (${label})" aria-label="Zonen-Gesundheit: ${score} Prozent, ${label}">${score}</span>`;
+  }
+
+  _buildModuleChips(zoneId) {
+    const modules = this._getModuleStates(zoneId);
+    if (modules.length === 0) return '';
+
+    const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
+    const chips = modules.map(m => {
+      const color = this._getModuleChipColor(m.state);
+      return `<span class="module-chip" style="--chip-color: ${color}" title="${esc(m.name)}: ${esc(m.state)}" aria-label="${esc(m.name)} ${esc(m.state)}">
+        <span class="module-chip-dot"></span>
+        <span class="module-chip-label">${esc(m.name)}</span>
+      </span>`;
+    }).join('');
+
+    return `<div class="module-chips">${chips}</div>`;
+  }
+
+  _buildAutonomyLog(zoneId) {
+    const actions = this._getAutonomyActions(zoneId);
+    if (actions.length === 0) return '';
+
+    const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
+    const actionItems = actions.map(a => {
+      const timeStr = this._formatActionTime(a.timestamp || a.time);
+      const desc = a.description || a.action || 'Aktion';
+      return `<div class="action-log-item">
+        <span class="action-log-desc">${esc(desc)}</span>
+        <span class="action-log-time">${esc(timeStr)}</span>
+      </div>`;
+    }).join('');
+
+    return `
+      <details class="autonomy-log">
+        <summary class="autonomy-log-header">
+          <span class="mdi-icon">🤖</span>
+          <span>Autonomie-Log (${actions.length})</span>
+        </summary>
+        <div class="action-log-items">
+          ${actionItems}
+        </div>
+      </details>`;
+  }
+
   _buildZoneCard(zone) {
     const esc = typeof window.styxEsc === 'function' ? window.styxEsc : s => s;
     const zoneId = zone.name?.toLowerCase().replace(/\s+/g, '_') || zone.zone_id || 'unknown';
@@ -291,6 +464,10 @@ class StyxZoneCard extends _ZoneBase {
       ? this._buildNeuronBar(neuronActivity)
       : '';
 
+    const healthBadge = this._config.show_health_score ? this._buildHealthBadge(zoneId) : '';
+    const moduleChips = this._config.show_module_states ? this._buildModuleChips(zoneId) : '';
+    const autonomyLog = this._config.show_autonomy_log ? this._buildAutonomyLog(zoneId) : '';
+
     const modeIcon = hasMode ? this._getModeIcon(zone.mode) : 'mdi:home';
     const modeLabel = zone.mode || 'inaktiv';
 
@@ -300,6 +477,7 @@ class StyxZoneCard extends _ZoneBase {
           <div class="zone-info">
             <span class="zone-icon mdi-icon">${this._getZoneIcon(zoneId)}</span>
             <span class="zone-name">${esc(zoneName)}</span>
+            ${healthBadge}
           </div>
           <div class="zone-status ${isActive ? 'active' : ''} ${hasPartialData ? 'partial' : ''}">
             <span class="status-dot"></span>
@@ -316,6 +494,8 @@ class StyxZoneCard extends _ZoneBase {
           </div>
         ` : ''}
 
+        ${moduleChips}
+
         ${moodGauges ? `
           <div class="mood-gauges">
             ${moodGauges}
@@ -323,6 +503,8 @@ class StyxZoneCard extends _ZoneBase {
         ` : ''}
 
         ${neuronBar}
+
+        ${autonomyLog}
 
         ${this._config.show_quick_actions ? `
           <div class="quick-actions">
@@ -601,6 +783,112 @@ class StyxZoneCard extends _ZoneBase {
         .action-btn:active {
           transform: scale(0.95);
         }
+        /* v14.2.0: Health Score Badge */
+        .health-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 28px;
+          height: 20px;
+          padding: 0 5px;
+          border-radius: 10px;
+          font-size: 11px;
+          font-weight: 700;
+          color: #fff;
+          background: var(--health-color, #6b7280);
+          line-height: 1;
+          margin-left: 4px;
+          box-shadow: 0 0 6px color-mix(in srgb, var(--health-color, #6b7280) 50%, transparent);
+        }
+
+        /* v14.2.0: Module State Chips */
+        .module-chips {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-bottom: 10px;
+        }
+        .module-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 8px;
+          border-radius: 999px;
+          font-size: 11px;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          background: rgba(30, 42, 54, 0.6);
+          border: 1px solid color-mix(in srgb, var(--chip-color, #6b7280) 40%, transparent);
+        }
+        .module-chip-dot {
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--chip-color, #6b7280);
+          box-shadow: 0 0 4px color-mix(in srgb, var(--chip-color, #6b7280) 60%, transparent);
+        }
+        .module-chip-label {
+          text-transform: capitalize;
+        }
+
+        /* v14.2.0: Autonomy Action Mini-Log */
+        .autonomy-log {
+          margin: 10px 0 0;
+          border-radius: 6px;
+          overflow: hidden;
+        }
+        .autonomy-log-header {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          cursor: pointer;
+          padding: 6px 8px;
+          background: rgba(30, 42, 54, 0.5);
+          border-radius: 6px;
+          user-select: none;
+          list-style: none;
+        }
+        .autonomy-log-header::-webkit-details-marker {
+          display: none;
+        }
+        .autonomy-log[open] .autonomy-log-header {
+          border-radius: 6px 6px 0 0;
+        }
+        .autonomy-log-header:hover {
+          background: rgba(30, 42, 54, 0.8);
+        }
+        .action-log-items {
+          background: rgba(30, 42, 54, 0.3);
+          padding: 4px 8px;
+          border-radius: 0 0 6px 6px;
+        }
+        .action-log-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 4px 0;
+          font-size: 11px;
+          border-bottom: 1px solid rgba(38, 51, 67, 0.5);
+        }
+        .action-log-item:last-child {
+          border-bottom: none;
+        }
+        .action-log-desc {
+          color: var(--ps-text, var(--primary-text-color, #e6eef6));
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          margin-right: 8px;
+        }
+        .action-log-time {
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          white-space: nowrap;
+          font-size: 10px;
+        }
+
         .no-zones {
           text-align: center;
           padding: 40px;
@@ -647,6 +935,16 @@ class StyxZoneCard extends _ZoneBase {
         }
       });
     });
+
+    // Close other autonomy logs when one opens (accordion behavior)
+    const details = this.shadowRoot.querySelectorAll('.autonomy-log');
+    details.forEach(d => {
+      d.addEventListener('toggle', () => {
+        if (d.open) {
+          details.forEach(other => { if (other !== d) other.open = false; });
+        }
+      });
+    });
   }
 
   _toggleLight(zoneId) {
@@ -684,7 +982,7 @@ class StyxZoneCard extends _ZoneBase {
 if (typeof registerStyxCard === 'function') {
   registerStyxCard('styx-zone-card', StyxZoneCard, {
     name: 'PilotSuite Zonen-Dashboard',
-    description: 'Zonen-Status mit Mood Gauges, Neuronenaktivitaet und Schnellaktionen.',
+    description: 'Zonen-Status mit Health Score, Module States, Mood Gauges, Neuronenaktivitaet, Autonomie-Log und Schnellaktionen.',
   });
 } else {
   customElements.define('styx-zone-card', StyxZoneCard);
@@ -692,7 +990,7 @@ if (typeof registerStyxCard === 'function') {
   window.customCards.push({
     type: 'styx-zone-card',
     name: 'PilotSuite Zonen-Dashboard',
-    description: 'Zonen-Status mit Mood Gauges, Neuronenaktivitaet und Schnellaktionen.',
+    description: 'Zonen-Status mit Health Score, Module States, Mood Gauges, Neuronenaktivitaet, Autonomie-Log und Schnellaktionen.',
     preview: true,
   });
 }

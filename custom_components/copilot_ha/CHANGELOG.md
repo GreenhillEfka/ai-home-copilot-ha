@@ -5,6 +5,27 @@ All notable changes to PilotSuite will be documented in this file.
 > Hinweis (2026-02-22): Die aktive Release-Historie wird im Repository-Root gepflegt: `CHANGELOG.md` (7.7.x Linie).
 > Diese Datei enthaelt vor allem aeltere 0.x Historie und bleibt als Archiv erhalten.
 
+## [14.2.0] - 2026-03-14
+
+### Added
+- **Autonomie-Webhook-Handler**: autonomy_executed, autonomy_failed, scene_captured, scene_applied, module_zone_state_changed (5 neue Event-Typen)
+- **Autonomie-Sensoren**: AutonomyStatusSensor (aktiv/lernend/inaktiv), AutonomyHistorySensor (letzte 10 Aktionen), ZoneHealthOverviewSensor (Durchschnitts-Score)
+- **Per-Zone Modul-Steuerung**: 6 Select-Entities pro Zone (Licht, Musik, Bewegung, Stimmung, Klima, Rollladen) mit active/learning/off
+- **Szenen-Buttons**: ZoneSceneCaptureButton pro Zone zum Erfassen des aktuellen Zustands
+- **Coordinator API**: async_get_autonomy_dashboard(), async_get_zone_health(), async_get_zone_aggregates(), async_set_zone_module_state(), async_capture_zone_scene(), async_apply_zone_scene()
+- **Polling**: Autonomie-Dashboard + Zone-Health im _async_update_data() Zyklus
+- **styx-zone-card.js v2.0**: Health-Score Badge, Modul-State Chips, Autonomie-Aktionslog
+- **Dashboard**: Autonomie-System + Zonen-Gesundheit Karten
+- **Constants**: CONF_AUTONOMY_ENABLED, CONF_AUTONOMY_AUTO_EXECUTE, CONF_ZONE_HEALTH_POLL_ENABLED
+
+### Changed
+- Webhook-Handler unterstützt 12 Event-Typen (zuvor 7)
+- Zone-Card zeigt erweiterte Modul-Informationen
+
+### Tests
+- 387 passed, 0 failed, 41 skipped (Baseline unveraendert)
+- Webhook-Contract-Tests fuer neue Event-Typen erweitert
+
 ## [7.9.0] - 2026-03-11
 
 ### Zone Presence Trigger Sensors

@@ -162,6 +162,11 @@ CANONICAL_CASES = [
     ("mood", {"mood": "calm", "confidence": 0.9}),
     ("neuron", {"neurons": {"n1": {"active": True}}}),
     ("suggestion", {"title": "Test suggestion", "action": "noop"}),
+    ("autonomy_executed", {"zone_id": "wohnbereich", "module_id": "licht", "actions": []}),
+    ("autonomy_failed", {"zone_id": "wohnbereich", "error": "timeout"}),
+    ("scene_captured", {"zone_id": "wohnbereich", "scene_id": "s1"}),
+    ("scene_applied", {"zone_id": "wohnbereich", "scene_id": "s1"}),
+    ("module_zone_state_changed", {"zone_id": "wohnbereich", "module_id": "licht", "new_state": "active"}),
 ]
 
 LEGACY_CASES = [
@@ -560,6 +565,53 @@ async def test_missing_token_returns_invalid_token_with_structured_error(hass, c
     assert body["ok"] is False
     assert body["error"]["code"] == "invalid_token"
     assert body["error"]["details"]["sources"] == ["missing"]
+
+
+@pytest.mark.asyncio
+async def test_autonomy_executed_merges_history_and_fires_event(hass, coordinator):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+    request = _FakeRequest(
+        payload={"type": "autonomy_executed", "data": {
+            "zone_id": "wohnbereich", "module_id": "licht",
+            "actions": [{"type": "turn_on_light"}], "mood": "relax",
+        }},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+    assert response.status == 200
+    coordinator.async_set_updated_data.assert_called_once()
+    hass.bus.async_fire.assert_called_once()
+    call_args = hass.bus.async_fire.call_args
+    assert call_args[0][0] == "copilot_ha_autonomy_executed"
+
+
+@pytest.mark.asyncio
+async def test_module_zone_state_updates_coordinator(hass, coordinator):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+    request = _FakeRequest(
+        payload={"type": "module_zone_state_changed", "data": {
+            "zone_id": "wohnbereich", "module_id": "musik", "new_state": "learning",
+        }},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+    assert response.status == 200
+    coordinator.async_set_updated_data.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_scene_captured_fires_ha_event(hass, coordinator):
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+    request = _FakeRequest(
+        payload={"type": "scene_captured", "data": {
+            "zone_id": "kueche", "scene_id": "s1", "name": "Test",
+        }},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+    response = await handler(hass, "webhook-test-id", request)
+    assert response.status == 200
+    hass.bus.async_fire.assert_called_once()
+    assert hass.bus.async_fire.call_args[0][0] == "copilot_ha_scene_captured"
 
 
 @pytest.mark.asyncio
