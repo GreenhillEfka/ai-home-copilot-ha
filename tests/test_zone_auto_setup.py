@@ -3,7 +3,10 @@ import pytest
 
 from custom_components.copilot_ha.zone_auto_setup import (
     HABITUS_ZONE_TEMPLATES,
+    ROLE_NEURON_TYPE_MAP,
+    NEURON_TAG_META,
     aggregate_areas_to_habitus_zones,
+    async_create_neuron_tags_from_zones,
     detect_entity_role,
     detect_entity_tags,
     _is_virtual_area,
@@ -324,3 +327,55 @@ class TestTemplateCompleteness:
             f"{room_name} matched {template['zone_id']} instead of {expected_zone}"
         )
         assert conf >= 0.6, f"{room_name} confidence {conf} too low"
+
+
+class TestNeuronTypeMapping:
+    """Test role → neuron type classification."""
+
+    def test_temperature_is_context(self):
+        assert ROLE_NEURON_TYPE_MAP["temperature"] == "context"
+
+    def test_humidity_is_context(self):
+        assert ROLE_NEURON_TYPE_MAP["humidity"] == "context"
+
+    def test_energy_is_context(self):
+        assert ROLE_NEURON_TYPE_MAP["energy"] == "context"
+
+    def test_motion_is_state(self):
+        assert ROLE_NEURON_TYPE_MAP["motion"] == "state"
+
+    def test_door_is_state(self):
+        assert ROLE_NEURON_TYPE_MAP["door"] == "state"
+
+    def test_lock_is_state(self):
+        assert ROLE_NEURON_TYPE_MAP["lock"] == "state"
+
+    def test_lights_is_mood(self):
+        assert ROLE_NEURON_TYPE_MAP["lights"] == "mood"
+
+    def test_media_is_mood(self):
+        assert ROLE_NEURON_TYPE_MAP["media"] == "mood"
+
+    def test_all_three_types_covered(self):
+        types = set(ROLE_NEURON_TYPE_MAP.values())
+        assert types == {"context", "state", "mood"}
+
+    def test_neuron_tag_meta_has_all_types(self):
+        assert set(NEURON_TAG_META.keys()) == {"context", "state", "mood"}
+
+    def test_each_meta_has_color_and_icon(self):
+        for ntype, meta in NEURON_TAG_META.items():
+            assert "color" in meta, f"{ntype} missing color"
+            assert "icon" in meta, f"{ntype} missing icon"
+
+    def test_context_roles_are_environmental(self):
+        context_roles = {r for r, t in ROLE_NEURON_TYPE_MAP.items() if t == "context"}
+        assert context_roles == {"temperature", "humidity", "co2", "pressure", "energy", "power"}
+
+    def test_state_roles_are_physical(self):
+        state_roles = {r for r, t in ROLE_NEURON_TYPE_MAP.items() if t == "state"}
+        assert state_roles == {"motion", "door", "window", "lock", "cover", "heating"}
+
+    def test_mood_roles_are_comfort(self):
+        mood_roles = {r for r, t in ROLE_NEURON_TYPE_MAP.items() if t == "mood"}
+        assert mood_roles == {"lights", "brightness", "media", "noise"}

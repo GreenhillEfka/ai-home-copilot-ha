@@ -188,6 +188,41 @@ ROLE_TAG_MAP = {
     "power": "energie",
 }
 
+# ── Neuron Type Mapping ────────────────────────────────────────────
+# Maps entity role → neuron layer for automatic brain feed assignment.
+# Context: background environmental data (temperature, humidity, energy)
+# State:   current physical conditions (motion, doors, locks, covers)
+# Mood:    emotional/comfort signals (lighting, media, noise levels)
+
+ROLE_NEURON_TYPE_MAP: dict[str, str] = {
+    # Context layer — environmental sensors, background data
+    "temperature": "context",
+    "humidity": "context",
+    "co2": "context",
+    "pressure": "context",
+    "energy": "context",
+    "power": "context",
+    # State layer — physical conditions, binary states
+    "motion": "state",
+    "door": "state",
+    "window": "state",
+    "lock": "state",
+    "cover": "state",
+    "heating": "state",
+    # Mood layer — comfort and emotional signals
+    "lights": "mood",
+    "brightness": "mood",
+    "media": "mood",
+    "noise": "mood",
+}
+
+# Neuron tag display metadata
+NEURON_TAG_META: dict[str, dict[str, str]] = {
+    "context": {"color": "#60a5fa", "icon": "mdi:thermometer"},
+    "state": {"color": "#34d399", "icon": "mdi:motion-sensor"},
+    "mood": {"color": "#f472b6", "icon": "mdi:emoticon-outline"},
+}
+
 
 def _normalize_text(text: str) -> str:
     """Normalize text for keyword matching (lowercase, strip accents)."""
@@ -343,6 +378,83 @@ def detect_entity_tags(entity_id: str, role: str) -> list[str]:
         tags.append("styx")
 
     return list(dict.fromkeys(tags))  # deduplicate preserving order
+
+
+async def async_create_neuron_tags_from_zones(
+    hass: HomeAssistant,
+    zones: list,
+) -> dict[str, list[str]]:
+    """Auto-create neuron-typed EntityTags from zone entities + roles.
+
+    For each zone, inspects entity roles and creates neuron tags:
+      - neuron_context_{zone_id}: temperature, humidity, co2, energy, ...
+      - neuron_state_{zone_id}:   motion, doors, locks, covers, ...
+      - neuron_mood_{zone_id}:    lights, media, brightness, ...
+
+    Returns mapping of neuron_type → list[entity_id] for config entry update.
+    """
+    from .entity_tags_store import async_upsert_tag
+
+    global_context: list[str] = []
+    global_state: list[str] = []
+    global_mood: list[str] = []
+
+    for zone in zones:
+        role_entities = zone.entities if isinstance(zone.entities, dict) else {}
+        if not role_entities:
+            continue
+
+        zone_short = zone.zone_id.replace("zone:", "")
+        zone_name = zone.name
+
+        neuron_buckets: dict[str, list[str]] = {
+            "context": [],
+            "state": [],
+            "mood": [],
+        }
+
+        for role, entity_ids in role_entities.items():
+            neuron_type = ROLE_NEURON_TYPE_MAP.get(role)
+            if not neuron_type:
+                continue
+            eids = list(entity_ids) if isinstance(entity_ids, (list, tuple)) else []
+            neuron_buckets[neuron_type].extend(eids)
+
+        for ntype, entity_ids in neuron_buckets.items():
+            if not entity_ids:
+                continue
+
+            tag_id = f"neuron_{ntype}_{zone_short}"
+            tag_name = f"Neuron {ntype.title()} — {zone_name}"
+            meta = NEURON_TAG_META.get(ntype, {})
+
+            await async_upsert_tag(
+                hass,
+                tag_id=tag_id,
+                name=tag_name,
+                entity_ids=entity_ids,
+                color=meta.get("color"),
+                icon=meta.get("icon", "mdi:neuron"),
+                module_hints=[f"neuron_{ntype}"],
+            )
+
+            if ntype == "context":
+                global_context.extend(entity_ids)
+            elif ntype == "state":
+                global_state.extend(entity_ids)
+            elif ntype == "mood":
+                global_mood.extend(entity_ids)
+
+    _LOGGER.info(
+        "Auto-created neuron tags: %d context, %d state, %d mood entities",
+        len(global_context), len(global_state), len(global_mood),
+    )
+
+    return {
+        "context": list(dict.fromkeys(global_context)),
+        "state": list(dict.fromkeys(global_state)),
+        "mood": list(dict.fromkeys(global_mood)),
+    }
 
 
 def aggregate_areas_to_habitus_zones(
@@ -560,6 +672,19 @@ async def async_auto_create_habitus_zones(
             await tag_zone_entities(hass, zone.zone_id, list(zone.entity_ids))
         except Exception:  # noqa: BLE001
             _LOGGER.debug("Could not auto-tag entities for zone %s", zone.name)
+
+    # Auto-create neuron tags from zone entities + roles.
+    # This feeds the Brain/Neuron system with per-zone context/state/mood entities.
+    try:
+        neuron_map = await async_create_neuron_tags_from_zones(hass, zones)
+        _LOGGER.info(
+            "Neuron tags created: %d context, %d state, %d mood",
+            len(neuron_map.get("context", [])),
+            len(neuron_map.get("state", [])),
+            len(neuron_map.get("mood", [])),
+        )
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Could not auto-create neuron tags from zones")
 
     _LOGGER.info(
         "Zone auto-setup complete: %d zones created from %d HA areas",
