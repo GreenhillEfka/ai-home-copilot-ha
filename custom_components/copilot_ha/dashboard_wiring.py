@@ -46,19 +46,20 @@ _NOTIFICATION_ID = "copilot_ha_dashboard_wiring"
 
 
 def _snippet_content() -> str:
+    # Hide YAML dashboards from sidebar — storage-mode is the primary dashboard now.
     return (
         "copilot-pilotsuite:\n"
         "  mode: yaml\n"
-        "  title: \"PilotSuite - Styx\"\n"
+        "  title: \"PilotSuite (Legacy)\"\n"
         "  icon: mdi:robot-outline\n"
-        "  show_in_sidebar: true\n"
+        "  show_in_sidebar: false\n"
         f"  filename: \"{PRIMARY_DASHBOARD_DIR}/pilotsuite_dashboard_latest.yaml\"\n"
         "\n"
         "copilot-habitus-zones:\n"
         "  mode: yaml\n"
-        "  title: \"PilotSuite - Habitus Zones\"\n"
+        "  title: \"PilotSuite Zones (Legacy)\"\n"
         "  icon: mdi:layers-outline\n"
-        "  show_in_sidebar: true\n"
+        "  show_in_sidebar: false\n"
         f"  filename: \"{PRIMARY_DASHBOARD_DIR}/habitus_zones_dashboard_latest.yaml\"\n"
     )
 
@@ -193,7 +194,7 @@ def _merge_dashboards_into_existing_lovelace(config_text: str) -> tuple[str, boo
                 f"{field_indent}mode: yaml",
                 f'{field_indent}title: "PilotSuite - Styx"',
                 f"{field_indent}icon: mdi:robot-outline",
-                f"{field_indent}show_in_sidebar: true",
+                f"{field_indent}show_in_sidebar: false",
                 f'{field_indent}filename: "{PRIMARY_DASHBOARD_DIR}/pilotsuite_dashboard_latest.yaml"',
             ]
         )
@@ -206,7 +207,7 @@ def _merge_dashboards_into_existing_lovelace(config_text: str) -> tuple[str, boo
                 f"{field_indent}mode: yaml",
                 f'{field_indent}title: "PilotSuite - Habitus Zones"',
                 f"{field_indent}icon: mdi:layers-outline",
-                f"{field_indent}show_in_sidebar: true",
+                f"{field_indent}show_in_sidebar: false",
                 f'{field_indent}filename: "{PRIMARY_DASHBOARD_DIR}/habitus_zones_dashboard_latest.yaml"',
             ]
         )
