@@ -303,7 +303,7 @@ class CandidatePollerModule:
             await asyncio.sleep(30)
             await self._poll_once(ctx.hass, ctx.entry)
 
-        ctx.hass.async_create_task(_initial_poll())
+        ctx.hass.async_create_background_task(_initial_poll(), "pilotsuite_initial_poll")
         _LOGGER.info("CandidatePoller: started (interval=%s)", DEFAULT_POLL_INTERVAL)
 
     async def _register_mining_service(self, hass: HomeAssistant, entry: ConfigEntry) -> None:

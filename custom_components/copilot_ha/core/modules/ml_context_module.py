@@ -112,7 +112,9 @@ class MLContextModule(CopilotModule):
                 await self._connect_mood_module()
                 
                 # Start periodic update
-                self._periodic_task = hass.async_create_task(self._periodic_update())
+                self._periodic_task = hass.async_create_background_task(
+                    self._periodic_update(), "pilotsuite_ml_context_update"
+                )
                 
             return True
             
