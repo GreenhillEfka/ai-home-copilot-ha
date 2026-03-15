@@ -532,7 +532,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Auto-generate dashboard YAML files on first setup.
     try:
-        from .dashboard_wiring import async_ensure_lovelace_dashboard_wiring
+        from .dashboard_wiring import (
+            async_ensure_lovelace_dashboard_wiring,
+            async_ensure_storage_dashboard,
+        )
         from .habitus_dashboard import async_generate_habitus_zones_dashboard
         from .pilotsuite_dashboard import async_generate_pilotsuite_dashboard
 
@@ -541,10 +544,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await async_generate_pilotsuite_dashboard(hass, entry, notify=False)
             await async_generate_habitus_zones_dashboard(hass, entry.entry_id, notify=False)
             wiring_state = await async_ensure_lovelace_dashboard_wiring(hass)
+            # Storage-mode dashboard works immediately (no HA restart needed)
+            storage_state = await async_ensure_storage_dashboard(hass)
             entry_store["_dashboards_generated"] = True
             _LOGGER.info(
-                "PilotSuite dashboards auto-generated on first setup (wiring=%s)",
+                "PilotSuite dashboards auto-generated (wiring=%s, storage=%s)",
                 wiring_state,
+                storage_state,
             )
     except Exception:
         _LOGGER.exception("Failed to auto-generate PilotSuite dashboards")
