@@ -5,6 +5,69 @@ All notable changes to PilotSuite will be documented in this file.
 > Hinweis (2026-02-22): Die aktive Release-Historie wird im Repository-Root gepflegt: `CHANGELOG.md` (7.7.x Linie).
 > Diese Datei enthaelt vor allem aeltere 0.x Historie und bleibt als Archiv erhalten.
 
+## [14.4.2] - 2026-03-15
+
+### Added
+- **Neuron Feed Pipeline**: Vollstaendige Zone→Neuron→Brain→RAG Pipeline
+  - Auto-Erstellung von Neuron-Tags aus bestehenden Habitus-Zonen beim Startup
+  - `ROLE_NEURON_TYPE_MAP`: 16 Entity-Rollen → 3 Neurontypen (context/state/mood)
+  - NeuronFeedTagSwitch pro Tag: Enable/Disable der Neuronbefeuerung
+  - `SIGNAL_NEURON_FEED_CHANGED` Dispatcher-Signal bei Toggle
+- **Event Envelope Enrichment**: Events enthalten jetzt `neuron_tags` Attribut fuer Core-seitige Layer-Klassifikation
+- **Events Forwarder Integration**: Neuron-Feed-Filter in `_refresh_subscriptions()` und `_handle_state()`
+  - Cached exclusion set, fruehes Return fuer nicht-gefuetterte Entities
+  - Automatische Subscription-Aktualisierung bei Feed-Aenderungen
+- **Coordinator API**: `async_sync_habitus_config()`, `async_get_habitus_config()`, `async_get_mood_history()`, `async_get_mood_trend()`
+- **Habitus Config Sync**: Einmaliger Push der HA Mining-Konfiguration an Core beim ersten Coordinator-Refresh
+
+### Fixed
+- **HomeKit Entity Platform Split**: ButtonEntity in `button.py`, SensorEntity in `sensor.py` (zuvor silent failure durch falsche Plattform-Zuordnung)
+- **Neuron Feed Signal**: `async_dispatcher_send` korrekt gemockt in Tests
+
+### Tests
+- 387+ passed, neue Tests fuer neuron_feed Signal und Pipeline-Integration
+
+---
+
+## [14.4.1] - 2026-03-15
+
+### Added
+- **Auto-Neuron-Tags**: Automatische Erstellung von Neuron-Tags aus bestehenden Habitus-Zonen
+  - `entity_tags_module.py`: `_ensure_neuron_tags()` bei Setup wenn keine neuron_* Tags vorhanden
+  - `zone_auto_setup.py`: `async_create_neuron_tags_from_zones()`
+
+### Fixed
+- **HomeKit Import**: Korrekte Import-Pfade fuer HomeKit-Entities
+
+---
+
+## [14.4.0] - 2026-03-15
+
+### Added
+- **FrontendModule**: Neues Runtime-Modul fuer Frontend-Entitaeten
+- **Zone Automation Entities**: Per-Zone Slider/Switches fuer Light+Music Konfiguration
+  - `zone_automation_entities.py`: 10 Entity-Typen pro Zone (Brightness, Delays, Volumes)
+  - `ZoneAutomationNumber`, `ZoneAutomationSwitch` fuer granulare Steuerung
+- **Neuron Feed Store**: `neuron_feed_store.py` mit `async_is_entity_neuron_fed()`
+- **LLM Config Entities**: Conversation-Model-Auswahl ueber HA-Entities
+- **Update Check**: `modules_ready` Flag fuer sauberen Startup-Status
+
+### Changed
+- **STT/TTS Lazy Init**: Speech-Services werden erst bei Bedarf initialisiert
+- **Conversation Error Sanitization**: LLM-Fehlermeldungen werden fuer den User bereinigt
+
+### Tests
+- 387 passed, 0 failed, 41 skipped
+
+---
+
+## [14.3.18] - 2026-03-15
+
+### Fixed
+- **HA 2026.3 Kompatibilitaet**: LovelaceData Dataclass, MappingProxy Config, Startup-Blocking entfernt
+
+---
+
 ## [14.3.17] - 2026-03-15
 
 ### Fixed

@@ -2,6 +2,58 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.4.2] - 2026-03-15
+
+### Vollstaendige Zone→Neuron→Brain→RAG Pipeline
+
+#### Added
+- **Neuron Feed Pipeline**: Auto-Erstellung von Neuron-Tags aus Habitus-Zonen beim Startup
+- **ROLE_NEURON_TYPE_MAP**: 16 Entity-Rollen → 3 Neurontypen (context/state/mood)
+- **NeuronFeedTagSwitch**: Enable/Disable der Neuronbefeuerung pro Tag
+- **Event Envelope Enrichment**: Events enthalten `neuron_tags` Attribut fuer Core-seitige Layer-Klassifikation
+- **Events Forwarder**: Neuron-Feed-Filter mit Cached Exclusion Set und automatischer Subscription-Aktualisierung
+- **Coordinator API**: `async_sync_habitus_config()`, `async_get_mood_history()`, `async_get_mood_trend()`
+- **Habitus Config Sync**: Einmaliger Push der HA Mining-Konfiguration an Core
+
+#### Fixed
+- **HomeKit Entity Platform Split**: ButtonEntity korrekt in `button.py`, SensorEntity in `sensor.py`
+- **Neuron Feed Signal**: SIGNAL_NEURON_FEED_CHANGED Dispatcher korrekt verdrahtet
+
+### Compatibility
+- HA v14.4.2 <-> Core v14.4.2 (Paired Release)
+- Tests: 387+ passed
+
+---
+
+## [14.4.1] - 2026-03-15
+
+### Auto-Neuron-Tags + HomeKit Fix
+
+#### Added
+- Auto-Erstellung von Neuron-Tags aus bestehenden Habitus-Zonen (`_ensure_neuron_tags()`)
+- `async_create_neuron_tags_from_zones()` in zone_auto_setup
+
+#### Fixed
+- HomeKit Import-Pfade korrigiert
+
+---
+
+## [14.4.0] - 2026-03-15
+
+### FrontendModule, Neuron Feed, LLM Config
+
+#### Added
+- **Zone Automation Entities**: Per-Zone Slider/Switches (Brightness, Delays, Volumes)
+- **Neuron Feed Store**: `async_is_entity_neuron_fed()` fuer Feed-State-Tracking
+- **LLM Config Entities**: Conversation-Model-Auswahl ueber HA-Entities
+- **modules_ready Flag**: Sauberer Startup-Status
+
+#### Changed
+- STT/TTS Lazy Init — Speech-Services erst bei Bedarf
+- Conversation Error Sanitization
+
+---
+
 ## [14.3.18] - 2026-03-15
 
 ### Fix: HA 2026.3 Kompatibilitaet, Startup-Blockade, Config-Persistierung
