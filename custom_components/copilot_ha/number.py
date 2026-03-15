@@ -109,4 +109,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     if media_coordinator_v2 is not None:
         entities.append(VolumeControlNumber(media_coordinator_v2))
 
+    # Zone automation number sliders (brightness, delays, volume per zone)
+    try:
+        from .zone_automation_entities import create_zone_automation_entities
+        from .habitus_zones_store_v2 import async_get_zones_v2
+
+        zones = await async_get_zones_v2(hass, entry.entry_id)
+        zone_list = [
+            {"zone_id": z.zone_id, "name": getattr(z, "name_de", None) or z.name}
+            for z in zones
+        ]
+        result = create_zone_automation_entities(coordinator, zone_list)
+        entities.extend(result.get("number", []))
+    except Exception:
+        _LOGGER.debug("Zone automation number entities skipped (zones not configured)")
+
     async_add_entities(entities, True)
