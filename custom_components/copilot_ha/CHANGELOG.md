@@ -5,6 +5,35 @@ All notable changes to PilotSuite will be documented in this file.
 > Hinweis (2026-02-22): Die aktive Release-Historie wird im Repository-Root gepflegt: `CHANGELOG.md` (7.7.x Linie).
 > Diese Datei enthaelt vor allem aeltere 0.x Historie und bleibt als Archiv erhalten.
 
+## [14.3.17] - 2026-03-15
+
+### Fixed
+- Dashboard Wiring laeuft jetzt IMMER bei Setup/Reload (nicht nur beim ersten Setup)
+- YAML-Dashboards `show_in_sidebar: false` wird zuverlaessig geschrieben
+- Sidebar zeigt nur noch 1 PilotSuite Dashboard (Storage-Mode)
+
+### Changed
+- Wiring + Storage-Dashboard aus `_dashboards_generated` Guard herausgezogen
+- YAML-Generierung bleibt einmalig
+
+---
+
+## [14.3.0-14.3.16] - 2026-03-14/15
+
+### Added
+- Storage-Mode Dashboard (kein HA-Restart noetig)
+- Thin-Client Prinzip: nur Haushalt, Zonen, Chat im HA-Frontend
+- System Health Dashboard, Cloud API Config UI
+- Dashboard Wiring Auto-Merge in bestehende lovelace-Bloecke
+
+### Fixed
+- YAML-Dashboards aus Sidebar entfernt
+- Zone-Card v2.1.0 Entity-Namen, Prefix-Normalisierung
+- Coordinator Webhook-Daten Persistenz
+- Null-Safety fuer postJSON/fetchJSON
+
+---
+
 ## [14.2.0] - 2026-03-14
 
 ### Added

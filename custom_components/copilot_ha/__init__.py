@@ -530,28 +530,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to register Lovelace card resources")
 
-    # Auto-generate dashboard YAML files on first setup.
+    # Dashboard setup: always update wiring + ensure storage dashboard exists.
     try:
         from .dashboard_wiring import (
             async_ensure_lovelace_dashboard_wiring,
             async_ensure_storage_dashboard,
         )
-        from .habitus_dashboard import async_generate_habitus_zones_dashboard
-        from .pilotsuite_dashboard import async_generate_pilotsuite_dashboard
+
+        # Always update YAML snippet (hides YAML dashboards from sidebar)
+        wiring_state = await async_ensure_lovelace_dashboard_wiring(hass)
+        # Storage-mode dashboard works immediately (no HA restart needed)
+        storage_state = await async_ensure_storage_dashboard(hass)
 
         entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
         if isinstance(entry_store, dict) and not entry_store.get("_dashboards_generated"):
+            from .habitus_dashboard import async_generate_habitus_zones_dashboard
+            from .pilotsuite_dashboard import async_generate_pilotsuite_dashboard
             await async_generate_pilotsuite_dashboard(hass, entry, notify=False)
             await async_generate_habitus_zones_dashboard(hass, entry.entry_id, notify=False)
-            wiring_state = await async_ensure_lovelace_dashboard_wiring(hass)
-            # Storage-mode dashboard works immediately (no HA restart needed)
-            storage_state = await async_ensure_storage_dashboard(hass)
             entry_store["_dashboards_generated"] = True
-            _LOGGER.info(
-                "PilotSuite dashboards auto-generated (wiring=%s, storage=%s)",
-                wiring_state,
-                storage_state,
-            )
+
+        _LOGGER.info(
+            "PilotSuite dashboards setup (wiring=%s, storage=%s)",
+            wiring_state,
+            storage_state,
+        )
     except Exception:
         _LOGGER.exception("Failed to auto-generate PilotSuite dashboards")
 
