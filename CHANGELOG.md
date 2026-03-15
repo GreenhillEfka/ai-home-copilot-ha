@@ -2,6 +2,74 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.3.17] - 2026-03-15
+
+### Fix: Dashboard Wiring immer aktualisieren
+
+#### Fixed
+- **Dashboard Wiring**: `async_ensure_lovelace_dashboard_wiring()` und `async_ensure_storage_dashboard()` laufen jetzt IMMER bei Setup/Reload, nicht nur beim ersten Setup
+- **YAML-Dashboards**: Snippet-Datei wird bei jedem Reload aktualisiert (vorher durch `_dashboards_generated` Guard uebersprungen)
+- **Sidebar-Duplikate**: YAML-Dashboards `show_in_sidebar: false` wird jetzt zuverlaessig geschrieben
+
+#### Changed
+- Dashboard-Wiring und Storage-Dashboard-Erstellung aus dem `_dashboards_generated`-Guard herausgezogen
+- YAML-Dashboard-Generierung bleibt weiterhin einmalig (Guard gilt nur noch fuer `pilotsuite_dashboard` und `habitus_zones_dashboard`)
+
+### Compatibility
+- HA v14.3.17 <-> Core v14.3.17
+- Migration required: no
+- Breaking Changes: keine
+
+### Tests
+- 387 passed, 0 failed, 41 skipped
+
+---
+
+## [14.3.16] - 2026-03-15
+
+### Fix: YAML-Dashboards aus Sidebar entfernen
+
+#### Fixed
+- **YAML Snippet**: `show_in_sidebar: false` fuer beide YAML-Dashboards (copilot-pilotsuite, copilot-habitus-zones)
+- **Storage Dashboard**: Thin-Client Prinzip — nur Haushalt, Zonen, Chat (3 Views)
+
+---
+
+## [14.3.15] - 2026-03-15
+
+### Fix: Thin-Client Dashboard
+
+#### Changed
+- **Storage Dashboard**: Reduziert auf 3 Views (Haushalt, Zonen, Chat) — Brain, Neurons, System gehoeren ins Core Backend
+
+---
+
+## [14.3.14] - 2026-03-15
+
+### Fix: Storage-Mode Dashboard + Ingress Detection
+
+#### Added
+- **Storage-Mode Dashboard**: `async_ensure_storage_dashboard()` erstellt Lovelace Dashboard ohne HA-Restart
+- **Dashboard Wiring Merge**: `_merge_dashboards_into_existing_lovelace()` kann PilotSuite-Dashboards in bestehende lovelace-Bloecke injizieren
+
+---
+
+## [14.3.0] - 2026-03-14
+
+### System Health + Cloud API + Blueprint Fixes
+
+#### Added
+- System Health Dashboard: CPU%, RAM, Disk, Uptime, Service-Verfuegbarkeit
+- Cloud API Config UI im Dashboard konfigurierbar
+- Blueprint-Registrierung: automations_bp + onboarding_bp verdrahtet
+
+#### Fixed
+- Null-Safety: postJSON(), fetchJSON() Aufrufer abgesichert
+- Zone-Card v2.1.0: Entity-Namen deutsch, zone: Prefix-Normalisierung
+- Coordinator: Webhook-Daten ueber Refreshes erhalten
+
+---
+
 ## [13.10.0] - 2026-03-13
 
 ### Quality Release — Paired mit Core v13.10.0
@@ -437,3 +505,83 @@ Alle P2 Security Issues wurden im Core implementiert und sind hier übernommen:
 - Format: lowercase, underscores, optional dot-prefix
 
 ---
+
+## [v12.0.0 - v12.15.0] - 2026-03-01 bis 2026-03-02
+
+### Phase 12 — RAG Conversation, Connection Pooling, Security Hardening
+
+- **RAG Conversation** (v12.1.0): `pilotSuite_rag_conversation` — Hybrid Search mit SearXNG-Integration
+- **Connection Pooling** (v12.13.0): 28.5x schnellere API-Responses, Hybrid Cache (Redis + LRU), Query Optimizer
+- **Security Hardening**: WebSocket Auth, Neuron State Override Protection, Zone-ID Sanitization, Rate-Limiting
+- **Dashboard**: 3D Vision (Three.js), Energy Forecast, Swagger UI, Prometheus Monitoring, Voice Integration
+- **HA Auto-Discovery** (v12.8.0): Habitus Dashboard, Zone Matching, Task Queue System
+- **Codequalitaet**: 2201 Tests (Phase 5/6 production-ready), 8 kritische Bugs behoben
+
+---
+
+## [v11.1.0 - v11.9.0] - 2026-02-27 bis 2026-03-01
+
+### Phase 11 — Dual-Repo Architektur, RAG Hybrid Search, Phase 5/6 APIs
+
+- **Dual-Repo Architektur** (v11.1.0): System Message Merge, MUPL Feedback-Loop, HA-Core Sync-Protokoll
+- **RAG Hybrid Search** (v11.5.0+): BM25 + Semantic mit RRF Fusion, SearXNG-Integration
+- **Phase 5 APIs** (v11.3.0): Sharing, Notifications, Collective Intelligence — Integration Tests komplett
+- **HA Notify Adapter**: Push-Notifications aus Core an HA
+- **Zone-Editor v1** (v11.7.0): UX Dashboard Foundation, Frontend Zone-Dashboard
+- **Neural Confidence Hardening** (v11.2.0): Docs Freshness Gate, Context-ID SHA256 Hashing
+- **Deprecation Fixes**: `datetime.utcnow()` durch `datetime.now(UTC)` ersetzt
+
+---
+
+## [v10.0.0 - v10.4.2] - 2026-02-26 bis 2026-02-27
+
+### Phase 10 — Override Modes, Mood Engine v3.0, Strukturbereinigung
+
+- **Override Modes** (v10.0.0): Musikwolke Coordinator Handoff, Volume-Presets, Light-Presets
+- **Mood Engine v3.0** (v10.2.0): Unified Mood Engine — Models, Engine, Service, API; defensive Input-Validierung
+- **Habitus Miner Trends** (v10.1.x): Climate-aware Zone Automation, Shopping, Network, Calendar/Weather Dashboard
+- **Security Hardening** (v10.3.0): Data-driven Blueprint-Registration (37 try/except Bloecke durch Loop ersetzt)
+- **Strukturbereinigung**: 815 tote API-Stubs entfernt, FastAPI v2 Modul geloescht
+- **EventBus Bridges**: Logik-Struktur gehaertet, Auto-Setup API Endpoints
+
+---
+
+## [v9.0.0 - v9.3.0] - 2026-02-26
+
+### Phase 9 — Entity Search v2, HA Bridge, Dashboard Restrukturierung
+
+- **HA Bridge**: HA-Daten aus Add-on heraus via REST + WebSocket entdecken
+- **Entity Search v2** (v9.1.0): Device Cache, Manufacturer Filter, Labels, Bulk Import, Zone Suggestions, Role Inference
+- **Dashboard Restrukturierung**: Tier-separierte Module, Overview Health Panel, Chat Tab
+- **Neuronenlayer 3-Ring Visualization**: Tagged-not-in-Zone Panel
+- **Config Services**: Endpoint-Fix, Dashboard Model Download + Manual Entry
+
+---
+
+## [v8.0.0 - v8.12.1] - 2026-02-24 bis 2026-02-26
+
+### Phase 8 — Scene/Routine Extractors, Habitus Management, Self-Repair
+
+- **Scene + Routine Pattern Extractors** (v8.0.0): Dashboard API, MCP Phase 2 Core Tools
+- **Brain Graph + Habitus Sensors** (v8.2.0): Core API Integration, Dashboard Improvements
+- **RAG Document Pipeline** (v8.7.0): Module Control erweitert, Knowledge Graph Guard
+- **Habitus Automation Management** (v8.6.0): Neuron-Brain Dashboard, react-first Habitus Flow
+- **HomeKit Zone Servers** (v8.10.0): QR Endpoints, Dashboard Controls
+- **System Observability Dashboard**: Zone Summaries, System Health Registration gehaertet
+- **Self-Repair API** (v8.11.0): Guarded Self-Repair, Workspace Clone + Branch Prep Flow
+- **Musikwolke**: Cloud Model Defaults, Media Flow gehaertet
+
+---
+
+## [v7.0.0 - v7.125.0] - 2026-02-21 bis 2026-02-25
+
+### Phase 7 — Brain Architecture, Presence Intelligence, MCP API-Expansion
+
+- **Brain Architecture** (v7.4.0): Hirnregionen, Neuronen, Synapsen — Pulse, Sleep, Chat History
+- **Presence Intelligence** (v7.1.0): Anwesenheits-Intelligence, Notification Intelligence (v7.2.0)
+- **System Integration Hub** (v7.3.0): Cross-Engine Orchestration
+- **Production-Ready** (v7.6.0): Full Engine Wiring, Granular Fault Isolation, Docker Build Fix (Alpine 3.21)
+- **LLM Hardening** (v7.7.x): Ollama Readiness, Cloud Fallback, Self-Heal, Model Alias, interner Port 11435
+- **MCP API Expansion** (v7.14.0-v7.125.0): Entity Management, Service Calls, Sensors, Lights, Climate, Switches, Media Players, Scenes, History, Weather, Scripts, Alerts, Webhooks, RBAC
+- **Notification APIs** (v7.10.0-v7.13.0): Templates, Scheduling, Type Hints, Phase 5/6 Tests (142+ Tests gruen)
+- **CI/CD**: HACS/HassFest Validation, Production Guard Workflow
