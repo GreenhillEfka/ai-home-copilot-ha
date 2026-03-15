@@ -448,7 +448,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await runtime.async_setup_entry(entry, modules=_MODULES)
     except Exception:
         _LOGGER.exception("Runtime setup failed")
-    
+
+    # Signal coordinator that modules have been loaded (suppresses spurious warnings)
+    try:
+        entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+        coord = entry_store.get("coordinator") if isinstance(entry_store, dict) else None
+        if coord is not None:
+            coord.modules_ready = True
+    except Exception:
+        pass
+
     # Set up User Preference Module separately (not a CopilotModule)
     try:
         from .user_preference_module import UserPreferenceModule
@@ -523,6 +532,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await async_setup_agent_auto_config(hass, entry)
     except Exception:
         _LOGGER.exception("Failed to set up agent auto-config")
+
+    # Register suggestion panel services (accept/reject/snooze)
+    try:
+        from .suggestion_panel import async_setup_suggestion_services
+        await async_setup_suggestion_services(hass, entry.entry_id)
+    except Exception:
+        _LOGGER.exception("Failed to set up suggestion panel services")
 
     # Register Lovelace card resources from Core Add-on
     try:

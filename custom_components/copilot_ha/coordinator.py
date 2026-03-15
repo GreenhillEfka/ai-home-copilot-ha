@@ -636,7 +636,10 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         # Camera state management
         self.camera_state: dict[str, CameraState] = {}
         self.camera_privacy: dict[str, CameraPrivacySettings] = {}
-        
+
+        # Set by __init__.py after CopilotRuntime.async_setup_entry() completes
+        self.modules_ready: bool = False
+
         # Hybrid mode: 120s fallback polling (real-time via webhook push)
         super().__init__(
             hass,
@@ -765,10 +768,16 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 break
 
         if not entry_store:
-            _LOGGER.warning(
-                "Smart home module entry store nicht gefunden — "
-                "Module-Updates uebersprungen (Module noch nicht geladen?)"
-            )
+            if not self.modules_ready:
+                _LOGGER.debug(
+                    "Module entry store noch nicht vorhanden — "
+                    "Module-Updates uebersprungen (Module noch nicht geladen)"
+                )
+            else:
+                _LOGGER.warning(
+                    "Smart home module entry store nicht gefunden — "
+                    "Module-Updates uebersprungen"
+                )
             return
 
         # Also fetch zone automation data for per-zone detail

@@ -64,7 +64,11 @@ class StyxConversationAgent(AbstractConversationAgent):
         except CopilotApiError as err:
             _LOGGER.error("PilotSuite API error: %s", err)
             return self._error_result(
-                language, f"Core returned an error: {err}", conversation_id
+                language,
+                "PilotSuite Core ist gerade nicht erreichbar."
+                if language.startswith("de")
+                else "PilotSuite Core is currently unavailable.",
+                conversation_id,
             )
         except TimeoutError:
             _LOGGER.error("PilotSuite conversation request timed out")
