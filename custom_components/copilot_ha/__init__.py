@@ -504,6 +504,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to set up ZoneDetector")
 
+    # Auto-create Habitus Zones from HA areas (ZeroConfig, v14.4.0)
+    try:
+        from .zone_auto_setup import async_auto_create_habitus_zones
+        zones_created = await async_auto_create_habitus_zones(hass, entry.entry_id)
+        if zones_created:
+            _LOGGER.info(
+                "Zone auto-setup: %d Habitus Zones created from HA areas "
+                "(smart aggregation: Badbereich, Gangbereich, etc.)",
+                zones_created,
+            )
+    except Exception:
+        _LOGGER.exception("Failed to auto-create Habitus Zones")
+
     # Register Core → HA webhook receiver for real-time push events (mood, neuron, suggestion)
     try:
         from .webhook import async_register_webhook

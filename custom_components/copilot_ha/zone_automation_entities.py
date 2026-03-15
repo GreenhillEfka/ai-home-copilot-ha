@@ -304,6 +304,107 @@ class ZoneDampeningBandNumber(_ZoneConfigNumber):
         )
 
 
+class ZoneLuxIndoorTargetNumber(_ZoneConfigNumber):
+    """Slider: target indoor illuminance (0-2000 lx)."""
+
+    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+        super().__init__(
+            coordinator, zone_id, zone_name,
+            target="light", key="lux_indoor_target",
+            name_suffix="Soll-Lux Innen",
+            icon="mdi:brightness-5",
+            min_value=0, max_value=2000, step=50, unit="lx",
+        )
+
+
+class ZoneColorTempNumber(_ZoneConfigNumber):
+    """Slider: color temperature (2200-6500 K)."""
+
+    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+        super().__init__(
+            coordinator, zone_id, zone_name,
+            target="light", key="color_temp_k",
+            name_suffix="Farbtemperatur",
+            icon="mdi:thermometer-lines",
+            min_value=2200, max_value=6500, step=100, unit="K",
+        )
+
+
+class ZoneMusicPresenceDelayNumber(_ZoneConfigNumber):
+    """Slider: seconds of presence before music starts (0-120s)."""
+
+    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+        super().__init__(
+            coordinator, zone_id, zone_name,
+            target="music", key="presence_delay_s",
+            name_suffix="Musik Einschaltverzögerung",
+            icon="mdi:timer-music-outline",
+            min_value=0, max_value=120, step=5, unit="s",
+        )
+
+
+class ZoneMusicAbsencePauseNumber(_ZoneConfigNumber):
+    """Slider: seconds after absence before music pauses (0-600s)."""
+
+    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+        super().__init__(
+            coordinator, zone_id, zone_name,
+            target="music", key="absence_pause_s",
+            name_suffix="Musik Pausenverzögerung",
+            icon="mdi:timer-music",
+            min_value=0, max_value=600, step=10, unit="s",
+        )
+
+
+class ZoneMusicFadeDurationNumber(_ZoneConfigNumber):
+    """Slider: cross-fade duration between zones (0-30s)."""
+
+    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+        super().__init__(
+            coordinator, zone_id, zone_name,
+            target="music", key="fade_duration_s",
+            name_suffix="Überblendung",
+            icon="mdi:swap-horizontal",
+            min_value=0, max_value=30, step=1, unit="s",
+        )
+
+
+class ZoneLuxOutdoorCompensationSwitch(_ZoneAutoSwitch):
+    """Toggle: outdoor lux compensation for indoor brightness."""
+
+    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+        super().__init__(
+            coordinator, zone_id, zone_name,
+            target="light", key="lux_outdoor_compensation",
+            name_suffix="Außenlicht-Kompensation",
+            icon="mdi:weather-sunny",
+        )
+
+
+class ZoneColorTempAutoSwitch(_ZoneAutoSwitch):
+    """Toggle: circadian color temperature adjustment."""
+
+    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+        super().__init__(
+            coordinator, zone_id, zone_name,
+            target="light", key="color_temp_auto",
+            name_suffix="Farbtemperatur Auto",
+            icon="mdi:theme-light-dark",
+        )
+
+
+class ZoneMusicAutoPlaySwitch(_ZoneAutoSwitch):
+    """Toggle: auto-play music on zone entry."""
+
+    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+        super().__init__(
+            coordinator, zone_id, zone_name,
+            target="music", key="presence_auto_play",
+            name_suffix="Musik Auto-Play",
+            icon="mdi:music-note-plus",
+        )
+
+
 # ── Factory Function ────────────────────────────────────────────────
 
 
@@ -333,10 +434,18 @@ def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str,
         numbers.append(ZonePresenceDelayNumber(coordinator, zone_id, zone_name))
         numbers.append(ZoneAbsenceDelayNumber(coordinator, zone_id, zone_name))
         numbers.append(ZoneDampeningBandNumber(coordinator, zone_id, zone_name))
+        numbers.append(ZoneLuxIndoorTargetNumber(coordinator, zone_id, zone_name))
+        numbers.append(ZoneColorTempNumber(coordinator, zone_id, zone_name))
+        switches.append(ZoneLuxOutdoorCompensationSwitch(coordinator, zone_id, zone_name))
+        switches.append(ZoneColorTempAutoSwitch(coordinator, zone_id, zone_name))
 
         # Music automation controls
         switches.append(ZoneMusicAutoSwitch(coordinator, zone_id, zone_name))
         switches.append(ZoneMusicFollowSwitch(coordinator, zone_id, zone_name))
+        switches.append(ZoneMusicAutoPlaySwitch(coordinator, zone_id, zone_name))
         numbers.append(ZoneMusicVolumeNumber(coordinator, zone_id, zone_name))
+        numbers.append(ZoneMusicPresenceDelayNumber(coordinator, zone_id, zone_name))
+        numbers.append(ZoneMusicAbsencePauseNumber(coordinator, zone_id, zone_name))
+        numbers.append(ZoneMusicFadeDurationNumber(coordinator, zone_id, zone_name))
 
     return {"number": numbers, "select": selects, "switch": switches}

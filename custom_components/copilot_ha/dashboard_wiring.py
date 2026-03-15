@@ -294,8 +294,8 @@ def _build_storage_dashboard_config(entities: list[str]) -> dict:
     """Build a storage-mode Lovelace dashboard config.
 
     HA frontend is "Sinne + Haende" (Thin Client):
-    only Haushalt, Zonen, Chat. Everything else (Brain, Neurons,
-    Suggestions, Mood engine, System) belongs in the Core ingress dashboard.
+    8 views covering all user-facing aspects. Brain Graph, Neuron details,
+    and system internals remain in the Core ingress dashboard.
     """
     status_entities = [
         e for e in entities
@@ -307,8 +307,26 @@ def _build_storage_dashboard_config(entities: list[str]) -> dict:
         if "habitus_zones" in e or "zones_v2" in e
     ]
     mood_entities = [e for e in entities if "mood" in e]
+    energy_entities = [e for e in entities if "energy" in e or "power" in e]
+    media_entities = [
+        e for e in entities
+        if "media" in e or "musikwolke" in e or "sonos" in e or "media_follow" in e
+    ]
+    module_entities = [
+        e for e in entities
+        if "module" in e or "autonomy" in e
+    ]
+    automation_entities = [
+        e for e in entities
+        if "automation" in e or "zone_" in e
+    ]
+    neuron_entities = [
+        e for e in entities
+        if "neuron" in e or "brain" in e or "prediction" in e
+    ]
 
     views = [
+        # 1. Haushalt
         {
             "title": "Haushalt",
             "path": "haushalt",
@@ -333,6 +351,7 @@ def _build_storage_dashboard_config(entities: list[str]) -> dict:
                 ),
             ],
         },
+        # 2. Zonen
         {
             "title": "Zonen",
             "path": "zonen",
@@ -350,6 +369,150 @@ def _build_storage_dashboard_config(entities: list[str]) -> dict:
                 ),
             ],
         },
+        # 3. Automation
+        {
+            "title": "Automation",
+            "path": "automation",
+            "icon": "mdi:robot",
+            "cards": [
+                {
+                    "type": "markdown",
+                    "title": "Zonen-Automatisierung",
+                    "content": (
+                        "Steuere die Automatisierungsmodi, Licht- und Musik-Einstellungen "
+                        "pro Zone. Jede Zone hat eigene Slider und Schalter."
+                    ),
+                },
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Automatisierungs-Entities",
+                        "show_header_toggle": False,
+                        "entities": automation_entities[:15],
+                    }] if automation_entities else []
+                ),
+            ],
+        },
+        # 4. Energie
+        {
+            "title": "Energie",
+            "path": "energie",
+            "icon": "mdi:lightning-bolt",
+            "cards": [
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Energie-Übersicht",
+                        "show_header_toggle": False,
+                        "entities": energy_entities[:8],
+                    }] if energy_entities else [{
+                        "type": "markdown",
+                        "content": "Keine Energie-Entities konfiguriert.",
+                    }]
+                ),
+            ],
+        },
+        # 5. Musik
+        {
+            "title": "Musik",
+            "path": "musik",
+            "icon": "mdi:speaker-group",
+            "cards": [
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Medien & Musikwolke",
+                        "show_header_toggle": False,
+                        "entities": media_entities[:8],
+                    }] if media_entities else [{
+                        "type": "markdown",
+                        "content": "Keine Medien-Entities konfiguriert.",
+                    }]
+                ),
+                {
+                    "type": "grid",
+                    "columns": 3,
+                    "square": False,
+                    "cards": [
+                        {
+                            "type": "button",
+                            "name": "Alle abspielen",
+                            "icon": "mdi:play",
+                            "tap_action": {
+                                "action": "call-service",
+                                "service": "copilot_ha.musikwolke_play",
+                                "service_data": {"zone_id": "all"},
+                            },
+                        },
+                        {
+                            "type": "button",
+                            "name": "Alle pausieren",
+                            "icon": "mdi:pause",
+                            "tap_action": {
+                                "action": "call-service",
+                                "service": "copilot_ha.musikwolke_pause",
+                                "service_data": {"zone_id": "all"},
+                            },
+                        },
+                        {
+                            "type": "button",
+                            "name": "Follow starten",
+                            "icon": "mdi:account-music",
+                            "tap_action": {
+                                "action": "call-service",
+                                "service": "copilot_ha.musikwolke_start_follow",
+                                "service_data": {
+                                    "person_id": "person.default",
+                                    "source_zone": "wohnzimmer",
+                                },
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+        # 6. Module
+        {
+            "title": "Module",
+            "path": "module",
+            "icon": "mdi:puzzle",
+            "cards": [
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Modul-Status",
+                        "show_header_toggle": False,
+                        "entities": module_entities[:10],
+                    }] if module_entities else [{
+                        "type": "markdown",
+                        "content": "Keine Modul-Entities verfügbar.",
+                    }]
+                ),
+            ],
+        },
+        # 7. KI / Stimmung
+        {
+            "title": "KI",
+            "path": "ki",
+            "icon": "mdi:brain",
+            "cards": [
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Stimmung & Neuronen",
+                        "show_header_toggle": False,
+                        "entities": (mood_entities + neuron_entities)[:10],
+                    }] if (mood_entities or neuron_entities) else [{
+                        "type": "markdown",
+                        "content": "Keine KI-Entities verfügbar.",
+                    }]
+                ),
+                {
+                    "type": "custom:styx-mood-card",
+                },
+            ],
+        },
+        # 8. Chat
         {
             "title": "Chat",
             "path": "chat",
