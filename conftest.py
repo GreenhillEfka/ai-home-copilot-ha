@@ -171,6 +171,7 @@ if "homeassistant" not in sys.modules:
         _attr_entity_registry_enabled_default = True
         entity_id = ""
         hass = None
+        def __init__(self, *args, **kwargs): pass
         def async_write_ha_state(self): pass
 
     class _SensorEntity(_Entity): pass

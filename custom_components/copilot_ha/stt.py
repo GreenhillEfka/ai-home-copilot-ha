@@ -41,13 +41,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up PilotSuite STT entity from a config entry."""
-    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-    coordinator = entry_data.get("coordinator")
-    if coordinator is None:
-        _LOGGER.warning("PilotSuite coordinator not available for STT setup")
-        return
-
-    async_add_entities([PilotSuiteSTTEntity(hass, entry, coordinator)])
+    async_add_entities([PilotSuiteSTTEntity(hass, entry)])
     _LOGGER.info("PilotSuite STT entity registered")
 
 
@@ -57,12 +51,17 @@ class PilotSuiteSTTEntity(SpeechToTextEntity):
     _attr_has_entity_name = True
     _attr_name = "PilotSuite STT"
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, coordinator) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize the STT entity."""
         self.hass = hass
         self._entry = entry
-        self._coordinator = coordinator
         self._attr_unique_id = f"{entry.entry_id}_stt"
+
+    @property
+    def _coordinator(self):
+        """Lazily resolve coordinator from hass.data."""
+        entry_data = self.hass.data.get(DOMAIN, {}).get(self._entry.entry_id, {})
+        return entry_data.get("coordinator") if isinstance(entry_data, dict) else None
 
     @property
     def supported_languages(self) -> list[str]:
@@ -104,6 +103,10 @@ class PilotSuiteSTTEntity(SpeechToTextEntity):
             audio_buffer.extend(chunk)
 
         if not audio_buffer:
+            return SpeechResult("", SpeechResultState.ERROR)
+
+        if self._coordinator is None or not hasattr(self._coordinator, "api"):
+            _LOGGER.warning("PilotSuite Core not connected — STT unavailable")
             return SpeechResult("", SpeechResultState.ERROR)
 
         # Wrap raw PCM in WAV container

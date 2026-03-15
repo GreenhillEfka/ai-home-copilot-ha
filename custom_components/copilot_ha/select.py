@@ -105,3 +105,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             async_add_entities(autonomy_entities, True)
     except Exception:
         _LOGGER.debug("Autonomy zone selects skipped (zones not configured)")
+
+    # Zone automation mode selects (off/learning/autonomy per zone)
+    try:
+        from .zone_automation_entities import create_zone_automation_entities
+        from .habitus_zones_store_v2 import async_get_zones_v2
+        zones = await async_get_zones_v2(hass, entry.entry_id)
+        zone_list = [{"zone_id": z.zone_id, "name": getattr(z, "name_de", None) or z.name} for z in zones]
+        result = create_zone_automation_entities(coordinator, zone_list)
+        zone_selects = result.get("select", [])
+        if zone_selects:
+            async_add_entities(zone_selects, True)
+    except Exception:
+        _LOGGER.debug("Zone automation mode selects skipped (zones not configured)")

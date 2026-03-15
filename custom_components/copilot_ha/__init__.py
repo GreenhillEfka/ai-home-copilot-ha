@@ -77,6 +77,7 @@ _MODULE_IMPORTS = {
     "heiz_module": (".core.modules.heiz_module", "HeizModule"),
     "bewegung_module": (".core.modules.bewegung_module", "BewegungModule"),
     "praesenz_module": (".core.modules.praesenz_module", "PraesenzModule"),
+    "frontend_module": (".core.modules.frontend_module", "FrontendModule"),
 }
 
 _MODULES = [
@@ -116,6 +117,7 @@ _MODULES = [
     "heiz_module",
     "bewegung_module",
     "praesenz_module",
+    "frontend_module",
 ]
 
 _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
@@ -448,7 +450,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await runtime.async_setup_entry(entry, modules=_MODULES)
     except Exception:
         _LOGGER.exception("Runtime setup failed")
-    
+
+    # Signal coordinator that modules have been loaded (suppresses spurious warnings)
+    try:
+        entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+        coord = entry_store.get("coordinator") if isinstance(entry_store, dict) else None
+        if coord is not None:
+            coord.modules_ready = True
+    except Exception:
+        pass
+
     # Set up User Preference Module separately (not a CopilotModule)
     try:
         from .user_preference_module import UserPreferenceModule
@@ -495,6 +506,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to set up ZoneDetector")
 
+    # Auto-create Habitus Zones from HA areas (ZeroConfig, v14.4.0)
+    try:
+        from .zone_auto_setup import async_auto_create_habitus_zones
+        zones_created = await async_auto_create_habitus_zones(hass, entry.entry_id)
+        if zones_created:
+            _LOGGER.info(
+                "Zone auto-setup: %d Habitus Zones created from HA areas "
+                "(smart aggregation: Badbereich, Gangbereich, etc.)",
+                zones_created,
+            )
+    except Exception:
+        _LOGGER.exception("Failed to auto-create Habitus Zones")
+
     # Register Core → HA webhook receiver for real-time push events (mood, neuron, suggestion)
     try:
         from .webhook import async_register_webhook
@@ -523,6 +547,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await async_setup_agent_auto_config(hass, entry)
     except Exception:
         _LOGGER.exception("Failed to set up agent auto-config")
+
+    # Register suggestion panel services (accept/reject/snooze)
+    try:
+        from .suggestion_panel import async_setup_suggestion_services
+        await async_setup_suggestion_services(hass, entry.entry_id)
+    except Exception:
+        _LOGGER.exception("Failed to set up suggestion panel services")
 
     # Register Lovelace card resources from Core Add-on
     try:
@@ -562,50 +593,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to auto-generate PilotSuite dashboards")
 
-    # Keep dashboard YAML updated when Habitus zones change.
-    try:
-        from .habitus_zones_store_v2 import SIGNAL_HABITUS_ZONES_V2_UPDATED
-        from .habitus_dashboard import async_generate_habitus_zones_dashboard
-        from .pilotsuite_dashboard import async_generate_pilotsuite_dashboard
-
-        entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-        if isinstance(entry_store, dict):
-            async def _async_refresh_dashboard(reason: str) -> None:
-                try:
-                    await async_generate_pilotsuite_dashboard(hass, entry, notify=False)
-                    await async_generate_habitus_zones_dashboard(hass, entry.entry_id, notify=False)
-                    _LOGGER.info("PilotSuite dashboards auto-regenerated (%s)", reason)
-                except Exception:
-                    _LOGGER.exception("Failed to auto-regenerate PilotSuite dashboards (%s)", reason)
-
-            @callback
-            def _schedule_dashboard_refresh(reason: str) -> None:
-                cancel = entry_store.pop("_dashboard_refresh_cancel", None)
-                if callable(cancel):
-                    cancel()
-
-                @callback
-                def _run_refresh(_now) -> None:
-                    entry_store.pop("_dashboard_refresh_cancel", None)
-                    hass.async_create_task(_async_refresh_dashboard(reason))
-
-                # Debounce rapid zone edits to a single regen.
-                entry_store["_dashboard_refresh_cancel"] = async_call_later(hass, 2.0, _run_refresh)
-
-            @callback
-            def _on_zones_updated(updated_entry_id: str) -> None:
-                if str(updated_entry_id) != entry.entry_id:
-                    return
-                _schedule_dashboard_refresh("habitus_zones_updated")
-
-            unsub = async_dispatcher_connect(
-                hass,
-                SIGNAL_HABITUS_ZONES_V2_UPDATED,
-                _on_zones_updated,
-            )
-            entry_store["_dashboard_zones_unsub"] = unsub
-    except Exception:
-        _LOGGER.exception("Failed to set up dashboard auto-refresh listener")
+    # Dashboard auto-refresh on zone changes is handled by FrontendModule
+    # (registered in _MODULES as "frontend_module").
 
     # Show onboarding notification on first setup (v3.12.0)
     try:
@@ -638,13 +627,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Unload User Preference Module
     entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
 
-    cancel_dashboard_refresh = entry_data.pop("_dashboard_refresh_cancel", None)
-    if callable(cancel_dashboard_refresh):
-        cancel_dashboard_refresh()
-
-    unsub_dashboard_listener = entry_data.pop("_dashboard_zones_unsub", None)
-    if callable(unsub_dashboard_listener):
-        unsub_dashboard_listener()
+    # Dashboard refresh cleanup is handled by FrontendModule.async_unload_entry
 
     user_pref_module = entry_data.get("user_preference_module")
     if user_pref_module:

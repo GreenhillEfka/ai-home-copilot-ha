@@ -354,6 +354,21 @@ class CopilotApiClient(SharedCopilotApiClient):
             key="automation_mode", label=f"Zone automation mode {zone_id}",
         )
 
+    async def async_set_zone_config(self, zone_id: str, config: dict[str, Any]) -> dict[str, Any]:
+        """Update zone automation config (partial: light, music, or individual fields)."""
+        return await self._safe_post(
+            f"/api/v1/zone-automation/zones/{zone_id}/config", config,
+            label=f"Zone config {zone_id}",
+        )
+
+    async def async_set_zone_override(self, zone_id: str, target: str, enabled: bool) -> dict[str, Any]:
+        """Toggle zone automation override (light or music)."""
+        return await self._safe_post(
+            f"/api/v1/zone-automation/zones/{zone_id}/override",
+            {"target": target, "enabled": enabled},
+            label=f"Zone override {zone_id}/{target}",
+        )
+
     async def async_get_musikwolke_zone_map(self) -> dict[str, Any]:
         """Get zone-to-speaker mapping."""
         return await self._safe_get(
@@ -636,7 +651,10 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         # Camera state management
         self.camera_state: dict[str, CameraState] = {}
         self.camera_privacy: dict[str, CameraPrivacySettings] = {}
-        
+
+        # Set by __init__.py after CopilotRuntime.async_setup_entry() completes
+        self.modules_ready: bool = False
+
         # Hybrid mode: 120s fallback polling (real-time via webhook push)
         super().__init__(
             hass,
@@ -711,6 +729,14 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 except Exception:
                     _LOGGER.debug("Zone health fetch skipped")
 
+                # Zone automation config (per-zone light/music settings)
+                try:
+                    zone_auto = await self.api.async_get_zone_automation()
+                    if zone_auto:
+                        result["zone_automation"] = zone_auto
+                except Exception:
+                    _LOGGER.debug("Zone automation dashboard fetch skipped")
+
                 # Preserve webhook-pushed data across coordinator refreshes
                 if self.data:
                     if "autonomy_history" in self.data:
@@ -765,10 +791,16 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 break
 
         if not entry_store:
-            _LOGGER.warning(
-                "Smart home module entry store nicht gefunden — "
-                "Module-Updates uebersprungen (Module noch nicht geladen?)"
-            )
+            if not self.modules_ready:
+                _LOGGER.debug(
+                    "Module entry store noch nicht vorhanden — "
+                    "Module-Updates uebersprungen (Module noch nicht geladen)"
+                )
+            else:
+                _LOGGER.warning(
+                    "Smart home module entry store nicht gefunden — "
+                    "Module-Updates uebersprungen"
+                )
             return
 
         # Also fetch zone automation data for per-zone detail
@@ -958,6 +990,18 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
     async def async_set_zone_module_state(self, zone_id: str, module_id: str, state: str) -> dict:
         """Set per-zone module state via Core API."""
         return await self.api.async_set_zone_module_state(zone_id, module_id, state)
+
+    async def async_set_zone_automation_mode(self, zone_id: str, mode: str) -> dict:
+        """Set zone automation mode (off/learning/autonomy)."""
+        return await self.api.async_set_zone_automation_mode(zone_id, mode)
+
+    async def async_set_zone_config(self, zone_id: str, config: dict) -> dict:
+        """Update zone automation config (partial: light, music fields)."""
+        return await self.api.async_set_zone_config(zone_id, config)
+
+    async def async_set_zone_override(self, zone_id: str, target: str, enabled: bool) -> dict:
+        """Toggle zone automation override (light or music)."""
+        return await self.api.async_set_zone_override(zone_id, target, enabled)
 
     async def async_capture_zone_scene(self, zone_id: str, name: str) -> dict:
         """Capture current zone state as a scene via Core API."""

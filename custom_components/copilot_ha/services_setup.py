@@ -1506,6 +1506,133 @@ def _register_memory_services(hass: HomeAssistant) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Entity-centric Zone + Tag assignment services
+# ---------------------------------------------------------------------------
+
+def _register_entity_centric_services(hass: HomeAssistant) -> None:
+    """Register entity-centric zone reassignment and tag assignment services."""
+
+    # --- assign_entity_to_zone ---
+    if not hass.services.has_service(DOMAIN, "assign_entity_to_zone"):
+        from .zone_entity_select import async_assign_entity_to_zone
+
+        async def _handle_assign_zone(call: ServiceCall) -> None:
+            entity_id = str(call.data.get("entity_id") or "").strip()
+            zone_id = str(call.data.get("zone_id") or "").strip()
+            if not entity_id or not zone_id:
+                return
+            await async_assign_entity_to_zone(hass, entity_id, zone_id)
+
+        hass.services.async_register(
+            DOMAIN,
+            "assign_entity_to_zone",
+            _handle_assign_zone,
+            schema=vol.Schema(
+                {
+                    vol.Required("entity_id"): str,
+                    vol.Required("zone_id"): str,
+                }
+            ),
+        )
+
+    # --- remove_entity_from_zone ---
+    if not hass.services.has_service(DOMAIN, "remove_entity_from_zone"):
+        from .zone_entity_select import async_remove_entity_from_zone
+
+        async def _handle_remove_zone(call: ServiceCall) -> None:
+            entity_id = str(call.data.get("entity_id") or "").strip()
+            if not entity_id:
+                return
+            await async_remove_entity_from_zone(hass, entity_id)
+
+        hass.services.async_register(
+            DOMAIN,
+            "remove_entity_from_zone",
+            _handle_remove_zone,
+            schema=vol.Schema(
+                {
+                    vol.Required("entity_id"): str,
+                }
+            ),
+        )
+
+    # --- tag_entity ---
+    if not hass.services.has_service(DOMAIN, "tag_entity"):
+        from .entity_tags_store import async_get_entity_tags, async_save_entity_tags
+
+        async def _handle_tag_entity(call: ServiceCall) -> None:
+            entity_id = str(call.data.get("entity_id") or "").strip()
+            tag_ids_raw = str(call.data.get("tag_ids") or "").strip()
+            if not entity_id or not tag_ids_raw:
+                return
+            tag_ids = [t.strip() for t in tag_ids_raw.split(",") if t.strip()]
+            if not tag_ids:
+                return
+
+            tags = await async_get_entity_tags(hass)
+            changed = False
+            for tid in tag_ids:
+                if tid in tags:
+                    if entity_id not in tags[tid].entity_ids:
+                        tags[tid].entity_ids.append(entity_id)
+                        changed = True
+                else:
+                    _LOGGER.warning("Tag '%s' does not exist — skipping", tid)
+
+            if changed:
+                await async_save_entity_tags(hass, tags)
+                _LOGGER.info("Entity '%s' tagged with: %s", entity_id, tag_ids)
+
+        hass.services.async_register(
+            DOMAIN,
+            "tag_entity",
+            _handle_tag_entity,
+            schema=vol.Schema(
+                {
+                    vol.Required("entity_id"): str,
+                    vol.Required("tag_ids"): str,
+                }
+            ),
+        )
+
+    # --- untag_entity ---
+    if not hass.services.has_service(DOMAIN, "untag_entity"):
+        from .entity_tags_store import async_get_entity_tags, async_save_entity_tags
+
+        async def _handle_untag_entity(call: ServiceCall) -> None:
+            entity_id = str(call.data.get("entity_id") or "").strip()
+            tag_ids_raw = str(call.data.get("tag_ids") or "").strip()
+            if not entity_id or not tag_ids_raw:
+                return
+            tag_ids = [t.strip() for t in tag_ids_raw.split(",") if t.strip()]
+            if not tag_ids:
+                return
+
+            tags = await async_get_entity_tags(hass)
+            changed = False
+            for tid in tag_ids:
+                if tid in tags and entity_id in tags[tid].entity_ids:
+                    tags[tid].entity_ids.remove(entity_id)
+                    changed = True
+
+            if changed:
+                await async_save_entity_tags(hass, tags)
+                _LOGGER.info("Entity '%s' untagged from: %s", entity_id, tag_ids)
+
+        hass.services.async_register(
+            DOMAIN,
+            "untag_entity",
+            _handle_untag_entity,
+            schema=vol.Schema(
+                {
+                    vol.Required("entity_id"): str,
+                    vol.Required("tag_ids"): str,
+                }
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
@@ -1528,3 +1655,4 @@ def async_register_all_services(hass: HomeAssistant) -> None:
     _register_homekit_services(hass)
     _register_musikwolke_services(hass)
     _register_memory_services(hass)
+    _register_entity_centric_services(hass)

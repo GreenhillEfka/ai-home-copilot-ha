@@ -242,6 +242,7 @@
         "menu_options": {
           "connection": "Connection",
           "modules": "Modules",
+          "llm_provider": "LLM Provider / OpenClaw",
           "automation_modes": "Automation modes",
           "habitus_zones": "Habitus zones",
           "entity_tags": "Entity tags",
@@ -325,6 +326,24 @@
           "birthday_tts_enabled": "Birthday TTS announcements",
           "birthday_tts_entity": "Birthday TTS entity",
           "birthday_reminder_hour": "Birthday reminder hour"
+        }
+      },
+      "llm_provider": {
+        "title": "LLM Provider / OpenClaw",
+        "description": "{description}",
+        "data": {
+          "llm_prefer_local": "Prefer local model (Ollama)",
+          "llm_cloud_api_url": "Cloud / OpenClaw API URL",
+          "llm_cloud_api_key": "API Key",
+          "llm_cloud_model": "Cloud model name",
+          "llm_ollama_model": "Preferred Ollama model"
+        },
+        "data_description": {
+          "llm_prefer_local": "When enabled, Ollama is used whenever available and Cloud is only used as fallback.",
+          "llm_cloud_api_url": "OpenAI-compatible endpoint URL (e.g. http://openclaw.local:8080/v1)",
+          "llm_cloud_api_key": "API key for the cloud/OpenClaw endpoint",
+          "llm_cloud_model": "Model name for cloud inference (e.g. gpt-4.1-nano, openclaw-7b)",
+          "llm_ollama_model": "Preferred Ollama model tag (e.g. qwen3:0.6b, llama3.2:3b)"
         }
       },
       "automation_modes": {

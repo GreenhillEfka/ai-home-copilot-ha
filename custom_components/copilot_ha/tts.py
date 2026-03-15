@@ -62,13 +62,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up PilotSuite TTS entity from a config entry."""
-    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-    coordinator = entry_data.get("coordinator")
-    if coordinator is None:
-        _LOGGER.warning("PilotSuite coordinator not available for TTS setup")
-        return
-
-    async_add_entities([PilotSuiteTTSEntity(hass, entry, coordinator)])
+    async_add_entities([PilotSuiteTTSEntity(hass, entry)])
     _LOGGER.info("PilotSuite TTS entity registered")
 
 
@@ -78,12 +72,17 @@ class PilotSuiteTTSEntity(TextToSpeechEntity):
     _attr_has_entity_name = True
     _attr_name = "PilotSuite TTS"
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, coordinator) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize the TTS entity."""
         self.hass = hass
         self._entry = entry
-        self._coordinator = coordinator
         self._attr_unique_id = f"{entry.entry_id}_tts"
+
+    @property
+    def _coordinator(self):
+        """Lazily resolve coordinator from hass.data."""
+        entry_data = self.hass.data.get(DOMAIN, {}).get(self._entry.entry_id, {})
+        return entry_data.get("coordinator") if isinstance(entry_data, dict) else None
 
     @property
     def supported_languages(self) -> list[str]:
@@ -105,6 +104,10 @@ class PilotSuiteTTSEntity(TextToSpeechEntity):
         """Generate TTS audio via PilotSuite Core."""
         options = options or {}
         voice = options.get("voice")
+
+        if self._coordinator is None or not hasattr(self._coordinator, "api"):
+            _LOGGER.warning("PilotSuite Core not connected — TTS unavailable")
+            return (None, None)
 
         try:
             audio_bytes = await self._coordinator.api.async_tts(
