@@ -131,6 +131,7 @@ class ZoneDetector:
         self._device_entities: list[str] = []
         self._unsub_trackers: list[Any] = []
         self._zone_entry_callbacks: list[Any] = []
+        self._periodic_task: asyncio.Task | None = None
 
         # Load zone templates
         self._load_zone_templates()
@@ -168,8 +169,10 @@ class ZoneDetector:
         # Subscribe to entity state changes
         await self._async_subscribe_entities()
         
-        # Start periodic zone checking
-        self.hass.async_create_task(self._async_periodic_zone_check())
+        # Start periodic zone checking (background task — don't block HA startup)
+        self._periodic_task = self.hass.async_create_background_task(
+            self._async_periodic_zone_check(), "pilotsuite_zone_detector"
+        )
         
         _LOGGER.info(
             "Zone Detector initialized: %d zones, %d persons, %d device_trackers",
@@ -180,6 +183,10 @@ class ZoneDetector:
         
     async def async_unload(self) -> None:
         """Unload the zone detector."""
+        self._enabled = False
+        if self._periodic_task and not self._periodic_task.done():
+            self._periodic_task.cancel()
+        self._periodic_task = None
         for unsub in self._unsub_trackers:
             unsub()
         self._unsub_trackers.clear()

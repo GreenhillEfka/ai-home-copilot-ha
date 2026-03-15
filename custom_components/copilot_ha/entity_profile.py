@@ -1,6 +1,8 @@
 """Helpers for entity profile selection (core vs full)."""
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from homeassistant.config_entries import ConfigEntry
 
 from .const import (
@@ -13,8 +15,8 @@ from .const import (
 
 def get_entity_profile(entry: ConfigEntry) -> str:
     """Return normalized entity profile for a config entry."""
-    options = entry.options if isinstance(entry.options, dict) else {}
-    data = entry.data if isinstance(entry.data, dict) else {}
+    options = entry.options if isinstance(entry.options, Mapping) else {}
+    data = entry.data if isinstance(entry.data, Mapping) else {}
     profile = options.get(CONF_ENTITY_PROFILE, data.get(CONF_ENTITY_PROFILE, DEFAULT_ENTITY_PROFILE))
     if profile not in ENTITY_PROFILES:
         return DEFAULT_ENTITY_PROFILE

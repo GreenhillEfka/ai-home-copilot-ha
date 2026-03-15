@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from importlib import import_module
 import logging
 
@@ -282,7 +283,7 @@ async def _async_migrate_connection_config(hass: HomeAssistant, entry: ConfigEnt
     merged = merged_entry_config(entry)
     host, port, token = resolve_core_connection_from_mapping(merged)
 
-    new_data = dict(entry.data) if isinstance(entry.data, dict) else {}
+    new_data = dict(entry.data) if isinstance(entry.data, Mapping) else {}
     changed = False
 
     if new_data.get(CONF_HOST) != host:
@@ -396,7 +397,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             token = await fetch_setup_token(hass, host or DEFAULT_HOST, port)
 
         # Persist discovered host/port/token into config entry
-        new_data = dict(entry.data) if isinstance(entry.data, dict) else {}
+        new_data = dict(entry.data) if isinstance(entry.data, Mapping) else {}
         changed = False
         if host and new_data.get(CONF_HOST) != host:
             new_data[CONF_HOST] = host
@@ -535,12 +536,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         from .dashboard_wiring import (
             async_ensure_lovelace_dashboard_wiring,
             async_ensure_storage_dashboard,
+            async_hide_yaml_dashboards_from_sidebar,
         )
 
         # Always update YAML snippet (hides YAML dashboards from sidebar)
         wiring_state = await async_ensure_lovelace_dashboard_wiring(hass)
         # Storage-mode dashboard works immediately (no HA restart needed)
         storage_state = await async_ensure_storage_dashboard(hass)
+        # Hide legacy YAML dashboards from sidebar at runtime
+        await async_hide_yaml_dashboards_from_sidebar(hass)
 
         entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
         if isinstance(entry_store, dict) and not entry_store.get("_dashboards_generated"):

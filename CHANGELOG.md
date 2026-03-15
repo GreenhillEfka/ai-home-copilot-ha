@@ -2,6 +2,30 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.3.18] - 2026-03-15
+
+### Fix: HA 2026.3 Kompatibilitaet, Startup-Blockade, Config-Persistierung
+
+#### Fixed
+- **Dashboard Wiring**: `LovelaceData` ist seit HA 2026.3 ein Dataclass, nicht dict — `.get()` durch Attribut-Zugriff ersetzt
+- **Config Entry Persistierung**: `isinstance(entry.data, dict)` war `False` weil HA `MappingProxyType` verwendet — geaendert zu `isinstance(..., Mapping)`. Token/Host/Port gingen nach Zero-Config-Flow verloren
+- **Entity Profile**: Gleicher `MappingProxyType`-Bug in `entity_profile.py`
+- **ZoneDetector Leak**: Periodischer Task wurde bei Reload nicht gecancelt — doppelte Tasks nach jedem Reload
+- **Startup-Blockade**: 4 Endlos-Loop-Tasks blockierten HA-Startup (CandidatePoller, ZoneDetector, MLContext, PerformanceScaling) — `async_create_task` durch `async_create_background_task` ersetzt
+
+#### Added
+- **YAML-Dashboard Sidebar-Hide**: Neue Funktion `async_hide_yaml_dashboards_from_sidebar()` versteckt Legacy-YAML-Dashboards sofort (ohne HA-Restart)
+
+### Compatibility
+- HA v14.3.18 <-> Core v14.3.17 (Core unveraendert)
+- Migration required: no
+- Breaking Changes: keine
+
+### Tests
+- 387 passed, 0 failed, 41 skipped
+
+---
+
 ## [14.3.17] - 2026-03-15
 
 ### Fix: Dashboard Wiring immer aktualisieren

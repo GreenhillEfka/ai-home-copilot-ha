@@ -368,21 +368,57 @@ async def async_ensure_storage_dashboard(hass: HomeAssistant) -> str:
         One of: "created", "exists", "error"
     """
     try:
+        # HA 2026.3+: hass.data["lovelace"] is a LovelaceData dataclass, not a dict.
+        # Earlier versions used a plain dict. Support both access patterns.
         lovelace = hass.data.get("lovelace")
         if lovelace is None:
             _LOGGER.debug("Lovelace not initialized, skipping storage dashboard")
             return "error"
 
-        dashboards_collection = lovelace.get("dashboards_collection")
-        if dashboards_collection is None:
-            _LOGGER.debug("No dashboards_collection in lovelace data")
+        # Access dashboards dict (attribute on dataclass, key on dict)
+        if isinstance(lovelace, dict):
+            dashboards = lovelace.get("dashboards", {})
+        else:
+            dashboards = getattr(lovelace, "dashboards", None) or {}
+
+        # Check if dashboard already exists in loaded dashboards
+        if _STORAGE_DASHBOARD_URL_PATH in dashboards:
+            _LOGGER.debug(
+                "Storage dashboard '%s' already exists", _STORAGE_DASHBOARD_URL_PATH
+            )
+            return "exists"
+
+        # Dashboard not loaded yet — check/create via DashboardsCollection.
+        # In HA 2026.3+, the collection is a local var in lovelace.async_setup()
+        # and not stored on LovelaceData. We instantiate a temporary handle that
+        # reads/writes the same storage file.
+        try:
+            from homeassistant.components.lovelace.dashboard import (
+                DashboardsCollection,
+            )
+        except ImportError:
+            _LOGGER.warning(
+                "Cannot import DashboardsCollection — create dashboard '%s' "
+                "manually via the HA UI",
+                _STORAGE_DASHBOARD_URL_PATH,
+            )
             return "error"
 
-        # Check if dashboard already exists
-        existing = dashboards_collection.async_items()
-        for item in existing:
-            if item.get("url_path") == _STORAGE_DASHBOARD_URL_PATH:
-                _LOGGER.debug("Storage dashboard '%s' already exists", _STORAGE_DASHBOARD_URL_PATH)
+        coll = DashboardsCollection(hass)
+        await coll.async_load()
+
+        # Double-check storage in case the dashboard exists but wasn't in the dict
+        for item in coll.async_items():
+            item_url = (
+                item.get("url_path")
+                if isinstance(item, dict)
+                else getattr(item, "url_path", None)
+            )
+            if item_url == _STORAGE_DASHBOARD_URL_PATH:
+                _LOGGER.debug(
+                    "Storage dashboard '%s' found in collection",
+                    _STORAGE_DASHBOARD_URL_PATH,
+                )
                 return "exists"
 
         # Gather PilotSuite entity IDs for the dashboard
@@ -392,25 +428,68 @@ async def async_ensure_storage_dashboard(hass: HomeAssistant) -> str:
             if "pilotsuite" in eid or "copilot" in eid
         )
 
-        # Create the dashboard
-        await dashboards_collection.async_create_item({
+        # Create the dashboard entry in the collection store
+        await coll.async_create_item({
             "url_path": _STORAGE_DASHBOARD_URL_PATH,
             "title": _STORAGE_DASHBOARD_TITLE,
             "icon": _STORAGE_DASHBOARD_ICON,
             "show_in_sidebar": True,
             "require_admin": False,
-            "mode": "storage",
         })
 
-        # Save dashboard config
-        dashboards = lovelace.get("dashboards", {})
-        dashboard = dashboards.get(_STORAGE_DASHBOARD_URL_PATH)
-        if dashboard is not None:
+        # Save dashboard view config to the LovelaceStorage store.
+        # The views are stored in .storage/lovelace.<dashboard_id>
+        try:
+            from homeassistant.helpers.storage import Store
+
+            dashboard_id = _STORAGE_DASHBOARD_URL_PATH.replace("-", "_")
+            store = Store(hass, 1, f"lovelace.{dashboard_id}")
             config = _build_storage_dashboard_config(ps_entities)
-            await dashboard.async_save(config)
-            _LOGGER.info("Created storage-mode PilotSuite dashboard with %d entities", len(ps_entities))
+            await store.async_save({"config": config})
+            _LOGGER.info(
+                "Created storage-mode PilotSuite dashboard with %d entities",
+                len(ps_entities),
+            )
+        except Exception:  # noqa: BLE001
+            _LOGGER.warning(
+                "Dashboard entry created but could not save views — "
+                "configure views manually in the HA UI"
+            )
 
         return "created"
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Failed to create storage-mode PilotSuite dashboard")
         return "error"
+
+
+_YAML_DASHBOARD_SLUGS = ("copilot-pilotsuite", "copilot-habitus-zones")
+
+
+async def async_hide_yaml_dashboards_from_sidebar(hass: HomeAssistant) -> None:
+    """Hide legacy YAML dashboards from sidebar at runtime (no HA restart needed).
+
+    The YAML snippet already sets show_in_sidebar: false, but that only takes
+    effect after HA restart. This re-registers the panels immediately.
+    """
+    try:
+        from homeassistant.components import frontend
+
+        panels = hass.data.get(frontend.DATA_PANELS, {})
+        for slug in _YAML_DASHBOARD_SLUGS:
+            if slug in panels:
+                panel = panels[slug]
+                if getattr(panel, "sidebar_show", True):
+                    frontend.async_register_built_in_panel(
+                        hass,
+                        "lovelace",
+                        frontend_url_path=slug,
+                        require_admin=False,
+                        show_in_sidebar=False,
+                        sidebar_title=getattr(panel, "sidebar_title", slug),
+                        sidebar_icon=getattr(panel, "sidebar_icon", "mdi:robot-outline"),
+                        config={"mode": "yaml"},
+                        update=True,
+                    )
+                    _LOGGER.debug("Hidden YAML dashboard '%s' from sidebar", slug)
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Could not hide YAML dashboards from sidebar", exc_info=True)

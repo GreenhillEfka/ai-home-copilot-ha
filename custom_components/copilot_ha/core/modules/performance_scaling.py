@@ -91,7 +91,9 @@ class PerformanceScalingModule:
         }
 
         # Start background monitor (every 60s)
-        self._monitor_task = ctx.hass.async_create_task(self._monitor_loop())
+        self._monitor_task = ctx.hass.async_create_background_task(
+            self._monitor_loop(), "pilotsuite_performance_monitor"
+        )
 
         _LOGGER.info(
             "Performance scaling kernel v1.0 active for entry %s",
