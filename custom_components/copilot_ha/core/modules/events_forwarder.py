@@ -197,6 +197,8 @@ class _ForwarderState:
 
     entity_ids: list[str] | None = None
     entity_to_zone_ids: dict[str, list[str]] | None = None
+    neuron_excluded: set[str] | None = None  # entities excluded from neuron feed
+    neuron_tags_map: dict[str, list[str]] | None = None  # entity_id → neuron tag ids
 
     # bounded in-memory queue (drop-oldest policy enforced by our enqueue helpers)
     queue: list[dict[str, Any]] | None = None
@@ -565,6 +567,35 @@ class EventsForwarderModule:
             st.entity_ids = all_entities
             st.entity_to_zone_ids = entity_to_zone
 
+            # Build neuron feed exclusion set + entity→neuron-tags map
+            # (cached for sync access in _handle_state)
+            try:
+                from ...neuron_feed_store import async_is_entity_neuron_fed
+                from ...entity_tags_store import async_get_entity_tags
+                excluded: set[str] = set()
+                for eid in all_entities:
+                    if not await async_is_entity_neuron_fed(hass, eid):
+                        excluded.add(eid)
+                st.neuron_excluded = excluded
+                if excluded:
+                    _LOGGER.info(
+                        "Neuron feed filter: %d/%d entities excluded",
+                        len(excluded), len(all_entities),
+                    )
+                # Build entity → neuron tag IDs map for event envelope enrichment
+                tags = await async_get_entity_tags(hass)
+                ntags_map: dict[str, list[str]] = {}
+                for tag_id, tag in tags.items():
+                    if not tag_id.startswith("neuron_"):
+                        continue
+                    for eid in tag.entity_ids:
+                        ntags_map.setdefault(eid, []).append(tag_id)
+                st.neuron_tags_map = ntags_map if ntags_map else None
+            except Exception:  # noqa: BLE001
+                st.neuron_excluded = None
+                st.neuron_tags_map = None
+                _LOGGER.debug("Neuron feed filter unavailable, forwarding all")
+
             # Re-subscribe
             if callable(st.unsub_state):
                 st.unsub_state()
@@ -578,6 +609,10 @@ class EventsForwarderModule:
                 try:
                     eid = str(event.data.get("entity_id") or "")
                     if not eid:
+                        return
+
+                    # Neuron feed filter: skip entities excluded by user
+                    if st.neuron_excluded and eid in st.neuron_excluded:
                         return
 
                     old = event.data.get("old_state")
@@ -598,20 +633,27 @@ class EventsForwarderModule:
                     if not _seen_allow(id_key):
                         return
 
+                    attrs: dict[str, Any] = {
+                        "domain": _domain(eid),
+                        "zone_ids": zone_ids,
+                        "old_state": old_state,
+                        "new_state": new_state,
+                        # Privacy-first: include a tiny allowlist of state attributes only.
+                        "state_attributes": _allowed_state_attrs(eid, new),
+                    }
+                    # Enrich with neuron layer classification if available
+                    if st.neuron_tags_map:
+                        ntags = st.neuron_tags_map.get(eid)
+                        if ntags:
+                            attrs["neuron_tags"] = ntags
+
                     item: dict[str, Any] = {
                         "id": id_key,
                         "ts": _now_iso(),
                         "type": "state_changed",
                         "source": "home_assistant",
                         "entity_id": eid,
-                        "attributes": {
-                            "domain": _domain(eid),
-                            "zone_ids": zone_ids,
-                            "old_state": old_state,
-                            "new_state": new_state,
-                            # Privacy-first: include a tiny allowlist of state attributes only.
-                            "state_attributes": _allowed_state_attrs(eid, new),
-                        },
+                        "attributes": attrs,
                     }
 
                     _enqueue(item)
@@ -862,6 +904,15 @@ class EventsForwarderModule:
 
         st.unsub_zones = async_dispatcher_connect(hass, SIGNAL_HABITUS_ZONES_V2_UPDATED, _zones_updated)
 
+        # Refresh neuron exclusion cache when user toggles a feed switch
+        def _neuron_feed_changed(tag_id: str) -> None:
+            _schedule_task(_refresh_subscriptions)
+
+        from ...neuron_feed_store import SIGNAL_NEURON_FEED_CHANGED
+        st._unsub_neuron_feed = async_dispatcher_connect(
+            hass, SIGNAL_NEURON_FEED_CHANGED, _neuron_feed_changed
+        )
+
         if forward_call_service:
             st.unsub_call_service = hass.bus.async_listen("call_service", _handle_call_service)
 
@@ -884,6 +935,9 @@ class EventsForwarderModule:
                 st.unsub_call_service()
             if callable(st.unsub_persist_timer):
                 st.unsub_persist_timer()
+            unsub_nf = getattr(st, "_unsub_neuron_feed", None)
+            if callable(unsub_nf):
+                unsub_nf()
 
             if isinstance(data, dict):
                 data.pop("events_forwarder_state", None)

@@ -11,12 +11,17 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
+from homeassistant.helpers.dispatcher import async_dispatcher_send
+
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 NEURON_FEED_STORE_KEY = f"{DOMAIN}.neuron_feed"
 NEURON_FEED_STORE_VERSION = 1
+
+# Signal fired when any neuron feed state changes
+SIGNAL_NEURON_FEED_CHANGED = f"{DOMAIN}_neuron_feed_changed"
 
 
 def _store(hass: HomeAssistant) -> Store:
@@ -56,6 +61,8 @@ async def async_set_neuron_feed_state(
     feeds[tag_id] = enabled
     await store.async_save(raw)
     _LOGGER.debug("Neuron feed for tag '%s' set to %s", tag_id, enabled)
+    # Notify listeners (e.g. events forwarder) to refresh exclusion cache
+    async_dispatcher_send(hass, SIGNAL_NEURON_FEED_CHANGED, tag_id)
 
 
 async def async_get_neuron_feed_state(

@@ -55,10 +55,43 @@ class EntityTagsModule(CopilotModule):
         ctx.hass.data["copilot_ha"].setdefault(ctx.entry_id, {})
         ctx.hass.data["copilot_ha"][ctx.entry_id]["entity_tags_module"] = self
 
+        # Auto-create neuron tags for existing zones if none exist yet.
+        # This ensures zones created before v14.4.x get neuron tags on upgrade.
+        has_neuron_tags = any(tid.startswith("neuron_") for tid in self._tags)
+        if not has_neuron_tags:
+            await self._ensure_neuron_tags(ctx)
+
         _LOGGER.info(
             "EntityTagsModule setup: %d tags loaded",
             len(self._tags),
         )
+
+    async def _ensure_neuron_tags(self, ctx: ModuleContext) -> None:
+        """Create neuron tags from existing habitus zones (one-time migration)."""
+        try:
+            from ...habitus_zones_store_v2 import async_get_zones_v2
+            from ...zone_auto_setup import async_create_neuron_tags_from_zones
+
+            zones = await async_get_zones_v2(ctx.hass, ctx.entry_id)
+            if not zones:
+                _LOGGER.debug("No habitus zones found, skipping neuron tag creation")
+                return
+
+            neuron_map = await async_create_neuron_tags_from_zones(ctx.hass, zones)
+            _LOGGER.info(
+                "Neuron tags auto-created for %d existing zones: "
+                "%d context, %d state, %d mood",
+                len(zones),
+                len(neuron_map.get("context", [])),
+                len(neuron_map.get("state", [])),
+                len(neuron_map.get("mood", [])),
+            )
+            # Reload tags so this module has the fresh state
+            from ...entity_tags_store import async_get_entity_tags
+            self._tags = await async_get_entity_tags(ctx.hass)
+
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug("Could not auto-create neuron tags from zones", exc_info=True)
 
     async def async_unload_entry(self, ctx: ModuleContext) -> bool:
         entry_store = ctx.hass.data.get("copilot_ha", {}).get(ctx.entry_id, {})

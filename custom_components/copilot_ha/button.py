@@ -158,6 +158,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     except Exception:
         _LOGGER.debug("Zone scene buttons skipped (zones not configured)")
 
+    # HomeKit per-zone toggle buttons (v14.4.2)
+    try:
+        from .homekit_entities import async_create_homekit_buttons
+        hk_buttons = await async_create_homekit_buttons(hass, entry, coordinator)
+        if hk_buttons:
+            async_add_entities(hk_buttons, True)
+    except Exception:
+        _LOGGER.debug("HomeKit toggle buttons skipped")
+
     # Dashboard rebuild button (if frontend_module already loaded)
     try:
         frontend_mod = data.get("frontend_module") if isinstance(data, dict) else None
