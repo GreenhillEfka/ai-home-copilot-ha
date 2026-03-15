@@ -361,6 +361,37 @@ class CopilotApiClient(SharedCopilotApiClient):
             label=f"Zone config {zone_id}",
         )
 
+    async def async_sync_habitus_config(self, config: dict[str, Any]) -> dict[str, Any]:
+        """Push habitus mining config from HA to Core.
+
+        Config may include: min_support, min_confidence, context_features,
+        auto_mine_interval_s, auto_mine_event_threshold.
+        """
+        return await self._safe_post(
+            "/api/v1/habitus/config", config, label="Habitus config sync",
+        )
+
+    async def async_get_habitus_config(self) -> dict[str, Any]:
+        """Get current habitus mining config from Core."""
+        return await self._safe_get(
+            "/api/v1/habitus/config", {},
+            label="Habitus config",
+        )
+
+    async def async_get_mood_history(self, hours: int = 24) -> list[dict[str, Any]]:
+        """Get mood snapshots from Core for the last N hours."""
+        return await self._safe_get(
+            f"/api/v1/neurons/mood/history?hours={hours}", [],
+            key="snapshots", label="Mood history",
+        )
+
+    async def async_get_mood_trend(self, hours: int = 24) -> dict[str, Any]:
+        """Get mood distribution/trend from Core for the last N hours."""
+        return await self._safe_get(
+            f"/api/v1/neurons/mood/trend?hours={hours}", {},
+            label="Mood trend",
+        )
+
     async def async_set_zone_override(self, zone_id: str, target: str, enabled: bool) -> dict[str, Any]:
         """Toggle zone automation override (light or music)."""
         return await self._safe_post(
@@ -736,6 +767,23 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                         result["zone_automation"] = zone_auto
                 except Exception:
                     _LOGGER.debug("Zone automation dashboard fetch skipped")
+
+                # Habitus config sync: push HA config to Core on first refresh
+                if not getattr(self, "_habitus_config_synced", False):
+                    try:
+                        cfg = self.config_entry.data | self.config_entry.options
+                        habitus_cfg = {
+                            k: v for k, v in cfg.items()
+                            if k.startswith("habitus_") or k in (
+                                "min_support", "min_confidence", "context_features",
+                            )
+                        }
+                        if habitus_cfg:
+                            await self.api.async_sync_habitus_config(habitus_cfg)
+                            _LOGGER.debug("Habitus config synced to Core: %s", list(habitus_cfg.keys()))
+                        self._habitus_config_synced = True
+                    except Exception:
+                        _LOGGER.debug("Habitus config sync skipped")
 
                 # Preserve webhook-pushed data across coordinator refreshes
                 if self.data:

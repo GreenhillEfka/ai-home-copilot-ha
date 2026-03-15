@@ -157,42 +157,75 @@ class HomeKitZoneQRSensor(CopilotBaseEntity, SensorEntity):
         return attrs
 
 
+async def _load_homekit_zones(hass: HomeAssistant, entry_id: str) -> list:
+    """Load active habitus zones for HomeKit entity creation."""
+    try:
+        from .habitus_zones_store_v2 import async_get_zones_v2
+        zones = await async_get_zones_v2(hass, entry_id)
+        return [z for z in zones if z.current_state != "disabled"]
+    except Exception:
+        _LOGGER.debug("Could not load zones for HomeKit entities")
+        return []
+
+
+async def async_create_homekit_buttons(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: CopilotDataUpdateCoordinator,
+) -> list[HomeKitZoneToggleButton]:
+    """Create HomeKit toggle buttons for each habitus zone.
+
+    Called from button.py async_setup_entry.
+    """
+    zones = await _load_homekit_zones(hass, entry.entry_id)
+    buttons: list[HomeKitZoneToggleButton] = []
+    for zone in zones:
+        entity_ids = list(zone.entity_ids) if zone.entity_ids else []
+        buttons.append(
+            HomeKitZoneToggleButton(
+                coordinator, entry,
+                zone.zone_id, zone.name, entity_ids,
+            )
+        )
+    if buttons:
+        _LOGGER.info("Created %d HomeKit toggle buttons", len(buttons))
+    return buttons
+
+
+async def async_create_homekit_sensors(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: CopilotDataUpdateCoordinator,
+) -> list[HomeKitZoneQRSensor]:
+    """Create HomeKit QR sensors for each habitus zone.
+
+    Called from sensor.py async_setup_entry.
+    """
+    zones = await _load_homekit_zones(hass, entry.entry_id)
+    sensors: list[HomeKitZoneQRSensor] = []
+    for zone in zones:
+        sensors.append(
+            HomeKitZoneQRSensor(
+                coordinator, entry,
+                zone.zone_id, zone.name,
+            )
+        )
+    if sensors:
+        _LOGGER.info("Created %d HomeKit QR sensors", len(sensors))
+    return sensors
+
+
 async def async_create_homekit_entities(
     hass: HomeAssistant,
     entry: ConfigEntry,
     coordinator: CopilotDataUpdateCoordinator,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Create HomeKit toggle + QR entities for each habitus zone.
+    """Create HomeKit QR sensor entities for each habitus zone.
 
     Called from sensor.py async_setup_entry.
+    NOTE: Only creates QR sensors here. Toggle buttons are in button.py.
     """
-    try:
-        from .habitus_zones_store_v2 import async_get_zones_v2
-        zones = await async_get_zones_v2(hass, entry.entry_id)
-    except Exception:
-        _LOGGER.debug("Could not load zones for HomeKit entities")
-        return
-
-    entities: list = []
-    for zone in zones:
-        if zone.current_state == "disabled":
-            continue
-        entity_ids = list(zone.entity_ids) if zone.entity_ids else []
-
-        entities.append(
-            HomeKitZoneToggleButton(
-                coordinator, entry,
-                zone.zone_id, zone.name, entity_ids,
-            )
-        )
-        entities.append(
-            HomeKitZoneQRSensor(
-                coordinator, entry,
-                zone.zone_id, zone.name,
-            )
-        )
-
-    if entities:
-        async_add_entities(entities, update_before_add=False)
-        _LOGGER.info("Created %d HomeKit entities for %d zones", len(entities), len(entities) // 2)
+    sensors = await async_create_homekit_sensors(hass, entry, coordinator)
+    if sensors:
+        async_add_entities(sensors, update_before_add=False)

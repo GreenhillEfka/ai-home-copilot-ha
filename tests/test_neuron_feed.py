@@ -82,6 +82,8 @@ class TestNeuronFeedStore:
         with patch(
             "copilot_ha.neuron_feed_store.Store",
             return_value=mock_store,
+        ), patch(
+            "copilot_ha.neuron_feed_store.async_dispatcher_send",
         ):
             # Reset global store cache
             hass.data.setdefault("copilot_ha", {}).setdefault("_global", {}).pop(
@@ -134,6 +136,27 @@ class TestNeuronFeedStore:
 
         states = await async_get_neuron_feed_states(hass)
         assert states == {"licht": False, "klima": True, "sicherheit": False}
+
+    @pytest.mark.asyncio
+    async def test_set_state_fires_signal(self, hass, store_data):
+        """Setting neuron feed state fires SIGNAL_NEURON_FEED_CHANGED."""
+        from copilot_ha.neuron_feed_store import (
+            async_set_neuron_feed_state,
+            SIGNAL_NEURON_FEED_CHANGED,
+        )
+
+        with patch(
+            "copilot_ha.neuron_feed_store.async_dispatcher_send",
+        ) as mock_signal:
+            await async_set_neuron_feed_state(hass, "licht", False)
+            mock_signal.assert_called_once_with(
+                hass, SIGNAL_NEURON_FEED_CHANGED, "licht"
+            )
+
+    def test_signal_constant_exists(self):
+        """SIGNAL_NEURON_FEED_CHANGED constant is defined."""
+        from copilot_ha.neuron_feed_store import SIGNAL_NEURON_FEED_CHANGED
+        assert "neuron_feed" in SIGNAL_NEURON_FEED_CHANGED
 
 
 # ── Entity Neuron Fed Check ─────────────────────────────────────────────
