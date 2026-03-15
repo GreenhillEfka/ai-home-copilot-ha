@@ -285,12 +285,17 @@ async def async_ensure_lovelace_dashboard_wiring(hass: HomeAssistant) -> str:
 
 
 _STORAGE_DASHBOARD_URL_PATH = "dashboard-pilotsuite"
-_STORAGE_DASHBOARD_TITLE = "PilotSuite - Styx"
-_STORAGE_DASHBOARD_ICON = "mdi:robot-outline"
+_STORAGE_DASHBOARD_TITLE = "PilotSuite"
+_STORAGE_DASHBOARD_ICON = "mdi:home-heart"
 
 
 def _build_storage_dashboard_config(entities: list[str]) -> dict:
-    """Build a storage-mode Lovelace dashboard config with PilotSuite cards."""
+    """Build a storage-mode Lovelace dashboard config.
+
+    HA frontend is "Sinne + Haende" (Thin Client):
+    only Haushalt, Zonen, Chat. Everything else (Brain, Neurons,
+    Suggestions, Mood engine, System) belongs in the Core ingress dashboard.
+    """
     status_entities = [
         e for e in entities
         if e.startswith(("binary_sensor.pilotsuite", "sensor.pilotsuite_styx_",
@@ -304,24 +309,6 @@ def _build_storage_dashboard_config(entities: list[str]) -> dict:
 
     views = [
         {
-            "title": "Styx",
-            "path": "styx",
-            "icon": "mdi:brain",
-            "cards": [
-                *(
-                    [{
-                        "type": "entities",
-                        "title": "PilotSuite Status",
-                        "show_header_toggle": False,
-                        "entities": status_entities[:6],
-                    }] if status_entities else []
-                ),
-                {"type": "custom:styx-brain-card"},
-                {"type": "custom:styx-mood-card"},
-                {"type": "custom:styx-suggestions-card"},
-            ],
-        },
-        {
             "title": "Haushalt",
             "path": "haushalt",
             "icon": "mdi:home-heart",
@@ -330,49 +317,20 @@ def _build_storage_dashboard_config(entities: list[str]) -> dict:
                 *(
                     [{
                         "type": "entities",
-                        "title": "Habitus Zonen",
+                        "title": "PilotSuite Status",
                         "show_header_toggle": False,
-                        "entities": zone_entities[:5],
-                    }] if zone_entities else []
+                        "entities": status_entities[:5],
+                    }] if status_entities else []
                 ),
-            ],
-        },
-        {
-            "title": "Stimmung",
-            "path": "stimmung",
-            "icon": "mdi:emoticon-outline",
-            "cards": [
-                {"type": "custom:styx-mood-card"},
                 *(
                     [{
                         "type": "entities",
-                        "title": "Mood Sensoren",
+                        "title": "Stimmung",
                         "show_header_toggle": False,
                         "entities": mood_entities[:3],
                     }] if mood_entities else []
                 ),
             ],
-        },
-        {
-            "title": "Brain",
-            "path": "brain",
-            "icon": "mdi:head-snowflake-outline",
-            "cards": [
-                {"type": "custom:styx-brain-card"},
-                {"type": "custom:styx-neural-card"},
-            ],
-        },
-        {
-            "title": "Chat",
-            "path": "chat",
-            "icon": "mdi:chat-outline",
-            "cards": [{"type": "custom:styx-chat-card"}],
-        },
-        {
-            "title": "Vorschlaege",
-            "path": "vorschlaege",
-            "icon": "mdi:lightbulb-on-outline",
-            "cards": [{"type": "custom:styx-suggestions-card"}],
         },
         {
             "title": "Zonen",
@@ -381,15 +339,21 @@ def _build_storage_dashboard_config(entities: list[str]) -> dict:
             "cards": [
                 {"type": "custom:styx-habitus-card"},
                 {"type": "custom:styx-zone-card"},
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Zonen-Status",
+                        "show_header_toggle": False,
+                        "entities": zone_entities[:5],
+                    }] if zone_entities else []
+                ),
             ],
         },
         {
-            "title": "System",
-            "path": "system",
-            "icon": "mdi:cog-outline",
-            "cards": [
-                {"type": "custom:styx-error-card"},
-            ],
+            "title": "Chat",
+            "path": "chat",
+            "icon": "mdi:chat-outline",
+            "cards": [{"type": "custom:styx-chat-card"}],
         },
     ]
 
