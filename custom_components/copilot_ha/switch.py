@@ -4,9 +4,10 @@ from __future__ import annotations
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
-from .const import DOMAIN
+from .const import DOMAIN, SIGNAL_FRONTEND_MODULE_READY
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,5 +40,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     except Exception:
         _LOGGER.debug("Zone automation switches skipped (zones not configured)")
 
+    # Dashboard view toggle switches (if frontend_module already loaded)
+    try:
+        frontend_mod = data.get("frontend_module")
+        if frontend_mod is not None:
+            from .frontend_entities import create_frontend_entities
+            result = create_frontend_entities(coordinator, entry)
+            entities.extend(result.get("switch", []))
+    except Exception:
+        _LOGGER.debug("Dashboard view toggles skipped")
+
+    # Neuron feed per-tag switches
+    try:
+        from .neuron_feed_entities import async_create_neuron_feed_entities
+
+        nf_result = await async_create_neuron_feed_entities(coordinator)
+        entities.extend(nf_result.get("switch", []))
+    except Exception:
+        _LOGGER.debug("Neuron feed switches skipped")
+
     if entities:
         async_add_entities(entities, True)
+
+    # Lazy creation: if frontend_module loads after switch platform,
+    # add view toggles when SIGNAL_FRONTEND_MODULE_READY fires.
+    @callback
+    def _on_frontend_ready(ready_entry_id: str) -> None:
+        if ready_entry_id != entry.entry_id:
+            return
+        try:
+            from .frontend_entities import create_frontend_entities
+            result = create_frontend_entities(coordinator, entry)
+            new_switches = result.get("switch", [])
+            if new_switches:
+                async_add_entities(new_switches, True)
+        except Exception:
+            _LOGGER.debug("Failed to add frontend view switches on signal")
+
+    async_dispatcher_connect(hass, SIGNAL_FRONTEND_MODULE_READY, _on_frontend_ready)

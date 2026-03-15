@@ -198,21 +198,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         return
 
     if not is_full_entity_profile(entry):
-        async_add_entities(
-            [
-                CopilotVersionSensor(coordinator),
-                CoreApiV1StatusSensor(coordinator, entry),
-                HabitusZonesSensor(coordinator, entry),
-                HabitusZonesV2CountSensor(coordinator, entry),
-                HabitusZonesV2StatesSensor(coordinator, entry),
-                HabitusZonesV2HealthSensor(coordinator, entry),
-                PipelineHealthSensor(coordinator),
-                MoodSensor(coordinator),
-                MoodConfidenceSensor(coordinator),
-                AgentStatusSensor(coordinator),
-            ],
-            True,
-        )
+        core_entities = [
+            CopilotVersionSensor(coordinator),
+            CoreApiV1StatusSensor(coordinator, entry),
+            HabitusZonesSensor(coordinator, entry),
+            HabitusZonesV2CountSensor(coordinator, entry),
+            HabitusZonesV2StatesSensor(coordinator, entry),
+            HabitusZonesV2HealthSensor(coordinator, entry),
+            PipelineHealthSensor(coordinator),
+            MoodSensor(coordinator),
+            MoodConfidenceSensor(coordinator),
+            AgentStatusSensor(coordinator),
+        ]
+        # Add version sensors created by button platform (if available).
+        ha_ver_sensor = data.get("_ha_version_sensor")
+        core_ver_sensor = data.get("_core_version_sensor")
+        if ha_ver_sensor is not None:
+            core_entities.append(ha_ver_sensor)
+        if core_ver_sensor is not None:
+            core_entities.append(core_ver_sensor)
+        async_add_entities(core_entities, True)
         return
 
     dynamic_context_unique_ids: set[str] = set()
@@ -467,6 +472,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     for sensor_cls in AUTONOMY_SENSORS:
         entities.append(sensor_cls(coordinator))
 
+    # Update check version sensors (created by button platform)
+    ha_ver_sensor = data.get("_ha_version_sensor")
+    core_ver_sensor = data.get("_core_version_sensor")
+    if ha_ver_sensor is not None:
+        entities.append(ha_ver_sensor)
+    if core_ver_sensor is not None:
+        entities.append(core_ver_sensor)
+
     # Camera Context Sensors (Habitus Camera Integration)
     entities.extend([
         CameraMotionHistorySensor(coordinator, entry),
@@ -530,6 +543,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     tags_mod = get_entity_tags_module(hass, entry.entry_id)
     if tags_mod is not None:
         entities.append(EntityTagsSensor(hass, entry, tags_mod))
+
+    # Neuron Feed Summary sensor
+    try:
+        from .neuron_feed_entities import NeuronFeedSummarySensor
+        entities.append(NeuronFeedSummarySensor(coordinator))
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Neuron feed summary sensor skipped")
 
     # Person Tracking sensor (v3.3.0)
     from .core.modules.person_tracking_module import get_person_tracking_module

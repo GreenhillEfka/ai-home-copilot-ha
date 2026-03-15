@@ -4,7 +4,8 @@ from __future__ import annotations
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ from .const import (
     CONF_TEST_LIGHT,
     DEFAULT_TEST_LIGHT,
     DOMAIN,
+    SIGNAL_FRONTEND_MODULE_READY,
 )
 from .entity_profile import is_full_entity_profile
 from .habitus_zones_entities_v2 import (
@@ -25,6 +27,12 @@ from .button_camera import (
 )
 from .button_tag_registry import CopilotTagRegistrySyncLabelsNowButton
 from .button_update_rollback import CopilotUpdateRollbackReportButton
+from .button_update_check import (
+    CheckHAUpdateButton,
+    CheckCoreUpdateButton,
+    PilotSuiteHAVersionSensor,
+    PilotSuiteCoreVersionSensor,
+)
 from .button_media import (
     VolumeUpButton,
     VolumeDownButton,
@@ -42,6 +50,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     cfg = entry.data | entry.options
 
     if not is_full_entity_profile(entry):
+        # Create version sensors for update check buttons.
+        ha_ver_sensor = PilotSuiteHAVersionSensor(coordinator)
+        core_ver_sensor = PilotSuiteCoreVersionSensor(coordinator)
+        # Store sensors in hass.data for sensor platform to pick up.
+        data["_ha_version_sensor"] = ha_ver_sensor
+        data["_core_version_sensor"] = core_ver_sensor
         async_add_entities(
             [
                 CopilotReloadConfigEntryButton(coordinator, entry.entry_id),
@@ -51,11 +65,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 CopilotDownloadHabitusDashboardButton(coordinator, entry),
                 CopilotGeneratePilotSuiteDashboardButton(coordinator, entry),
                 CopilotDownloadPilotSuiteDashboardButton(coordinator, entry),
+                CheckHAUpdateButton(coordinator, ha_ver_sensor),
+                CheckCoreUpdateButton(coordinator, core_ver_sensor),
             ],
             True,
         )
         return
     
+    # Create version sensors for update check buttons.
+    ha_ver_sensor = PilotSuiteHAVersionSensor(coordinator)
+    core_ver_sensor = PilotSuiteCoreVersionSensor(coordinator)
+    data["_ha_version_sensor"] = ha_ver_sensor
+    data["_core_version_sensor"] = core_ver_sensor
+
     entities = [
         # System buttons
         CopilotGenerateOverviewButton(coordinator),
@@ -104,6 +126,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         CopilotUpdateRollbackReportButton(coordinator),
         # Brain dashboard summary
         CopilotBrainDashboardSummaryButton(coordinator, entry),
+        # Update check buttons
+        CheckHAUpdateButton(coordinator, ha_ver_sensor),
+        CheckCoreUpdateButton(coordinator, core_ver_sensor),
         # Camera Dashboard buttons
         CopilotGenerateCameraDashboardButton(hass, entry),
         CopilotDownloadCameraDashboardButton(hass, entry),
@@ -132,6 +157,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             async_add_entities(scene_buttons, True)
     except Exception:
         _LOGGER.debug("Zone scene buttons skipped (zones not configured)")
+
+    # Dashboard rebuild button (if frontend_module already loaded)
+    try:
+        frontend_mod = data.get("frontend_module") if isinstance(data, dict) else None
+        if frontend_mod is not None:
+            from .frontend_entities import DashboardRefreshButton
+            async_add_entities([DashboardRefreshButton(coordinator, entry)], True)
+    except Exception:
+        _LOGGER.debug("Dashboard rebuild button skipped")
+
+    # Lazy creation via dispatcher signal
+    @callback
+    def _on_frontend_ready(ready_entry_id: str) -> None:
+        if ready_entry_id != entry.entry_id:
+            return
+        try:
+            from .frontend_entities import DashboardRefreshButton
+            async_add_entities([DashboardRefreshButton(coordinator, entry)], True)
+        except Exception:
+            _LOGGER.debug("Failed to add dashboard rebuild button on signal")
+
+    async_dispatcher_connect(hass, SIGNAL_FRONTEND_MODULE_READY, _on_frontend_ready)
 
 
 # Re-export all button classes

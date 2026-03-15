@@ -290,7 +290,11 @@ _STORAGE_DASHBOARD_TITLE = "PilotSuite"
 _STORAGE_DASHBOARD_ICON = "mdi:home-heart"
 
 
-def _build_storage_dashboard_config(entities: list[str]) -> dict:
+def _build_storage_dashboard_config(
+    entities: list[str],
+    *,
+    enabled_views: set[str] | None = None,
+) -> dict:
     """Build a storage-mode Lovelace dashboard config.
 
     HA frontend is "Sinne + Haende" (Thin Client):
@@ -520,6 +524,10 @@ def _build_storage_dashboard_config(entities: list[str]) -> dict:
             "cards": [{"type": "custom:styx-chat-card"}],
         },
     ]
+
+    # Filter views if enabled_views is specified
+    if enabled_views is not None:
+        views = [v for v in views if v["path"] in enabled_views]
 
     return {"title": _STORAGE_DASHBOARD_TITLE, "views": views}
 

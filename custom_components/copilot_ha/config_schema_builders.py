@@ -143,6 +143,16 @@ from .const import (
     CONF_HABITUS_MIN_CONFIDENCE,
     DEFAULT_HABITUS_ENABLED,
     DEFAULT_HABITUS_MIN_CONFIDENCE,
+    CONF_LLM_PREFER_LOCAL,
+    CONF_LLM_CLOUD_API_URL,
+    CONF_LLM_CLOUD_API_KEY,
+    CONF_LLM_CLOUD_MODEL,
+    CONF_LLM_OLLAMA_MODEL,
+    DEFAULT_LLM_PREFER_LOCAL,
+    DEFAULT_LLM_CLOUD_API_URL,
+    DEFAULT_LLM_CLOUD_API_KEY,
+    DEFAULT_LLM_CLOUD_MODEL,
+    DEFAULT_LLM_OLLAMA_MODEL,
 )
 
 
@@ -528,6 +538,32 @@ def build_anomaly_habitus_schema(data: dict) -> dict:
             CONF_HABITUS_MIN_CONFIDENCE,
             default=data.get(CONF_HABITUS_MIN_CONFIDENCE, DEFAULT_HABITUS_MIN_CONFIDENCE),
         ): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1.0)),
+    }
+
+
+def build_llm_provider_schema(data: dict) -> dict:
+    """Build schema fields for LLM provider / OpenClaw settings."""
+    return {
+        vol.Optional(
+            CONF_LLM_PREFER_LOCAL,
+            default=data.get(CONF_LLM_PREFER_LOCAL, DEFAULT_LLM_PREFER_LOCAL),
+        ): bool,
+        vol.Optional(
+            CONF_LLM_CLOUD_API_URL,
+            default=data.get(CONF_LLM_CLOUD_API_URL, DEFAULT_LLM_CLOUD_API_URL),
+        ): str,
+        vol.Optional(
+            CONF_LLM_CLOUD_API_KEY,
+            default=data.get(CONF_LLM_CLOUD_API_KEY, DEFAULT_LLM_CLOUD_API_KEY),
+        ): str,
+        vol.Optional(
+            CONF_LLM_CLOUD_MODEL,
+            default=data.get(CONF_LLM_CLOUD_MODEL, DEFAULT_LLM_CLOUD_MODEL),
+        ): str,
+        vol.Optional(
+            CONF_LLM_OLLAMA_MODEL,
+            default=data.get(CONF_LLM_OLLAMA_MODEL, DEFAULT_LLM_OLLAMA_MODEL),
+        ): str,
     }
 
 

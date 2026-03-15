@@ -982,3 +982,76 @@ get_memory_history:
           min: 1
           max: 100
           mode: slider
+
+# ─── Entity-centric Zone Assignment ─────────────────────────────────────────
+
+assign_entity_to_zone:
+  name: Entity einer Zone zuordnen
+  description: Weist eine Entity einer Habitus-Zone zu (entfernt sie vorher aus anderen Zonen).
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Die zuzuordnende Entity.
+      required: true
+      example: "light.wohnzimmer"
+      selector:
+        entity:
+    zone_id:
+      name: Zone ID
+      description: ID der Ziel-Zone (z.B. "zone:wohnzimmer").
+      required: true
+      example: "zone:wohnzimmer"
+      selector:
+        text:
+
+remove_entity_from_zone:
+  name: Entity aus Zone entfernen
+  description: Entfernt eine Entity aus allen Habitus-Zonen.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Die zu entfernende Entity.
+      required: true
+      example: "light.wohnzimmer"
+      selector:
+        entity:
+
+# ─── Entity-centric Tag Assignment ──────────────────────────────────────────
+
+tag_entity:
+  name: Entity taggen
+  description: Weist einer Entity einen oder mehrere Tags zu.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Die zu taggende Entity.
+      required: true
+      example: "light.wohnzimmer"
+      selector:
+        entity:
+    tag_ids:
+      name: Tag IDs
+      description: "Komma-getrennte Tag-IDs (z.B. \"licht,klima\")."
+      required: true
+      example: "licht,klima"
+      selector:
+        text:
+
+untag_entity:
+  name: Tag von Entity entfernen
+  description: Entfernt Tags von einer Entity.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Die Entity, von der Tags entfernt werden sollen.
+      required: true
+      example: "light.wohnzimmer"
+      selector:
+        entity:
+    tag_ids:
+      name: Tag IDs
+      description: "Komma-getrennte Tag-IDs (z.B. \"licht,klima\")."
+      required: true
+      example: "licht"
+      selector:
+        text:

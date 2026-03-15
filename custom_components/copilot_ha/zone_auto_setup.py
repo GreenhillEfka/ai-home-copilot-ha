@@ -29,7 +29,7 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "name_de": "Wohnbereich",
         "keywords": [
             "wohn", "wohnzimmer", "esszimmer", "ess", "gast",
-            "living", "dining", "lounge",
+            "living", "dining", "lounge", "loft", "entspannung",
         ],
         "zone_type": "area",
         "icon": "mdi:sofa",
@@ -78,7 +78,7 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "zone_id": "schlafbereich",
         "name_de": "Schlafbereich",
         "keywords": [
-            "schlaf", "schlafzimmer", "bedroom", "eltern",
+            "schlaf", "schlafzimmer", "bedroom",
         ],
         "zone_type": "room",
         "icon": "mdi:bed",
@@ -195,10 +195,48 @@ def _normalize_text(text: str) -> str:
     return nfkd.encode("ascii", "ignore").decode("ascii").strip()
 
 
+def _levenshtein_distance(s1: str, s2: str) -> int:
+    """Compute Levenshtein distance between two strings."""
+    if len(s1) < len(s2):
+        return _levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    prev_row = list(range(len(s2) + 1))
+    for i, c1 in enumerate(s1):
+        curr_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            curr_row.append(min(
+                prev_row[j + 1] + 1,
+                curr_row[j] + 1,
+                prev_row[j] + (0 if c1 == c2 else 1),
+            ))
+        prev_row = curr_row
+    return prev_row[-1]
+
+
+# Virtual/system areas that should be excluded from zone auto-setup.
+# These contain organizational entities, not physical room devices.
+_VIRTUAL_AREA_HINTS = frozenset({
+    "energie", "energy", "netzwerk", "network", "kontrollraum",
+    "kalender", "calendar", "kosten", "cost", "personen", "person",
+    "serverraum", "umwelt", "environment", "medienkontrolle",
+    "free devices", "haupthaus", "pv-anlage", "move", "viture",
+    "firetv", "airplay", "ai-factory",
+})
+
+
+def _is_virtual_area(area_name: str) -> bool:
+    """Check if an area is a virtual/organizational area (not a physical room)."""
+    normalized = _normalize_text(area_name)
+    return any(hint in normalized for hint in _VIRTUAL_AREA_HINTS)
+
+
 def _match_area_to_template(area_name: str) -> tuple[dict | None, float]:
     """Match an HA area name to a Habitus Zone template.
 
     Returns (template, confidence) or (None, 0.0) if no match.
+    Uses exact/substring matching first, then fuzzy matching (Levenshtein ≤ 1)
+    for typo tolerance (e.g., "Toilettte" → "toilette").
     """
     normalized = _normalize_text(area_name)
     best_template = None
@@ -207,13 +245,21 @@ def _match_area_to_template(area_name: str) -> tuple[dict | None, float]:
     for template in HABITUS_ZONE_TEMPLATES:
         for keyword in template["keywords"]:
             kw_norm = _normalize_text(keyword)
+
+            # Exact or substring match
             if kw_norm in normalized or normalized in kw_norm:
-                # Exact or substring match
                 confidence = 0.9 if kw_norm == normalized else 0.8
-                # Bonus for longer keyword matches
                 length_bonus = min(len(kw_norm) / max(len(normalized), 1), 0.1)
                 confidence = min(confidence + length_bonus, 1.0)
 
+                if confidence > best_confidence:
+                    best_confidence = confidence
+                    best_template = template
+                continue
+
+            # Fuzzy match: Levenshtein distance ≤ 1 for keywords ≥ 4 chars
+            if len(kw_norm) >= 4 and _levenshtein_distance(kw_norm, normalized) <= 1:
+                confidence = 0.7  # lower confidence for fuzzy match
                 if confidence > best_confidence:
                     best_confidence = confidence
                     best_template = template
@@ -321,6 +367,11 @@ def aggregate_areas_to_habitus_zones(
 
     for area in areas:
         area_name = area.get("name", "")
+
+        # Skip virtual/organizational areas (Energie, Netzwerk, etc.)
+        if _is_virtual_area(area_name):
+            continue
+
         template, confidence = _match_area_to_template(area_name)
 
         if template and confidence >= 0.6:

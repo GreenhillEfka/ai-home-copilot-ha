@@ -6,6 +6,7 @@ from custom_components.copilot_ha.zone_auto_setup import (
     aggregate_areas_to_habitus_zones,
     detect_entity_role,
     detect_entity_tags,
+    _is_virtual_area,
     _match_area_to_template,
 )
 
@@ -93,6 +94,56 @@ class TestAreaToTemplateMatching:
         template, conf = _match_area_to_template("Eingang")
         assert template is not None
         assert template["zone_id"] == "gangbereich"
+
+    def test_loft_matches_wohnbereich(self):
+        template, conf = _match_area_to_template("Loft")
+        assert template is not None
+        assert template["zone_id"] == "wohnbereich"
+
+    def test_fuzzy_toilettte_typo_matches_badbereich(self):
+        """Typo tolerance: 'Toilettte' (triple t) should still match badbereich."""
+        template, conf = _match_area_to_template("Toilettte")
+        assert template is not None
+        assert template["zone_id"] == "badbereich"
+        assert conf >= 0.6
+
+
+class TestVirtualAreaFilter:
+    """Test virtual/organizational area detection."""
+
+    def test_energie_is_virtual(self):
+        assert _is_virtual_area("Energie") is True
+
+    def test_netzwerk_is_virtual(self):
+        assert _is_virtual_area("Netzwerk") is True
+
+    def test_kontrollraum_is_virtual(self):
+        assert _is_virtual_area("Kontrollraum") is True
+
+    def test_personen_is_virtual(self):
+        assert _is_virtual_area("Personen") is True
+
+    def test_pv_anlage_is_virtual(self):
+        assert _is_virtual_area("PV-Anlage") is True
+
+    def test_wohnzimmer_is_not_virtual(self):
+        assert _is_virtual_area("Wohnzimmer") is False
+
+    def test_kueche_is_not_virtual(self):
+        assert _is_virtual_area("Küche") is False
+
+    def test_virtual_areas_excluded_from_aggregation(self):
+        areas = [
+            {"area_id": "wz", "name": "Wohnzimmer"},
+            {"area_id": "en", "name": "Energie"},
+            {"area_id": "nw", "name": "Netzwerk"},
+        ]
+        zones = aggregate_areas_to_habitus_zones(areas)
+        zone_ids = {z["zone_id"] for z in zones}
+        assert "zone:wohnbereich" in zone_ids
+        # Virtual areas should not appear
+        assert not any("energie" in zid for zid in zone_ids)
+        assert not any("netzwerk" in zid for zid in zone_ids)
 
 
 class TestAggregation:
@@ -248,6 +299,7 @@ class TestTemplateCompleteness:
     @pytest.mark.parametrize("room_name,expected_zone", [
         ("Wohnzimmer", "wohnbereich"),
         ("Esszimmer", "wohnbereich"),
+        ("Loft", "wohnbereich"),
         ("Badezimmer", "badbereich"),
         ("Toilette", "badbereich"),
         ("WC", "badbereich"),

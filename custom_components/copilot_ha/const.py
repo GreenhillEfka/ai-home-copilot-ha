@@ -19,6 +19,12 @@ DATA_RUNTIME = "runtime"
 
 # Dispatcher signals
 SIGNAL_CONTEXT_ENTITIES_REFRESH = f"{DOMAIN}_context_entities_refresh"
+SIGNAL_FRONTEND_MODULE_READY = f"{DOMAIN}_frontend_module_ready"
+SIGNAL_DASHBOARD_REFRESHED = f"{DOMAIN}_dashboard_refreshed"
+
+# Frontend module storage
+FRONTEND_VIEW_STORE_KEY = f"{DOMAIN}.frontend_view_toggles"
+FRONTEND_VIEW_STORE_VERSION = 1
 
 CONF_HOST = "host"
 CONF_PORT = "port"
@@ -303,6 +309,19 @@ DEFAULT_AUTONOMY_AUTO_EXECUTE = False
 # Zone Health Polling (v14.2.0)
 CONF_ZONE_HEALTH_POLL_ENABLED = "zone_health_poll_enabled"
 DEFAULT_ZONE_HEALTH_POLL_ENABLED = True
+
+# LLM Provider / OpenClaw (v14.4.0)
+CONF_LLM_PREFER_LOCAL = "llm_prefer_local"
+CONF_LLM_CLOUD_API_URL = "llm_cloud_api_url"
+CONF_LLM_CLOUD_API_KEY = "llm_cloud_api_key"
+CONF_LLM_CLOUD_MODEL = "llm_cloud_model"
+CONF_LLM_OLLAMA_MODEL = "llm_ollama_model"
+
+DEFAULT_LLM_PREFER_LOCAL = True
+DEFAULT_LLM_CLOUD_API_URL = ""
+DEFAULT_LLM_CLOUD_API_KEY = ""
+DEFAULT_LLM_CLOUD_MODEL = ""
+DEFAULT_LLM_OLLAMA_MODEL = "qwen3:0.6b"
 
 # Entity Tags (v3.2.2)
 ENTITY_TAGS_STORE_KEY = "copilot_ha.entity_tags"

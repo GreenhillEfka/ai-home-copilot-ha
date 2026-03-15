@@ -13,7 +13,7 @@ from homeassistant.helpers import selector
 
 from .config_helpers import merge_config_data, parse_csv
 from .core_endpoint import normalize_host_port
-from .config_schema_builders import build_neuron_schema
+from .config_schema_builders import build_neuron_schema, build_llm_provider_schema
 from .config_snapshot_flow import ConfigSnapshotOptionsFlow
 from .config_zones_flow import async_step_zone_form
 from .config_tags_flow import async_step_add_tag, async_step_edit_tag, async_step_delete_tag
@@ -36,6 +36,11 @@ from .const import (
     CONF_PRIMARY_USER,
     CONF_WASTE_TTS_ENTITY,
     CONF_BIRTHDAY_TTS_ENTITY,
+    CONF_LLM_PREFER_LOCAL,
+    CONF_LLM_CLOUD_API_URL,
+    CONF_LLM_CLOUD_API_KEY,
+    CONF_LLM_CLOUD_MODEL,
+    CONF_LLM_OLLAMA_MODEL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -69,7 +74,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["connection", "modules", "automation_modes", "habitus_zones", "entity_tags", "neurons", "backup_restore"],
+            menu_options=["connection", "modules", "llm_provider", "automation_modes", "habitus_zones", "entity_tags", "neurons", "backup_restore"],
         )
 
     # ── Connection ───────────────────────────────────────────────────
@@ -157,6 +162,35 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
         from .config_schema_builders import build_modules_schema
         schema = vol.Schema(build_modules_schema(data))
         return self.async_show_form(step_id="modules", data_schema=schema)
+
+    # ── LLM Provider / OpenClaw ─────────────────────────────────────
+
+    async def async_step_llm_provider(self, user_input: dict | None = None) -> FlowResult:
+        """Configure LLM provider: local Ollama vs. Cloud/OpenClaw endpoint."""
+        if user_input is not None:
+            # Strip whitespace from text fields
+            for field in (CONF_LLM_CLOUD_API_URL, CONF_LLM_CLOUD_API_KEY, CONF_LLM_CLOUD_MODEL, CONF_LLM_OLLAMA_MODEL):
+                if field in user_input and isinstance(user_input[field], str):
+                    user_input[field] = user_input[field].strip()
+
+            return self._create_merged_entry(user_input)
+
+        data = self._effective_config()
+        schema = vol.Schema(build_llm_provider_schema(data))
+        return self.async_show_form(
+            step_id="llm_provider",
+            data_schema=schema,
+            description_placeholders={
+                "description": (
+                    "Configure the LLM backend for PilotSuite Core.\n\n"
+                    "**Local (Ollama):** Runs on-device via the Core add-on (default, privacy-first).\n\n"
+                    "**Cloud / OpenClaw:** Any OpenAI-compatible endpoint "
+                    "(e.g. http://openclaw.local:8080/v1). Requires API key and model name.\n\n"
+                    "When 'Prefer local model' is enabled, Ollama is used whenever available "
+                    "and Cloud is only used as fallback."
+                )
+            },
+        )
 
     # ── Habitus zones ────────────────────────────────────────────────
 
