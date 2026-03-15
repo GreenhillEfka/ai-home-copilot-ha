@@ -12,7 +12,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
 from .blueprints import async_install_blueprints
-from .config_helpers import fetch_setup_token
+from .config_helpers import discover_reachable_core_endpoint, fetch_setup_token
 from .connection_config import merged_entry_config, resolve_core_connection_from_mapping
 from .const import (
     CONF_HOST,
@@ -373,31 +373,54 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to normalize connection config")
 
-    # Auto-fetch token from Core if missing (1-Key-Flow)
+    # Auto-discover Core endpoint + fetch token if missing (1-Key-Flow)
     try:
         merged = merged_entry_config(entry)
         token = str(merged.get(CONF_TOKEN, "") or "").strip()
+        host = str(merged.get(CONF_HOST, "") or "").strip()
+        port = int(merged.get(CONF_PORT, DEFAULT_PORT) or DEFAULT_PORT)
+
+        # Run discovery if host is missing, default, or token is empty
+        if not token or not host or host == DEFAULT_HOST:
+            discovered = await discover_reachable_core_endpoint(
+                hass,
+                preferred_host=host or DEFAULT_HOST,
+                preferred_port=port,
+            )
+            if discovered:
+                host, port = discovered
+                _LOGGER.info("Auto-discovered Core at %s:%s", host, port)
+
+        # Fetch token if still missing
         if not token:
-            host = str(merged.get(CONF_HOST, DEFAULT_HOST) or DEFAULT_HOST)
-            port = int(merged.get(CONF_PORT, DEFAULT_PORT) or DEFAULT_PORT)
-            fetched = await fetch_setup_token(hass, host, port)
-            if fetched:
-                new_data = dict(entry.data) if isinstance(entry.data, dict) else {}
-                new_data[CONF_TOKEN] = fetched
-                hass.config_entries.async_update_entry(entry, data=new_data)
-                _LOGGER.info(
-                    "Auto-fetched token from Core at %s:%s (1-Key-Flow)",
-                    host, port,
-                )
-            else:
-                _LOGGER.warning(
-                    "No token configured and auto-fetch from Core at %s:%s failed — "
-                    "API calls will fail with 401. Configure token via "
-                    "Settings > Integrations > PilotSuite > Configure",
-                    host, port,
-                )
+            token = await fetch_setup_token(hass, host or DEFAULT_HOST, port)
+
+        # Persist discovered host/port/token into config entry
+        new_data = dict(entry.data) if isinstance(entry.data, dict) else {}
+        changed = False
+        if host and new_data.get(CONF_HOST) != host:
+            new_data[CONF_HOST] = host
+            changed = True
+        if new_data.get(CONF_PORT) != port:
+            new_data[CONF_PORT] = port
+            changed = True
+        if token and new_data.get(CONF_TOKEN) != token:
+            new_data[CONF_TOKEN] = token
+            changed = True
+        if changed:
+            hass.config_entries.async_update_entry(entry, data=new_data)
+            _LOGGER.info(
+                "PilotSuite connection config updated: %s:%s (token=%s)",
+                host, port, "set" if token else "missing",
+            )
+        if not token:
+            _LOGGER.warning(
+                "No token configured and auto-fetch from Core failed — "
+                "API calls will fail with 401. Configure token via "
+                "Settings > Integrations > PilotSuite > Configure",
+            )
     except Exception:
-        _LOGGER.exception("Failed to auto-fetch token from Core")
+        _LOGGER.exception("Failed to auto-discover Core / fetch token")
 
     try:
         await _async_migrate_entry_identity(hass, entry)
