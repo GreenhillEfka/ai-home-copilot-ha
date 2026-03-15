@@ -682,8 +682,7 @@ class MoodModule(CopilotModule):
 
         # Resolve Core URL from config entry
         try:
-            entry_data = hass.data.get(DOMAIN, {}).get(self._entry_id, {})
-            entry = entry_data.get("config_entry")
+            entry = hass.config_entries.async_get_entry(self._entry_id)
             if entry:
                 host, port, token = resolve_core_connection_from_mapping(
                     merged_entry_config(entry)
