@@ -282,3 +282,170 @@ async def async_ensure_lovelace_dashboard_wiring(hass: HomeAssistant) -> str:
     except Exception:  # noqa: BLE001
         _LOGGER.exception("Failed to ensure PilotSuite Lovelace dashboard wiring")
         return "error"
+
+
+_STORAGE_DASHBOARD_URL_PATH = "dashboard-pilotsuite"
+_STORAGE_DASHBOARD_TITLE = "PilotSuite - Styx"
+_STORAGE_DASHBOARD_ICON = "mdi:robot-outline"
+
+
+def _build_storage_dashboard_config(entities: list[str]) -> dict:
+    """Build a storage-mode Lovelace dashboard config with PilotSuite cards."""
+    status_entities = [
+        e for e in entities
+        if e.startswith(("binary_sensor.pilotsuite", "sensor.pilotsuite_styx_",
+                         "sensor.pilotsuite_core_"))
+    ]
+    zone_entities = [
+        e for e in entities
+        if "habitus_zones" in e or "zones_v2" in e
+    ]
+    mood_entities = [e for e in entities if "mood" in e]
+
+    views = [
+        {
+            "title": "Styx",
+            "path": "styx",
+            "icon": "mdi:brain",
+            "cards": [
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "PilotSuite Status",
+                        "show_header_toggle": False,
+                        "entities": status_entities[:6],
+                    }] if status_entities else []
+                ),
+                {"type": "custom:styx-brain-card"},
+                {"type": "custom:styx-mood-card"},
+                {"type": "custom:styx-suggestions-card"},
+            ],
+        },
+        {
+            "title": "Haushalt",
+            "path": "haushalt",
+            "icon": "mdi:home-heart",
+            "cards": [
+                {"type": "custom:styx-household-card"},
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Habitus Zonen",
+                        "show_header_toggle": False,
+                        "entities": zone_entities[:5],
+                    }] if zone_entities else []
+                ),
+            ],
+        },
+        {
+            "title": "Stimmung",
+            "path": "stimmung",
+            "icon": "mdi:emoticon-outline",
+            "cards": [
+                {"type": "custom:styx-mood-card"},
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Mood Sensoren",
+                        "show_header_toggle": False,
+                        "entities": mood_entities[:3],
+                    }] if mood_entities else []
+                ),
+            ],
+        },
+        {
+            "title": "Brain",
+            "path": "brain",
+            "icon": "mdi:head-snowflake-outline",
+            "cards": [
+                {"type": "custom:styx-brain-card"},
+                {"type": "custom:styx-neural-card"},
+            ],
+        },
+        {
+            "title": "Chat",
+            "path": "chat",
+            "icon": "mdi:chat-outline",
+            "cards": [{"type": "custom:styx-chat-card"}],
+        },
+        {
+            "title": "Vorschlaege",
+            "path": "vorschlaege",
+            "icon": "mdi:lightbulb-on-outline",
+            "cards": [{"type": "custom:styx-suggestions-card"}],
+        },
+        {
+            "title": "Zonen",
+            "path": "zonen",
+            "icon": "mdi:map-marker-radius",
+            "cards": [
+                {"type": "custom:styx-habitus-card"},
+                {"type": "custom:styx-zone-card"},
+            ],
+        },
+        {
+            "title": "System",
+            "path": "system",
+            "icon": "mdi:cog-outline",
+            "cards": [
+                {"type": "custom:styx-error-card"},
+            ],
+        },
+    ]
+
+    return {"title": _STORAGE_DASHBOARD_TITLE, "views": views}
+
+
+async def async_ensure_storage_dashboard(hass: HomeAssistant) -> str:
+    """Create a storage-mode Lovelace dashboard (works without HA restart).
+
+    Returns:
+        One of: "created", "exists", "error"
+    """
+    try:
+        lovelace = hass.data.get("lovelace")
+        if lovelace is None:
+            _LOGGER.debug("Lovelace not initialized, skipping storage dashboard")
+            return "error"
+
+        dashboards_collection = lovelace.get("dashboards_collection")
+        if dashboards_collection is None:
+            _LOGGER.debug("No dashboards_collection in lovelace data")
+            return "error"
+
+        # Check if dashboard already exists
+        existing = dashboards_collection.async_items()
+        for item in existing:
+            if item.get("url_path") == _STORAGE_DASHBOARD_URL_PATH:
+                _LOGGER.debug("Storage dashboard '%s' already exists", _STORAGE_DASHBOARD_URL_PATH)
+                return "exists"
+
+        # Gather PilotSuite entity IDs for the dashboard
+        ps_entities = sorted(
+            eid
+            for eid in hass.states.async_entity_ids()
+            if "pilotsuite" in eid or "copilot" in eid
+        )
+
+        # Create the dashboard
+        await dashboards_collection.async_create_item({
+            "url_path": _STORAGE_DASHBOARD_URL_PATH,
+            "title": _STORAGE_DASHBOARD_TITLE,
+            "icon": _STORAGE_DASHBOARD_ICON,
+            "show_in_sidebar": True,
+            "require_admin": False,
+            "mode": "storage",
+        })
+
+        # Save dashboard config
+        dashboards = lovelace.get("dashboards", {})
+        dashboard = dashboards.get(_STORAGE_DASHBOARD_URL_PATH)
+        if dashboard is not None:
+            config = _build_storage_dashboard_config(ps_entities)
+            await dashboard.async_save(config)
+            _LOGGER.info("Created storage-mode PilotSuite dashboard with %d entities", len(ps_entities))
+
+        return "created"
+    except Exception:  # noqa: BLE001
+        _LOGGER.exception("Failed to create storage-mode PilotSuite dashboard")
+        return "error"
