@@ -16,13 +16,13 @@ _LOGGER = logging.getLogger(__name__)
 
 # View definitions: (path, label_de, icon)
 DASHBOARD_VIEWS = [
+    ("styx", "Styx", "mdi:brain"),
     ("haushalt", "Haushalt", "mdi:home-heart"),
     ("zonen", "Zonen", "mdi:map-marker-radius"),
     ("automation", "Automation", "mdi:robot"),
     ("energie", "Energie", "mdi:lightning-bolt"),
     ("musik", "Musik", "mdi:speaker-group"),
-    ("module", "Module", "mdi:puzzle"),
-    ("ki", "KI", "mdi:brain"),
+    ("ki", "KI", "mdi:head-snowflake-outline"),
     ("chat", "Chat", "mdi:chat-outline"),
 ]
 

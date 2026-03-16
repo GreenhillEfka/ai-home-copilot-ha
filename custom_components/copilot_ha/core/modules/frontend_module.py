@@ -30,8 +30,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # All 8 dashboard view paths — must match dashboard_wiring.py
 DASHBOARD_VIEW_PATHS = (
-    "haushalt", "zonen", "automation", "energie",
-    "musik", "module", "ki", "chat",
+    "styx", "haushalt", "zonen", "automation",
+    "energie", "musik", "ki", "chat",
 )
 
 

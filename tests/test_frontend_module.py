@@ -30,8 +30,8 @@ class TestDashboardViewPaths:
         assert len(DASHBOARD_VIEWS) == 8
 
     def test_all_expected_paths_present(self):
-        expected = {"haushalt", "zonen", "automation", "energie",
-                    "musik", "module", "ki", "chat"}
+        expected = {"styx", "haushalt", "zonen", "automation",
+                    "energie", "musik", "ki", "chat"}
         assert set(DASHBOARD_VIEW_PATHS) == expected
 
 
@@ -158,7 +158,7 @@ class TestBuildStorageDashboardConfigFiltering:
     def test_view_order_preserved(self):
         """Views should maintain their original order even when filtered."""
         config = _build_storage_dashboard_config(
-            [], enabled_views={"chat", "haushalt", "energie"}
+            [], enabled_views={"chat", "styx", "energie"}
         )
         paths = [v["path"] for v in config["views"]]
-        assert paths == ["haushalt", "energie", "chat"]
+        assert paths == ["styx", "energie", "chat"]
