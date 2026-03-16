@@ -239,10 +239,19 @@ class CopilotApiClient(SharedCopilotApiClient):
 
     async def async_get_zone_automation(self) -> dict[str, Any]:
         """Get zone automation dashboard (presence, lights, music per zone)."""
-        return await self._safe_get(
-            "/api/v1/zone-automation/dashboard", {"zones": [], "summary": {}},
-            label="Zone automation API",
-        )
+        try:
+            data = await self._request_json(
+                "GET", "/api/v1/zone-automation/dashboard",
+            )
+            zones = data.get("zones", [])
+            _LOGGER.debug(
+                "Zone automation: fetched %d zones from %s",
+                len(zones), self._active_base_url,
+            )
+            return data
+        except Exception as exc:
+            _LOGGER.warning("Zone automation API failed: %s", exc)
+            return {"zones": [], "summary": {}}
 
     async def async_ensure_zone_automation_zones(self, zone_ids: list[str]) -> dict[str, Any]:
         """Ensure zone automation configs exist for given zone IDs.
