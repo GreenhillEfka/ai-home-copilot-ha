@@ -5,6 +5,7 @@ import asyncio
 from datetime import timedelta
 import json
 import logging
+import time
 from typing import Any
 import re
 
@@ -41,6 +42,19 @@ API_DEFAULT_TIMEOUT_S = 10.0
 AUDIO_TIMEOUT_S = 30.0
 # Chat completions — qwen3 on HA-class hardware often needs >20s
 CHAT_COMPLETIONS_TIMEOUT_S = 90.0
+
+# ── Adaptive polling constants ──────────────────────────────────────
+POLL_INTERVAL_NORMAL_S = 120   # Default / backward-compatible interval
+POLL_INTERVAL_IDLE_S = 180     # Stretched interval when data is stale
+POLL_NO_CHANGE_THRESHOLD = 5   # Consecutive unchanged polls before stretching
+
+# ── Priority data categories ────────────────────────────────────────
+# HIGH: fetched every poll cycle
+# MEDIUM: fetched every 2nd poll cycle
+# LOW: fetched every 3rd poll cycle
+PRIORITY_HIGH = "high"      # mood, zone_automation status
+PRIORITY_MEDIUM = "medium"  # neurons, module_dashboards
+PRIORITY_LOW = "low"        # anomaly_status, autonomy_dashboard
 
 
 def _extract_http_status(err: CopilotApiError) -> int | None:
@@ -791,16 +805,224 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         # Set by __init__.py after CopilotRuntime.async_setup_entry() completes
         self.modules_ready: bool = False
 
+        # ── Multi-tier adaptive polling state ───────────────────────────
+        self._poll_generation: int = 0       # Monotonic counter, decides priority tiers
+        self._consecutive_no_changes: int = 0  # Unchanged polls → stretch interval
+        self._previous_mood: str | None = None   # For change detection
+        self._previous_zone_modes: dict[str, str] = {}  # zone_id → mode
+        self._last_webhook_ts: float = 0.0   # time.monotonic() of last webhook push
+
         # Hybrid mode: 120s fallback polling (real-time via webhook push)
         super().__init__(
             hass,
             logger=_LOGGER,
             name=f"{DOMAIN}_coordinator",
-            update_interval=timedelta(seconds=120),
+            update_interval=timedelta(seconds=POLL_INTERVAL_NORMAL_S),
         )
     
+    # ── Priority tier helpers ─────────────────────────────────────────
+
+    def _should_fetch_tier(self, tier: str) -> bool:
+        """Decide whether a priority tier should be fetched this cycle.
+
+        HIGH  → every poll
+        MEDIUM → every 2nd poll (generation % 2 == 0)
+        LOW   → every 3rd poll (generation % 3 == 0)
+        """
+        if tier == PRIORITY_HIGH:
+            return True
+        if tier == PRIORITY_MEDIUM:
+            return self._poll_generation % 2 == 0
+        if tier == PRIORITY_LOW:
+            return self._poll_generation % 3 == 0
+        return True  # unknown tier → always fetch
+
+    def _adjust_poll_interval(self, data_changed: bool) -> None:
+        """Adapt update_interval based on change frequency.
+
+        If data hasn't changed for POLL_NO_CHANGE_THRESHOLD consecutive polls,
+        stretch to POLL_INTERVAL_IDLE_S. Reset to POLL_INTERVAL_NORMAL_S when
+        a webhook push is received or data changes.
+        """
+        if data_changed:
+            self._consecutive_no_changes = 0
+            if self.update_interval != timedelta(seconds=POLL_INTERVAL_NORMAL_S):
+                _LOGGER.debug(
+                    "Adaptive polling: data changed, restoring %ds interval",
+                    POLL_INTERVAL_NORMAL_S,
+                )
+                self.update_interval = timedelta(seconds=POLL_INTERVAL_NORMAL_S)
+        else:
+            self._consecutive_no_changes += 1
+            if (
+                self._consecutive_no_changes >= POLL_NO_CHANGE_THRESHOLD
+                and self.update_interval != timedelta(seconds=POLL_INTERVAL_IDLE_S)
+            ):
+                _LOGGER.debug(
+                    "Adaptive polling: %d unchanged polls, stretching to %ds",
+                    self._consecutive_no_changes,
+                    POLL_INTERVAL_IDLE_S,
+                )
+                self.update_interval = timedelta(seconds=POLL_INTERVAL_IDLE_S)
+
+    def _detect_changes_and_fire_events(self, result: dict[str, Any]) -> bool:
+        """Compare result with previous data and fire HA events on changes.
+
+        Returns True if any tracked data changed.
+        """
+        changed = False
+
+        # ── Mood change detection ────────────────────────────────────
+        new_mood = result.get("dominant_mood", "unknown")
+        if self._previous_mood is not None and new_mood != self._previous_mood:
+            changed = True
+            _LOGGER.info(
+                "Mood changed: %s → %s", self._previous_mood, new_mood,
+            )
+            self.hass.bus.async_fire(
+                f"{DOMAIN}_mood_changed",
+                {
+                    "previous_mood": self._previous_mood,
+                    "new_mood": new_mood,
+                    "confidence": result.get("mood_confidence", 0.0),
+                },
+            )
+        self._previous_mood = new_mood
+
+        # ── Zone automation mode change detection ────────────────────
+        zone_auto = result.get("zone_automation", {})
+        new_zone_modes: dict[str, str] = {}
+        for zone_info in zone_auto.get("zones", []):
+            zid = zone_info.get("zone_id", "")
+            config = zone_info.get("config", {})
+            mode = config.get("automation_mode", "off")
+            if zid:
+                new_zone_modes[zid] = mode
+
+        if self._previous_zone_modes:
+            for zid, new_mode in new_zone_modes.items():
+                old_mode = self._previous_zone_modes.get(zid)
+                if old_mode is not None and new_mode != old_mode:
+                    changed = True
+                    _LOGGER.info(
+                        "Zone mode changed: %s %s → %s", zid, old_mode, new_mode,
+                    )
+                    self.hass.bus.async_fire(
+                        f"{DOMAIN}_zone_mode_changed",
+                        {
+                            "zone_id": zid,
+                            "previous_mode": old_mode,
+                            "new_mode": new_mode,
+                        },
+                    )
+
+        self._previous_zone_modes = new_zone_modes
+        return changed
+
+    # ── Webhook-triggered refresh ──────────────────────────────────
+
+    @callback
+    def async_notify_webhook_received(self) -> None:
+        """Called by webhook handler to signal that fresh data was pushed.
+
+        Resets the adaptive interval back to normal so the next scheduled
+        poll doesn't wait the stretched idle interval.
+        """
+        self._last_webhook_ts = time.monotonic()
+        self._consecutive_no_changes = 0
+        if self.update_interval != timedelta(seconds=POLL_INTERVAL_NORMAL_S):
+            _LOGGER.debug(
+                "Adaptive polling: webhook received, restoring %ds interval",
+                POLL_INTERVAL_NORMAL_S,
+            )
+            self.update_interval = timedelta(seconds=POLL_INTERVAL_NORMAL_S)
+
+    async def async_request_refresh_for(self, data_type: str) -> None:
+        """Request an immediate targeted refresh for a specific data type.
+
+        Called by webhook handler when push data arrives for mood/zone/autonomy
+        so that derived data (zone states, module stubs) stays in sync without
+        waiting for the next scheduled poll.
+
+        Falls back to a full coordinator refresh on failure.
+        """
+        try:
+            current = dict(self.data) if self.data else {}
+
+            if data_type == "mood":
+                mood_data = await self.api.async_get_mood()
+                current["mood"] = mood_data
+                current["dominant_mood"] = mood_data.get("mood", "unknown")
+                current["mood_confidence"] = mood_data.get("confidence", 0.0)
+
+            elif data_type == "zone_automation":
+                zone_auto = await self.api.async_get_zone_automation()
+                if isinstance(zone_auto, dict) and zone_auto:
+                    current["zone_automation"] = zone_auto
+                    await self._sync_zone_states(current, zone_auto)
+
+            elif data_type == "autonomy":
+                autonomy_data = await self.api.async_get_autonomy_dashboard()
+                if isinstance(autonomy_data, dict) and autonomy_data:
+                    current["autonomy"] = autonomy_data
+
+            elif data_type == "neurons":
+                neurons_data = await self.api.async_get_neurons()
+                current["neurons"] = neurons_data.get("neurons", {})
+
+            elif data_type == "anomaly":
+                anomaly_data = await self.api.async_get_anomaly_status()
+                anomaly_history = anomaly_data.get("history", [])
+                current["anomaly_status"] = {
+                    "status": "active" if anomaly_history else "idle",
+                    "summary": {
+                        "count": len(anomaly_history),
+                        "last_anomaly": (
+                            anomaly_history[0].get("detected_at")
+                            if anomaly_history else None
+                        ),
+                        "peak_score": max(
+                            (a.get("score", 0) for a in anomaly_history),
+                            default=0,
+                        ),
+                    },
+                    "features": list(
+                        {a.get("anomaly_type", "")
+                         for a in anomaly_history if a.get("anomaly_type")}
+                    ),
+                }
+                current["alert_history"] = anomaly_history
+
+            else:
+                _LOGGER.debug(
+                    "Unknown data_type '%s' for targeted refresh, triggering full refresh",
+                    data_type,
+                )
+                await self.async_request_refresh()
+                return
+
+            # Notify webhook timestamp + reset adaptive interval
+            self.async_notify_webhook_received()
+
+            # Detect changes and fire events
+            self._detect_changes_and_fire_events(current)
+
+            # Push the updated data to listeners
+            self.async_set_updated_data(current)
+            _LOGGER.debug("Targeted refresh completed for '%s'", data_type)
+
+        except Exception:
+            _LOGGER.debug(
+                "Targeted refresh for '%s' failed, falling back to full refresh",
+                data_type,
+                exc_info=True,
+            )
+            await self.async_request_refresh()
+
+    # ── Main update method ─────────────────────────────────────────
+
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from API with parallelized calls and circuit breaker."""
+        """Fetch data from API with prioritized tiers, adaptive interval, and circuit breaker."""
         # Circuit breaker: skip all Core calls when open
         if self._circuit_breaker.is_open:
             _LOGGER.debug("Circuit breaker OPEN — returning stale data")
@@ -808,157 +1030,120 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 return self.data
             raise UpdateFailed("Core API circuit breaker is open")
 
+        gen = self._poll_generation
+        self._poll_generation += 1
+        fetch_medium = self._should_fetch_tier(PRIORITY_MEDIUM)
+        fetch_low = self._should_fetch_tier(PRIORITY_LOW)
+
+        _LOGGER.debug(
+            "Poll generation %d: HIGH=always, MEDIUM=%s, LOW=%s",
+            gen, fetch_medium, fetch_low,
+        )
+
         last_err: Exception | None = None
         for attempt in range(3):
             try:
-                # ── Parallel batch 1: independent Core API calls ─────
-                (
-                    status,
-                    mood_data,
-                    neurons_data,
-                    habit_data,
-                    module_data,
-                    anomaly_data,
-                ) = await asyncio.gather(
-                    self.api.async_get_status(),
-                    self.api.async_get_mood(),
-                    self.api.async_get_neurons(),
-                    self._get_habit_learning_data(),
-                    self.api.async_get_module_dashboards(),
-                    self.api.async_get_anomaly_status(),
-                )
+                # ── Parallel batch 1: HIGH + conditional MEDIUM/LOW ──
+                coros: list[Any] = [
+                    # HIGH priority (always)
+                    self.api.async_get_status(),       # [0]
+                    self.api.async_get_mood(),          # [1]
+                    self._get_habit_learning_data(),    # [2]
+                ]
+                # MEDIUM priority (every 2nd poll)
+                coros.append(
+                    self.api.async_get_neurons() if fetch_medium
+                    else asyncio.sleep(0, result=None)
+                )  # [3]
+                coros.append(
+                    self.api.async_get_module_dashboards() if fetch_medium
+                    else asyncio.sleep(0, result=None)
+                )  # [4]
+                # LOW priority (every 3rd poll)
+                coros.append(
+                    self.api.async_get_anomaly_status() if fetch_low
+                    else asyncio.sleep(0, result=None)
+                )  # [5]
 
-                # Feed module data into HA module stubs (depends on module_data)
-                await self._update_smart_home_modules(module_data)
+                batch1 = await asyncio.gather(*coros)
+                status = batch1[0]
+                mood_data = batch1[1]
+                habit_data = batch1[2]
+                neurons_data = batch1[3]
+                module_data = batch1[4]
+                anomaly_data = batch1[5]
 
-                anomaly_history = anomaly_data.get("history", [])
-                anomaly_status = {
-                    "status": "active" if anomaly_history else "idle",
-                    "summary": {
-                        "count": len(anomaly_history),
-                        "last_anomaly": anomaly_history[0].get("detected_at") if anomaly_history else None,
-                        "peak_score": max((a.get("score", 0) for a in anomaly_history), default=0),
-                    },
-                    "features": list({a.get("anomaly_type", "") for a in anomaly_history if a.get("anomaly_type")}),
-                }
+                # Start building result from current data (preserve skipped tiers)
+                result: dict[str, Any] = dict(self.data) if self.data else {}
 
-                result = {
-                    "ok": bool(status.ok) if status.ok is not None else True,
-                    "version": status.version or "unknown",
-                    "mood": mood_data,
-                    "neurons": neurons_data.get("neurons", {}),
-                    "dominant_mood": mood_data.get("mood", "unknown"),
-                    "mood_confidence": mood_data.get("confidence", 0.0),
-                    "habit_summary": habit_data.get("habit_summary", {}),
-                    "predictions": habit_data.get("predictions", []),
-                    "sequences": habit_data.get("sequences", []),
-                    "modules": module_data.get("modules", {}),
-                    "anomaly_status": anomaly_status,
-                    "alert_history": anomaly_history,
-                }
+                # HIGH: always update
+                result["ok"] = bool(status.ok) if status.ok is not None else True
+                result["version"] = status.version or "unknown"
+                result["mood"] = mood_data
+                result["dominant_mood"] = mood_data.get("mood", "unknown")
+                result["mood_confidence"] = mood_data.get("confidence", 0.0)
+                result["habit_summary"] = habit_data.get("habit_summary", {})
+                result["predictions"] = habit_data.get("predictions", [])
+                result["sequences"] = habit_data.get("sequences", [])
 
-                # ── Parallel batch 2: secondary/optional API calls ───
-                autonomy_coro = self.api.async_get_autonomy_dashboard()
-                zone_health_coro = self.api.async_get_zone_health()
-                zone_auto_coro = self.api.async_get_zone_automation()
+                # MEDIUM: update only when fetched
+                if fetch_medium:
+                    if neurons_data is not None:
+                        result["neurons"] = neurons_data.get("neurons", {})
+                    if module_data is not None:
+                        result["modules"] = module_data.get("modules", {})
+                        # Feed module data into HA module stubs
+                        await self._update_smart_home_modules(module_data)
+
+                # LOW: update only when fetched
+                if fetch_low and anomaly_data is not None:
+                    anomaly_history = anomaly_data.get("history", [])
+                    result["anomaly_status"] = {
+                        "status": "active" if anomaly_history else "idle",
+                        "summary": {
+                            "count": len(anomaly_history),
+                            "last_anomaly": anomaly_history[0].get("detected_at") if anomaly_history else None,
+                            "peak_score": max((a.get("score", 0) for a in anomaly_history), default=0),
+                        },
+                        "features": list({a.get("anomaly_type", "") for a in anomaly_history if a.get("anomaly_type")}),
+                    }
+                    result["alert_history"] = anomaly_history
+
+                # ── Parallel batch 2: secondary API calls ────────────
+                # zone_automation is HIGH priority; autonomy/zone_health are LOW
+                batch2_coros = [
+                    self.api.async_get_zone_automation(),  # [0] HIGH
+                ]
+                batch2_coros.append(
+                    self.api.async_get_autonomy_dashboard() if fetch_low
+                    else asyncio.sleep(0, result=None)
+                )  # [1]
+                batch2_coros.append(
+                    self.api.async_get_zone_health() if fetch_low
+                    else asyncio.sleep(0, result=None)
+                )  # [2]
 
                 batch2 = await asyncio.gather(
-                    autonomy_coro, zone_health_coro, zone_auto_coro,
+                    *batch2_coros,
                     return_exceptions=True,
                 )
-                autonomy_data, zone_health, zone_auto = batch2
+                zone_auto = batch2[0]
+                autonomy_data_b2 = batch2[1]
+                zone_health = batch2[2]
 
-                if isinstance(autonomy_data, dict) and autonomy_data:
-                    result["autonomy"] = autonomy_data
-
-                if isinstance(zone_health, dict) and zone_health:
-                    result["zone_health"] = zone_health
+                if fetch_low:
+                    if isinstance(autonomy_data_b2, dict) and autonomy_data_b2:
+                        result["autonomy"] = autonomy_data_b2
+                    if isinstance(zone_health, dict) and zone_health:
+                        result["zone_health"] = zone_health
 
                 if isinstance(zone_auto, dict) and zone_auto:
                     result["zone_automation"] = zone_auto
-                    # Sync zone states: zones with automation_mode != "off" are active
-                    try:
-                        from .habitus_zones_store_v2 import (
-                            async_get_zones_v2,
-                            async_set_zone_state,
-                        )
-                        ha_zones = await async_get_zones_v2(
-                            self.hass, self.config_entry.entry_id,
-                        )
-                        ha_zone_ids = {z.zone_id for z in ha_zones}
-                        for core_zone in zone_auto.get("zones", []):
-                            core_id = core_zone.get("zone_id", "")
-                            config = core_zone.get("config", {})
-                            mode = config.get("automation_mode", "off")
-                            matched_id = None
-                            if f"zone:{core_id}" in ha_zone_ids:
-                                matched_id = f"zone:{core_id}"
-                            elif core_id in ha_zone_ids:
-                                matched_id = core_id
-                            if matched_id:
-                                new_state = "active" if mode != "off" else "idle"
-                                await async_set_zone_state(
-                                    self.hass,
-                                    self.config_entry.entry_id,
-                                    matched_id,
-                                    new_state,
-                                    fire_event=True,
-                                )
-                    except Exception:
-                        _LOGGER.debug("Zone state sync skipped")
+                    await self._sync_zone_states(result, zone_auto)
 
                 # Zone automation sync: ensure HA zones exist in Core on first refresh
                 if not getattr(self, "_zone_auto_synced", False):
-                    try:
-                        from .habitus_zones_store_v2 import async_get_zones_v2
-
-                        ha_zones = await async_get_zones_v2(
-                            self.hass, self.config_entry.entry_id,
-                        )
-                        if ha_zones:
-                            zone_ids = [z.zone_id for z in ha_zones if z.zone_id]
-                            # Strip 'zone:' prefix for Core compatibility
-                            clean_ids = [
-                                zid.removeprefix("zone:") for zid in zone_ids
-                            ]
-                            synced = await self.api.async_ensure_zone_automation_zones(clean_ids)
-                            if synced and synced.get("zones"):
-                                result["zone_automation"] = synced
-                            _LOGGER.info(
-                                "Zone automation synced %d zones to Core (created: %s)",
-                                len(clean_ids),
-                                synced.get("created", []),
-                            )
-
-                            # Push full zone definitions (entities, roles, metadata)
-                            zone_defs = []
-                            for z in ha_zones:
-                                zid = z.zone_id.removeprefix("zone:")
-                                meta = z.metadata or {}
-                                zone_defs.append({
-                                    "zone_id": zid,
-                                    "name": z.name,
-                                    "zone_type": z.zone_type,
-                                    "entity_ids": list(z.entity_ids),
-                                    "entities": {
-                                        role: list(eids)
-                                        for role, eids in (z.entities or {}).items()
-                                    },
-                                    "floor": z.floor,
-                                    "priority": z.priority,
-                                    "tags": list(z.tags),
-                                    "ha_area_ids": meta.get("ha_area_ids", []),
-                                    "ha_area_names": meta.get("ha_area_names", []),
-                                })
-                            await self.api.async_sync_zone_definitions(zone_defs)
-                            _LOGGER.info(
-                                "Zone definitions synced: %d zones with %d total entities",
-                                len(zone_defs),
-                                sum(len(zd["entity_ids"]) for zd in zone_defs),
-                            )
-                        self._zone_auto_synced = True
-                    except Exception:
-                        _LOGGER.debug("Zone automation sync skipped")
+                    await self._first_zone_sync(result)
 
                 # Habitus config sync: push HA config to Core on first refresh
                 if not getattr(self, "_habitus_config_synced", False):
@@ -983,8 +1168,12 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                         "autonomy_history", "autonomy_errors",
                         "zone_module_states", "zone_updates",
                     ):
-                        if key in self.data:
+                        if key in self.data and key not in result:
                             result[key] = self.data[key]
+
+                # ── Change detection + adaptive polling ──────────────
+                data_changed = self._detect_changes_and_fire_events(result)
+                self._adjust_poll_interval(data_changed)
 
                 # Circuit breaker: successful cycle → reset
                 self._circuit_breaker.record_success()
@@ -1013,6 +1202,93 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
             last_err = RuntimeError("unknown API error")
         _LOGGER.warning("PilotSuite API unreachable after 3 attempts: %s", last_err)
         raise UpdateFailed(f"API unavailable after retries: {last_err}") from last_err
+
+    async def _sync_zone_states(
+        self, result: dict[str, Any], zone_auto: dict[str, Any],
+    ) -> None:
+        """Sync zone automation states from Core response into HA zone store."""
+        try:
+            from .habitus_zones_store_v2 import (
+                async_get_zones_v2,
+                async_set_zone_state,
+            )
+            ha_zones = await async_get_zones_v2(
+                self.hass, self.config_entry.entry_id,
+            )
+            ha_zone_ids = {z.zone_id for z in ha_zones}
+            for core_zone in zone_auto.get("zones", []):
+                core_id = core_zone.get("zone_id", "")
+                config = core_zone.get("config", {})
+                mode = config.get("automation_mode", "off")
+                matched_id = None
+                if f"zone:{core_id}" in ha_zone_ids:
+                    matched_id = f"zone:{core_id}"
+                elif core_id in ha_zone_ids:
+                    matched_id = core_id
+                if matched_id:
+                    new_state = "active" if mode != "off" else "idle"
+                    await async_set_zone_state(
+                        self.hass,
+                        self.config_entry.entry_id,
+                        matched_id,
+                        new_state,
+                        fire_event=True,
+                    )
+        except Exception:
+            _LOGGER.debug("Zone state sync skipped")
+
+    async def _first_zone_sync(self, result: dict[str, Any]) -> None:
+        """One-time zone automation sync: ensure HA zones exist in Core."""
+        try:
+            from .habitus_zones_store_v2 import async_get_zones_v2
+
+            ha_zones = await async_get_zones_v2(
+                self.hass, self.config_entry.entry_id,
+            )
+            if ha_zones:
+                zone_ids = [z.zone_id for z in ha_zones if z.zone_id]
+                # Strip 'zone:' prefix for Core compatibility
+                clean_ids = [
+                    zid.removeprefix("zone:") for zid in zone_ids
+                ]
+                synced = await self.api.async_ensure_zone_automation_zones(clean_ids)
+                if synced and synced.get("zones"):
+                    result["zone_automation"] = synced
+                _LOGGER.info(
+                    "Zone automation synced %d zones to Core (created: %s)",
+                    len(clean_ids),
+                    synced.get("created", []),
+                )
+
+                # Push full zone definitions (entities, roles, metadata)
+                zone_defs = []
+                for z in ha_zones:
+                    zid = z.zone_id.removeprefix("zone:")
+                    meta = z.metadata or {}
+                    zone_defs.append({
+                        "zone_id": zid,
+                        "name": z.name,
+                        "zone_type": z.zone_type,
+                        "entity_ids": list(z.entity_ids),
+                        "entities": {
+                            role: list(eids)
+                            for role, eids in (z.entities or {}).items()
+                        },
+                        "floor": z.floor,
+                        "priority": z.priority,
+                        "tags": list(z.tags),
+                        "ha_area_ids": meta.get("ha_area_ids", []),
+                        "ha_area_names": meta.get("ha_area_names", []),
+                    })
+                await self.api.async_sync_zone_definitions(zone_defs)
+                _LOGGER.info(
+                    "Zone definitions synced: %d zones with %d total entities",
+                    len(zone_defs),
+                    sum(len(zd["entity_ids"]) for zd in zone_defs),
+                )
+            self._zone_auto_synced = True
+        except Exception:
+            _LOGGER.debug("Zone automation sync skipped")
     
     async def _update_smart_home_modules(self, module_data: dict[str, Any]) -> None:
         """Feed Core module dashboard data into HA module stubs.
