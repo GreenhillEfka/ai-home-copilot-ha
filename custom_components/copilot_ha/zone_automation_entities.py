@@ -30,10 +30,16 @@ AUTOMATION_MODE_LABELS = {
 
 
 def _get_zone_data(coordinator, zone_id: str) -> dict[str, Any]:
-    """Extract zone data from coordinator's last zone_automation poll."""
+    """Extract zone data from coordinator's last zone_automation poll.
+
+    Handles 'zone:' prefix mismatch: HA entities use 'zone:wohnbereich'
+    while Core returns 'wohnbereich'.
+    """
     data = coordinator.data or {}
+    clean_id = zone_id.removeprefix("zone:")
     for zone in data.get("zone_automation", {}).get("zones", []):
-        if zone.get("zone_id") == zone_id:
+        core_id = zone.get("zone_id", "")
+        if core_id == zone_id or core_id == clean_id:
             return zone
     return {}
 
@@ -423,6 +429,8 @@ def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str,
         zone_name = zone.get("name", zone_id)
         if not zone_id:
             continue
+        # Strip 'zone:' prefix for Core API compatibility
+        zone_id = zone_id.removeprefix("zone:")
 
         # Automation mode select
         selects.append(ZoneAutomationModeSelect(coordinator, zone_id, zone_name))
