@@ -312,7 +312,7 @@ def _build_storage_dashboard_config(
     """Build a storage-mode Lovelace dashboard config.
 
     HA frontend is "Sinne + Haende" (Thin Client):
-    8 views covering all user-facing aspects with rich custom cards.
+    10 views covering all user-facing aspects with rich custom cards.
     """
     # ── Entity classification ──
     status_entities = [
@@ -329,6 +329,31 @@ def _build_storage_dashboard_config(
     module_entities = _filter_entities(entities, "module", "autonomy")
     automation_entities = _filter_entities(entities, "automation", "zone_")
     neuron_entities = _filter_entities(entities, "neuron", "brain", "prediction")
+    network_entities = _filter_entities(
+        entities, "zwave", "zigbee", "mesh", "thread",
+    )
+    weather_entities = _filter_entities(entities, "weather")
+    unifi_entities = _filter_entities(entities, "unifi")
+    camera_entities = _filter_entities(entities, "camera", "motion", "activity")
+    kg_entities = _filter_entities(entities, "kg_", "knowledge")
+    debug_entities = [
+        e for e in entities
+        if e.startswith(("button.copilot_ha_", "button.pilotsuite_"))
+        and not any(p in e for p in ("generate_", "download_", "validate_"))
+    ]
+    system_entities = _filter_entities(
+        entities, "version", "online", "debug", "config_validation",
+        "reload", "safety_backup",
+    )
+    # All classified entity IDs (for catch-all)
+    _classified = set(
+        status_entities + zone_entities + mood_entities + energy_entities
+        + media_entities + module_entities + automation_entities
+        + neuron_entities + network_entities + weather_entities
+        + unifi_entities + camera_entities + kg_entities
+        + debug_entities + system_entities
+    )
+    unassigned_entities = [e for e in entities if e not in _classified]
 
     # ── Resolve key entity IDs for custom cards ──
     mood_entity = _find_entity(
@@ -603,6 +628,89 @@ def _build_storage_dashboard_config(
             "path": "chat",
             "icon": "mdi:chat-outline",
             "cards": [{"type": "custom:styx-chat-card"}],
+        },
+        # ── 9. Netzwerk ──
+        {
+            "title": "Netzwerk",
+            "path": "netzwerk",
+            "icon": "mdi:network",
+            "cards": [
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Netzwerk-Module (ZWave / Zigbee / Thread)",
+                        "show_header_toggle": False,
+                        "entities": network_entities[:15],
+                    }] if network_entities else [{
+                        "type": "markdown",
+                        "content": "Keine Netzwerk-Entities erkannt.",
+                    }]
+                ),
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Wetter & Umgebung",
+                        "show_header_toggle": False,
+                        "entities": weather_entities[:10],
+                    }] if weather_entities else []
+                ),
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "UniFi Netzwerk",
+                        "show_header_toggle": False,
+                        "entities": unifi_entities[:8],
+                    }] if unifi_entities else []
+                ),
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Kamera & Bewegung",
+                        "show_header_toggle": False,
+                        "entities": camera_entities[:10],
+                    }] if camera_entities else []
+                ),
+            ],
+        },
+        # ── 10. System ──
+        {
+            "title": "System",
+            "path": "system",
+            "icon": "mdi:cog",
+            "cards": [
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "System & Version",
+                        "show_header_toggle": False,
+                        "entities": system_entities[:10],
+                    }] if system_entities else []
+                ),
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Knowledge Graph",
+                        "show_header_toggle": False,
+                        "entities": kg_entities[:8],
+                    }] if kg_entities else []
+                ),
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Debug & Aktionen",
+                        "show_header_toggle": False,
+                        "entities": debug_entities[:15],
+                    }] if debug_entities else []
+                ),
+                *(
+                    [{
+                        "type": "entities",
+                        "title": "Weitere Entities",
+                        "show_header_toggle": False,
+                        "entities": unassigned_entities[:20],
+                    }] if unassigned_entities else []
+                ),
+            ],
         },
     ]
 

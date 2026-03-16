@@ -913,6 +913,113 @@ def generate_praesenz_view(zones: list[dict[str, Any]] | None = None) -> dict[st
 # ── Full Dashboard Assembly (updated) ────────────────────────────────
 
 
+def generate_network_view() -> dict[str, Any]:
+    """Tab: Netzwerk — ZWave, Zigbee, Thread, UniFi status."""
+    return {
+        "title": "Netzwerk",
+        "path": "netzwerk",
+        "icon": "mdi:network",
+        "badges": [],
+        "cards": [
+            {
+                "type": "entities",
+                "title": "ZWave Netzwerk",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "sensor.pilotsuite_zwave_network_health", "name": "Netzwerk-Health"},
+                    {"entity": "sensor.pilotsuite_zwave_devices_online", "name": "Geraete online"},
+                    {"entity": "binary_sensor.pilotsuite_zwave_mesh_status", "name": "Mesh-Status"},
+                ],
+            },
+            {
+                "type": "entities",
+                "title": "Zigbee Netzwerk",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "sensor.pilotsuite_zigbee_network_health", "name": "Netzwerk-Health"},
+                    {"entity": "sensor.pilotsuite_zigbee_devices_online", "name": "Geraete online"},
+                    {"entity": "binary_sensor.pilotsuite_zigbee_mesh_status", "name": "Mesh-Status"},
+                ],
+            },
+            {
+                "type": "entities",
+                "title": "Mesh-Uebersicht",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "sensor.pilotsuite_mesh_network_overview", "name": "Gesamt-Uebersicht"},
+                ],
+            },
+            {
+                "type": "entities",
+                "title": "UniFi Netzwerk",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "sensor.copilot_ha_unifi_clients_online", "name": "Clients online"},
+                    {"entity": "sensor.copilot_ha_unifi_wan_latency", "name": "WAN Latenz"},
+                    {"entity": "sensor.copilot_ha_unifi_packet_loss", "name": "Paketverlust"},
+                    {"entity": "sensor.copilot_ha_unifi_uptime", "name": "Uptime"},
+                ],
+            },
+            {
+                "type": "entities",
+                "title": "Wetter & Umgebung",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "sensor.copilot_ha_weather_condition", "name": "Wetterlage"},
+                    {"entity": "sensor.copilot_ha_weather_temperature", "name": "Temperatur"},
+                    {"entity": "sensor.copilot_ha_weather_cloud_coverage", "name": "Bewoelkung"},
+                    {"entity": "sensor.copilot_ha_weather_uv_index", "name": "UV-Index"},
+                ],
+            },
+        ],
+    }
+
+
+def generate_system_view() -> dict[str, Any]:
+    """Tab: System — Debug, Version, Knowledge Graph, Kamera."""
+    return {
+        "title": "System",
+        "path": "system",
+        "icon": "mdi:cog",
+        "badges": [],
+        "cards": [
+            {
+                "type": "entities",
+                "title": "System & Version",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "binary_sensor.copilot_ha_online", "name": "Online"},
+                    {"entity": "sensor.copilot_ha_version", "name": "Version"},
+                    {"entity": "sensor.copilot_ha_core_api_v1", "name": "Core API"},
+                ],
+            },
+            {
+                "type": "entities",
+                "title": "Kamera & Bewegung",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "sensor.copilot_ha_camera_motion_history", "name": "Bewegungsverlauf"},
+                    {"entity": "sensor.copilot_ha_camera_presence_history", "name": "Praesenzverlauf"},
+                    {"entity": "sensor.copilot_ha_camera_activity_history", "name": "Aktivitaetsverlauf"},
+                    {"entity": "sensor.copilot_ha_camera_zone_activity", "name": "Zonen-Aktivitaet"},
+                ],
+            },
+            {
+                "type": "entities",
+                "title": "Debug & Wartung",
+                "show_header_toggle": False,
+                "entities": [
+                    {"entity": "button.copilot_ha_reload_config_entry", "name": "Config neu laden"},
+                    {"entity": "button.copilot_ha_enable_debug_30m", "name": "Debug 30min"},
+                    {"entity": "button.copilot_ha_disable_debug", "name": "Debug aus"},
+                    {"entity": "button.copilot_ha_clear_all_logs", "name": "Logs leeren"},
+                    {"entity": "button.copilot_ha_ping_core", "name": "Core anpingen"},
+                ],
+            },
+        ],
+    }
+
+
 def generate_styx_dashboard_extended(
     host: str,
     port: int,
@@ -934,6 +1041,9 @@ def generate_styx_dashboard_extended(
         generate_heiz_view(zones=zones),
         generate_bewegung_view(zones=zones),
         generate_praesenz_view(zones=zones),
+        # Netzwerk + System tabs
+        generate_network_view(),
+        generate_system_view(),
     ]
 
     # Add per-zone tabs

@@ -24,6 +24,8 @@ DASHBOARD_VIEWS = [
     ("musik", "Musik", "mdi:speaker-group"),
     ("ki", "KI", "mdi:head-snowflake-outline"),
     ("chat", "Chat", "mdi:chat-outline"),
+    ("netzwerk", "Netzwerk", "mdi:network"),
+    ("system", "System", "mdi:cog"),
 ]
 
 
