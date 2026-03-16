@@ -2,6 +2,42 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.6.1] - 2026-03-16
+
+### Frontend-Dashboard Redesign + Mood Card v3.0
+
+#### Changed
+- **Storage-Dashboard**: 8 Views komplett redesigned (Styx, Haushalt, Zonen, Automation, Energie, Musik, KI, Chat)
+- **Styx-Tab**: Neue Startseite mit Neural Interface + Brain Graph + Mood + Suggestions + Error Log
+- **Dashboard-Updates**: Bestehende Dashboards werden bei Integration-Reload automatisch aktualisiert
+- **Mood Card v3.0**: Zeigt echten Mood-State (Relax/Focus/Active/Sleep/Away/Alert/Social/Recovery), Konfidenz-Gauge, beitragende Neuronen
+- **Habitus Card**: Auto-Entity-Detect (kein harter Entity-Requirement mehr)
+- **DASHBOARD_VIEW_PATHS**: "module" ersetzt durch "styx" als primaerer Tab
+
+### Compatibility
+- HA v14.6.1 <-> Core v14.6.1 (Paired Release)
+- Tests: 522 passed, 41 skipped
+
+---
+
+## [14.6.0] - 2026-03-16
+
+### Version Sync mit Core v14.6.0
+
+#### Changed
+- Version bump fuer Paired Release mit Core Backend Dashboard Ueberarbeitung
+
+---
+
+## [14.4.3] - 2026-03-15
+
+### Bugfixes
+
+#### Fixed
+- Diverse kleinere Fixes
+
+---
+
 ## [14.4.2] - 2026-03-15
 
 ### Vollstaendige Zone→Neuron→Brain→RAG Pipeline

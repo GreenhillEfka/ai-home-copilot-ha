@@ -5,6 +5,14 @@ All notable changes to PilotSuite will be documented in this file.
 > Hinweis (2026-02-22): Die aktive Release-Historie wird im Repository-Root gepflegt: `CHANGELOG.md` (7.7.x Linie).
 > Diese Datei enthaelt vor allem aeltere 0.x Historie und bleibt als Archiv erhalten.
 
+## [14.6.1] - 2026-03-16
+
+### Changed
+- Frontend-Dashboard Redesign: 8 Views, Styx als Startseite
+- Mood Card v3.0: Echter Mood-State + Konfidenz-Gauge + Neuronen
+- Habitus Card: Auto-Entity-Detect
+- Dashboard-Auto-Update bei bestehenden Installationen
+
 ## [14.4.2] - 2026-03-15
 
 ### Added
