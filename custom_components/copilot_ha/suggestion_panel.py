@@ -356,24 +356,59 @@ async def async_setup_suggestion_services(hass: HomeAssistant, entry_id: str) ->
     hass.data[DOMAIN].setdefault(entry_id, {})
     hass.data[DOMAIN][entry_id]["suggestion_store"] = store
     
+    async def _send_feedback_to_core(
+        suggestion_id: str, accepted: bool, suggestion: Any = None, reason: str = ""
+    ) -> None:
+        """Send suggestion feedback to Core for Brain Graph weight adjustment."""
+        try:
+            entry_data = hass.data.get(DOMAIN, {}).get(entry_id, {})
+            coordinator = entry_data.get("coordinator")
+            if coordinator is None:
+                _LOGGER.debug("No coordinator available for feedback push")
+                return
+
+            related_entities: list[str] = []
+            pattern_key = ""
+            if suggestion is not None:
+                related_entities = getattr(suggestion, "zone_entities", []) or []
+                pattern_key = getattr(suggestion, "pattern", "")
+
+            await coordinator.api.async_send_suggestion_feedback(
+                suggestion_id,
+                accepted,
+                related_entities=related_entities,
+                pattern_key=pattern_key,
+            )
+            _LOGGER.info(
+                "Suggestion feedback sent to Core: %s=%s",
+                suggestion_id, "accepted" if accepted else "rejected",
+            )
+        except Exception:
+            _LOGGER.debug("Could not send suggestion feedback to Core (Core may be offline)")
+
     @callback
     def handle_accept(call):
         """Handle suggestion accept."""
         suggestion_id = call.data.get("suggestion_id")
         user = call.data.get("user", "")
-        
+
         if store.queue.accept(suggestion_id, user):
             _LOGGER.info("Accepted suggestion %s", suggestion_id)
             hass.async_create_task(store.async_save())
             hass.bus.async_fire(f"{DOMAIN}_suggestion_accepted", {"suggestion_id": suggestion_id})
-    
+            # Push feedback to Core → Brain Graph weight +0.5
+            suggestion = store.queue.get_by_id(suggestion_id)
+            hass.async_create_task(
+                _send_feedback_to_core(suggestion_id, True, suggestion)
+            )
+
     @callback
     def handle_reject(call):
         """Handle suggestion reject."""
         suggestion_id = call.data.get("suggestion_id")
         user = call.data.get("user", "")
         reason = call.data.get("reason", "")
-        
+
         if store.queue.reject(suggestion_id, user, reason):
             _LOGGER.info("Rejected suggestion %s", suggestion_id)
             hass.async_create_task(store.async_save())
@@ -381,6 +416,11 @@ async def async_setup_suggestion_services(hass: HomeAssistant, entry_id: str) ->
                 "suggestion_id": suggestion_id,
                 "reason": reason
             })
+            # Push feedback to Core → Brain Graph weight -0.3
+            suggestion = store.queue.get_by_id(suggestion_id)
+            hass.async_create_task(
+                _send_feedback_to_core(suggestion_id, False, suggestion, reason)
+            )
     
     @callback
     def handle_snooze(call):

@@ -31,6 +31,10 @@ class MLContextModule(CopilotModule):
     """
     
     MODULE_NAME = "ml_context"
+
+    @property
+    def name(self) -> str:
+        return self.MODULE_NAME
     
     def __init__(self) -> None:
         """Initialize ML context module."""

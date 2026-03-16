@@ -84,6 +84,11 @@ def build_candidate_hosts(
         except Exception:
             continue
 
+    # Supervisor addon hostnames (Docker DNS resolves slug-based names)
+    _add("533952f3-copilot-core")
+    _add("533952f3_copilot_core")
+    _add("local-copilot-core")
+
     _add("homeassistant.local")
     _add("homeassistant")
     _add("supervisor")

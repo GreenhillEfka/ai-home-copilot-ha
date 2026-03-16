@@ -13,7 +13,14 @@ from homeassistant.helpers import selector
 
 from .config_helpers import merge_config_data, parse_csv
 from .core_endpoint import normalize_host_port
-from .config_schema_builders import build_neuron_schema, build_llm_provider_schema
+from .config_schema_builders import (
+    build_neuron_schema,
+    build_llm_provider_schema,
+    build_knowledge_graph_schema,
+    build_autonomy_schema,
+    build_zone_health_schema,
+    build_anomaly_habitus_schema,
+)
 from .config_snapshot_flow import ConfigSnapshotOptionsFlow
 from .config_zones_flow import async_step_zone_form
 from .config_tags_flow import async_step_add_tag, async_step_edit_tag, async_step_delete_tag
@@ -41,6 +48,7 @@ from .const import (
     CONF_LLM_CLOUD_API_KEY,
     CONF_LLM_CLOUD_MODEL,
     CONF_LLM_OLLAMA_MODEL,
+    CONF_ML_ENTITIES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,7 +82,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["connection", "modules", "llm_provider", "automation_modes", "habitus_zones", "entity_tags", "neurons", "backup_restore"],
+            menu_options=["connection", "modules", "llm_provider", "knowledge_graph", "autonomy", "zone_health", "ml_anomaly", "automation_modes", "habitus_zones", "entity_tags", "neurons", "backup_restore"],
         )
 
     # ── Connection ───────────────────────────────────────────────────
@@ -147,6 +155,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
                 CONF_TRACKED_USERS,
                 CONF_WASTE_ENTITIES,
                 CONF_BIRTHDAY_CALENDAR_ENTITIES,
+                CONF_ML_ENTITIES,
             ):
                 if field in user_input:
                     user_input[field] = _normalize_entity_list(user_input.get(field))
@@ -511,3 +520,50 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
         data = self._effective_config()
         schema = vol.Schema(build_neuron_schema(data))
         return self.async_show_form(step_id="neurons", data_schema=schema)
+
+    # ── Knowledge Graph ───────────────────────────────────────────────
+
+    async def async_step_knowledge_graph(self, user_input: dict | None = None) -> FlowResult:
+        """Configure knowledge graph sync settings."""
+        if user_input is not None:
+            return self._create_merged_entry(user_input)
+
+        data = self._effective_config()
+        schema = vol.Schema(build_knowledge_graph_schema(data))
+        return self.async_show_form(step_id="knowledge_graph", data_schema=schema)
+
+    # ── Autonomy ──────────────────────────────────────────────────────
+
+    async def async_step_autonomy(self, user_input: dict | None = None) -> FlowResult:
+        """Configure autonomy system settings."""
+        if user_input is not None:
+            return self._create_merged_entry(user_input)
+
+        data = self._effective_config()
+        schema = vol.Schema(build_autonomy_schema(data))
+        return self.async_show_form(step_id="autonomy", data_schema=schema)
+
+    # ── Zone Health ───────────────────────────────────────────────────
+
+    async def async_step_zone_health(self, user_input: dict | None = None) -> FlowResult:
+        """Configure zone health polling settings."""
+        if user_input is not None:
+            return self._create_merged_entry(user_input)
+
+        data = self._effective_config()
+        schema = vol.Schema(build_zone_health_schema(data))
+        return self.async_show_form(step_id="zone_health", data_schema=schema)
+
+    # ── ML / Anomaly ──────────────────────────────────────────────────
+
+    async def async_step_ml_anomaly(self, user_input: dict | None = None) -> FlowResult:
+        """Configure ML context, anomaly detection, and habitus mining."""
+        if user_input is not None:
+            if CONF_ML_ENTITIES in user_input:
+                user_input[CONF_ML_ENTITIES] = _normalize_entity_list(user_input.get(CONF_ML_ENTITIES))
+
+            return self._create_merged_entry(user_input)
+
+        data = self._effective_config()
+        schema = vol.Schema(build_anomaly_habitus_schema(data))
+        return self.async_show_form(step_id="ml_anomaly", data_schema=schema)

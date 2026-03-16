@@ -153,6 +153,24 @@ from .const import (
     DEFAULT_LLM_CLOUD_API_KEY,
     DEFAULT_LLM_CLOUD_MODEL,
     DEFAULT_LLM_OLLAMA_MODEL,
+    CONF_KNOWLEDGE_GRAPH_ENABLED,
+    CONF_KNOWLEDGE_GRAPH_SYNC_INTERVAL,
+    DEFAULT_KNOWLEDGE_GRAPH_ENABLED,
+    DEFAULT_KNOWLEDGE_GRAPH_SYNC_INTERVAL,
+    CONF_AUTONOMY_ENABLED,
+    CONF_AUTONOMY_AUTO_EXECUTE,
+    DEFAULT_AUTONOMY_ENABLED,
+    DEFAULT_AUTONOMY_AUTO_EXECUTE,
+    CONF_ZONE_HEALTH_POLL_ENABLED,
+    DEFAULT_ZONE_HEALTH_POLL_ENABLED,
+    CONF_ML_ENABLED,
+    CONF_ML_ENTITIES,
+    CONF_ML_ANOMALY_CONTAMINATION,
+    CONF_ML_HABIT_WINDOW_SIZE,
+    DEFAULT_ML_ENABLED,
+    DEFAULT_ML_ENTITIES,
+    DEFAULT_ML_ANOMALY_CONTAMINATION,
+    DEFAULT_ML_HABIT_WINDOW_SIZE,
 )
 
 
@@ -520,7 +538,7 @@ def build_birthday_schema(data: dict) -> dict:
 
 
 def build_anomaly_habitus_schema(data: dict) -> dict:
-    """Build schema fields for anomaly detection and habitus mining toggles."""
+    """Build schema fields for anomaly detection, habitus mining, and ML toggles."""
     return {
         vol.Optional(
             CONF_ANOMALY_ENABLED,
@@ -538,6 +556,62 @@ def build_anomaly_habitus_schema(data: dict) -> dict:
             CONF_HABITUS_MIN_CONFIDENCE,
             default=data.get(CONF_HABITUS_MIN_CONFIDENCE, DEFAULT_HABITUS_MIN_CONFIDENCE),
         ): vol.All(vol.Coerce(float), vol.Range(min=0.0, max=1.0)),
+        vol.Optional(
+            CONF_ML_ENABLED,
+            default=data.get(CONF_ML_ENABLED, DEFAULT_ML_ENABLED),
+        ): bool,
+        vol.Optional(
+            CONF_ML_ENTITIES,
+            default=_as_entity_list(data.get(CONF_ML_ENTITIES, DEFAULT_ML_ENTITIES)),
+        ): selector.EntitySelector(
+            selector.EntitySelectorConfig(multiple=True)
+        ),
+        vol.Optional(
+            CONF_ML_ANOMALY_CONTAMINATION,
+            default=data.get(CONF_ML_ANOMALY_CONTAMINATION, DEFAULT_ML_ANOMALY_CONTAMINATION),
+        ): vol.All(vol.Coerce(float), vol.Range(min=0.01, max=0.5)),
+        vol.Optional(
+            CONF_ML_HABIT_WINDOW_SIZE,
+            default=data.get(CONF_ML_HABIT_WINDOW_SIZE, DEFAULT_ML_HABIT_WINDOW_SIZE),
+        ): vol.All(vol.Coerce(int), vol.Range(min=10, max=10000)),
+    }
+
+
+def build_knowledge_graph_schema(data: dict) -> dict:
+    """Build schema fields for knowledge graph sync settings."""
+    return {
+        vol.Optional(
+            CONF_KNOWLEDGE_GRAPH_ENABLED,
+            default=data.get(CONF_KNOWLEDGE_GRAPH_ENABLED, DEFAULT_KNOWLEDGE_GRAPH_ENABLED),
+        ): bool,
+        vol.Optional(
+            CONF_KNOWLEDGE_GRAPH_SYNC_INTERVAL,
+            default=data.get(CONF_KNOWLEDGE_GRAPH_SYNC_INTERVAL, DEFAULT_KNOWLEDGE_GRAPH_SYNC_INTERVAL),
+        ): vol.All(vol.Coerce(int), vol.Range(min=60, max=86400)),
+    }
+
+
+def build_autonomy_schema(data: dict) -> dict:
+    """Build schema fields for autonomy system settings."""
+    return {
+        vol.Optional(
+            CONF_AUTONOMY_ENABLED,
+            default=data.get(CONF_AUTONOMY_ENABLED, DEFAULT_AUTONOMY_ENABLED),
+        ): bool,
+        vol.Optional(
+            CONF_AUTONOMY_AUTO_EXECUTE,
+            default=data.get(CONF_AUTONOMY_AUTO_EXECUTE, DEFAULT_AUTONOMY_AUTO_EXECUTE),
+        ): bool,
+    }
+
+
+def build_zone_health_schema(data: dict) -> dict:
+    """Build schema fields for zone health polling settings."""
+    return {
+        vol.Optional(
+            CONF_ZONE_HEALTH_POLL_ENABLED,
+            default=data.get(CONF_ZONE_HEALTH_POLL_ENABLED, DEFAULT_ZONE_HEALTH_POLL_ENABLED),
+        ): bool,
     }
 
 
@@ -585,6 +659,9 @@ def build_modules_schema(data: dict) -> dict:
     fields.update(build_waste_schema(data))
     fields.update(build_birthday_schema(data))
     fields.update(build_anomaly_habitus_schema(data))
+    fields.update(build_knowledge_graph_schema(data))
+    fields.update(build_autonomy_schema(data))
+    fields.update(build_zone_health_schema(data))
     return fields
 
 

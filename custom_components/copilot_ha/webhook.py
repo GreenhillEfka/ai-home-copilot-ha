@@ -681,6 +681,33 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             coordinator.async_set_updated_data(merged)
             _LOGGER.debug("Webhook: mood push received – %s", data.get("mood"))
 
+            # Execute mood-driven service calls (light scenes, music, etc.)
+            service_calls = data.get("actions", {}).get("service_calls", [])
+            if service_calls:
+                async def _execute_mood_actions(calls: list[dict]) -> None:
+                    for call_data in calls:
+                        try:
+                            domain = call_data.get("domain")
+                            service = call_data.get("service")
+                            if not domain or not service:
+                                continue
+                            await hass.services.async_call(
+                                domain,
+                                service,
+                                call_data.get("service_data", {}),
+                                target=call_data.get("target", {}),
+                            )
+                            _LOGGER.debug(
+                                "Webhook: mood action executed %s.%s", domain, service,
+                            )
+                        except Exception as exc:
+                            _LOGGER.warning(
+                                "Webhook: mood action %s.%s failed: %s",
+                                call_data.get("domain"), call_data.get("service"), exc,
+                            )
+
+                hass.async_create_task(_execute_mood_actions(service_calls))
+
         elif event_type == EVENT_TYPE_NEURON:
             # Add-on pushes neuron state update
             updates = {"neurons": data.get("neurons", {})}

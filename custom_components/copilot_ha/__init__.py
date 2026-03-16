@@ -5,11 +5,10 @@ from importlib import import_module
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_call_later
 
 from .blueprints import async_install_blueprints
@@ -337,6 +336,65 @@ async def _async_cleanup_legacy_config_text_entities(
         _LOGGER.info("Removed %d obsolete PilotSuite legacy text entities", removed)
 
 
+async def _async_cleanup_duplicate_entities(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Remove stale duplicate entities with _2, _3, … suffix.
+
+    When entities are re-created after a code update, HA sometimes appends _2
+    to the entity_id because the old (now stale) entry still occupies the
+    original entity_id with a different unique_id.  This migration detects
+    such duplicates and removes the stale entry so the canonical entity gets
+    the clean entity_id on next reload.
+    """
+    import re as _re
+
+    ent_reg = er.async_get(hass)
+    entries = er.async_entries_for_config_entry(ent_reg, entry.entry_id)
+
+    # Build unique_id → entity map
+    uid_map: dict[str, list] = {}
+    for entity_entry in entries:
+        uid = str(entity_entry.unique_id or "")
+        if not uid:
+            continue
+        uid_map.setdefault(uid, []).append(entity_entry)
+
+    # Detect entity_ids ending with _2, _3, … whose unique_id also exists
+    # under a different (non-suffixed) entity
+    _suffix_re = _re.compile(r"_(\d+)$")
+    removed = 0
+    for entity_entry in entries:
+        eid = entity_entry.entity_id or ""
+        m = _suffix_re.search(eid)
+        if not m:
+            continue
+        # Check if a canonical entity (without suffix) exists with same unique_id
+        base_eid = eid[: m.start()]
+        canonical = ent_reg.async_get(base_eid)
+        if canonical is None:
+            # No canonical entity → this _2 entity IS the only one, rename it
+            # by removing the stale original if it exists with different unique_id
+            continue
+        if canonical.unique_id == entity_entry.unique_id:
+            # Same unique_id on both → remove the suffixed duplicate
+            ent_reg.async_remove(entity_entry.entity_id)
+            removed += 1
+        elif canonical.config_entry_id != entry.entry_id:
+            # Canonical belongs to a different integration, skip
+            continue
+        else:
+            # Both belong to us but different unique_ids — the suffixed one
+            # is the stale leftover from a previous unique_id scheme
+            uid = str(entity_entry.unique_id or "")
+            if uid.startswith("copilot_ha_zone_") or uid.startswith(f"{DOMAIN}_zone_"):
+                ent_reg.async_remove(entity_entry.entity_id)
+                removed += 1
+
+    if removed:
+        _LOGGER.info("Removed %d duplicate PilotSuite entities (with _2/_3 suffix)", removed)
+
+
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
     async_register_all_services(hass)
@@ -377,7 +435,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.exception("Failed to normalize connection config")
 
     # Auto-discover Core endpoint + fetch token if missing (1-Key-Flow)
-    try:
+    async def _discover_and_persist() -> bool:
+        """Discover Core endpoint and persist to config entry. Returns True if config was updated."""
         merged = merged_entry_config(entry)
         token = str(merged.get(CONF_TOKEN, "") or "").strip()
         host = str(merged.get(CONF_HOST, "") or "").strip()
@@ -422,6 +481,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "API calls will fail with 401. Configure token via "
                 "Settings > Integrations > PilotSuite > Configure",
             )
+        return changed
+
+    try:
+        config_updated = await _discover_and_persist()
+        # If discovery failed (no config change), schedule a delayed retry.
+        # Core addon may not be up yet during HA boot.
+        if not config_updated:
+            merged = merged_entry_config(entry)
+            current_host = str(merged.get(CONF_HOST, "") or "").strip()
+            if not current_host or current_host == DEFAULT_HOST:
+                async def _delayed_discovery(_now=None):
+                    try:
+                        await _discover_and_persist()
+                    except Exception:
+                        _LOGGER.debug("Delayed Core discovery also failed")
+
+                async_call_later(hass, 30, _delayed_discovery)
+                _LOGGER.info("Core discovery scheduled for retry in 30s (addon may still be starting)")
     except Exception:
         _LOGGER.exception("Failed to auto-discover Core / fetch token")
 
@@ -439,6 +516,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_cleanup_legacy_config_text_entities(hass, entry)
     except Exception:
         _LOGGER.exception("Failed to clean up legacy config text entities")
+
+    try:
+        await _async_cleanup_duplicate_entities(hass, entry)
+    except Exception:
+        _LOGGER.exception("Failed to clean up duplicate entities")
 
     try:
         await async_install_blueprints(hass)

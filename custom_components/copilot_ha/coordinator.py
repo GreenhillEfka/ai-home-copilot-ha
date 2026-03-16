@@ -265,6 +265,18 @@ class CopilotApiClient(SharedCopilotApiClient):
             label="Zone automation ensure-zones",
         )
 
+    async def async_sync_zone_definitions(self, zones: list[dict[str, Any]]) -> dict[str, Any]:
+        """Push full zone definitions (entities, roles, metadata) to Core.
+
+        Goes beyond ensure-zones by syncing entity assignments and zone metadata
+        so Core's Brain/Neuron system knows the full zone topology.
+        """
+        return await self._safe_post(
+            "/api/v1/zone-automation/sync-definitions",
+            {"source": "ha", "zones": zones},
+            label="Zone definitions sync",
+        )
+
     async def async_get_sonos_summary(self) -> dict[str, Any]:
         """Get Sonos speaker summary from jishi API."""
         return await self._safe_get(
@@ -380,6 +392,34 @@ class CopilotApiClient(SharedCopilotApiClient):
         return await self._safe_post(
             f"/api/v1/zone-automation/zones/{zone_id}/config", config,
             label=f"Zone config {zone_id}",
+        )
+
+    async def async_send_suggestion_feedback(
+        self,
+        suggestion_id: str,
+        accepted: bool,
+        *,
+        related_entities: list[str] | None = None,
+        pattern_key: str = "",
+    ) -> dict[str, Any]:
+        """Send suggestion accept/reject feedback to Core for Brain Graph weight adjustment.
+
+        Core's FeedbackLoop adjusts Brain Graph weights:
+        - Accept: +0.5 weight boost on correlated edges
+        - Reject: -0.3 weight penalty on correlated edges
+        """
+        payload: dict[str, Any] = {
+            "suggestion_id": suggestion_id,
+            "accepted": accepted,
+        }
+        if related_entities:
+            payload["related_entities"] = related_entities
+        if pattern_key:
+            payload["pattern_key"] = pattern_key
+        return await self._safe_post(
+            "/api/v1/integration/feedback",
+            payload,
+            label="Suggestion feedback",
         )
 
     async def async_sync_habitus_config(self, config: dict[str, Any]) -> dict[str, Any]:
@@ -666,11 +706,55 @@ class CopilotApiClient(SharedCopilotApiClient):
         return await self.async_put(self._normalize_v1_path(path), payload=data or {})
 
 
+# ── Circuit Breaker ──────────────────────────────────────────────────
+_CB_FAILURE_THRESHOLD = 3   # consecutive failures before opening
+_CB_RECOVERY_TIMEOUT_S = 60  # seconds to wait before half-open retry
+
+
+class _CircuitBreakerState:
+    """Simple circuit breaker: CLOSED → OPEN → HALF_OPEN → CLOSED."""
+
+    __slots__ = ("_failures", "_opened_at", "_state")
+
+    def __init__(self) -> None:
+        self._failures: int = 0
+        self._opened_at: float = 0.0
+        self._state: str = "closed"  # closed | open | half_open
+
+    @property
+    def state(self) -> str:
+        if self._state == "open":
+            elapsed = asyncio.get_event_loop().time() - self._opened_at
+            if elapsed >= _CB_RECOVERY_TIMEOUT_S:
+                self._state = "half_open"
+        return self._state
+
+    def record_success(self) -> None:
+        self._failures = 0
+        self._state = "closed"
+
+    def record_failure(self) -> None:
+        self._failures += 1
+        if self._failures >= _CB_FAILURE_THRESHOLD:
+            self._state = "open"
+            self._opened_at = asyncio.get_event_loop().time()
+            _LOGGER.warning(
+                "Circuit breaker OPEN after %d consecutive failures — "
+                "skipping Core API calls for %ds",
+                self._failures, _CB_RECOVERY_TIMEOUT_S,
+            )
+
+    @property
+    def is_open(self) -> bool:
+        return self.state == "open"
+
+
 class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
     """Coordinator with neural system integration."""
-    
+
     def __init__(self, hass: HomeAssistant, config: dict):
         self._config = config
+        self._circuit_breaker = _CircuitBreakerState()
         session = async_get_clientsession(hass)
 
         host, port, token = resolve_core_connection_from_mapping(config)
@@ -716,29 +800,37 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         )
     
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch data from API with retry on transient failures."""
+        """Fetch data from API with parallelized calls and circuit breaker."""
+        # Circuit breaker: skip all Core calls when open
+        if self._circuit_breaker.is_open:
+            _LOGGER.debug("Circuit breaker OPEN — returning stale data")
+            if self.data:
+                return self.data
+            raise UpdateFailed("Core API circuit breaker is open")
+
         last_err: Exception | None = None
         for attempt in range(3):
             try:
-                status = await self.api.async_get_status()
+                # ── Parallel batch 1: independent Core API calls ─────
+                (
+                    status,
+                    mood_data,
+                    neurons_data,
+                    habit_data,
+                    module_data,
+                    anomaly_data,
+                ) = await asyncio.gather(
+                    self.api.async_get_status(),
+                    self.api.async_get_mood(),
+                    self.api.async_get_neurons(),
+                    self._get_habit_learning_data(),
+                    self.api.async_get_module_dashboards(),
+                    self.api.async_get_anomaly_status(),
+                )
 
-                # Get mood from neural system
-                mood_data = await self.api.async_get_mood()
-
-                # Get neuron states
-                neurons_data = await self.api.async_get_neurons()
-
-                # Get habit learning data from ML context if available
-                habit_data = await self._get_habit_learning_data()
-
-                # Get smart home module dashboards (aggregated single call)
-                module_data = await self.api.async_get_module_dashboards()
-
-                # Feed module data into HA module stubs
+                # Feed module data into HA module stubs (depends on module_data)
                 await self._update_smart_home_modules(module_data)
 
-                # Get anomaly detection data from Core
-                anomaly_data = await self.api.async_get_anomaly_status()
                 anomaly_history = anomaly_data.get("history", [])
                 anomaly_status = {
                     "status": "active" if anomaly_history else "idle",
@@ -765,29 +857,55 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     "alert_history": anomaly_history,
                 }
 
-                # Autonomy dashboard (v14.2.0)
-                try:
-                    autonomy_data = await self.api.async_get_autonomy_dashboard()
-                    if autonomy_data:
-                        result["autonomy"] = autonomy_data
-                except Exception:
-                    _LOGGER.debug("Autonomy dashboard fetch skipped")
+                # ── Parallel batch 2: secondary/optional API calls ───
+                autonomy_coro = self.api.async_get_autonomy_dashboard()
+                zone_health_coro = self.api.async_get_zone_health()
+                zone_auto_coro = self.api.async_get_zone_automation()
 
-                # Zone health (v14.2.0)
-                try:
-                    zone_health = await self.api.async_get_zone_health()
-                    if zone_health:
-                        result["zone_health"] = zone_health
-                except Exception:
-                    _LOGGER.debug("Zone health fetch skipped")
+                batch2 = await asyncio.gather(
+                    autonomy_coro, zone_health_coro, zone_auto_coro,
+                    return_exceptions=True,
+                )
+                autonomy_data, zone_health, zone_auto = batch2
 
-                # Zone automation config (per-zone light/music settings)
-                try:
-                    zone_auto = await self.api.async_get_zone_automation()
-                    if zone_auto:
-                        result["zone_automation"] = zone_auto
-                except Exception:
-                    _LOGGER.debug("Zone automation dashboard fetch skipped")
+                if isinstance(autonomy_data, dict) and autonomy_data:
+                    result["autonomy"] = autonomy_data
+
+                if isinstance(zone_health, dict) and zone_health:
+                    result["zone_health"] = zone_health
+
+                if isinstance(zone_auto, dict) and zone_auto:
+                    result["zone_automation"] = zone_auto
+                    # Sync zone states: zones with automation_mode != "off" are active
+                    try:
+                        from .habitus_zones_store_v2 import (
+                            async_get_zones_v2,
+                            async_set_zone_state,
+                        )
+                        ha_zones = await async_get_zones_v2(
+                            self.hass, self.config_entry.entry_id,
+                        )
+                        ha_zone_ids = {z.zone_id for z in ha_zones}
+                        for core_zone in zone_auto.get("zones", []):
+                            core_id = core_zone.get("zone_id", "")
+                            config = core_zone.get("config", {})
+                            mode = config.get("automation_mode", "off")
+                            matched_id = None
+                            if f"zone:{core_id}" in ha_zone_ids:
+                                matched_id = f"zone:{core_id}"
+                            elif core_id in ha_zone_ids:
+                                matched_id = core_id
+                            if matched_id:
+                                new_state = "active" if mode != "off" else "idle"
+                                await async_set_zone_state(
+                                    self.hass,
+                                    self.config_entry.entry_id,
+                                    matched_id,
+                                    new_state,
+                                    fire_event=True,
+                                )
+                    except Exception:
+                        _LOGGER.debug("Zone state sync skipped")
 
                 # Zone automation sync: ensure HA zones exist in Core on first refresh
                 if not getattr(self, "_zone_auto_synced", False):
@@ -810,6 +928,33 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                                 "Zone automation synced %d zones to Core (created: %s)",
                                 len(clean_ids),
                                 synced.get("created", []),
+                            )
+
+                            # Push full zone definitions (entities, roles, metadata)
+                            zone_defs = []
+                            for z in ha_zones:
+                                zid = z.zone_id.removeprefix("zone:")
+                                meta = z.metadata or {}
+                                zone_defs.append({
+                                    "zone_id": zid,
+                                    "name": z.name,
+                                    "zone_type": z.zone_type,
+                                    "entity_ids": list(z.entity_ids),
+                                    "entities": {
+                                        role: list(eids)
+                                        for role, eids in (z.entities or {}).items()
+                                    },
+                                    "floor": z.floor,
+                                    "priority": z.priority,
+                                    "tags": list(z.tags),
+                                    "ha_area_ids": meta.get("ha_area_ids", []),
+                                    "ha_area_names": meta.get("ha_area_names", []),
+                                })
+                            await self.api.async_sync_zone_definitions(zone_defs)
+                            _LOGGER.info(
+                                "Zone definitions synced: %d zones with %d total entities",
+                                len(zone_defs),
+                                sum(len(zd["entity_ids"]) for zd in zone_defs),
                             )
                         self._zone_auto_synced = True
                     except Exception:
@@ -834,11 +979,15 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
 
                 # Preserve webhook-pushed data across coordinator refreshes
                 if self.data:
-                    if "autonomy_history" in self.data:
-                        result["autonomy_history"] = self.data["autonomy_history"]
-                    if "zone_module_states" in self.data:
-                        result["zone_module_states"] = self.data["zone_module_states"]
+                    for key in (
+                        "autonomy_history", "autonomy_errors",
+                        "zone_module_states", "zone_updates",
+                    ):
+                        if key in self.data:
+                            result[key] = self.data[key]
 
+                # Circuit breaker: successful cycle → reset
+                self._circuit_breaker.record_success()
                 return result
             except CopilotApiError as err:
                 last_err = err
@@ -846,7 +995,6 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     await asyncio.sleep(2 ** attempt)  # 1s, 2s backoff
                     _LOGGER.debug("Retrying PilotSuite API (attempt %d): %s", attempt + 1, err)
                 continue
-                # fallthrough prevented by continue
             except Exception as err:  # noqa: BLE001
                 last_err = err
                 if attempt < 2:
@@ -859,6 +1007,8 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     continue
                 break
 
+        # All retries exhausted → record failure for circuit breaker
+        self._circuit_breaker.record_failure()
         if last_err is None:
             last_err = RuntimeError("unknown API error")
         _LOGGER.warning("PilotSuite API unreachable after 3 attempts: %s", last_err)
