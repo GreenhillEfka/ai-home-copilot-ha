@@ -25,9 +25,6 @@ class StyxHabitusCard extends _HabitusBase {
   }
 
   setConfig(config) {
-    if (!config.entity) {
-      throw new Error("Please define an entity");
-    }
     this._config = { max_rules: 5, ...config };
   }
 
@@ -36,13 +33,35 @@ class StyxHabitusCard extends _HabitusBase {
     this._render();
   }
 
+  _resolveEntity() {
+    if (!this._hass) return null;
+    // Try configured entity first, then auto-detect
+    if (this._config.entity) {
+      const s = this._hass.states[this._config.entity];
+      if (s) return s;
+    }
+    // Auto-detect with common naming patterns
+    const candidates = [
+      "sensor.pilotsuite_habitus_rules_count",
+      "sensor.styx_hub_habitus_rules_count",
+    ];
+    // Also search all entities for matching unique_id pattern
+    for (const eid of Object.keys(this._hass.states)) {
+      if (eid.includes("habitus_rules_count")) candidates.unshift(eid);
+    }
+    for (const eid of candidates) {
+      const s = this._hass.states[eid];
+      if (s) return s;
+    }
+    return null;
+  }
+
   getCardSize() {
     return 3;
   }
 
   _getRules() {
-    if (!this._hass) return [];
-    const state = this._hass.states[this._config.entity];
+    const state = this._resolveEntity();
     if (!state) return [];
 
     const attrs = state.attributes || {};
@@ -59,7 +78,7 @@ class StyxHabitusCard extends _HabitusBase {
   }
 
   _render() {
-    const state = this._hass ? this._hass.states[this._config.entity] : null;
+    const state = this._resolveEntity();
     const total = state ? parseInt(state.state, 10) || 0 : 0;
     const rules = this._getRules();
 

@@ -290,6 +290,20 @@ _STORAGE_DASHBOARD_TITLE = "PilotSuite"
 _STORAGE_DASHBOARD_ICON = "mdi:home-heart"
 
 
+def _find_entity(entities: list[str], *patterns: str) -> str | None:
+    """Find first entity matching any of the given substrings."""
+    for pat in patterns:
+        for e in entities:
+            if pat in e:
+                return e
+    return None
+
+
+def _filter_entities(entities: list[str], *patterns: str) -> list[str]:
+    """Filter entities matching any of the given substrings."""
+    return [e for e in entities if any(p in e for p in patterns)]
+
+
 def _build_storage_dashboard_config(
     entities: list[str],
     *,
@@ -298,39 +312,72 @@ def _build_storage_dashboard_config(
     """Build a storage-mode Lovelace dashboard config.
 
     HA frontend is "Sinne + Haende" (Thin Client):
-    8 views covering all user-facing aspects. Brain Graph, Neuron details,
-    and system internals remain in the Core ingress dashboard.
+    8 views covering all user-facing aspects with rich custom cards.
     """
+    # ── Entity classification ──
     status_entities = [
         e for e in entities
         if e.startswith(("binary_sensor.pilotsuite", "sensor.pilotsuite_styx_",
                          "sensor.pilotsuite_core_"))
     ]
-    zone_entities = [
-        e for e in entities
-        if "habitus_zones" in e or "zones_v2" in e
-    ]
-    mood_entities = [e for e in entities if "mood" in e]
-    energy_entities = [e for e in entities if "energy" in e or "power" in e]
-    media_entities = [
-        e for e in entities
-        if "media" in e or "musikwolke" in e or "sonos" in e or "media_follow" in e
-    ]
-    module_entities = [
-        e for e in entities
-        if "module" in e or "autonomy" in e
-    ]
-    automation_entities = [
-        e for e in entities
-        if "automation" in e or "zone_" in e
-    ]
-    neuron_entities = [
-        e for e in entities
-        if "neuron" in e or "brain" in e or "prediction" in e
-    ]
+    zone_entities = _filter_entities(entities, "habitus_zones", "zones_v2")
+    mood_entities = _filter_entities(entities, "mood")
+    energy_entities = _filter_entities(entities, "energy", "power")
+    media_entities = _filter_entities(
+        entities, "media", "musikwolke", "sonos", "media_follow",
+    )
+    module_entities = _filter_entities(entities, "module", "autonomy")
+    automation_entities = _filter_entities(entities, "automation", "zone_")
+    neuron_entities = _filter_entities(entities, "neuron", "brain", "prediction")
+
+    # ── Resolve key entity IDs for custom cards ──
+    mood_entity = _find_entity(
+        entities, "sensor.copilot_ha_mood", "sensor.pilotsuite_mood",
+    ) or "sensor.copilot_ha_mood"
+    brain_nodes_entity = _find_entity(
+        entities, "sensor.pilotsuite_brain_graph_nodes", "sensor.copilot_ha_brain_graph_nodes",
+    ) or "sensor.pilotsuite_brain_graph_nodes"
+    brain_edges_entity = _find_entity(
+        entities, "sensor.pilotsuite_brain_graph_edges", "sensor.copilot_ha_brain_graph_edges",
+    ) or "sensor.pilotsuite_brain_graph_edges"
+    habitus_entity = _find_entity(
+        entities, "sensor.pilotsuite_habitus_rules_count", "sensor.copilot_ha_habitus_rules_count",
+    ) or "sensor.pilotsuite_habitus_rules_count"
+    zones_entity = _find_entity(
+        entities, "sensor.copilot_ha_habitus_zones", "sensor.pilotsuite_habitus_zones",
+    ) or "sensor.copilot_ha_habitus_zones"
 
     views = [
-        # 1. Haushalt
+        # ── 1. Styx (Start) ──
+        {
+            "title": "Styx",
+            "path": "styx",
+            "icon": "mdi:brain",
+            "cards": [
+                {
+                    "type": "custom:styx-neural-card",
+                    "title": "Neural Interface",
+                    "show_history": True,
+                },
+                {
+                    "type": "horizontal-stack",
+                    "cards": [
+                        {
+                            "type": "custom:styx-mood-card",
+                            "entity": mood_entity,
+                        },
+                        {
+                            "type": "custom:styx-brain-card",
+                            "entity": brain_nodes_entity,
+                            "edge_entity": brain_edges_entity,
+                        },
+                    ],
+                },
+                {"type": "custom:styx-suggestions-card"},
+                {"type": "custom:styx-error-card"},
+            ],
+        },
+        # ── 2. Haushalt ──
         {
             "title": "Haushalt",
             "path": "haushalt",
@@ -342,62 +389,102 @@ def _build_storage_dashboard_config(
                         "type": "entities",
                         "title": "PilotSuite Status",
                         "show_header_toggle": False,
-                        "entities": status_entities[:5],
+                        "entities": status_entities[:8],
                     }] if status_entities else []
                 ),
                 *(
                     [{
-                        "type": "entities",
-                        "title": "Stimmung",
-                        "show_header_toggle": False,
-                        "entities": mood_entities[:3],
+                        "type": "custom:styx-mood-card",
+                        "entity": mood_entity,
                     }] if mood_entities else []
                 ),
             ],
         },
-        # 2. Zonen
+        # ── 3. Zonen ──
         {
             "title": "Zonen",
             "path": "zonen",
             "icon": "mdi:map-marker-radius",
             "cards": [
-                {"type": "custom:styx-habitus-card"},
-                {"type": "custom:styx-zone-card"},
+                {
+                    "type": "custom:styx-habitus-card",
+                    "entity": habitus_entity,
+                    "max_rules": 8,
+                },
+                {
+                    "type": "custom:styx-zone-card",
+                    "entity": zones_entity,
+                    "show_mood": True,
+                    "show_neuron_activity": True,
+                    "show_quick_actions": True,
+                },
                 *(
                     [{
                         "type": "entities",
-                        "title": "Zonen-Status",
+                        "title": "Zonen-Entities",
                         "show_header_toggle": False,
-                        "entities": zone_entities[:5],
+                        "entities": zone_entities[:10],
                     }] if zone_entities else []
                 ),
             ],
         },
-        # 3. Automation
+        # ── 4. Automation ──
         {
             "title": "Automation",
             "path": "automation",
             "icon": "mdi:robot",
             "cards": [
+                {"type": "custom:styx-suggestions-card"},
                 {
-                    "type": "markdown",
-                    "title": "Zonen-Automatisierung",
-                    "content": (
-                        "Steuere die Automatisierungsmodi, Licht- und Musik-Einstellungen "
-                        "pro Zone. Jede Zone hat eigene Slider und Schalter."
-                    ),
+                    "type": "custom:styx-habitus-card",
+                    "entity": habitus_entity,
+                    "max_rules": 10,
                 },
                 *(
                     [{
                         "type": "entities",
-                        "title": "Automatisierungs-Entities",
+                        "title": "Automatisierungen",
                         "show_header_toggle": False,
                         "entities": automation_entities[:15],
                     }] if automation_entities else []
                 ),
+                {
+                    "type": "grid",
+                    "columns": 3,
+                    "square": False,
+                    "cards": [
+                        {
+                            "type": "button",
+                            "name": "Brain Sync",
+                            "icon": "mdi:brain",
+                            "tap_action": {
+                                "action": "call-service",
+                                "service": "copilot_ha.trigger_brain_sync",
+                            },
+                        },
+                        {
+                            "type": "button",
+                            "name": "Muster Mining",
+                            "icon": "mdi:magnify-scan",
+                            "tap_action": {
+                                "action": "call-service",
+                                "service": "copilot_ha.trigger_habitus_mining",
+                            },
+                        },
+                        {
+                            "type": "button",
+                            "name": "Dashboard aktualisieren",
+                            "icon": "mdi:refresh",
+                            "tap_action": {
+                                "action": "call-service",
+                                "service": "copilot_ha.refresh_dashboard",
+                            },
+                        },
+                    ],
+                },
             ],
         },
-        # 4. Energie
+        # ── 5. Energie ──
         {
             "title": "Energie",
             "path": "energie",
@@ -406,9 +493,9 @@ def _build_storage_dashboard_config(
                 *(
                     [{
                         "type": "entities",
-                        "title": "Energie-Übersicht",
+                        "title": "Energie & Verbrauch",
                         "show_header_toggle": False,
-                        "entities": energy_entities[:8],
+                        "entities": energy_entities[:12],
                     }] if energy_entities else [{
                         "type": "markdown",
                         "content": "Keine Energie-Entities konfiguriert.",
@@ -416,7 +503,7 @@ def _build_storage_dashboard_config(
                 ),
             ],
         },
-        # 5. Musik
+        # ── 6. Musik ──
         {
             "title": "Musik",
             "path": "musik",
@@ -427,7 +514,7 @@ def _build_storage_dashboard_config(
                         "type": "entities",
                         "title": "Medien & Musikwolke",
                         "show_header_toggle": False,
-                        "entities": media_entities[:8],
+                        "entities": media_entities[:10],
                     }] if media_entities else [{
                         "type": "markdown",
                         "content": "Keine Medien-Entities konfiguriert.",
@@ -475,48 +562,42 @@ def _build_storage_dashboard_config(
                 },
             ],
         },
-        # 6. Module
-        {
-            "title": "Module",
-            "path": "module",
-            "icon": "mdi:puzzle",
-            "cards": [
-                *(
-                    [{
-                        "type": "entities",
-                        "title": "Modul-Status",
-                        "show_header_toggle": False,
-                        "entities": module_entities[:10],
-                    }] if module_entities else [{
-                        "type": "markdown",
-                        "content": "Keine Modul-Entities verfügbar.",
-                    }]
-                ),
-            ],
-        },
-        # 7. KI / Stimmung
+        # ── 7. KI / Neuronen ──
         {
             "title": "KI",
             "path": "ki",
-            "icon": "mdi:brain",
+            "icon": "mdi:head-snowflake-outline",
             "cards": [
+                {
+                    "type": "custom:styx-brain-card",
+                    "entity": brain_nodes_entity,
+                    "edge_entity": brain_edges_entity,
+                },
+                {
+                    "type": "horizontal-stack",
+                    "cards": [
+                        {
+                            "type": "custom:styx-mood-card",
+                            "entity": mood_entity,
+                        },
+                        {
+                            "type": "custom:styx-habitus-card",
+                            "entity": habitus_entity,
+                            "max_rules": 5,
+                        },
+                    ],
+                },
                 *(
                     [{
                         "type": "entities",
-                        "title": "Stimmung & Neuronen",
+                        "title": "Neuronen & Sensoren",
                         "show_header_toggle": False,
-                        "entities": (mood_entities + neuron_entities)[:10],
-                    }] if (mood_entities or neuron_entities) else [{
-                        "type": "markdown",
-                        "content": "Keine KI-Entities verfügbar.",
-                    }]
+                        "entities": (neuron_entities + mood_entities)[:12],
+                    }] if (neuron_entities or mood_entities) else []
                 ),
-                {
-                    "type": "custom:styx-mood-card",
-                },
             ],
         },
-        # 8. Chat
+        # ── 8. Chat ──
         {
             "title": "Chat",
             "path": "chat",
@@ -552,17 +633,41 @@ async def async_ensure_storage_dashboard(hass: HomeAssistant) -> str:
         else:
             dashboards = getattr(lovelace, "dashboards", None) or {}
 
-        # Check if dashboard already exists in loaded dashboards
+        # Gather PilotSuite entity IDs for the dashboard
+        ps_entities = sorted(
+            eid
+            for eid in hass.states.async_entity_ids()
+            if "pilotsuite" in eid or "copilot" in eid
+        )
+
+        # Helper: save/update the views config in HA storage
+        def _save_views() -> bool:
+            """Save dashboard views to HA storage. Returns success."""
+            try:
+                from homeassistant.helpers.storage import Store
+
+                dashboard_id = _STORAGE_DASHBOARD_URL_PATH.replace("-", "_")
+                store = Store(hass, 1, f"lovelace.{dashboard_id}")
+                config = _build_storage_dashboard_config(ps_entities)
+                return store, config
+            except Exception:  # noqa: BLE001
+                return None, None
+
+        # Dashboard already exists — update views
         if _STORAGE_DASHBOARD_URL_PATH in dashboards:
             _LOGGER.debug(
-                "Storage dashboard '%s' already exists", _STORAGE_DASHBOARD_URL_PATH
+                "Storage dashboard '%s' exists, updating views", _STORAGE_DASHBOARD_URL_PATH
             )
+            store, config = _save_views()
+            if store and config:
+                await store.async_save({"config": config})
+                _LOGGER.info(
+                    "Updated storage-mode PilotSuite dashboard views (%d entities)",
+                    len(ps_entities),
+                )
             return "exists"
 
         # Dashboard not loaded yet — check/create via DashboardsCollection.
-        # In HA 2026.3+, the collection is a local var in lovelace.async_setup()
-        # and not stored on LovelaceData. We instantiate a temporary handle that
-        # reads/writes the same storage file.
         try:
             from homeassistant.components.lovelace.dashboard import (
                 DashboardsCollection,
@@ -587,17 +692,13 @@ async def async_ensure_storage_dashboard(hass: HomeAssistant) -> str:
             )
             if item_url == _STORAGE_DASHBOARD_URL_PATH:
                 _LOGGER.debug(
-                    "Storage dashboard '%s' found in collection",
+                    "Storage dashboard '%s' found in collection, updating views",
                     _STORAGE_DASHBOARD_URL_PATH,
                 )
+                store, config = _save_views()
+                if store and config:
+                    await store.async_save({"config": config})
                 return "exists"
-
-        # Gather PilotSuite entity IDs for the dashboard
-        ps_entities = sorted(
-            eid
-            for eid in hass.states.async_entity_ids()
-            if "pilotsuite" in eid or "copilot" in eid
-        )
 
         # Create the dashboard entry in the collection store
         await coll.async_create_item({
@@ -608,20 +709,15 @@ async def async_ensure_storage_dashboard(hass: HomeAssistant) -> str:
             "require_admin": False,
         })
 
-        # Save dashboard view config to the LovelaceStorage store.
-        # The views are stored in .storage/lovelace.<dashboard_id>
-        try:
-            from homeassistant.helpers.storage import Store
-
-            dashboard_id = _STORAGE_DASHBOARD_URL_PATH.replace("-", "_")
-            store = Store(hass, 1, f"lovelace.{dashboard_id}")
-            config = _build_storage_dashboard_config(ps_entities)
+        # Save dashboard view config
+        store, config = _save_views()
+        if store and config:
             await store.async_save({"config": config})
             _LOGGER.info(
                 "Created storage-mode PilotSuite dashboard with %d entities",
                 len(ps_entities),
             )
-        except Exception:  # noqa: BLE001
+        else:
             _LOGGER.warning(
                 "Dashboard entry created but could not save views — "
                 "configure views manually in the HA UI"
