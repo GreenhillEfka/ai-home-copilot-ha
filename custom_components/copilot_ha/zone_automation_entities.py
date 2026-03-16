@@ -37,10 +37,23 @@ def _get_zone_data(coordinator, zone_id: str) -> dict[str, Any]:
     """
     data = coordinator.data or {}
     clean_id = zone_id.removeprefix("zone:")
-    for zone in data.get("zone_automation", {}).get("zones", []):
+    za = data.get("zone_automation", {})
+    zones_list = za.get("zones", [])
+    if not zones_list and za:
+        _LOGGER.debug(
+            "zone_automation has keys %s but no zones for %s",
+            list(za.keys()), clean_id,
+        )
+    for zone in zones_list:
         core_id = zone.get("zone_id", "")
         if core_id == zone_id or core_id == clean_id:
             return zone
+    if zones_list:
+        available_ids = [z.get("zone_id", "?") for z in zones_list]
+        _LOGGER.warning(
+            "Zone %r (clean: %r) not found in %d zones: %s",
+            zone_id, clean_id, len(zones_list), available_ids,
+        )
     return {}
 
 

@@ -285,9 +285,12 @@ class SuggestionPanelStore:
     
     async def async_load(self) -> None:
         """Load suggestions from storage."""
-        from .storage import async_load_from_store
-        
-        data = await async_load_from_store(self.hass, self.entry_id, "suggestions")
+        from .storage import _load
+
+        all_data = await _load(self.hass)
+        entries = all_data.get("entries", {}) if isinstance(all_data, dict) else {}
+        entry_data = entries.get(self.entry_id, {})
+        data = entry_data.get("suggestions", {}) if isinstance(entry_data, dict) else {}
         if isinstance(data, dict) and "suggestions" in data:
             suggestions = []
             for s in data["suggestions"]:
