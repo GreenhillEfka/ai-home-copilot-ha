@@ -244,6 +244,18 @@ class CopilotApiClient(SharedCopilotApiClient):
             label="Zone automation API",
         )
 
+    async def async_ensure_zone_automation_zones(self, zone_ids: list[str]) -> dict[str, Any]:
+        """Ensure zone automation configs exist for given zone IDs.
+
+        Calls Core's ensure-zones endpoint which auto-creates missing zones
+        and returns the updated dashboard.
+        """
+        return await self._safe_post(
+            "/api/v1/zone-automation/ensure-zones",
+            {"zone_ids": zone_ids},
+            label="Zone automation ensure-zones",
+        )
+
     async def async_get_sonos_summary(self) -> dict[str, Any]:
         """Get Sonos speaker summary from jishi API."""
         return await self._safe_get(
@@ -767,6 +779,32 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                         result["zone_automation"] = zone_auto
                 except Exception:
                     _LOGGER.debug("Zone automation dashboard fetch skipped")
+
+                # Zone automation sync: ensure HA zones exist in Core on first refresh
+                if not getattr(self, "_zone_auto_synced", False):
+                    try:
+                        from .habitus_zones_store_v2 import async_get_zones_v2
+
+                        ha_zones = await async_get_zones_v2(
+                            self.hass, self.config_entry.entry_id,
+                        )
+                        if ha_zones:
+                            zone_ids = [z.zone_id for z in ha_zones if z.zone_id]
+                            # Strip 'zone:' prefix for Core compatibility
+                            clean_ids = [
+                                zid.removeprefix("zone:") for zid in zone_ids
+                            ]
+                            synced = await self.api.async_ensure_zone_automation_zones(clean_ids)
+                            if synced and synced.get("zones"):
+                                result["zone_automation"] = synced
+                            _LOGGER.info(
+                                "Zone automation synced %d zones to Core (created: %s)",
+                                len(clean_ids),
+                                synced.get("created", []),
+                            )
+                        self._zone_auto_synced = True
+                    except Exception:
+                        _LOGGER.debug("Zone automation sync skipped")
 
                 # Habitus config sync: push HA config to Core on first refresh
                 if not getattr(self, "_habitus_config_synced", False):
