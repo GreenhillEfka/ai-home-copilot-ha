@@ -60,6 +60,9 @@ class MoodSensor(CoordinatorEntity, SensorEntity):
                 if isinstance(n, dict)
             ]
 
+        # Per-zone mood data from webhook pushes
+        zone_moods = self.coordinator.data.get("zone_moods", {}) if self.coordinator.data else {}
+
         return {
             "confidence": mood_data.get("confidence", 0.0),
             "emotions": emotions,
@@ -67,6 +70,8 @@ class MoodSensor(CoordinatorEntity, SensorEntity):
             "last_updated": mood_data.get("last_update"),
             "last_update": mood_data.get("last_update"),
             "contributing_neurons": mood_data.get("contributing_neurons", []),
+            "zone_moods": zone_moods,
+            "zone_moods_count": len(zone_moods),
         }
     
     def _handle_coordinator_update(self) -> None:

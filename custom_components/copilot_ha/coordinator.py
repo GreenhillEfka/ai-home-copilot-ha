@@ -1167,6 +1167,8 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     for key in (
                         "autonomy_history", "autonomy_errors",
                         "zone_module_states", "zone_updates",
+                        "neurons_fired", "brain_insights",
+                        "ranked_candidates", "zone_moods",
                     ):
                         if key in self.data and key not in result:
                             result[key] = self.data[key]

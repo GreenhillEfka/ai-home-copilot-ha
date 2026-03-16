@@ -54,6 +54,10 @@ EVENT_TYPE_AUTONOMY_FAILED = "autonomy_failed"
 EVENT_TYPE_SCENE_CAPTURED = "scene_captured"
 EVENT_TYPE_SCENE_APPLIED = "scene_applied"
 EVENT_TYPE_MODULE_ZONE_STATE = "module_zone_state_changed"
+EVENT_TYPE_NEURON_FIRED = "neuron_fired"
+EVENT_TYPE_BRAIN_INSIGHT = "brain_insight"
+EVENT_TYPE_CANDIDATES_RANKED = "candidates_ranked"
+EVENT_TYPE_ZONE_MOOD = "zone_mood"
 
 _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_STATUS,
@@ -68,6 +72,10 @@ _ALLOWED_EVENT_TYPES = {
     EVENT_TYPE_SCENE_CAPTURED,
     EVENT_TYPE_SCENE_APPLIED,
     EVENT_TYPE_MODULE_ZONE_STATE,
+    EVENT_TYPE_NEURON_FIRED,
+    EVENT_TYPE_BRAIN_INSIGHT,
+    EVENT_TYPE_CANDIDATES_RANKED,
+    EVENT_TYPE_ZONE_MOOD,
 }
 
 # Canonical aliases should continue to map directly; legacy aliases are only accepted in
@@ -85,6 +93,10 @@ _EVENT_TYPE_CANONICAL_TO_CANONICAL = {
     EVENT_TYPE_SCENE_CAPTURED: EVENT_TYPE_SCENE_CAPTURED,
     EVENT_TYPE_SCENE_APPLIED: EVENT_TYPE_SCENE_APPLIED,
     EVENT_TYPE_MODULE_ZONE_STATE: EVENT_TYPE_MODULE_ZONE_STATE,
+    EVENT_TYPE_NEURON_FIRED: EVENT_TYPE_NEURON_FIRED,
+    EVENT_TYPE_BRAIN_INSIGHT: EVENT_TYPE_BRAIN_INSIGHT,
+    EVENT_TYPE_CANDIDATES_RANKED: EVENT_TYPE_CANDIDATES_RANKED,
+    EVENT_TYPE_ZONE_MOOD: EVENT_TYPE_ZONE_MOOD,
 }
 
 _EVENT_TYPE_LEGACY_ALIASES = {
@@ -849,6 +861,79 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             merged = _merge_coordinator_data(coordinator, updates)
             coordinator.async_set_updated_data(merged)
             _LOGGER.debug("Webhook: module_zone_state_changed (zone=%s, module=%s → %s)", zone_id, module_id, new_state)
+
+        elif event_type == EVENT_TYPE_NEURON_FIRED:
+            # Core pushes individual neuron firing event
+            neuron_data = data
+            current = coordinator.data if isinstance(coordinator.data, dict) else {}
+            neurons_fired = list(current.get("neurons_fired", []))
+            neurons_fired.append(neuron_data)
+            # Keep only last 20
+            neurons_fired = neurons_fired[-20:]
+            updates = {"neurons_fired": neurons_fired}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+            hass.bus.async_fire(
+                f"{DOMAIN}_neuron_fired",
+                neuron_data,
+            )
+            _LOGGER.debug(
+                "Webhook: neuron_fired (neuron=%s)",
+                neuron_data.get("neuron_id", neuron_data.get("name", "unknown")),
+            )
+
+        elif event_type == EVENT_TYPE_BRAIN_INSIGHT:
+            # Core pushes brain insight (pattern discovery, correlation, etc.)
+            insight_data = data
+            current = coordinator.data if isinstance(coordinator.data, dict) else {}
+            insights = list(current.get("brain_insights", []))
+            insights.append(insight_data)
+            # Keep only last 50
+            insights = insights[-50:]
+            updates = {"brain_insights": insights}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+            hass.bus.async_fire(
+                f"{DOMAIN}_brain_insight",
+                insight_data,
+            )
+            _LOGGER.debug(
+                "Webhook: brain_insight (type=%s)",
+                insight_data.get("insight_type", "unknown"),
+            )
+
+        elif event_type == EVENT_TYPE_CANDIDATES_RANKED:
+            # Core pushes ranked suggestion candidates
+            candidates = data.get("candidates", [])
+            updates = {"ranked_candidates": candidates}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+            hass.bus.async_fire(
+                f"{DOMAIN}_candidates_updated",
+                {"count": len(candidates)},
+            )
+            _LOGGER.debug("Webhook: candidates_ranked (count=%d)", len(candidates))
+
+        elif event_type == EVENT_TYPE_ZONE_MOOD:
+            # Core pushes per-zone mood state
+            zone_data = data
+            zone_id = zone_data.get("zone_id", "")
+            current = coordinator.data if isinstance(coordinator.data, dict) else {}
+            zone_moods = dict(current.get("zone_moods", {}))
+            if zone_id:
+                zone_moods[zone_id] = zone_data
+            updates = {"zone_moods": zone_moods}
+            merged = _merge_coordinator_data(coordinator, updates)
+            coordinator.async_set_updated_data(merged)
+            hass.bus.async_fire(
+                f"{DOMAIN}_zone_mood_changed",
+                zone_data,
+            )
+            _LOGGER.debug(
+                "Webhook: zone_mood (zone=%s, mood=%s)",
+                zone_id,
+                zone_data.get("mood", "unknown"),
+            )
 
         else:
             # Legacy status push (online/version)

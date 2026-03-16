@@ -145,14 +145,17 @@ class SuggestionSensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return all suggestions."""
         if not self.coordinator.data:
-            return {"suggestions": []}
-        
+            return {"suggestions": [], "ranked_candidates_count": 0}
+
         suggestions = self.coordinator.data.get("suggestions", [])
-        
+        ranked_candidates = self.coordinator.data.get("ranked_candidates", [])
+
         return {
             "suggestions": suggestions,
             "count": len(suggestions),
             "top_suggestion": suggestions[0] if suggestions else None,
+            "ranked_candidates_count": len(ranked_candidates),
+            "ranked_candidates": ranked_candidates[:10],
         }
     
     def _handle_coordinator_update(self) -> None:
