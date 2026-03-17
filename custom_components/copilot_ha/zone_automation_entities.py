@@ -476,10 +476,185 @@ class ZoneMusicAutoPlaySwitch(_ZoneAutoSwitch):
         )
 
 
+# ── Schema-Driven Module Entities ──────────────────────────────────
+
+
+class _ZoneModuleSwitch(CopilotBaseEntity, SwitchEntity):
+    """Schema-driven switch for zone module configs (reads from modules dict)."""
+
+    _attr_has_entity_name = False
+
+    def __init__(
+        self,
+        coordinator,
+        zone_id: str,
+        zone_name: str,
+        *,
+        module_id: str,
+        key: str,
+        label_de: str,
+        icon: str,
+        area_name: str | None = None,
+    ) -> None:
+        super().__init__(coordinator)
+        self._zone_id = zone_id
+        self._module_id = module_id
+        self._config_key = key
+        self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
+        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{module_id}_{key}"
+        self._attr_name = f"PilotSuite {zone_name} {label_de}"
+        self._attr_icon = icon
+        self._attr_is_on = False
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self._zone_device_info
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        zd = _get_zone_data(self.coordinator, self._zone_id)
+        modules = zd.get("config", {}).get("modules", {})
+        mod = modules.get(self._module_id, {})
+        self._attr_is_on = bool(mod.get(self._config_key, False))
+        self.async_write_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self._handle_coordinator_update()
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_zone_config(
+            self._zone_id, {"modules": {self._module_id: {self._config_key: True}}}
+        )
+        self._attr_is_on = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_zone_config(
+            self._zone_id, {"modules": {self._module_id: {self._config_key: False}}}
+        )
+        self._attr_is_on = False
+        self.async_write_ha_state()
+
+
+class _ZoneModuleNumber(CopilotBaseEntity, NumberEntity):
+    """Schema-driven number slider for zone module configs."""
+
+    _attr_has_entity_name = False
+    _attr_mode = NumberMode.SLIDER
+
+    def __init__(
+        self,
+        coordinator,
+        zone_id: str,
+        zone_name: str,
+        *,
+        module_id: str,
+        key: str,
+        label_de: str,
+        icon: str,
+        min_value: float,
+        max_value: float,
+        step: float = 1.0,
+        unit: str | None = None,
+        area_name: str | None = None,
+    ) -> None:
+        super().__init__(coordinator)
+        self._zone_id = zone_id
+        self._module_id = module_id
+        self._config_key = key
+        self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
+        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{module_id}_{key}"
+        self._attr_name = f"PilotSuite {zone_name} {label_de}"
+        self._attr_icon = icon
+        self._attr_native_min_value = min_value
+        self._attr_native_max_value = max_value
+        self._attr_native_step = step
+        if unit:
+            self._attr_native_unit_of_measurement = unit
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self._zone_device_info
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        zd = _get_zone_data(self.coordinator, self._zone_id)
+        modules = zd.get("config", {}).get("modules", {})
+        mod = modules.get(self._module_id, {})
+        val = mod.get(self._config_key)
+        if val is not None:
+            try:
+                self._attr_native_value = float(val)
+            except (TypeError, ValueError):
+                pass
+        self.async_write_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self._handle_coordinator_update()
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self.coordinator.async_set_zone_config(
+            self._zone_id, {"modules": {self._module_id: {self._config_key: value}}}
+        )
+        self._attr_native_value = value
+        self.async_write_ha_state()
+
+
 # ── Factory Function ────────────────────────────────────────────────
 
+# Modules that use legacy config path (config.light.*, config.music.*)
+_LEGACY_MODULES = {"light", "music"}
 
-def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str, list]:
+
+def _create_module_entities(
+    coordinator, zone_id: str, zone_name: str, area_name: str | None,
+    module_schemas: dict[str, Any],
+) -> tuple[list, list]:
+    """Create entities for non-legacy modules from Core's module schemas.
+
+    Returns (numbers, switches) lists.
+    """
+    numbers: list[NumberEntity] = []
+    switches: list[SwitchEntity] = []
+
+    for module_id, schema in module_schemas.items():
+        if module_id in _LEGACY_MODULES:
+            continue
+
+        for field_spec in schema.get("fields", []):
+            key = field_spec.get("key", "")
+            ft = field_spec.get("field_type", "")
+            ha_platform = field_spec.get("ha_platform", "number")
+            label_de = field_spec.get("label_de", key)
+            icon = field_spec.get("icon", "mdi:cog")
+
+            if ft == "bool" or ha_platform == "switch":
+                switches.append(_ZoneModuleSwitch(
+                    coordinator, zone_id, zone_name,
+                    module_id=module_id, key=key,
+                    label_de=label_de, icon=icon,
+                    area_name=area_name,
+                ))
+            elif ft in ("int", "float") and ha_platform == "number":
+                numbers.append(_ZoneModuleNumber(
+                    coordinator, zone_id, zone_name,
+                    module_id=module_id, key=key,
+                    label_de=label_de, icon=icon,
+                    min_value=field_spec.get("min_value", 0),
+                    max_value=field_spec.get("max_value", 100),
+                    step=field_spec.get("step", 1),
+                    unit=field_spec.get("unit"),
+                    area_name=area_name,
+                ))
+
+    return numbers, switches
+
+
+def create_zone_automation_entities(
+    coordinator, zones: list[dict], module_schemas: dict[str, Any] | None = None,
+) -> dict[str, list]:
     """Create all per-zone automation control entities.
 
     Returns a dict with keys "number", "select", "switch" mapping to
@@ -489,6 +664,10 @@ def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str,
     - zone_id: required
     - name: display name
     - area_name: HA area name for suggested_area assignment
+
+    If module_schemas is provided (from Core's /module-schemas endpoint),
+    entities for new modules (climate, cover, energy, scene, security)
+    are generated dynamically from the schema.
     """
     numbers: list[NumberEntity] = []
     selects: list[SelectEntity] = []
@@ -506,7 +685,7 @@ def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str,
         # Automation mode select
         selects.append(ZoneAutomationModeSelect(coordinator, zone_id, zone_name, area_name))
 
-        # Light automation controls
+        # ── Legacy light automation controls ──────────────────
         switches.append(ZoneLightAutoSwitch(coordinator, zone_id, zone_name, area_name))
         numbers.append(ZoneBrightnessTargetNumber(coordinator, zone_id, zone_name, area_name))
         numbers.append(ZoneBrightnessMinNumber(coordinator, zone_id, zone_name, area_name))
@@ -518,7 +697,7 @@ def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str,
         switches.append(ZoneLuxOutdoorCompensationSwitch(coordinator, zone_id, zone_name, area_name))
         switches.append(ZoneColorTempAutoSwitch(coordinator, zone_id, zone_name, area_name))
 
-        # Music automation controls
+        # ── Legacy music automation controls ──────────────────
         switches.append(ZoneMusicAutoSwitch(coordinator, zone_id, zone_name, area_name))
         switches.append(ZoneMusicFollowSwitch(coordinator, zone_id, zone_name, area_name))
         switches.append(ZoneMusicAutoPlaySwitch(coordinator, zone_id, zone_name, area_name))
@@ -526,5 +705,13 @@ def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str,
         numbers.append(ZoneMusicPresenceDelayNumber(coordinator, zone_id, zone_name, area_name))
         numbers.append(ZoneMusicAbsencePauseNumber(coordinator, zone_id, zone_name, area_name))
         numbers.append(ZoneMusicFadeDurationNumber(coordinator, zone_id, zone_name, area_name))
+
+        # ── Schema-driven module entities (climate, cover, etc.) ──
+        if module_schemas:
+            mod_numbers, mod_switches = _create_module_entities(
+                coordinator, zone_id, zone_name, area_name, module_schemas,
+            )
+            numbers.extend(mod_numbers)
+            switches.extend(mod_switches)
 
     return {"number": numbers, "select": selects, "switch": switches}

@@ -82,7 +82,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         return self.async_show_menu(
             step_id="init",
-            menu_options=["connection", "modules", "llm_provider", "knowledge_graph", "autonomy", "zone_health", "ml_anomaly", "automation_modes", "habitus_zones", "entity_tags", "neurons", "backup_restore"],
+            menu_options=["connection", "modules", "llm_provider", "knowledge_graph", "autonomy", "zone_health", "ml_anomaly", "automation_modes", "habitus_zones", "entity_tags", "neurons"],
         )
 
     # ── Connection ───────────────────────────────────────────────────

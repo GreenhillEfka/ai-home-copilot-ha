@@ -402,10 +402,40 @@ class CopilotApiClient(SharedCopilotApiClient):
         )
 
     async def async_set_zone_config(self, zone_id: str, config: dict[str, Any]) -> dict[str, Any]:
-        """Update zone automation config (partial: light, music, or individual fields)."""
+        """Update zone automation config (partial: light, music, modules, or individual fields)."""
         return await self._safe_post(
             f"/api/v1/zone-automation/zones/{zone_id}/config", config,
             label=f"Zone config {zone_id}",
+        )
+
+    async def async_get_module_schemas(self) -> dict[str, Any]:
+        """Fetch self-describing module schemas from Core.
+
+        Returns dict of module_id -> {name_de, icon, color, fields: [...]}.
+        Used by HA to dynamically generate per-zone entities.
+        """
+        try:
+            data = await self._request_json(
+                "GET", "/api/v1/zone-automation/module-schemas",
+            )
+            schemas = data.get("schemas", {})
+            _LOGGER.info(
+                "Module schemas: fetched %d modules (%s)",
+                len(schemas), ", ".join(schemas.keys()),
+            )
+            return schemas
+        except Exception as exc:
+            _LOGGER.warning("Module schemas API failed: %s", exc)
+            return {}
+
+    async def async_set_zone_module_config(
+        self, zone_id: str, module_id: str, config: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Update a specific module config for a zone."""
+        return await self._safe_post(
+            f"/api/v1/zone-automation/zones/{zone_id}/modules/{module_id}",
+            config,
+            label=f"Zone module config {zone_id}/{module_id}",
         )
 
     async def async_send_suggestion_feedback(
@@ -805,6 +835,9 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         # Set by __init__.py after CopilotRuntime.async_setup_entry() completes
         self.modules_ready: bool = False
 
+        # Zone module schemas (fetched once from Core, cached)
+        self.module_schemas: dict[str, Any] = {}
+
         # ── Multi-tier adaptive polling state ───────────────────────────
         self._poll_generation: int = 0       # Monotonic counter, decides priority tiers
         self._consecutive_no_changes: int = 0  # Unchanged polls → stretch interval
@@ -1140,6 +1173,13 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 if isinstance(zone_auto, dict) and zone_auto:
                     result["zone_automation"] = zone_auto
                     await self._sync_zone_states(result, zone_auto)
+
+                # Fetch module schemas once (cached after first success)
+                if not self.module_schemas:
+                    try:
+                        self.module_schemas = await self.api.async_get_module_schemas()
+                    except Exception:
+                        _LOGGER.debug("Module schemas fetch deferred")
 
                 # Zone automation sync: ensure HA zones exist in Core on first refresh
                 if not getattr(self, "_zone_auto_synced", False):

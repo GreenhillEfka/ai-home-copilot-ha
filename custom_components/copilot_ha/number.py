@@ -125,7 +125,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 "name": getattr(z, "name_de", None) or z.name,
                 "area_name": area_name or z.name,
             })
-        result = create_zone_automation_entities(coordinator, zone_list)
+        result = create_zone_automation_entities(
+            coordinator, zone_list, module_schemas=getattr(coordinator, "module_schemas", None),
+        )
         entities.extend(result.get("number", []))
     except Exception:
         _LOGGER.debug("Zone automation number entities skipped (zones not configured)")
