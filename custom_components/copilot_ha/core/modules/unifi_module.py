@@ -141,7 +141,10 @@ class UniFiModule:
         # Set up periodic checks (every 15 minutes)
         unifi_data["polling_unsub"] = async_track_time_interval(
             ctx.hass,
-            lambda _: ctx.hass.async_create_task(self._periodic_check()),
+            lambda _: ctx.hass.loop.call_soon_threadsafe(
+                ctx.hass.async_create_task,
+                self._periodic_check(),
+            ),
             timedelta(minutes=config.get("check_interval_minutes", 15)),
         )
 
