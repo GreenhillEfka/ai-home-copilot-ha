@@ -1506,6 +1506,131 @@ def _register_memory_services(hass: HomeAssistant) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Zone CRUD + Entity-centric assignment services
+# ---------------------------------------------------------------------------
+
+def _normalize_service_list(value: object) -> list[str]:
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(",") if part.strip()]
+    if value is None:
+        return []
+    item = str(value).strip()
+    return [item] if item else []
+
+
+def _resolve_zone_entry_id(hass: HomeAssistant, preferred: str | None = None) -> str:
+    entries = hass.config_entries.async_entries(DOMAIN)
+    if preferred:
+        preferred = preferred.strip()
+        for entry in entries:
+            if entry.entry_id == preferred:
+                return entry.entry_id
+    if not entries:
+        raise ValueError("No PilotSuite config entry available")
+    return entries[0].entry_id
+
+
+async def _async_create_zone_from_service(hass: HomeAssistant, call: ServiceCall) -> str:
+    from .config_zones_flow import (
+        _area_name,
+        _ensure_unique_zone_id,
+        _normalize_area_ids,
+        _normalize_entity_ids,
+        _suggest_entities_for_areas,
+        _zone_id_from_name,
+        create_zone_tag,
+        tag_zone_entities,
+    )
+    from .habitus_zones_store_v2 import HabitusZoneV2, async_get_zones_v2, async_set_zones_v2
+
+    entry_id = _resolve_zone_entry_id(hass, str(call.data.get("entry_id") or "").strip() or None)
+    zones = await async_get_zones_v2(hass, entry_id)
+    existing_ids = {z.zone_id for z in zones}
+
+    area_ids = _normalize_area_ids(call.data.get("area_ids"))
+    if not area_ids:
+        area_ids = _normalize_area_ids(call.data.get("area_id"))
+    name = str(call.data.get("name") or "").strip()
+    motion = str(call.data.get("motion_entity_id") or "").strip()
+    lights = _normalize_entity_ids(call.data.get("light_entity_ids"))
+    optional = _normalize_entity_ids(call.data.get("optional_entity_ids"))
+
+    if area_ids and (not motion or not lights):
+        suggestions = await _suggest_entities_for_areas(hass, area_ids)
+        if not motion and suggestions["motion"]:
+            motion = suggestions["motion"][0]
+        if not lights and suggestions["lights"]:
+            lights = suggestions["lights"]
+        if not optional and suggestions["optional"]:
+            optional = suggestions["optional"][:8]
+
+    area_names = [label for label in (_area_name(hass, area_id) for area_id in area_ids) if label]
+    base_name = name or (" + ".join(area_names) if area_names else "Zone")
+    zone_id = _ensure_unique_zone_id(_zone_id_from_name(base_name), existing_ids)
+
+    entity_ids = []
+    for entity_id in [motion, *lights, *optional]:
+        if entity_id and entity_id not in entity_ids:
+            entity_ids.append(entity_id)
+
+    if not entity_ids:
+        raise ValueError("At least one entity is required to create a Habitus zone")
+
+    entities = {
+        key: value
+        for key, value in {
+            "motion": [motion] if motion else [],
+            "lights": lights,
+            "other": optional,
+        }.items()
+        if value
+    }
+    metadata: dict[str, object] = {}
+    if area_ids:
+        metadata["ha_area_ids"] = area_ids
+
+    zone = HabitusZoneV2(
+        zone_id=zone_id,
+        name=base_name,
+        entity_ids=tuple(entity_ids),
+        entities=entities or None,
+        metadata=metadata or None,
+    )
+    await async_set_zones_v2(hass, entry_id, [*zones, zone])
+    await create_zone_tag(hass, zone_id, base_name)
+    await tag_zone_entities(hass, zone_id, entity_ids)
+    _LOGGER.info("Created Habitus zone via service: %s (%s)", zone_id, base_name)
+    return zone_id
+
+
+def _register_zone_crud_services(hass: HomeAssistant) -> None:
+    if not hass.services.has_service(DOMAIN, "create_zone"):
+
+        async def _handle_create_zone(call: ServiceCall) -> None:
+            zone_id = await _async_create_zone_from_service(hass, call)
+            _LOGGER.info("Habitus zone created via frontend/service: %s", zone_id)
+
+        hass.services.async_register(
+            DOMAIN,
+            "create_zone",
+            _handle_create_zone,
+            schema=vol.Schema(
+                {
+                    vol.Optional("entry_id"): str,
+                    vol.Optional("name"): str,
+                    vol.Optional("area_id"): vol.Any(str, [str]),
+                    vol.Optional("area_ids"): vol.Any(str, [str]),
+                    vol.Optional("motion_entity_id"): str,
+                    vol.Optional("light_entity_ids"): vol.Any(str, [str]),
+                    vol.Optional("optional_entity_ids"): vol.Any(str, [str]),
+                }
+            ),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Entity-centric Zone + Tag assignment services
 # ---------------------------------------------------------------------------
 
@@ -1655,4 +1780,5 @@ def async_register_all_services(hass: HomeAssistant) -> None:
     _register_homekit_services(hass)
     _register_musikwolke_services(hass)
     _register_memory_services(hass)
+    _register_zone_crud_services(hass)
     _register_entity_centric_services(hass)

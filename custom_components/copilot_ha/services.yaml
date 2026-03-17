@@ -985,6 +985,50 @@ get_memory_history:
 
 # ─── Entity-centric Zone Assignment ─────────────────────────────────────────
 
+create_zone:
+  name: Habitus-Zone erstellen
+  description: Erstellt eine neue Habitus-Zone direkt aus echten HA-Areas und Entity-Auswahl. Ideal fuer Frontend-/Lovelace-Karten.
+  fields:
+    entry_id:
+      name: Entry ID
+      description: "Optional: konkrete PilotSuite Config Entry ID. Wenn leer, wird die erste PilotSuite-Instanz verwendet."
+      example: "abcd1234efgh5678"
+      selector:
+        text:
+    name:
+      name: Zone Name
+      description: Optionaler Anzeigename der Zone. Wenn leer, wird der Bereichsname verwendet.
+      example: "Wohnzimmer"
+      selector:
+        text:
+    area_ids:
+      name: Area IDs
+      description: Eine oder mehrere HA-Areas, aus denen die Zone gebaut wird.
+      example: '["living_room"]'
+      selector:
+        text:
+    motion_entity_id:
+      name: Motion Entity
+      description: Optionale Bewegungs-/Praesenz-Entity. Wenn leer, wird aus der Area vorgeschlagen.
+      example: "binary_sensor.wohnzimmer_motion"
+      selector:
+        entity:
+          domain:
+            - binary_sensor
+            - sensor
+    light_entity_ids:
+      name: Licht-Entities
+      description: Optionale Licht-Entities. Wenn leer, werden passende Area-Lichter vorgeschlagen.
+      example: '["light.wohnzimmer_decke", "light.wohnzimmer_stehlampe"]'
+      selector:
+        text:
+    optional_entity_ids:
+      name: Weitere Entities
+      description: Optionale weitere Entities fuer die neue Zone.
+      example: '["media_player.wohnzimmer_tv", "sensor.wohnzimmer_temperature"]'
+      selector:
+        text:
+
 assign_entity_to_zone:
   name: Entity einer Zone zuordnen
   description: Weist eine Entity einer Habitus-Zone zu (entfernt sie vorher aus anderen Zonen).
