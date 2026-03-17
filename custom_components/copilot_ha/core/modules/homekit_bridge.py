@@ -316,7 +316,7 @@ class HomeKitBridgeModule(CopilotModule):
             )
             _LOGGER.debug("HomeKit integration reloaded")
         except Exception as exc:
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "Could not reload HomeKit integration (may not be installed): %s", exc
             )
 

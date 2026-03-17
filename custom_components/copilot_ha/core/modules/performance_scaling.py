@@ -29,7 +29,7 @@ DEFAULT_THRESHOLDS = {
     "api_response_time_ms": 2000,
     "coordinator_update_ms": 5000,
     "entity_count_max": 200,
-    "memory_usage_mb_max": 1536,
+    "memory_usage_mb_max": 2048,
     "error_rate_percent": 5.0,
 }
 
@@ -75,6 +75,7 @@ class PerformanceScalingModule:
         self._monitor_task: Optional[asyncio.Task] = None
         self._hass: Optional[HomeAssistant] = None
         self._entry: Optional[ConfigEntry] = None
+        self._last_memory_warning: float = 0.0  # rate-limit memory warnings
 
     async def async_setup_entry(self, ctx: ModuleContext) -> None:
         self._hass = ctx.hass
@@ -306,8 +307,14 @@ class PerformanceScalingModule:
             try:
                 await asyncio.sleep(60)
                 alerts = self._check_alerts()
+                now = time.time()
                 for alert in alerts:
                     self._alerts.append(alert)
+                    # Rate-limit memory warnings to every 10 minutes
+                    if alert["type"] == "memory_high":
+                        if now - self._last_memory_warning < 600:
+                            continue
+                        self._last_memory_warning = now
                     _LOGGER.warning("Performance alert: %s", alert["message"])
             except asyncio.CancelledError:
                 break
