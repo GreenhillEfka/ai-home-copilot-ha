@@ -2,6 +2,29 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.7.3] - 2026-03-17
+
+### Module-per-Zone Schema-Driven Entities
+
+#### Added
+- **Schema-Fetch**: Coordinator holt `module-schemas` vom Core und cached sie
+- **Dynamische Entities**: _ZoneModuleSwitch und _ZoneModuleNumber Klassen fuer schema-getriebene Entity-Generierung
+- **5 neue Module**: Climate, Cover, Energy, Scene, Security — pro Zone als Switch/Number Entities
+- **async_set_zone_module_config()**: API-Client Methode fuer Modul-Config Updates
+
+#### Changed
+- **zone_automation_entities.py**: Factory-Funktion akzeptiert `module_schemas` Parameter
+- **switch/number/select Platform Setup**: Durchreichen von `module_schemas` an Entity-Factory
+
+#### Fixed
+- **Config Options Flow**: `backup_restore` Menuepunkt entfernt (keine Implementierung vorhanden)
+
+### Compatibility
+- HA v14.7.3 <-> Core v14.7.3 (Paired Release)
+- Tests: 522 passed, 41 skipped
+
+---
+
 ## [14.6.1] - 2026-03-16
 
 ### Frontend-Dashboard Redesign + Mood Card v3.0
