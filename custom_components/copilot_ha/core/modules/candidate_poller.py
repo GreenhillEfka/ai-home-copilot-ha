@@ -198,7 +198,7 @@ class CandidatePollerModule:
             return
 
         try:
-            resp = await api.async_get("/api/v1/candidates?state=pending&include_ready_deferred=true&limit=10")
+            resp = await api.async_get("/api/v1/candidates?limit=10")
             
             # Success - reset backoff
             st.backoff_level = 0

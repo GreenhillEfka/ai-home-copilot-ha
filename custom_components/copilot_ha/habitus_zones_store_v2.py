@@ -547,6 +547,12 @@ def _normalize_zone_v2(obj: dict[str, Any], default_floor: str | None = None) ->
     if current_state_raw in ("idle", "active", "transitioning", "disabled", "error"):
         current_state = current_state_raw
 
+    # Auto-activate zones that have entities assigned but are still "idle".
+    # Zones with entities should be "active" — only explicitly "disabled"/"error"
+    # states are preserved as-is.
+    if current_state == "idle" and uniq:
+        current_state = "active"
+
     # Metadata
     priority = int(obj.get("priority", 0))
     tags = _as_tuple(obj.get("tags"))
