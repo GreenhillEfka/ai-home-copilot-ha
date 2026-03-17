@@ -95,4 +95,21 @@ class BrainActivitySensor(CopilotBaseEntity, SensorEntity):
                 for m in recent_chat[:3]
             ]
 
+        # Webhook-pushed intelligence data from coordinator
+        coord_data = self.coordinator.data if isinstance(self.coordinator.data, dict) else {}
+
+        neurons_fired = coord_data.get("neurons_fired", [])
+        attrs["neurons_fired_count"] = len(neurons_fired)
+        if neurons_fired:
+            last = neurons_fired[-1]
+            attrs["last_neuron_fired"] = last.get("neuron_id", last.get("name", "unknown"))
+            attrs["last_neuron_fired_at"] = last.get("fired_at", last.get("timestamp", ""))
+
+        brain_insights = coord_data.get("brain_insights", [])
+        attrs["brain_insights_count"] = len(brain_insights)
+        if brain_insights:
+            last_insight = brain_insights[-1]
+            attrs["last_brain_insight"] = last_insight.get("insight_type", last_insight.get("type", "unknown"))
+            attrs["last_brain_insight_summary"] = last_insight.get("summary", last_insight.get("description", ""))[:200]
+
         return attrs

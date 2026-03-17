@@ -1,49 +1,37 @@
 /**
- * PilotSuite Brain Graph Card v3.0.0
+ * PilotSuite Brain Graph Card v4.0.0
  *
  * Living, pulsing, multi-colored Lovelace custom card that renders
- * a force-directed SVG brain graph with neural cross-dependencies,
- * animated synaptic connections, and real-time neuron firing visualization.
+ * a force-directed SVG brain graph with neural pipeline visualization.
  *
  * Features:
- * - Pulsing nodes with domain-specific colors (multi-colored Neuronennetz)
- * - Animated synaptic edge flow (living connections)
+ * - 3-Layer pipeline layout: Context (green) → State (blue) → Mood (orange)
+ * - Animated data flow particles between layers
+ * - Pulsing nodes with domain-specific colors
  * - Cross-dependency highlighting on hover
- * - Neural layer grouping (Context -> State -> Mood)
- * - Automation suggestion indicators
- * - Smooth breathing animation for the entire graph
+ * - Firing ripple effects on active neurons
+ * - Pipeline status bar with live metrics
+ * - Input entity indicators per layer
+ * - Smooth breathing animation
  */
 
 const DOMAIN_COLORS = {
-  light: "#f9d71c",
-  switch: "#4caf50",
-  sensor: "#2196f3",
-  binary_sensor: "#03a9f4",
-  climate: "#ff9800",
-  media_player: "#e91e63",
-  cover: "#9c27b0",
-  person: "#00bcd4",
-  automation: "#ff5722",
-  script: "#795548",
-  device_tracker: "#607d8b",
-  zone: "#daa520",
-  area: "#daa520",
-  service: "#e06666",
-  input_boolean: "#8bc34a",
-  input_number: "#cddc39",
-  scene: "#ab47bc",
-  group: "#78909c",
+  light: "#f9d71c", switch: "#4caf50", sensor: "#2196f3",
+  binary_sensor: "#03a9f4", climate: "#ff9800", media_player: "#e91e63",
+  cover: "#9c27b0", person: "#00bcd4", automation: "#ff5722",
+  script: "#795548", device_tracker: "#607d8b", zone: "#daa520",
+  area: "#daa520", service: "#e06666", input_boolean: "#8bc34a",
+  input_number: "#cddc39", scene: "#ab47bc", group: "#78909c",
   default: "#4aa3df",
 };
 
-/** Neural layer colors for neuron-type nodes */
-const NEURAL_LAYER_COLORS = {
-  context: "#2196F3",
-  state: "#9C27B0",
-  mood: "#FF9800",
-  input: "#2196F3",
-  hidden: "#9C27B0",
-  output: "#FF9800",
+const LAYER_CONFIG = {
+  context: { color: "#22d3ee", bg: "#22d3ee", label: "Context", icon: "C", order: 0 },
+  state:   { color: "#a78bfa", bg: "#a78bfa", label: "State",   icon: "S", order: 1 },
+  mood:    { color: "#fb923c", bg: "#fb923c", label: "Mood",    icon: "M", order: 2 },
+  input:   { color: "#22d3ee", bg: "#22d3ee", label: "Input",   icon: "I", order: 0 },
+  hidden:  { color: "#a78bfa", bg: "#a78bfa", label: "Hidden",  icon: "H", order: 1 },
+  output:  { color: "#fb923c", bg: "#fb923c", label: "Output",  icon: "O", order: 2 },
 };
 
 class StyxBrainCard extends HTMLElement {
@@ -57,6 +45,7 @@ class StyxBrainCard extends HTMLElement {
     this._phase = 0;
     this._hoveredNode = null;
     this._svgEl = null;
+    this._flowParticles = [];
   }
 
   static getConfigElement() {
@@ -68,17 +57,14 @@ class StyxBrainCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!config.entity) {
-      throw new Error("Please define an entity");
-    }
+    if (!config.entity) throw new Error("Please define an entity");
     this._config = config;
   }
 
   set hass(hass) {
     this._hass = hass;
     const nodeEntity = hass.states[this._config.entity];
-    const edgeEntityId =
-      this._config.edge_entity || "sensor.pilotsuite_brain_graph_edges";
+    const edgeEntityId = this._config.edge_entity || "sensor.pilotsuite_brain_graph_edges";
     const edgeEntity = hass.states[edgeEntityId];
 
     const nodes = nodeEntity
@@ -96,74 +82,77 @@ class StyxBrainCard extends HTMLElement {
   }
 
   _hasDataChanged(newNodes, newEdges) {
-    if (newNodes.length !== this._nodes.length || newEdges.length !== this._edges.length) {
-      return true;
-    }
+    if (newNodes.length !== this._nodes.length || newEdges.length !== this._edges.length) return true;
     if (newNodes.length === 0) return false;
-    // Compare score sums as a fast hash
     const sumScore = arr => arr.reduce((s, n) => s + (n.score || 0), 0);
     if (Math.abs(sumScore(newNodes) - sumScore(this._nodes)) > 0.01) return true;
-    // Compare first/last node ids
     const nid = n => n.id || n.node_id || '';
     if (nid(newNodes[0]) !== nid(this._nodes[0])) return true;
-    if (nid(newNodes[newNodes.length - 1]) !== nid(this._nodes[this._nodes.length - 1])) return true;
     return false;
   }
 
   disconnectedCallback() {
-    if (this._animFrame) {
-      cancelAnimationFrame(this._animFrame);
-      this._animFrame = null;
-    }
+    if (this._animFrame) { cancelAnimationFrame(this._animFrame); this._animFrame = null; }
   }
 
-  getCardSize() {
-    return 6;
-  }
+  getCardSize() { return 7; }
 
-  _colorForDomain(domain) {
+  _nodeColor(node) {
+    const layer = (node.layer || node.neural_layer || "").toLowerCase();
+    if (LAYER_CONFIG[layer]) return LAYER_CONFIG[layer].color;
+    const domain = (node.domain || "default").split(".")[0];
     return DOMAIN_COLORS[domain] || DOMAIN_COLORS.default;
   }
 
-  _neuralColor(node) {
+  _nodeLayer(node) {
     const layer = (node.layer || node.neural_layer || "").toLowerCase();
-    if (NEURAL_LAYER_COLORS[layer]) return NEURAL_LAYER_COLORS[layer];
+    if (LAYER_CONFIG[layer]) return LAYER_CONFIG[layer].order;
     const domain = (node.domain || "default").split(".")[0];
-    return this._colorForDomain(domain);
+    if (["sensor", "binary_sensor", "device_tracker", "person"].includes(domain)) return 0;
+    if (["switch", "cover", "lock", "climate", "input_boolean"].includes(domain)) return 1;
+    if (["light", "media_player", "scene", "automation"].includes(domain)) return 2;
+    return 1;
   }
 
   _layoutNodes(nodes, w, h) {
-    const cx = w / 2;
-    const cy = h / 2;
-    const r = Math.min(w, h) * 0.36;
-    const count = Math.max(1, nodes.length);
-
-    // Group nodes by domain/layer for cluster layout
-    const groups = {};
+    // 3-column pipeline layout: Context | State | Mood
+    const layers = [[], [], []];
     nodes.forEach((n, i) => {
-      const key = n.layer || n.neural_layer || (n.domain || "default").split(".")[0];
-      if (!groups[key]) groups[key] = [];
-      groups[key].push({ ...n, _idx: i });
+      const layerIdx = this._nodeLayer(n);
+      layers[layerIdx].push({ ...n, _idx: i });
     });
 
-    const groupKeys = Object.keys(groups);
+    const colW = w / 3;
+    const padX = 40;
+    const padY = 40;
     const result = new Array(nodes.length);
 
-    groupKeys.forEach((key, gi) => {
-      const group = groups[key];
-      const groupAngle = (2 * Math.PI * gi) / Math.max(1, groupKeys.length);
-      const groupCx = cx + r * 0.5 * Math.cos(groupAngle);
-      const groupCy = cy + r * 0.5 * Math.sin(groupAngle);
-      const subR = r * 0.35 * Math.sqrt(group.length / count + 0.1);
+    layers.forEach((layer, li) => {
+      const cx = padX + li * colW + colW / 2 - padX;
+      const count = Math.max(1, layer.length);
+      const maxPerCol = Math.ceil(Math.sqrt(count));
 
-      group.forEach((n, si) => {
-        const subAngle = (2 * Math.PI * si) / Math.max(1, group.length);
-        const jitter = Math.sin(n._idx * 7) * subR * 0.15;
+      layer.forEach((n, ni) => {
+        const row = Math.floor(ni / maxPerCol);
+        const col = ni % maxPerCol;
+        const rows = Math.ceil(count / maxPerCol);
+        const cols = Math.min(count, maxPerCol);
+
+        const spacingX = Math.min(colW * 0.7, cols > 1 ? (colW - padX * 1.2) / (cols - 1) : 0);
+        const spacingY = rows > 1 ? (h - padY * 2) / (rows - 1) : 0;
+
+        const x = cx - (cols - 1) * spacingX / 2 + col * spacingX;
+        const y = padY + row * spacingY + (h - padY * 2) / 2 - (rows - 1) * spacingY / 2;
+
+        // Add organic jitter
+        const jx = Math.sin(n._idx * 5.7 + li * 2) * 8;
+        const jy = Math.cos(n._idx * 3.3 + li) * 6;
+
         result[n._idx] = {
           ...n,
-          x: groupCx + (subR + jitter) * Math.cos(subAngle),
-          y: groupCy + (subR + jitter) * Math.sin(subAngle),
-          _group: key,
+          x: Math.max(15, Math.min(w - 15, x + jx)),
+          y: Math.max(15, Math.min(h - 15, y + jy)),
+          _layerIdx: li,
         };
       });
     });
@@ -173,7 +162,7 @@ class StyxBrainCard extends HTMLElement {
 
   _getConnectedNodes(nodeId) {
     const connected = new Set();
-    this._edges.forEach((e) => {
+    this._edges.forEach(e => {
       const from = e.from || e.source_id;
       const to = e.to || e.target_id;
       if (from === nodeId) connected.add(to);
@@ -183,8 +172,7 @@ class StyxBrainCard extends HTMLElement {
   }
 
   _render() {
-    const w = 520;
-    const h = 400;
+    const w = 580, h = 380;
     const positioned = this._layoutNodes(this._nodes.slice(0, 150), w, h);
 
     const idMap = {};
@@ -196,221 +184,387 @@ class StyxBrainCard extends HTMLElement {
     const nodeCount = this._nodes.length;
     const edgeCount = this._edges.length;
 
-    // Count cross-dependencies (edges spanning different domains)
-    let crossDeps = 0;
-    this._edges.slice(0, 300).forEach((e) => {
+    // Layer stats
+    const layerCounts = [0, 0, 0];
+    positioned.forEach(n => { layerCounts[n._layerIdx]++; });
+
+    // Active neurons (score > 0.5)
+    const activeCount = positioned.filter(n => (n.score || 0) > 0.5).length;
+
+    // Cross-layer edges
+    let crossCount = 0;
+    this._edges.slice(0, 300).forEach(e => {
       const src = idMap[e.from || e.source_id];
       const tgt = idMap[e.to || e.target_id];
-      if (src && tgt && src._group !== tgt._group) crossDeps++;
+      if (src && tgt && src._layerIdx !== tgt._layerIdx) crossCount++;
     });
+
+    const layerLabels = ["Context", "State", "Mood"];
+    const layerColors = ["#22d3ee", "#a78bfa", "#fb923c"];
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host {
-          display: block;
-          /* ── PilotSuite Design Tokens ─────────────── */
-          --ps-accent: var(--accent-color, #4fc3f7);
-          --ps-green: #81c784; --ps-orange: #ffb74d;
-          --ps-red: #ef5350; --ps-purple: #ce93d8;
-          /* Surfaces */
-          --ps-bg: var(--card-background-color, var(--ha-card-background, #1a1a2e));
-          --ps-surface: var(--secondary-background-color, #222240);
-          --ps-border: var(--divider-color, rgba(255,255,255,0.08));
-          /* Text */
-          --ps-text: var(--primary-text-color, #e0e0f0);
-          --ps-text-secondary: var(--secondary-text-color, #9e9eb8);
-          --ps-text-disabled: var(--disabled-text-color, #666);
-          /* Radius */
-          --ps-radius: var(--ha-card-border-radius, 12px);
-          --ps-radius-sm: 8px;
+        :host { display: block; }
+        ha-card { overflow: hidden; background: var(--card-background-color, #1a1a2e); border: 1px solid rgba(255,255,255,0.06); }
+
+        .brain-header {
+          padding: 16px 20px 10px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
-        .card {
-          background: var(--ps-bg);
-          border-radius: var(--ps-radius);
-          padding: 16px;
-          color: var(--ps-text);
-          font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
+        .brain-title {
+          font-size: 0.9375rem;
+          font-weight: 600;
+          color: var(--primary-text-color, #e0e0f0);
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
-        .header {
-          display: flex; justify-content: space-between; align-items: center;
-          margin-bottom: 8px;
-        }
-        .title { font-size: 16px; font-weight: 600; }
         .pulse-dot {
-          display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-          background: var(--ps-green); margin-right: 6px; vertical-align: middle;
-          animation: pulseDot 2s ease-in-out infinite;
+          width: 8px; height: 8px; border-radius: 50%;
+          background: #34d399;
+          animation: pulse-glow 2s ease-in-out infinite;
+          box-shadow: 0 0 6px #34d39960;
         }
-        @keyframes pulseDot {
-          0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--ps-green); }
-          50% { opacity: 0.4; box-shadow: 0 0 12px var(--ps-green); }
+        @keyframes pulse-glow {
+          0%, 100% { opacity: 1; box-shadow: 0 0 4px #34d39960; }
+          50% { opacity: 0.5; box-shadow: 0 0 12px #34d39990; }
         }
-        .meta { font-size: 0.75rem; color: var(--ps-text-secondary); }
-        .stats {
-          display: flex; gap: 12px; margin-bottom: 8px; flex-wrap: wrap;
+        .brain-meta {
+          font-size: 0.6875rem;
+          color: var(--secondary-text-color, #9e9eb8);
         }
-        .stat {
-          background: rgba(74, 163, 223, 0.08);
-          padding: 4px 10px; border-radius: 12px; font-size: 0.75rem;
-          border: 1px solid rgba(74, 163, 223, 0.15);
+
+        /* Pipeline status chips */
+        .pipeline-bar {
+          display: flex;
+          gap: 6px;
+          padding: 0 20px 12px;
+          flex-wrap: wrap;
         }
-        .stat b { color: var(--ps-accent); }
+        .pipe-chip {
+          font-size: 0.6875rem;
+          padding: 3px 10px;
+          border-radius: 12px;
+          font-weight: 500;
+          letter-spacing: 0.3px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .pipe-chip .chip-dot {
+          width: 6px; height: 6px; border-radius: 50%;
+        }
+        .pipe-chip.context { background: #22d3ee12; color: #22d3ee; border: 1px solid #22d3ee25; }
+        .pipe-chip.context .chip-dot { background: #22d3ee; }
+        .pipe-chip.state { background: #a78bfa12; color: #a78bfa; border: 1px solid #a78bfa25; }
+        .pipe-chip.state .chip-dot { background: #a78bfa; }
+        .pipe-chip.mood { background: #fb923c12; color: #fb923c; border: 1px solid #fb923c25; }
+        .pipe-chip.mood .chip-dot { background: #fb923c; }
+        .pipe-chip.active { background: #34d39912; color: #34d399; border: 1px solid #34d39925; }
+        .pipe-chip.cross { background: #60a5fa12; color: #60a5fa; border: 1px solid #60a5fa25; }
+
+        /* SVG container */
+        .graph-wrap { position: relative; padding: 0 8px 8px; }
         svg {
           width: 100%; height: auto;
-          background: var(--ps-surface); border: 1px solid var(--ps-border); border-radius: var(--ps-radius-sm);
+          border-radius: 8px;
+          background: #0c1118;
+          border: 1px solid rgba(255,255,255,0.04);
         }
-        .edge-line { transition: stroke-opacity 0.3s, stroke-width 0.3s; }
+
+        .edge-line { transition: stroke-opacity 0.3s; }
         .node-g { cursor: pointer; }
-        .node-g:hover .node-circle { filter: brightness(1.4); }
+        .node-g:hover .node-circle { filter: brightness(1.5) drop-shadow(0 0 6px currentColor); }
         .node-label { pointer-events: none; user-select: none; }
-        /* Pulsing glow for active nodes */
-        @keyframes pulseGlow {
-          0%, 100% { r: var(--base-r); opacity: 0; }
-          50% { r: calc(var(--base-r) + 6px); opacity: 0.35; }
+
+        /* Pulsing glow ring */
+        @keyframes pulseRing {
+          0%, 100% { opacity: 0; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(1.6); }
         }
         .glow-ring {
-          animation: pulseGlow 3s ease-in-out infinite;
+          animation: pulseRing 3s ease-in-out infinite;
           fill: none; pointer-events: none;
+          transform-origin: center;
         }
-        /* Synaptic flow animation on edges */
-        @keyframes synapticFlow {
-          0% { stroke-dashoffset: 20; }
+
+        /* Firing ripple */
+        @keyframes fireRipple {
+          0% { r: 4; opacity: 0.8; }
+          100% { r: 20; opacity: 0; }
+        }
+        .fire-ripple {
+          fill: none; stroke-width: 1.5; pointer-events: none;
+          animation: fireRipple 2s ease-out infinite;
+        }
+
+        /* Synaptic flow particles */
+        @keyframes flowDash {
+          0% { stroke-dashoffset: 24; }
           100% { stroke-dashoffset: 0; }
         }
         .edge-flow {
-          stroke-dasharray: 4 16;
-          animation: synapticFlow 2s linear infinite;
+          stroke-dasharray: 3 21;
+          animation: flowDash 1.5s linear infinite;
         }
-        .cross-dep { stroke-dasharray: 3 6; }
-        /* Legend */
-        .legend {
-          display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
-          font-size: 0.75rem; color: var(--ps-text-secondary);
+
+        /* Pipeline flow arrows */
+        .flow-arrow {
+          fill: none;
+          stroke-dasharray: 6 10;
+          animation: flowDash 2s linear infinite;
         }
-        .legend-item { display: flex; align-items: center; gap: 3px; }
-        .legend-dot {
-          width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-        }
+
+        /* Layer region backgrounds */
+        .layer-region { pointer-events: none; }
+
+        /* Tooltip */
         .tooltip-panel {
-          position: absolute; top: 8px; right: 8px; max-width: 200px;
-          background: rgba(15, 23, 32, 0.95); border: 1px solid var(--ps-border);
-          border-radius: var(--ps-radius-sm); padding: 10px; font-size: var(--ps-fs-xs, 0.75rem); display: none;
-          z-index: 10; pointer-events: none;
+          position: absolute;
+          top: 12px; right: 20px;
+          max-width: 220px;
+          background: rgba(10, 14, 20, 0.95);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 10px;
+          padding: 12px;
+          font-size: 0.75rem;
+          display: none;
+          z-index: 10;
+          pointer-events: none;
+          backdrop-filter: blur(8px);
         }
         .tooltip-panel.visible { display: block; }
-        .tooltip-panel .tp-title { font-weight: 600; margin-bottom: 4px; }
-        .tooltip-panel .tp-row { display: flex; justify-content: space-between; color: var(--ps-text-secondary); padding: 1px 0; }
-        .tooltip-panel .tp-val { color: var(--ps-text); }
-        .graph-wrap { position: relative; }
+        .tp-title { font-weight: 600; margin-bottom: 6px; font-size: 0.8125rem; }
+        .tp-row { display: flex; justify-content: space-between; color: var(--secondary-text-color, #9e9eb8); padding: 2px 0; }
+        .tp-val { color: var(--primary-text-color, #e0e0f0); font-variant-numeric: tabular-nums; }
+        .tp-layer-badge {
+          display: inline-block;
+          padding: 1px 6px;
+          border-radius: 6px;
+          font-size: 0.625rem;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        /* Legend */
+        .brain-legend {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          padding: 8px 20px 14px;
+          font-size: 0.6875rem;
+          color: var(--secondary-text-color, #9e9eb8);
+        }
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .legend-dot {
+          width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+        }
       </style>
       <ha-card>
-        <div class="card">
-          <div class="header">
-            <span class="title"><span class="pulse-dot"></span>Brain Graph</span>
-            <span class="meta">${nodeCount} nodes · ${edgeCount} edges</span>
-          </div>
-          <div class="stats">
-            <span class="stat"><b>${nodeCount}</b> Neuronen</span>
-            <span class="stat"><b>${edgeCount}</b> Synapsen</span>
-            <span class="stat"><b>${crossDeps}</b> Cross-Deps</span>
-          </div>
-          <div class="graph-wrap">
-            <svg id="brain-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="PilotSuite Brain-Graph Visualisierung">
-              <title>Brain-Graph: Neuronale Verbindungen</title>
-              <defs>
-                <radialGradient id="bg-grad" cx="50%" cy="50%" r="55%">
-                  <stop offset="0%" stop-color="#101820"/>
-                  <stop offset="100%" stop-color="#080c12"/>
-                </radialGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="3" result="blur"/>
-                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
-              </defs>
-              <rect x="0" y="0" width="${w}" height="${h}" fill="url(#bg-grad)"/>
-              <g class="edges-layer"></g>
-              <g class="nodes-layer"></g>
-            </svg>
-            <div class="tooltip-panel" id="tp"></div>
-          </div>
-          <div class="legend" id="legend-container"></div>
+        <div class="brain-header">
+          <span class="brain-title"><span class="pulse-dot"></span>Neural Pipeline</span>
+          <span class="brain-meta">${nodeCount} Neuronen &middot; ${edgeCount} Synapsen</span>
         </div>
+        <div class="pipeline-bar">
+          <span class="pipe-chip context"><span class="chip-dot"></span>Context ${layerCounts[0]}</span>
+          <span class="pipe-chip state"><span class="chip-dot"></span>State ${layerCounts[1]}</span>
+          <span class="pipe-chip mood"><span class="chip-dot"></span>Mood ${layerCounts[2]}</span>
+          <span class="pipe-chip active"><span class="chip-dot"></span>Aktiv ${activeCount}</span>
+          <span class="pipe-chip cross"><span class="chip-dot"></span>Cross ${crossCount}</span>
+        </div>
+        <div class="graph-wrap">
+          <svg id="brain-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="PilotSuite Neural Pipeline">
+            <defs>
+              <radialGradient id="bg-grad" cx="50%" cy="50%" r="55%">
+                <stop offset="0%" stop-color="#0f1720"/>
+                <stop offset="100%" stop-color="#080c12"/>
+              </radialGradient>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <filter id="soft-glow">
+                <feGaussianBlur stdDeviation="6" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+              <marker id="arrow-ctx" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                <path d="M0,0 L6,2 L0,4" fill="#22d3ee" fill-opacity="0.3"/>
+              </marker>
+              <marker id="arrow-mood" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
+                <path d="M0,0 L6,2 L0,4" fill="#fb923c" fill-opacity="0.3"/>
+              </marker>
+            </defs>
+            <rect x="0" y="0" width="${w}" height="${h}" fill="url(#bg-grad)"/>
+            <g class="layer-regions"></g>
+            <g class="flow-arrows"></g>
+            <g class="edges-layer"></g>
+            <g class="nodes-layer"></g>
+          </svg>
+          <div class="tooltip-panel" id="tp"></div>
+        </div>
+        <div class="brain-legend" id="legend-container"></div>
       </ha-card>`;
 
     this._svgEl = this.shadowRoot.querySelector("#brain-svg");
+    const layerRegions = this._svgEl.querySelector(".layer-regions");
+    const flowArrows = this._svgEl.querySelector(".flow-arrows");
     const edgesLayer = this._svgEl.querySelector(".edges-layer");
     const nodesLayer = this._svgEl.querySelector(".nodes-layer");
     const tooltipPanel = this.shadowRoot.querySelector("#tp");
 
-    // Draw edges with synaptic flow
+    // Draw layer region backgrounds
+    const colW = w / 3;
+    for (let i = 0; i < 3; i++) {
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", (i * colW).toFixed(0));
+      rect.setAttribute("y", "0");
+      rect.setAttribute("width", colW.toFixed(0));
+      rect.setAttribute("height", h);
+      rect.setAttribute("fill", layerColors[i]);
+      rect.setAttribute("fill-opacity", "0.03");
+      rect.classList.add("layer-region");
+      layerRegions.appendChild(rect);
+
+      // Layer label at top
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", (i * colW + colW / 2).toFixed(0));
+      text.setAttribute("y", "16");
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("font-size", "9");
+      text.setAttribute("font-weight", "600");
+      text.setAttribute("fill", layerColors[i]);
+      text.setAttribute("fill-opacity", "0.5");
+      text.setAttribute("font-family", "system-ui,sans-serif");
+      text.setAttribute("letter-spacing", "1.5");
+      text.textContent = layerLabels[i].toUpperCase();
+      layerRegions.appendChild(text);
+
+      // Separator lines
+      if (i > 0) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", (i * colW).toFixed(0));
+        line.setAttribute("y1", "0");
+        line.setAttribute("x2", (i * colW).toFixed(0));
+        line.setAttribute("y2", h);
+        line.setAttribute("stroke", "rgba(255,255,255,0.04)");
+        line.setAttribute("stroke-width", "1");
+        line.setAttribute("stroke-dasharray", "4 4");
+        layerRegions.appendChild(line);
+      }
+    }
+
+    // Draw pipeline flow arrows between layers
+    for (let i = 0; i < 2; i++) {
+      const x1 = (i + 1) * colW - 10;
+      const x2 = (i + 1) * colW + 10;
+      const midY = h / 2;
+      for (let dy = -60; dy <= 60; dy += 40) {
+        const arrow = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        arrow.setAttribute("x1", x1.toFixed(0));
+        arrow.setAttribute("y1", (midY + dy).toFixed(0));
+        arrow.setAttribute("x2", x2.toFixed(0));
+        arrow.setAttribute("y2", (midY + dy).toFixed(0));
+        arrow.setAttribute("stroke", i === 0 ? "#22d3ee" : "#fb923c");
+        arrow.setAttribute("stroke-opacity", "0.15");
+        arrow.setAttribute("stroke-width", "2");
+        arrow.classList.add("flow-arrow");
+        arrow.setAttribute("marker-end", i === 0 ? "url(#arrow-ctx)" : "url(#arrow-mood)");
+        arrow.style.animationDelay = `${(dy + 60) * 0.02}s`;
+        flowArrows.appendChild(arrow);
+      }
+    }
+
+    // Draw edges
     this._edges.slice(0, 300).forEach((e, ei) => {
       const src = idMap[e.from || e.source_id];
       const tgt = idMap[e.to || e.target_id];
       if (!src || !tgt) return;
 
-      const isCross = src._group !== tgt._group;
+      const isCross = src._layerIdx !== tgt._layerIdx;
       const weight = Math.max(0.3, Math.min(1, e.weight || 0.5));
 
-      // Base edge
       const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
       line.setAttribute("x1", src.x.toFixed(1));
       line.setAttribute("y1", src.y.toFixed(1));
       line.setAttribute("x2", tgt.x.toFixed(1));
       line.setAttribute("y2", tgt.y.toFixed(1));
-      line.setAttribute("stroke", isCross ? "#5a7a9a" : "#3a5060");
-      line.setAttribute("stroke-opacity", (0.15 + weight * 0.25).toFixed(2));
-      line.setAttribute("stroke-width", (0.5 + weight * 1.5).toFixed(1));
+
+      const edgeColor = isCross
+        ? `hsl(${200 + src._layerIdx * 40}, 60%, 55%)`
+        : `hsl(${190 + src._layerIdx * 50}, 30%, 35%)`;
+
+      line.setAttribute("stroke", edgeColor);
+      line.setAttribute("stroke-opacity", (0.1 + weight * 0.2).toFixed(2));
+      line.setAttribute("stroke-width", (0.5 + weight * 1.2).toFixed(1));
       line.classList.add("edge-line");
-      if (isCross) line.classList.add("cross-dep");
       line.dataset.from = src._nid;
       line.dataset.to = tgt._nid;
-      line._origOpacity = (0.15 + weight * 0.25).toFixed(2);
-      line._origWidth = (0.5 + weight * 1.5).toFixed(1);
-      line._origStroke = isCross ? "#5a7a9a" : "#3a5060";
+      line._origOpacity = (0.1 + weight * 0.2).toFixed(2);
+      line._origWidth = (0.5 + weight * 1.2).toFixed(1);
+      line._origStroke = edgeColor;
       edgesLayer.appendChild(line);
 
-      // Synaptic flow overlay (animated)
+      // Flow particles on strong or cross-layer edges
       if (weight > 0.5 || isCross) {
         const flow = document.createElementNS("http://www.w3.org/2000/svg", "line");
         flow.setAttribute("x1", src.x.toFixed(1));
         flow.setAttribute("y1", src.y.toFixed(1));
         flow.setAttribute("x2", tgt.x.toFixed(1));
         flow.setAttribute("y2", tgt.y.toFixed(1));
-        flow.setAttribute("stroke", isCross ? "#88ccff" : "#4aa3df");
+        const flowColor = isCross ? layerColors[Math.max(src._layerIdx, tgt._layerIdx)] : "#4aa3df";
+        flow.setAttribute("stroke", flowColor);
         flow.setAttribute("stroke-opacity", "0.25");
         flow.setAttribute("stroke-width", "1.5");
         flow.classList.add("edge-flow");
-        flow.style.animationDelay = `${(ei * 0.1) % 2}s`;
+        flow.style.animationDelay = `${(ei * 0.13) % 2}s`;
         edgesLayer.appendChild(flow);
       }
     });
 
-    // Draw nodes with pulsing glow
+    // Draw nodes
     const usedDomains = new Set();
     positioned.forEach((n, ni) => {
       const nid = n.id || n.node_id || `n${ni}`;
       const score = Math.max(0, Math.min(1, n.score || 0.5));
-      const baseR = 3.5 + 8 * score;
-      const fill = this._neuralColor(n);
+      const baseR = 3.5 + 7 * score;
+      const fill = this._nodeColor(n);
       const domain = (n.domain || "default").split(".")[0];
       usedDomains.add(domain);
-      const label = (n.label || n.name || n.id || "").substring(0, 22);
+      const label = (n.label || n.name || n.id || "").substring(0, 20);
+      const layerIdx = n._layerIdx;
 
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
       g.classList.add("node-g");
       g.dataset.nid = nid;
 
-      // Glow ring (pulsing)
+      // Firing ripple for high-score neurons
+      if (score > 0.7) {
+        const ripple = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        ripple.setAttribute("cx", n.x.toFixed(1));
+        ripple.setAttribute("cy", n.y.toFixed(1));
+        ripple.setAttribute("r", "4");
+        ripple.setAttribute("stroke", fill);
+        ripple.classList.add("fire-ripple");
+        ripple.style.animationDelay = `${(ni * 0.3) % 2}s`;
+        g.appendChild(ripple);
+      }
+
+      // Glow ring
       if (score > 0.3) {
         const glow = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         glow.setAttribute("cx", n.x.toFixed(1));
         glow.setAttribute("cy", n.y.toFixed(1));
-        glow.setAttribute("r", (baseR + 5).toFixed(1));
+        glow.setAttribute("r", (baseR + 4).toFixed(1));
         glow.setAttribute("stroke", fill);
-        glow.setAttribute("stroke-width", "2");
+        glow.setAttribute("stroke-width", "1.5");
         glow.classList.add("glow-ring");
-        glow.style.setProperty("--base-r", `${baseR}px`);
-        glow.style.animationDelay = `${(ni * 0.2) % 3}s`;
+        glow.style.animationDelay = `${(ni * 0.25) % 3}s`;
         g.appendChild(glow);
       }
 
@@ -420,21 +574,21 @@ class StyxBrainCard extends HTMLElement {
       circle.setAttribute("cy", n.y.toFixed(1));
       circle.setAttribute("r", baseR.toFixed(1));
       circle.setAttribute("fill", fill);
-      circle.setAttribute("fill-opacity", (0.35 + 0.65 * score).toFixed(2));
+      circle.setAttribute("fill-opacity", (0.4 + 0.6 * score).toFixed(2));
       circle.setAttribute("stroke", fill);
-      circle.setAttribute("stroke-opacity", "0.6");
-      circle.setAttribute("stroke-width", "1");
+      circle.setAttribute("stroke-opacity", "0.5");
+      circle.setAttribute("stroke-width", "0.8");
       circle.classList.add("node-circle");
       g.appendChild(circle);
 
-      // Label for high-score or sparse graphs
-      if (positioned.length <= 50 || score > 0.6) {
+      // Label (show for sparse graphs or high-score nodes)
+      if (positioned.length <= 40 || score > 0.6) {
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", (n.x + baseR + 3).toFixed(1));
         text.setAttribute("y", (n.y + 3).toFixed(1));
-        text.setAttribute("font-size", "9");
-        text.setAttribute("fill", "#aab8c5");
-        text.setAttribute("fill-opacity", "0.75");
+        text.setAttribute("font-size", "8");
+        text.setAttribute("fill", "#8899aa");
+        text.setAttribute("fill-opacity", "0.7");
         text.setAttribute("font-family", "system-ui,sans-serif");
         text.classList.add("node-label");
         text.textContent = label;
@@ -444,83 +598,81 @@ class StyxBrainCard extends HTMLElement {
       // Hover interactions
       g.addEventListener("mouseenter", () => {
         this._hoveredNode = nid;
-        // Highlight cross-dependencies
         const connected = this._getConnectedNodes(nid);
-        edgesLayer.querySelectorAll(".edge-line").forEach((el) => {
+        edgesLayer.querySelectorAll(".edge-line").forEach(el => {
           if (el.dataset.from === nid || el.dataset.to === nid) {
             el.setAttribute("stroke-opacity", "0.8");
             el.setAttribute("stroke-width", "2.5");
-            el.setAttribute("stroke", "#88ccff");
+            el.setAttribute("stroke", layerColors[layerIdx] || "#88ccff");
           } else {
-            el.setAttribute("stroke-opacity", "0.05");
+            el.setAttribute("stroke-opacity", "0.03");
           }
         });
-        nodesLayer.querySelectorAll(".node-g").forEach((ng) => {
-          if (ng.dataset.nid !== nid && !connected.has(ng.dataset.nid)) {
-            ng.style.opacity = "0.2";
-          }
+        nodesLayer.querySelectorAll(".node-g").forEach(ng => {
+          if (ng.dataset.nid !== nid && !connected.has(ng.dataset.nid)) ng.style.opacity = "0.15";
         });
-        // Tooltip
+        const layerName = layerLabels[layerIdx] || "Unknown";
+        const layerCol = layerColors[layerIdx] || "#888";
         tooltipPanel.classList.add("visible");
         tooltipPanel.innerHTML = `
-          <div class="tp-title">${label}</div>
+          <div class="tp-title" style="color:${layerCol}">${this._esc(label || nid)}</div>
+          <div class="tp-row"><span>Layer</span><span class="tp-layer-badge" style="background:${layerCol}20;color:${layerCol}">${layerName}</span></div>
           <div class="tp-row"><span>Domain</span><span class="tp-val">${domain}</span></div>
           <div class="tp-row"><span>Score</span><span class="tp-val">${(score * 100).toFixed(0)}%</span></div>
-          <div class="tp-row"><span>Connections</span><span class="tp-val">${connected.size}</span></div>
+          <div class="tp-row"><span>Verbindungen</span><span class="tp-val">${connected.size}</span></div>
           ${n.zone ? `<div class="tp-row"><span>Zone</span><span class="tp-val">${n.zone}</span></div>` : ""}
-          ${n.layer || n.neural_layer ? `<div class="tp-row"><span>Layer</span><span class="tp-val">${n.layer || n.neural_layer}</span></div>` : ""}
         `;
       });
 
       g.addEventListener("mouseleave", () => {
         this._hoveredNode = null;
-        edgesLayer.querySelectorAll(".edge-line").forEach((el) => {
-          el.setAttribute("stroke", el._origStroke || (el.classList.contains("cross-dep") ? "#5a7a9a" : "#3a5060"));
-          el.setAttribute("stroke-opacity", el._origOpacity || "0.25");
+        edgesLayer.querySelectorAll(".edge-line").forEach(el => {
+          el.setAttribute("stroke", el._origStroke || "#3a5060");
+          el.setAttribute("stroke-opacity", el._origOpacity || "0.15");
           el.setAttribute("stroke-width", el._origWidth || "1");
         });
-        nodesLayer.querySelectorAll(".node-g").forEach((ng) => {
-          ng.style.opacity = "1";
-        });
+        nodesLayer.querySelectorAll(".node-g").forEach(ng => { ng.style.opacity = "1"; });
         tooltipPanel.classList.remove("visible");
       });
 
       nodesLayer.appendChild(g);
     });
 
-    // Build legend
+    // Legend
     const legendEl = this.shadowRoot.querySelector("#legend-container");
     if (legendEl) {
-      let legendHtml = "";
-      usedDomains.forEach((d) => {
-        const c = DOMAIN_COLORS[d] || DOMAIN_COLORS.default;
-        legendHtml += `<span class="legend-item"><span class="legend-dot" style="background:${c}"></span>${d}</span>`;
+      let html = "";
+      // Layer legend first
+      layerLabels.forEach((l, i) => {
+        html += `<span class="legend-item"><span class="legend-dot" style="background:${layerColors[i]}"></span>${l}</span>`;
       });
-      legendEl.innerHTML = legendHtml;
+      // Domain legend
+      usedDomains.forEach(d => {
+        const c = DOMAIN_COLORS[d] || DOMAIN_COLORS.default;
+        html += `<span class="legend-item"><span class="legend-dot" style="background:${c}"></span>${d}</span>`;
+      });
+      legendEl.innerHTML = html;
     }
 
-    // Start breathing animation
     this._startAnimation();
+  }
+
+  _esc(s) {
+    const el = document.createElement('span');
+    el.textContent = s || '';
+    return el.innerHTML;
   }
 
   _startAnimation() {
     if (this._animFrame) cancelAnimationFrame(this._animFrame);
-
     const animate = () => {
-      this._phase += 0.015;
+      this._phase += 0.012;
       if (this._svgEl) {
-        // Subtle breathing transform on the whole graph
-        const breathe = 1 + Math.sin(this._phase) * 0.008;
-        const nodesLayer = this._svgEl.querySelector(".nodes-layer");
-        const edgesLayer = this._svgEl.querySelector(".edges-layer");
-        if (nodesLayer) {
-          nodesLayer.style.transform = `scale(${breathe.toFixed(4)})`;
-          nodesLayer.style.transformOrigin = "center center";
-        }
-        if (edgesLayer) {
-          edgesLayer.style.transform = `scale(${breathe.toFixed(4)})`;
-          edgesLayer.style.transformOrigin = "center center";
-        }
+        const breathe = 1 + Math.sin(this._phase) * 0.005;
+        const nl = this._svgEl.querySelector(".nodes-layer");
+        const el = this._svgEl.querySelector(".edges-layer");
+        if (nl) { nl.style.transform = `scale(${breathe.toFixed(4)})`; nl.style.transformOrigin = "center center"; }
+        if (el) { el.style.transform = `scale(${breathe.toFixed(4)})`; el.style.transformOrigin = "center center"; }
       }
       this._animFrame = requestAnimationFrame(animate);
     };
@@ -530,16 +682,16 @@ class StyxBrainCard extends HTMLElement {
 
 if (typeof registerStyxCard === 'function') {
   registerStyxCard("styx-brain-card", StyxBrainCard, {
-    name: "PilotSuite Brain Graph",
-    description: "Lebendiger, pulsierender Brain Graph mit neuronalen Cross-Dependencies.",
+    name: "PilotSuite Neural Pipeline",
+    description: "Neurale Pipeline mit 3-Layer-Layout, Flow-Partikeln und Firing-Ripples.",
   });
 } else {
   customElements.define("styx-brain-card", StyxBrainCard);
   window.customCards = window.customCards || [];
   window.customCards.push({
     type: "styx-brain-card",
-    name: "PilotSuite Brain Graph",
-    description: "Lebendiger, pulsierender Brain Graph mit neuronalen Cross-Dependencies.",
+    name: "PilotSuite Neural Pipeline",
+    description: "Neurale Pipeline mit 3-Layer-Layout, Flow-Partikeln und Firing-Ripples.",
     preview: true,
   });
 }

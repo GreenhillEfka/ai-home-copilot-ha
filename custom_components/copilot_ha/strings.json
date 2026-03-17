@@ -243,6 +243,10 @@
           "connection": "Connection",
           "modules": "Modules",
           "llm_provider": "LLM Provider / OpenClaw",
+          "knowledge_graph": "Knowledge Graph",
+          "autonomy": "Autonomie",
+          "zone_health": "Zonen-Gesundheit",
+          "ml_anomaly": "ML / Anomalie-Erkennung",
           "automation_modes": "Automation modes",
           "habitus_zones": "Habitus zones",
           "entity_tags": "Entity tags",
@@ -325,7 +329,20 @@
           "birthday_lookahead_days": "Birthday lookahead days",
           "birthday_tts_enabled": "Birthday TTS announcements",
           "birthday_tts_entity": "Birthday TTS entity",
-          "birthday_reminder_hour": "Birthday reminder hour"
+          "birthday_reminder_hour": "Birthday reminder hour",
+          "anomaly_enabled": "Anomaly detection",
+          "anomaly_sensitivity": "Anomaly sensitivity",
+          "habitus_enabled": "Habitus mining",
+          "habitus_min_confidence": "Habitus min confidence",
+          "ml_enabled": "ML context module",
+          "ml_entities": "ML entities",
+          "ml_anomaly_contamination": "ML anomaly contamination",
+          "ml_habit_window_size": "ML habit window size",
+          "knowledge_graph_enabled": "Knowledge Graph",
+          "knowledge_graph_sync_interval": "Knowledge Graph sync interval (seconds)",
+          "autonomy_enabled": "Autonomy system",
+          "autonomy_auto_execute": "Auto-execute actions",
+          "zone_health_poll_enabled": "Zone health polling"
         }
       },
       "llm_provider": {
@@ -617,6 +634,64 @@
           "neuron_context_entities": "Entities for context neurons (presence, time, weather, etc.)",
           "neuron_state_entities": "Entities for state neurons (energy, comfort, stress, etc.)",
           "neuron_mood_entities": "Entities that influence mood (lights, media, climate, etc.)"
+        }
+      },
+      "knowledge_graph": {
+        "title": "Knowledge Graph",
+        "description": "Konfiguriere die Knowledge-Graph-Synchronisation mit PilotSuite Core. Der Graph bildet Beziehungen zwischen Entities, Zonen und Mustern ab.",
+        "data": {
+          "knowledge_graph_enabled": "Knowledge Graph aktivieren",
+          "knowledge_graph_sync_interval": "Sync-Intervall (Sekunden)"
+        },
+        "data_description": {
+          "knowledge_graph_enabled": "Aktiviert die periodische Synchronisation des Knowledge Graph mit Core.",
+          "knowledge_graph_sync_interval": "Intervall in Sekunden zwischen Graph-Synchronisationen (60 - 86400, Standard: 3600)."
+        }
+      },
+      "autonomy": {
+        "title": "Autonomie",
+        "description": "Steuere das Autonomie-System von PilotSuite. Wenn aktiviert, kann Styx eigenstaendig Aktionen ausfuehren (z.B. Licht, Klima, Musik).",
+        "data": {
+          "autonomy_enabled": "Autonomie aktivieren",
+          "autonomy_auto_execute": "Aktionen automatisch ausfuehren"
+        },
+        "data_description": {
+          "autonomy_enabled": "Aktiviert das Autonomie-System insgesamt.",
+          "autonomy_auto_execute": "Wenn aktiviert, fuehrt Styx Aktionen ohne Bestaetigung aus. Andernfalls werden nur Vorschlaege erstellt."
+        }
+      },
+      "zone_health": {
+        "title": "Zonen-Gesundheit",
+        "description": "Konfiguriere das Zonen-Gesundheits-Polling. Prueft periodisch den Status aller Habitus-Zonen und meldet Probleme.",
+        "data": {
+          "zone_health_poll_enabled": "Zonen-Gesundheits-Polling aktivieren"
+        },
+        "data_description": {
+          "zone_health_poll_enabled": "Aktiviert das periodische Polling des Zonen-Gesundheitsstatus."
+        }
+      },
+      "ml_anomaly": {
+        "title": "ML / Anomalie-Erkennung",
+        "description": "Konfiguriere ML-Kontext, Anomalie-Erkennung und Habitus-Mining. Diese Module analysieren Muster und erkennen ungewoehnliches Verhalten.",
+        "data": {
+          "anomaly_enabled": "Anomalie-Erkennung aktivieren",
+          "anomaly_sensitivity": "Anomalie-Empfindlichkeit",
+          "habitus_enabled": "Habitus-Mining aktivieren",
+          "habitus_min_confidence": "Habitus: min. Konfidenz",
+          "ml_enabled": "ML-Kontext aktivieren",
+          "ml_entities": "ML-Entities",
+          "ml_anomaly_contamination": "ML: Anomalie-Kontamination",
+          "ml_habit_window_size": "ML: Habit-Fenstergroesse"
+        },
+        "data_description": {
+          "anomaly_enabled": "Aktiviert die automatische Erkennung von Anomalien in Sensor-Daten.",
+          "anomaly_sensitivity": "Empfindlichkeit der Anomalie-Erkennung (low / medium / high).",
+          "habitus_enabled": "Aktiviert das Mining von Gewohnheitsmustern aus Zone-Daten.",
+          "habitus_min_confidence": "Minimale Konfidenz (0.0 - 1.0) fuer erkannte Muster.",
+          "ml_enabled": "Aktiviert den ML-Kontext-Service fuer erweiterte Mustererkennung.",
+          "ml_entities": "Entities, die vom ML-Modul ueberwacht werden sollen.",
+          "ml_anomaly_contamination": "Erwarteter Anteil an Anomalien in den Daten (0.01 - 0.5).",
+          "ml_habit_window_size": "Anzahl der Datenpunkte fuer die Gewohnheits-Analyse (10 - 10000)."
         }
       },
       "generate_dashboard": {

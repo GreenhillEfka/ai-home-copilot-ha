@@ -61,6 +61,10 @@ class EntityTagsModule(CopilotModule):
         if not has_neuron_tags:
             await self._ensure_neuron_tags(ctx)
 
+        # Sync all tags (including neuron tags) to Core so Core knows
+        # which entities feed which neuron layers.
+        await self._sync_tags_to_core_safe()
+
         _LOGGER.info(
             "EntityTagsModule setup: %d tags loaded",
             len(self._tags),
@@ -192,6 +196,8 @@ class EntityTagsModule(CopilotModule):
         )
         await self.reload_from_storage()
         _LOGGER.info("Auto-tagged %d entities with Styx (total: %d)", len(new_ids), len(merged))
+        # Push updated tags to Core
+        await self._sync_tags_to_core_safe()
         return len(new_ids)
 
     # ------------------------------------------------------------------
@@ -258,6 +264,15 @@ class EntityTagsModule(CopilotModule):
                         )
 
         return updates
+
+    async def _sync_tags_to_core_safe(self) -> None:
+        """Best-effort sync of tags to Core. Swallows errors so setup never fails."""
+        try:
+            synced = await self.async_sync_tags_to_core()
+            if synced:
+                _LOGGER.info("Tag sync to Core: %d tags pushed", synced)
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug("Tag sync to Core deferred (Core may not be reachable yet)")
 
     def _get_coordinator(self):
         """Get the CopilotDataUpdateCoordinator instance."""

@@ -89,6 +89,8 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "keywords": [
             "kind", "kinderzimmer", "kinder", "nursery",
             "spielzimmer", "jugend",
+            "zimmer paul", "zimmer pauli", "zimmer emma",
+            "zimmer lena", "zimmer max", "zimmer anna",
         ],
         "zone_type": "room",
         "icon": "mdi:baby-face-outline",
@@ -533,6 +535,35 @@ def aggregate_areas_to_habitus_zones(
             "aggregated": False,
         })
 
+    # Deduplicate near-identical standalone zones (e.g., "Zimmer Paul" + "Zimmer Pauli")
+    # Only merge standalone zones (not template-matched ones) with Levenshtein ≤ 2
+    deduped: list[dict[str, Any]] = []
+    for zone in result:
+        merged = False
+        if zone.get("confidence", 1.0) <= 0.5:
+            # Standalone zone — check if it's a near-duplicate of an existing one
+            for existing in deduped:
+                if existing.get("confidence", 1.0) > 0.5:
+                    continue
+                dist = _levenshtein_distance(
+                    _normalize_text(zone["name_de"]),
+                    _normalize_text(existing["name_de"]),
+                )
+                if dist <= 2:
+                    # Merge: keep the shorter name, combine areas + entities
+                    existing["area_ids"].extend(zone["area_ids"])
+                    existing["area_names"].extend(zone["area_names"])
+                    existing["aggregated"] = True
+                    _LOGGER.info(
+                        "Zone dedup: merged '%s' into '%s' (Levenshtein=%d)",
+                        zone["name_de"], existing["name_de"], dist,
+                    )
+                    merged = True
+                    break
+        if not merged:
+            deduped.append(zone)
+    result = deduped
+
     # Sort: aggregated zones first (more important), then by name
     result.sort(key=lambda z: (-len(z["area_ids"]), z["name_de"]))
     return result
@@ -685,6 +716,20 @@ async def async_auto_create_habitus_zones(
         )
     except Exception:  # noqa: BLE001
         _LOGGER.debug("Could not auto-create neuron tags from zones")
+
+    # Sync all tags (zone + neuron) to Core so the Brain/Neuron pipeline
+    # knows which entities feed which neuron layers.
+    try:
+        from .core.modules.entity_tags_module import get_entity_tags_module
+
+        tags_module = get_entity_tags_module(hass, entry_id)
+        if tags_module is not None:
+            synced = await tags_module.async_sync_tags_to_core()
+            _LOGGER.info("Zone auto-setup: synced %d tags to Core", synced)
+        else:
+            _LOGGER.debug("EntityTagsModule not yet available, tag sync deferred to module setup")
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Could not sync tags to Core after zone auto-setup")
 
     _LOGGER.info(
         "Zone auto-setup complete: %d zones created from %d HA areas",

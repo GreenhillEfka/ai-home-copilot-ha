@@ -15,8 +15,9 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.components.select import SelectEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import callback
+from homeassistant.helpers.device_registry import DeviceInfo
 
-from .entity import CopilotBaseEntity
+from .entity import CopilotBaseEntity, VERSION
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,6 +28,23 @@ AUTOMATION_MODE_LABELS = {
     "learning": "Lernend",
     "autonomy": "Autonomie",
 }
+
+
+def _build_zone_device_info(
+    zone_id: str, zone_name: str, area_name: str | None = None,
+) -> DeviceInfo:
+    """Build DeviceInfo for a per-zone sub-device."""
+    info = DeviceInfo(
+        identifiers={(DOMAIN, f"zone_{zone_id}")},
+        name=f"PilotSuite — {zone_name}",
+        manufacturer="PilotSuite",
+        model="Habituszone",
+        sw_version=VERSION,
+        via_device=(DOMAIN, "styx_hub"),
+    )
+    if area_name:
+        info["suggested_area"] = area_name
+    return info
 
 
 def _get_zone_data(coordinator, zone_id: str) -> dict[str, Any]:
@@ -67,12 +85,17 @@ class ZoneAutomationModeSelect(CopilotBaseEntity, SelectEntity):
     _attr_options = AUTOMATION_MODES
     _attr_icon = "mdi:robot"
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(coordinator)
         self._zone_id = zone_id
+        self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
         self._attr_unique_id = f"copilot_ha_zone_{zone_id}_automation_mode"
         self._attr_name = f"PilotSuite {zone_name} Automationsmodus"
         self._attr_current_option = "off"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self._zone_device_info
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -112,15 +135,21 @@ class _ZoneAutoSwitch(CopilotBaseEntity, SwitchEntity):
         key: str,
         name_suffix: str,
         icon: str,
+        area_name: str | None = None,
     ) -> None:
         super().__init__(coordinator)
         self._zone_id = zone_id
         self._target = target
         self._config_key = key
+        self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
         self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{target}_{key}"
         self._attr_name = f"PilotSuite {zone_name} {name_suffix}"
         self._attr_icon = icon
         self._attr_is_on = False
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self._zone_device_info
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -151,36 +180,39 @@ class _ZoneAutoSwitch(CopilotBaseEntity, SwitchEntity):
 class ZoneLightAutoSwitch(_ZoneAutoSwitch):
     """Toggle: automatic light control for a zone."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="enabled",
             name_suffix="Licht Automatik",
             icon="mdi:lightbulb-auto",
+            area_name=area_name,
         )
 
 
 class ZoneMusicAutoSwitch(_ZoneAutoSwitch):
     """Toggle: automatic music control for a zone."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="music", key="enabled",
             name_suffix="Musik Automatik",
             icon="mdi:music-circle",
+            area_name=area_name,
         )
 
 
 class ZoneMusicFollowSwitch(_ZoneAutoSwitch):
     """Toggle: music follows user between zones."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="music", key="follow_mode",
             name_suffix="Musik Follow",
             icon="mdi:walk",
+            area_name=area_name,
         )
 
 
@@ -207,11 +239,13 @@ class _ZoneConfigNumber(CopilotBaseEntity, NumberEntity):
         max_value: float,
         step: float = 1.0,
         unit: str | None = None,
+        area_name: str | None = None,
     ) -> None:
         super().__init__(coordinator)
         self._zone_id = zone_id
         self._target = target
         self._config_key = key
+        self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
         self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{target}_{key}"
         self._attr_name = f"PilotSuite {zone_name} {name_suffix}"
         self._attr_icon = icon
@@ -220,6 +254,10 @@ class _ZoneConfigNumber(CopilotBaseEntity, NumberEntity):
         self._attr_native_step = step
         if unit:
             self._attr_native_unit_of_measurement = unit
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self._zone_device_info
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -248,179 +286,193 @@ class _ZoneConfigNumber(CopilotBaseEntity, NumberEntity):
 class ZoneBrightnessTargetNumber(_ZoneConfigNumber):
     """Slider: target brightness level for a zone (0-100%)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="brightness_target_pct",
             name_suffix="Ziel-Helligkeit",
             icon="mdi:brightness-7",
             min_value=0, max_value=100, step=5, unit="%",
+            area_name=area_name,
         )
 
 
 class ZonePresenceDelayNumber(_ZoneConfigNumber):
     """Slider: seconds of presence before lights turn on (0-120s)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="presence_delay_s",
             name_suffix="Einschaltverzögerung",
             icon="mdi:timer-outline",
             min_value=0, max_value=120, step=5, unit="s",
+            area_name=area_name,
         )
 
 
 class ZoneAbsenceDelayNumber(_ZoneConfigNumber):
     """Slider: seconds after last presence before lights off (0-600s)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="absence_delay_s",
             name_suffix="Abschaltverzögerung",
             icon="mdi:timer-off-outline",
             min_value=0, max_value=600, step=10, unit="s",
+            area_name=area_name,
         )
 
 
 class ZoneMusicVolumeNumber(_ZoneConfigNumber):
     """Slider: default music volume for a zone (0-100%)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="music", key="default_volume_pct",
             name_suffix="Musiklautstärke",
             icon="mdi:volume-medium",
             min_value=0, max_value=100, step=5, unit="%",
+            area_name=area_name,
         )
 
 
 class ZoneBrightnessMinNumber(_ZoneConfigNumber):
     """Slider: minimum brightness when on (0-100%)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="brightness_min_pct",
             name_suffix="Min. Helligkeit",
             icon="mdi:brightness-4",
             min_value=0, max_value=100, step=5, unit="%",
+            area_name=area_name,
         )
 
 
 class ZoneDampeningBandNumber(_ZoneConfigNumber):
     """Slider: hysteresis dead-band to prevent flicker (0-50%)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="dampening_band_pct",
             name_suffix="Dämpfungsband",
             icon="mdi:sine-wave",
             min_value=0, max_value=50, step=5, unit="%",
+            area_name=area_name,
         )
 
 
 class ZoneLuxIndoorTargetNumber(_ZoneConfigNumber):
     """Slider: target indoor illuminance (0-2000 lx)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="lux_indoor_target",
             name_suffix="Soll-Lux Innen",
             icon="mdi:brightness-5",
             min_value=0, max_value=2000, step=50, unit="lx",
+            area_name=area_name,
         )
 
 
 class ZoneColorTempNumber(_ZoneConfigNumber):
     """Slider: color temperature (2200-6500 K)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="color_temp_k",
             name_suffix="Farbtemperatur",
             icon="mdi:thermometer-lines",
             min_value=2200, max_value=6500, step=100, unit="K",
+            area_name=area_name,
         )
 
 
 class ZoneMusicPresenceDelayNumber(_ZoneConfigNumber):
     """Slider: seconds of presence before music starts (0-120s)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="music", key="presence_delay_s",
             name_suffix="Musik Einschaltverzögerung",
             icon="mdi:timer-music-outline",
             min_value=0, max_value=120, step=5, unit="s",
+            area_name=area_name,
         )
 
 
 class ZoneMusicAbsencePauseNumber(_ZoneConfigNumber):
     """Slider: seconds after absence before music pauses (0-600s)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="music", key="absence_pause_s",
             name_suffix="Musik Pausenverzögerung",
             icon="mdi:timer-music",
             min_value=0, max_value=600, step=10, unit="s",
+            area_name=area_name,
         )
 
 
 class ZoneMusicFadeDurationNumber(_ZoneConfigNumber):
     """Slider: cross-fade duration between zones (0-30s)."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="music", key="fade_duration_s",
             name_suffix="Überblendung",
             icon="mdi:swap-horizontal",
             min_value=0, max_value=30, step=1, unit="s",
+            area_name=area_name,
         )
 
 
 class ZoneLuxOutdoorCompensationSwitch(_ZoneAutoSwitch):
     """Toggle: outdoor lux compensation for indoor brightness."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="lux_outdoor_compensation",
             name_suffix="Außenlicht-Kompensation",
             icon="mdi:weather-sunny",
+            area_name=area_name,
         )
 
 
 class ZoneColorTempAutoSwitch(_ZoneAutoSwitch):
     """Toggle: circadian color temperature adjustment."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="light", key="color_temp_auto",
             name_suffix="Farbtemperatur Auto",
             icon="mdi:theme-light-dark",
+            area_name=area_name,
         )
 
 
 class ZoneMusicAutoPlaySwitch(_ZoneAutoSwitch):
     """Toggle: auto-play music on zone entry."""
 
-    def __init__(self, coordinator, zone_id: str, zone_name: str) -> None:
+    def __init__(self, coordinator, zone_id: str, zone_name: str, area_name: str | None = None) -> None:
         super().__init__(
             coordinator, zone_id, zone_name,
             target="music", key="presence_auto_play",
             name_suffix="Musik Auto-Play",
             icon="mdi:music-note-plus",
+            area_name=area_name,
         )
 
 
@@ -432,6 +484,11 @@ def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str,
 
     Returns a dict with keys "number", "select", "switch" mapping to
     lists of entity instances for the corresponding HA platforms.
+
+    Each zone dict may include:
+    - zone_id: required
+    - name: display name
+    - area_name: HA area name for suggested_area assignment
     """
     numbers: list[NumberEntity] = []
     selects: list[SelectEntity] = []
@@ -440,33 +497,34 @@ def create_zone_automation_entities(coordinator, zones: list[dict]) -> dict[str,
     for zone in zones:
         zone_id = zone.get("zone_id", "")
         zone_name = zone.get("name", zone_id)
+        area_name = zone.get("area_name")
         if not zone_id:
             continue
         # Strip 'zone:' prefix for Core API compatibility
         zone_id = zone_id.removeprefix("zone:")
 
         # Automation mode select
-        selects.append(ZoneAutomationModeSelect(coordinator, zone_id, zone_name))
+        selects.append(ZoneAutomationModeSelect(coordinator, zone_id, zone_name, area_name))
 
         # Light automation controls
-        switches.append(ZoneLightAutoSwitch(coordinator, zone_id, zone_name))
-        numbers.append(ZoneBrightnessTargetNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZoneBrightnessMinNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZonePresenceDelayNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZoneAbsenceDelayNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZoneDampeningBandNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZoneLuxIndoorTargetNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZoneColorTempNumber(coordinator, zone_id, zone_name))
-        switches.append(ZoneLuxOutdoorCompensationSwitch(coordinator, zone_id, zone_name))
-        switches.append(ZoneColorTempAutoSwitch(coordinator, zone_id, zone_name))
+        switches.append(ZoneLightAutoSwitch(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneBrightnessTargetNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneBrightnessMinNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZonePresenceDelayNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneAbsenceDelayNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneDampeningBandNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneLuxIndoorTargetNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneColorTempNumber(coordinator, zone_id, zone_name, area_name))
+        switches.append(ZoneLuxOutdoorCompensationSwitch(coordinator, zone_id, zone_name, area_name))
+        switches.append(ZoneColorTempAutoSwitch(coordinator, zone_id, zone_name, area_name))
 
         # Music automation controls
-        switches.append(ZoneMusicAutoSwitch(coordinator, zone_id, zone_name))
-        switches.append(ZoneMusicFollowSwitch(coordinator, zone_id, zone_name))
-        switches.append(ZoneMusicAutoPlaySwitch(coordinator, zone_id, zone_name))
-        numbers.append(ZoneMusicVolumeNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZoneMusicPresenceDelayNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZoneMusicAbsencePauseNumber(coordinator, zone_id, zone_name))
-        numbers.append(ZoneMusicFadeDurationNumber(coordinator, zone_id, zone_name))
+        switches.append(ZoneMusicAutoSwitch(coordinator, zone_id, zone_name, area_name))
+        switches.append(ZoneMusicFollowSwitch(coordinator, zone_id, zone_name, area_name))
+        switches.append(ZoneMusicAutoPlaySwitch(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneMusicVolumeNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneMusicPresenceDelayNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneMusicAbsencePauseNumber(coordinator, zone_id, zone_name, area_name))
+        numbers.append(ZoneMusicFadeDurationNumber(coordinator, zone_id, zone_name, area_name))
 
     return {"number": numbers, "select": selects, "switch": switches}

@@ -25,13 +25,14 @@ class TestDashboardViewPaths:
         module_paths = set(DASHBOARD_VIEW_PATHS)
         assert entity_paths == module_paths
 
-    def test_eight_views_defined(self):
-        assert len(DASHBOARD_VIEW_PATHS) == 8
-        assert len(DASHBOARD_VIEWS) == 8
+    def test_ten_views_defined(self):
+        assert len(DASHBOARD_VIEW_PATHS) == 10
+        assert len(DASHBOARD_VIEWS) == 10
 
     def test_all_expected_paths_present(self):
         expected = {"styx", "haushalt", "zonen", "automation",
-                    "energie", "musik", "ki", "chat"}
+                    "energie", "musik", "ki", "chat",
+                    "netzwerk", "system"}
         assert set(DASHBOARD_VIEW_PATHS) == expected
 
 
@@ -83,7 +84,7 @@ class TestCreateFrontendEntities:
         result = create_frontend_entities(mock_coordinator, mock_entry)
         assert "switch" in result
         assert "button" in result
-        assert len(result["switch"]) == 8
+        assert len(result["switch"]) == 10
         assert len(result["button"]) == 1
 
     def test_switch_unique_ids_are_unique(self, mock_coordinator, mock_entry):
@@ -119,7 +120,7 @@ class TestBuildStorageDashboardConfigFiltering:
 
     def test_all_views_when_none(self):
         config = _build_storage_dashboard_config([])
-        assert len(config["views"]) == 8
+        assert len(config["views"]) == 10
 
     def test_filter_to_two_views(self):
         config = _build_storage_dashboard_config(
@@ -147,7 +148,7 @@ class TestBuildStorageDashboardConfigFiltering:
     def test_all_views_when_all_enabled(self):
         all_paths = set(DASHBOARD_VIEW_PATHS)
         config = _build_storage_dashboard_config([], enabled_views=all_paths)
-        assert len(config["views"]) == 8
+        assert len(config["views"]) == 10
 
     def test_single_view_chat(self):
         config = _build_storage_dashboard_config([], enabled_views={"chat"})

@@ -111,7 +111,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         from .zone_automation_entities import create_zone_automation_entities
         from .habitus_zones_store_v2 import async_get_zones_v2
         zones = await async_get_zones_v2(hass, entry.entry_id)
-        zone_list = [{"zone_id": z.zone_id, "name": getattr(z, "name_de", None) or z.name} for z in zones]
+        zone_list = []
+        for z in zones:
+            meta = z.metadata or {}
+            area_names = meta.get("ha_area_names")
+            area_name = area_names[0] if isinstance(area_names, list) and area_names else None
+            zone_list.append({
+                "zone_id": z.zone_id,
+                "name": getattr(z, "name_de", None) or z.name,
+                "area_name": area_name or z.name,
+            })
         result = create_zone_automation_entities(coordinator, zone_list)
         zone_selects = result.get("select", [])
         if zone_selects:

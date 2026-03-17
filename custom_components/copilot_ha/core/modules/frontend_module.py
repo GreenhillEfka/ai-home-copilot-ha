@@ -28,10 +28,11 @@ from ..module import CopilotModule, ModuleContext
 
 _LOGGER = logging.getLogger(__name__)
 
-# All 8 dashboard view paths — must match dashboard_wiring.py
+# All 10 dashboard view paths — must match dashboard_wiring.py
 DASHBOARD_VIEW_PATHS = (
     "styx", "haushalt", "zonen", "automation",
     "energie", "musik", "ki", "chat",
+    "netzwerk", "system",
 )
 
 
