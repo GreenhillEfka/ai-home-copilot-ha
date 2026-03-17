@@ -409,13 +409,13 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     return True
 
 
-def _get_runtime(hass: HomeAssistant) -> CopilotRuntime:
+async def _get_runtime(hass: HomeAssistant) -> CopilotRuntime:
     runtime = CopilotRuntime.get(hass)
 
     for name, (module_path, class_name) in _MODULE_IMPORTS.items():
         if name not in runtime.registry.names():
             try:
-                module = import_module(module_path, package=__package__)
+                module = await hass.async_add_executor_job(import_module, module_path, __package__)
                 cls = getattr(module, class_name)
                 runtime.registry.register(name, cls)
             except Exception:
@@ -527,7 +527,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to install blueprints during setup")
 
-    runtime = _get_runtime(hass)
+    runtime = await _get_runtime(hass)
     try:
         await runtime.async_setup_entry(entry, modules=_MODULES)
     except Exception:
@@ -704,8 +704,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    runtime = _get_runtime(hass)
-    
+    runtime = await _get_runtime(hass)
+
     # Unload User Preference Module
     entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
 

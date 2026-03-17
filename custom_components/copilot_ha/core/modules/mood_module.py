@@ -643,7 +643,13 @@ class MoodModule(CopilotModule):
                 if not domain or not service:
                     _LOGGER.warning("Invalid service call data: %s", call_data)
                     continue
-                
+
+                # Convert deprecated color_temp (mireds) to color_temp_kelvin
+                if domain == "light" and "color_temp" in service_data:
+                    mireds = service_data.pop("color_temp")
+                    if isinstance(mireds, (int, float)) and mireds > 0:
+                        service_data["color_temp_kelvin"] = round(1000000 / mireds)
+
                 await hass.services.async_call(
                     domain, 
                     service, 

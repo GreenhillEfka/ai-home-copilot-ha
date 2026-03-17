@@ -671,6 +671,7 @@ async def async_auto_create_habitus_zones(
             zone_type=zone_info["zone_type"],
             entity_ids=tuple(all_entity_ids),
             entities=role_entities or None,
+            current_state="active" if all_entity_ids else "idle",
             metadata={
                 "ha_area_ids": area_ids,
                 "ha_area_names": zone_info["area_names"],

@@ -30,13 +30,20 @@ GITHUB_CORE_RELEASES_URL = (
 )
 
 
+_CACHED_LOCAL_VERSION: str | None = None
+
+
 def _read_local_version() -> str:
     """Read the local VERSION file from this integration package."""
+    global _CACHED_LOCAL_VERSION
+    if _CACHED_LOCAL_VERSION is not None:
+        return _CACHED_LOCAL_VERSION
     version_file = Path(__file__).resolve().parent / "VERSION"
     try:
-        return version_file.read_text(encoding="utf-8").strip()
+        _CACHED_LOCAL_VERSION = version_file.read_text(encoding="utf-8").strip()
     except Exception:  # noqa: BLE001
-        return "unknown"
+        _CACHED_LOCAL_VERSION = "unknown"
+    return _CACHED_LOCAL_VERSION
 
 
 def _compare_versions(local: str, remote: str) -> int:
