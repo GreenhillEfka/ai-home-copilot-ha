@@ -22,7 +22,7 @@ from .config_schema_builders import (
     build_anomaly_habitus_schema,
 )
 from .config_snapshot_flow import ConfigSnapshotOptionsFlow
-from .config_zones_flow import async_step_zone_form
+from .config_zones_flow import async_step_zone_form, async_sync_zone_editor_zone
 from .config_tags_flow import async_step_add_tag, async_step_edit_tag, async_step_delete_tag
 from .const import (
     CONF_HOST,
@@ -305,6 +305,16 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
         zid = str(user_input.get("zone_id", ""))
         remain = [z for z in zones if z.zone_id != zid]
         await async_set_zones_v2(self.hass, self._entry.entry_id, remain)
+
+        synced = await async_sync_zone_editor_zone(
+            self,
+            mode="delete",
+            zone=None,
+            previous_zone_id=zid,
+        )
+        if not synced:
+            _LOGGER.debug("Core zone-editor sync not confirmed for deleted zone: %s", zid)
+
         return await self.async_step_habitus_zones()
 
     async def async_step_bulk_edit(self, user_input: dict | None = None) -> FlowResult:
