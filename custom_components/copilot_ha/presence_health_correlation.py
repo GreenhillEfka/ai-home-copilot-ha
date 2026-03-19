@@ -141,7 +141,7 @@ async def async_correlate_presence_health(
         source_count=presence.source_count,
         health_score=health.health_score,
         temperature=health.temperature,
-        humidity=health.hydration,
+        humidity=health.humidity,
         co2=health.co2,
         air_quality=health.air_quality,
     )
@@ -157,7 +157,7 @@ async def async_correlate_presence_health(
         presence.absence_duration_minutes,
         health.health_score,
         health.temperature,
-        health.hydration,
+        health.humidity,
     )
     
     correlation.recommended_action = _determine_recommended_action(
@@ -165,7 +165,7 @@ async def async_correlate_presence_health(
         health.health_score,
         health.co2,
         health.temperature,
-        health.hydration,
+        health.humidity,
         health.air_quality,
     )
     
