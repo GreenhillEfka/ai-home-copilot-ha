@@ -595,8 +595,31 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             )
 
         signing = _signing_config()
+        # Payload size guard (before full read)
+        content_length = request.content_length
+        if content_length is not None and content_length > _WEBHOOK_MAX_PAYLOAD_BYTES:
+            _LOGGER.warning(
+                "Rejected webhook: payload_too_large (%d > %d bytes)",
+                content_length, _WEBHOOK_MAX_PAYLOAD_BYTES,
+            )
+            return _error_response(
+                code="payload_too_large",
+                details={"max_bytes": _WEBHOOK_MAX_PAYLOAD_BYTES, "received": content_length},
+            )
+
         if signing:
             body_bytes = await request.read()
+            # Second check after actual read (in case content_length was missing)
+            if len(body_bytes) > _WEBHOOK_MAX_PAYLOAD_BYTES:
+                _LOGGER.warning(
+                    "Rejected webhook: payload_too_large (%d > %d bytes)",
+                    len(body_bytes), _WEBHOOK_MAX_PAYLOAD_BYTES,
+                )
+                return _error_response(
+                    code="payload_too_large",
+                    details={"max_bytes": _WEBHOOK_MAX_PAYLOAD_BYTES, "received": len(body_bytes)},
+                )
+
             now_epoch = int(_utcnow().timestamp())
             auth_scope_token = (
                 token_expected
@@ -623,16 +646,40 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             try:
                 payload = json.loads(body_bytes.decode("utf-8"))
             except Exception:  # noqa: BLE001
-                return _error_response(
-                    code="invalid_json",
-                )
+                return _error_response(code="invalid_json")
         else:
             try:
                 payload = await request.json()
             except Exception:  # noqa: BLE001
-                return _error_response(
-                    code="invalid_json",
-                )
+                return _error_response(code="invalid_json")
+
+        # Rate limit guard (per webhook ID)
+        now_epoch = int(_utcnow().timestamp())
+        window_start = now_epoch - _WEBHOOK_RATELIMIT_WINDOW_SEC
+        if webhook_id not in _WEBHOOK_RATELIMIT_CACHE:
+            _WEBHOOK_RATELIMIT_CACHE[webhook_id] = []
+        # Clean old entries
+        _WEBHOOK_RATELIMIT_CACHE[webhook_id] = [
+            ts for ts in _WEBHOOK_RATELIMIT_CACHE[webhook_id] if ts > window_start
+        ]
+        if len(_WEBHOOK_RATELIMIT_CACHE[webhook_id]) >= _WEBHOOK_RATELIMIT_MAX_REQS:
+            oldest = min(_WEBHOOK_RATELIMIT_CACHE[webhook_id])
+            retry_after = oldest + _WEBHOOK_RATELIMIT_WINDOW_SEC - now_epoch
+            _LOGGER.warning(
+                "Rejected webhook: rate_limited (%d reqs in %ds window, retry_after=%ds)",
+                len(_WEBHOOK_RATELIMIT_CACHE[webhook_id]), _WEBHOOK_RATELIMIT_WINDOW_SEC, retry_after,
+            )
+            response = _error_response(
+                code="rate_limited",
+                details={"retry_after_seconds": retry_after},
+            )
+            response.headers[HEADER_RATELIMIT_RETRY_AFTER] = str(retry_after)
+            return response
+        # Record this request
+        _WEBHOOK_RATELIMIT_CACHE[webhook_id].append(now_epoch)
+        # Trim cache size
+        if len(_WEBHOOK_RATELIMIT_CACHE[webhook_id]) > _WEBHOOK_RATELIMIT_MAX_REQS * 2:
+            _WEBHOOK_RATELIMIT_CACHE[webhook_id] = _WEBHOOK_RATELIMIT_CACHE[webhook_id][-_WEBHOOK_RATELIMIT_MAX_REQS:]
 
         if not isinstance(payload, dict):
             return _error_response(
