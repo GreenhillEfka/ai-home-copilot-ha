@@ -76,7 +76,7 @@ class TestAreaToTemplateMatching:
     def test_terrasse_matches(self):
         template, conf = _match_area_to_template("Terrasse")
         assert template is not None
-        assert template["zone_id"] == "terrassenbereich"
+        assert template["zone_id"] == "aussenbereich"
 
     def test_unknown_area_no_match(self):
         template, conf = _match_area_to_template("Serverschrank")
@@ -314,8 +314,9 @@ class TestTemplateCompleteness:
         ("Eingang", "gangbereich"),
         ("Schlafzimmer", "schlafbereich"),
         ("Kinderzimmer", "kinderzimmer"),
-        ("Terrasse", "terrassenbereich"),
-        ("Balkon", "terrassenbereich"),
+        ("Terrasse", "aussenbereich"),
+        ("Balkon", "aussenbereich"),
+        ("Loggia", "aussenbereich"),
         ("Garten", "aussenbereich"),
         ("Garage", "aussenbereich"),
         ("Keller", "kellerbereich"),

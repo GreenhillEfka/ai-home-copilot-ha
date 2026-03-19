@@ -99,8 +99,7 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "zone_id": "terrassenbereich",
         "name_de": "Terrassenbereich",
         "keywords": [
-            "terrass", "balkon", "veranda", "patio", "loggia",
-            "wintergarten",
+            "veranda", "patio", "wintergarten",
         ],
         "zone_type": "outdoor",
         "icon": "mdi:flower",
@@ -111,6 +110,7 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "keywords": [
             "aussen", "außen", "garten", "garage", "carport",
             "outdoor", "garden", "hof", "parkplatz",
+            "terrass", "balkon", "loggia",
         ],
         "zone_type": "outdoor",
         "icon": "mdi:tree",
