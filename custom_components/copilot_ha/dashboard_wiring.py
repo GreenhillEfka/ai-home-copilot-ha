@@ -850,6 +850,7 @@ async def async_hide_yaml_dashboards_from_sidebar(hass: HomeAssistant) -> None:
         from homeassistant.components import frontend
 
         panels = hass.data.get(frontend.DATA_PANELS, {})
+        hidden_count = 0
         for slug in _YAML_DASHBOARD_SLUGS:
             if slug in panels:
                 panel = panels[slug]
@@ -866,5 +867,23 @@ async def async_hide_yaml_dashboards_from_sidebar(hass: HomeAssistant) -> None:
                         update=True,
                     )
                     _LOGGER.debug("Hidden YAML dashboard '%s' from sidebar", slug)
+                    hidden_count += 1
+        if hidden_count:
+            _LOGGER.info("Hidden %d YAML dashboards from sidebar at runtime", hidden_count)
     except Exception:  # noqa: BLE001
         _LOGGER.debug("Could not hide YAML dashboards from sidebar", exc_info=True)
+
+
+def _validate_report_sections(sections: list[str]) -> tuple[bool, list[str]]:
+    """Validate that all required report sections are present.
+
+    Returns (ok, missing) where ok=True if all sections present.
+    """
+    missing = list(REQUIRED_REPORT_SECTIONS - set(sections))
+    return len(missing) == 0, missing
+
+
+REQUIRED_REPORT_SECTIONS = frozenset({
+    "Changed", "Checked", "Not clean / open",
+    "Next step", "workers", "cron"
+})
