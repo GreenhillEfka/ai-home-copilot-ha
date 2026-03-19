@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import logging
 import unicodedata
-import re
 from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry, device_registry, entity_registry
+
+from .unmatched_logger import log_unmatched_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -84,46 +85,43 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "icon": "mdi:bed",
     },
     {
-        "zone_id": "kinderzimmer",
-        "name_de": "Kinderzimmer",
+        "zone_id": "kellerbereich",
+        "name_de": "Kellerbereich",
         "keywords": [
-            "kind", "kinderzimmer", "kinder", "nursery",
-            "spielzimmer", "jugend",
-            "zimmer paul", "zimmer pauli", "zimmer emma",
-            "zimmer lena", "zimmer max", "zimmer anna",
+            "keller", "speicher", "basement", "cellar",
         ],
         "zone_type": "room",
-        "icon": "mdi:baby-face-outline",
+        "icon": "mdi:home-floor-negative-1",
     },
     {
-        "zone_id": "terrassenbereich",
-        "name_de": "Terrassenbereich",
+        "zone_id": "zimmer_mira",
+        "name_de": "Zimmer Mira",
         "keywords": [
-            "terrass", "balkon", "veranda", "patio", "loggia",
-            "wintergarten",
+            "mira", "zimmer mira", "miras zimmer",
         ],
-        "zone_type": "outdoor",
-        "icon": "mdi:flower",
+        "zone_type": "room",
+        "icon": "mdi:bed-single-outline",
+    },
+    {
+        "zone_id": "zimmer_paul",
+        "name_de": "Zimmer Paul",
+        "keywords": [
+            "paul", "zimmer paul", "zimmer pauli", "pauls zimmer",
+        ],
+        "zone_type": "room",
+        "icon": "mdi:bed-single-outline",
     },
     {
         "zone_id": "aussenbereich",
         "name_de": "Außenbereich",
         "keywords": [
             "aussen", "außen", "garten", "garage", "carport",
-            "outdoor", "garden", "hof", "parkplatz",
+            "outdoor", "garden", "hof", "parkplatz", "terrasse",
+            "terrass", "balkon", "loggia", "veranda", "patio",
+            "wintergarten",
         ],
         "zone_type": "outdoor",
         "icon": "mdi:tree",
-    },
-    {
-        "zone_id": "kellerbereich",
-        "name_de": "Kellerbereich",
-        "keywords": [
-            "keller", "basement", "wasch", "heizraum", "technik",
-            "hauswirtschaft", "lager", "abstellraum",
-        ],
-        "zone_type": "area",
-        "icon": "mdi:stairs-down",
     },
 ]
 
@@ -517,52 +515,18 @@ def aggregate_areas_to_habitus_zones(
             "aggregated": len(area_ids) > 1,
         })
 
-    # Unmatched areas become standalone zones
-    for area in unmatched:
-        area_name = area.get("name", "Unbekannt")
-        slug = re.sub(
-            r"[^a-z0-9]+", "_",
-            _normalize_text(area_name),
-        ).strip("_") or "zone"
+    # Unmatched areas are collected explicitly in the canonical fallback bucket.
+    if unmatched:
         result.append({
-            "zone_id": f"zone:{slug}",
-            "name_de": area_name,
+            "zone_id": "zone:ungeordnet",
+            "name_de": "Ungeordnet",
             "zone_type": "room",
-            "icon": area.get("icon") or "mdi:home-outline",
-            "area_ids": [area["area_id"]],
-            "area_names": [area_name],
-            "confidence": 0.5,
-            "aggregated": False,
+            "icon": "mdi:help-circle-outline",
+            "area_ids": [area["area_id"] for area in unmatched],
+            "area_names": [area.get("name", "Unbekannt") for area in unmatched],
+            "confidence": 0.0,
+            "aggregated": len(unmatched) > 1,
         })
-
-    # Deduplicate near-identical standalone zones (e.g., "Zimmer Paul" + "Zimmer Pauli")
-    # Only merge standalone zones (not template-matched ones) with Levenshtein ≤ 2
-    deduped: list[dict[str, Any]] = []
-    for zone in result:
-        merged = False
-        if zone.get("confidence", 1.0) <= 0.5:
-            # Standalone zone — check if it's a near-duplicate of an existing one
-            for existing in deduped:
-                if existing.get("confidence", 1.0) > 0.5:
-                    continue
-                dist = _levenshtein_distance(
-                    _normalize_text(zone["name_de"]),
-                    _normalize_text(existing["name_de"]),
-                )
-                if dist <= 2:
-                    # Merge: keep the shorter name, combine areas + entities
-                    existing["area_ids"].extend(zone["area_ids"])
-                    existing["area_names"].extend(zone["area_names"])
-                    existing["aggregated"] = True
-                    _LOGGER.info(
-                        "Zone dedup: merged '%s' into '%s' (Levenshtein=%d)",
-                        zone["name_de"], existing["name_de"], dist,
-                    )
-                    merged = True
-                    break
-        if not merged:
-            deduped.append(zone)
-    result = deduped
 
     # Sort: aggregated zones first (more important), then by name
     result.sort(key=lambda z: (-len(z["area_ids"]), z["name_de"]))
@@ -693,6 +657,24 @@ async def async_auto_create_habitus_zones(
     if not zones:
         _LOGGER.info("No zones with entities found, skipping auto-setup")
         return 0
+
+    # PS-179: Log unmatched entities before persisting
+    all_entities = []
+    for zone in zones:
+        for entity_id in zone.entity_ids:
+            ent_entry = ent_reg.entities.get(entity_id)
+            area_id = ent_entry.area_id if ent_entry else None
+            all_entities.append({"entity_id": entity_id, "area_id": area_id})
+    
+    # Build area→zone map for unmatched logging
+    area_zone_map = {}
+    for zone in zones:
+        for area_id in zone.area_ids:
+            area_zone_map[area_id] = zone.zone_id
+    
+    unmatched = log_unmatched_entities(all_entities, area_zone_map)
+    if unmatched:
+        _LOGGER.info("[PS-179] Logged %d unmatched entities", len(unmatched))
 
     # Persist zones
     await async_set_zones_v2(hass, entry_id, zones, validate=False)
