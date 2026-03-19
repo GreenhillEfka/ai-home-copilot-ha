@@ -7,42 +7,19 @@ Covers:
 - CopilotRuntime: get singleton, setup_entry, unload_entry
 - config_helpers: parse_csv, as_csv, merge_config_data, validate_input
 - config_schema_builders: build_modules_schema, build_neuron_schema
+
+Uses shared fixtures from conftest.py: _FakeConfigEntry, _FakeHass, async_flow_hass, config_entry_factory.
 """
 
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# ---------------------------------------------------------------------------
-# Lightweight HA stubs – keep tests runnable without a full HA install.
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class _FakeConfigEntry:
-    entry_id: str = "test_entry_1"
-    domain: str = "copilot_ha"
-    data: dict = None  # type: ignore[assignment]
-    options: dict = None  # type: ignore[assignment]
-
-    def __post_init__(self):
-        self.data = self.data or {}
-        self.options = self.options or {}
-
-
-class _FakeHass:
-    """Minimal hass stub for tests that need hass.data / hass.config."""
-
-    def __init__(self) -> None:
-        self.data: dict[str, Any] = {}
-        self.config = MagicMock()
-        self.config.internal_url = None
-        self.config.external_url = None
+from .conftest import _FakeConfigEntry, _FakeHass
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -816,7 +793,7 @@ class TestConfigSnapshotApply:
         with patch.object(_snapshot, "async_set_zones_v2_from_raw", new=AsyncMock()) as set_zones:
             await _snapshot.async_apply_config_snapshot(hass, entry, snapshot)
 
-        set_zones.assert_awaited_once_with(hass, entry.entry_id, snapshot["habitus_zones"])
+        set_zones.assert_awaited_once_with(hass, entry.entry_id, snapshot["habitus_zones"], unmatched_fallback=True)
         hass.config_entries.async_update_entry.assert_called_once_with(
             entry,
             options={"token": "keep-me", "host": "new"},
