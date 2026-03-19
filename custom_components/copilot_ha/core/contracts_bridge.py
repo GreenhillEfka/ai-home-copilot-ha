@@ -82,6 +82,14 @@ class ProposalIntent:
             requires_confirmation=bool(data.get("requires_confirmation", True)),
         )
 
+    def can_auto_execute(self) -> bool:
+        """Return True only for explicitly autonomous, approval-free proposals."""
+        return (
+            self.autonomy_mode == "autonomous"
+            and not self.approval_required
+            and not self.requires_confirmation
+        )
+
     def to_action_intent(self, *, approved: bool = False) -> "ActionIntent":
         """Derive ActionIntent from this proposal."""
         return ActionIntent(
