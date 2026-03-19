@@ -626,6 +626,7 @@ async def async_auto_create_habitus_zones(
 
     # For each aggregated zone, collect and classify entities
     zones: list[HabitusZoneV2] = []
+    unmatched_entities: list[str] = []
 
     for zone_info in aggregated:
         zone_id = zone_info["zone_id"]
@@ -641,6 +642,8 @@ async def async_auto_create_habitus_zones(
             for entity_id, reg_entry in ent_reg.entities.items():
                 if reg_entry.disabled_by is not None:
                     continue
+                if entity_id in seen:
+                    continue
 
                 # Check if entity belongs to this area
                 ent_area = reg_entry.area_id
@@ -651,8 +654,7 @@ async def async_auto_create_habitus_zones(
 
                 if ent_area != area_id:
                     continue
-                if entity_id in seen:
-                    continue
+
                 seen.add(entity_id)
 
                 # Detect role
@@ -667,10 +669,15 @@ async def async_auto_create_habitus_zones(
 
                 role = detect_entity_role(entity_id, device_class, friendly_name)
 
-                if role not in role_entities:
-                    role_entities[role] = []
-                role_entities[role].append(entity_id)
-                all_entity_ids.append(entity_id)
+                if role:
+                    if role not in role_entities:
+                        role_entities[role] = []
+                    role_entities[role].append(entity_id)
+                    all_entity_ids.append(entity_id)
+                else:
+                    # Unmatched entity → collect for fallback zone
+                    unmatched_entities.append(entity_id)
+                    _LOGGER.debug("Unmatched entity %s in area %s → zone:ungeordnet", entity_id, area_id)
 
         if not all_entity_ids:
             _LOGGER.debug("Zone %s has no entities, skipping", zone_name)
@@ -704,6 +711,23 @@ async def async_auto_create_habitus_zones(
             len(all_entity_ids),
             len(role_entities),
         )
+
+    # Add fallback zone for unmatched entities
+    if unmatched_entities:
+        fallback_zone = HabitusZoneV2(
+            zone_id="zone:ungeordnet",
+            name="Ungeordnet",
+            zone_type="fallback",
+            entity_ids=tuple(unmatched_entities),
+            entities=None,
+            current_state="idle",
+            metadata={
+                "unmatched_fallback": True,
+                "auto_created": True,
+            },
+        )
+        zones.append(fallback_zone)
+        _LOGGER.info("Fallback zone:ungeordnet created with %d unmatched entities", len(unmatched_entities))
 
     if not zones:
         _LOGGER.info("No zones with entities found, skipping auto-setup")
