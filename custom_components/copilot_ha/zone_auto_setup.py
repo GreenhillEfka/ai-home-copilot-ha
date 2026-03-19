@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry, device_registry, entity_registry
 
 from .unmatched_logger import log_unmatched_entities
+from .area_zone_registry import load_area_zone_map, get_zone_for_area, get_unmatched_fallback
 
 _LOGGER = logging.getLogger(__name__)
 
