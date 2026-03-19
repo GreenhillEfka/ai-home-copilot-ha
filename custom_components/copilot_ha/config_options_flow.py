@@ -68,16 +68,35 @@ def _normalize_entity_list(value: object) -> list[str]:
 
 class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        # HA best-practice migration: keep canonical helper properties.
+        self.config_entry = config_entry
+        self._config_entry_id = config_entry.entry_id
+        # Legacy compatibility for existing tests/helpers.
         self._entry = config_entry
         ConfigSnapshotOptionsFlow.__init__(self, config_entry)
 
+    def _resolve_config_entry(self) -> config_entries.ConfigEntry:
+        entry = getattr(self, "config_entry", None) or getattr(self, "_entry", None)
+        if entry is None:
+            raise RuntimeError("Options flow has no config entry")
+        return entry
+
+    def _resolve_config_entry_id(self) -> str:
+        entry_id = getattr(self, "_config_entry_id", "")
+        if isinstance(entry_id, str) and entry_id:
+            return entry_id
+        entry = getattr(self, "config_entry", None) or getattr(self, "_entry", None)
+        return str(getattr(entry, "entry_id", ""))
+
     def _effective_config(self) -> dict:
         """Return merged live config (entry.data + entry.options)."""
-        return merge_config_data(self._entry.data, self._entry.options)
+        entry = self._resolve_config_entry()
+        return merge_config_data(entry.data, entry.options)
 
     def _create_merged_entry(self, updates: dict) -> FlowResult:
         """Persist options without dropping unrelated keys from previous steps."""
-        return self.async_create_entry(title="", data=merge_config_data(self._entry.data, self._entry.options, updates))
+        entry = self._resolve_config_entry()
+        return self.async_create_entry(title="", data=merge_config_data(entry.data, entry.options, updates))
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         return self.async_show_menu(
@@ -207,7 +226,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
         """Show zone menu with options tailored to whether zones already exist."""
         from .habitus_zones_store_v2 import async_get_zones_v2
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._resolve_config_entry_id())
         has_zones = bool(zones)
 
         menu_options = ["create_zone"]
@@ -252,7 +271,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     async def async_step_edit_zone(self, user_input: dict | None = None) -> FlowResult:
         from .habitus_zones_store_v2 import async_get_zones_v2
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._resolve_config_entry_id())
         if not zones:
             return self.async_abort(reason="no_zones")
 
@@ -280,7 +299,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     async def async_step_delete_zone(self, user_input: dict | None = None) -> FlowResult:
         from .habitus_zones_store_v2 import async_get_zones_v2, async_set_zones_v2
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._resolve_config_entry_id())
         if not zones:
             return self.async_abort(reason="no_zones")
 
@@ -304,7 +323,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
 
         zid = str(user_input.get("zone_id", ""))
         remain = [z for z in zones if z.zone_id != zid]
-        await async_set_zones_v2(self.hass, self._entry.entry_id, remain)
+        await async_set_zones_v2(self.hass, self._resolve_config_entry_id(), remain)
 
         synced = await async_sync_zone_editor_zone(
             self,
@@ -321,7 +340,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
         """Bulk editor to paste YAML/JSON (no 255-char limit) with validation."""
         from .habitus_zones_store_v2 import async_get_zones_v2, async_set_zones_v2_from_raw
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._resolve_config_entry_id())
         current = []
         for z in zones:
             item = {"id": z.zone_id, "name": z.name}
@@ -342,7 +361,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
                 except Exception:  # noqa: BLE001
                     raw = yaml.safe_load(raw_text)
 
-                await async_set_zones_v2_from_raw(self.hass, self._entry.entry_id, raw)
+                await async_set_zones_v2_from_raw(self.hass, self._resolve_config_entry_id(), raw)
             except Exception as err:  # noqa: BLE001
                 return self.async_show_form(
                     step_id="bulk_edit",
@@ -388,7 +407,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
 
         if user_input is not None:
             try:
-                path = await async_generate_habitus_zones_dashboard(self.hass, self._entry.entry_id)
+                path = await async_generate_habitus_zones_dashboard(self.hass, self._resolve_config_entry_id())
                 return self.async_abort(
                     reason="dashboard_generated",
                     description_placeholders={"path": str(path)},
@@ -463,7 +482,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
         """
         from .habitus_zones_store_v2 import async_get_zones_v2
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._resolve_config_entry_id())
         data = self._effective_config()
 
         # Load existing mode config

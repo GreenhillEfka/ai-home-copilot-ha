@@ -180,7 +180,11 @@ async def _load_tags(flow) -> dict:
 def _reload_module(flow) -> None:
     """Ask the entity_tags_module to reload from storage (if loaded)."""
     try:
-        entry_id = flow._entry.entry_id if hasattr(flow, "_entry") else None
+        entry_id = getattr(flow, "_config_entry_id", None)
+        if not entry_id and hasattr(flow, "config_entry"):
+            entry_id = getattr(flow.config_entry, "entry_id", None)
+        if not entry_id and hasattr(flow, "_entry"):
+            entry_id = getattr(flow._entry, "entry_id", None)
         if not entry_id:
             return
         data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})

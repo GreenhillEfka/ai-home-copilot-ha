@@ -78,7 +78,18 @@ def _zone_id_from_name(name: str) -> str:
 
 
 def _resolve_flow_entry(flow: Any):
-    return getattr(flow, "config_entry", None) or getattr(flow, "_entry", None)
+    entry = getattr(flow, "config_entry", None) or getattr(flow, "_entry", None)
+    if entry is not None:
+        return entry
+
+    # HA helper-property migration fallback: resolve by config entry id.
+    entry_id = getattr(flow, "_config_entry_id", None)
+    if isinstance(entry_id, str) and entry_id and hasattr(flow, "hass"):
+        getter = getattr(getattr(flow.hass, "config_entries", None), "async_get_entry", None)
+        if callable(getter):
+            return getter(entry_id)
+
+    return None
 
 
 def _ensure_unique_zone_id(candidate: str, existing_ids: set[str]) -> str:

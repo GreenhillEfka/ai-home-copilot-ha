@@ -83,8 +83,18 @@ class ConfigSnapshotOptionsFlow:
     """Mixin-like helper for OptionsFlowHandler (kept separate to keep config_flow.py small)."""
 
     def __init__(self, entry: config_entries.ConfigEntry) -> None:
+        # HA best-practice helper properties.
+        self.config_entry = entry
+        self._config_entry_id = entry.entry_id
+        # Legacy compatibility fallback.
         self._entry = entry
         self._snapshot: dict[str, Any] | None = None
+
+    def _resolve_config_entry(self) -> config_entries.ConfigEntry:
+        entry = getattr(self, "config_entry", None) or getattr(self, "_entry", None)
+        if entry is None:
+            raise RuntimeError("Options flow has no config entry")
+        return entry
 
     async def async_step_backup_restore(self, user_input: dict | None = None) -> FlowResult:
         return self.async_show_menu(
@@ -151,7 +161,7 @@ class ConfigSnapshotOptionsFlow:
                     errors={"base": "confirm_required"},
                 )
 
-            await async_apply_config_snapshot(self.hass, self._entry, snap)
+            await async_apply_config_snapshot(self.hass, self._resolve_config_entry(), snap)
             return self.async_create_entry(title="", data={"result": "imported"})
 
         # Minimal preview text
