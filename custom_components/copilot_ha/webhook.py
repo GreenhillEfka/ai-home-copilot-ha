@@ -23,6 +23,7 @@ from .const import (
     HEADER_AUTH_LEGACY,
     ENV_LEGACY_HEADER_SUNSET_AT,
 )
+from .core.contracts_bridge import ProposalIntent, ActionIntent, HabitatModuleCommand
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -728,12 +729,55 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             _LOGGER.debug("Webhook: neuron update received")
 
         elif event_type == EVENT_TYPE_SUGGESTION:
-            # Add-on pushes new suggestion – fire HA event for suggestion panel
-            hass.bus.async_fire(
-                f"{DOMAIN}_suggestion_received",
-                {"suggestion": data},
-            )
-            _LOGGER.debug("Webhook: suggestion push received")
+            # Add-on pushes new suggestion – parse as ProposalIntent for type safety
+            try:
+                proposal = ProposalIntent.from_dict(data)
+                _LOGGER.debug(
+                    "Webhook: suggestion push received (proposal=%s, zone=%s, confidence=%.2f)",
+                    proposal.proposal_id, proposal.zone_id, proposal.confidence,
+                )
+                # Fire HA event with typed proposal
+                hass.bus.async_fire(
+                    f"{DOMAIN}_suggestion_received",
+                    {"proposal": proposal.to_dict(), "raw": data},
+                )
+                # Auto-apply if autonomous + approved
+                if proposal.can_auto_execute():
+                    _LOGGER.info(
+                        "Webhook: auto-executing autonomous proposal %s (%s)",
+                        proposal.proposal_id, proposal.action_type,
+                    )
+                    action = proposal.to_action_intent(approved=True)
+                    cmd = action.to_module_command()
+                    # Execute via HA service call
+                    if cmd.command_mode == "execute":
+                        async def _execute_proposal() -> None:
+                            try:
+                                domain = cmd.payload.get("domain")
+                                service = cmd.payload.get("service")
+                                service_data = cmd.payload.get("service_data", {})
+                                target = cmd.payload.get("target", {})
+                                if domain and service:
+                                    await hass.services.async_call(
+                                        domain, service, service_data, target,
+                                    )
+                                    _LOGGER.info(
+                                        "Webhook: autonomous proposal executed %s.%s",
+                                        domain, service,
+                                    )
+                            except Exception as exc:
+                                _LOGGER.warning(
+                                    "Webhook: autonomous proposal %s failed: %s",
+                                    proposal.proposal_id, exc,
+                                )
+                        hass.async_create_task(_execute_proposal())
+            except Exception as exc:
+                _LOGGER.warning("Webhook: suggestion parse failed: %s", exc)
+                # Fallback: fire raw event
+                hass.bus.async_fire(
+                    f"{DOMAIN}_suggestion_received",
+                    {"suggestion": data},
+                )
 
         elif event_type == EVENT_TYPE_MODULE_DATA:
             # Core pushes smart home module data (licht, helligkeit, heiz, bewegung, praesenz)
