@@ -15,6 +15,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .connection_config import build_core_headers, resolve_core_connection
 from .core_endpoint import build_base_url
+from .config_snapshot_flow import _as_config_validation_error, _notify_flow_validation_error
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -571,7 +572,18 @@ async def async_step_zone_form(
     try:
         await async_set_zones_v2(flow.hass, entry.entry_id, new_list)
     except ValueError as err:
+        validation_err = _as_config_validation_error(
+            f"Zone validation failed for {zid}",
+            err,
+            translation_key="invalid",
+        )
         _LOGGER.debug("Zone validation failed for %s: %s", zid, err)
+        _notify_flow_validation_error(
+            flow.hass,
+            notification_id="copilot_ha_zone_validation_error",
+            title="PilotSuite zone validation failed",
+            err=validation_err,
+        )
         schema = _build_zone_form_schema(
             mode=mode,
             area_ids=area_ids,

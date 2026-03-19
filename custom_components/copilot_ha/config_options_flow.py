@@ -21,7 +21,11 @@ from .config_schema_builders import (
     build_zone_health_schema,
     build_anomaly_habitus_schema,
 )
-from .config_snapshot_flow import ConfigSnapshotOptionsFlow
+from .config_snapshot_flow import (
+    ConfigSnapshotOptionsFlow,
+    _as_config_validation_error,
+    _notify_flow_validation_error,
+)
 from .config_zones_flow import async_step_zone_form, async_sync_zone_editor_zone
 from .config_tags_flow import async_step_add_tag, async_step_edit_tag, async_step_delete_tag
 from .const import (
@@ -363,6 +367,17 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
 
                 await async_set_zones_v2_from_raw(self.hass, self._resolve_config_entry_id(), raw)
             except Exception as err:  # noqa: BLE001
+                validation_err = _as_config_validation_error(
+                    "Bulk zone edit failed",
+                    err,
+                    translation_key="invalid_json",
+                )
+                _notify_flow_validation_error(
+                    self.hass,
+                    notification_id="copilot_ha_zone_bulk_edit_error",
+                    title="PilotSuite bulk zone edit failed",
+                    err=validation_err,
+                )
                 return self.async_show_form(
                     step_id="bulk_edit",
                     data_schema=vol.Schema(
@@ -413,6 +428,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
                     description_placeholders={"path": str(path)},
                 )
             except Exception as err:  # noqa: BLE001
+                validation_err = _as_config_validation_error(
+                    "Dashboard generation failed",
+                    err,
+                    translation_key="generation_failed",
+                    translation_placeholders={"error": str(err)},
+                )
+                _notify_flow_validation_error(
+                    self.hass,
+                    notification_id="copilot_ha_dashboard_generation_error",
+                    title="PilotSuite dashboard generation failed",
+                    err=validation_err,
+                )
                 return self.async_show_form(
                     step_id="generate_dashboard",
                     errors={"base": "generation_failed"},
@@ -443,7 +470,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
                     reason="dashboard_published",
                     description_placeholders={"url": url},
                 )
-            except FileNotFoundError:
+            except FileNotFoundError as err:
+                validation_err = _as_config_validation_error(
+                    "No dashboard generated yet",
+                    err,
+                    translation_key="no_dashboard_generated",
+                    translation_placeholders={
+                        "hint": "Generate a dashboard first using 'Generate dashboard YAML'."
+                    },
+                )
+                _notify_flow_validation_error(
+                    self.hass,
+                    notification_id="copilot_ha_dashboard_publish_missing",
+                    title="PilotSuite dashboard publish blocked",
+                    err=validation_err,
+                )
                 return self.async_show_form(
                     step_id="publish_dashboard",
                     errors={"base": "no_dashboard_generated"},
@@ -452,6 +493,18 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
                     },
                 )
             except Exception as err:  # noqa: BLE001
+                validation_err = _as_config_validation_error(
+                    "Dashboard publish failed",
+                    err,
+                    translation_key="publish_failed",
+                    translation_placeholders={"error": str(err)},
+                )
+                _notify_flow_validation_error(
+                    self.hass,
+                    notification_id="copilot_ha_dashboard_publish_error",
+                    title="PilotSuite dashboard publish failed",
+                    err=validation_err,
+                )
                 return self.async_show_form(
                     step_id="publish_dashboard",
                     errors={"base": "publish_failed"},

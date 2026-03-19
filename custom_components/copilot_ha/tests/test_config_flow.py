@@ -854,3 +854,64 @@ class TestConfigSnapshotFlowPathResolve:
             _snapshot_flow.PUBLISH_DIR = old_publish
 
         assert loaded["schema"] == "copilot_ha_config_snapshot"
+
+
+class _FakeSnapshotFlow(_snapshot_flow.ConfigSnapshotOptionsFlow):
+    def __init__(self, entry: _FakeConfigEntry):
+        super().__init__(entry)
+        self.hass = _FakeHass()
+
+    def async_show_form(self, **kwargs):
+        return {"type": "form", **kwargs}
+
+    def async_create_entry(self, **kwargs):
+        return {"type": "create_entry", **kwargs}
+
+
+class TestConfigFlowErrorHandling:
+    def test_config_validation_error_keeps_translation_metadata(self):
+        with patch.object(
+            _snapshot_flow,
+            "ConfigValidationError",
+            side_effect=lambda *args, **kwargs: {"args": args, "kwargs": kwargs},
+        ) as ctor:
+            err = _snapshot_flow._as_config_validation_error(
+                "Snapshot import failed",
+                ValueError("boom"),
+                translation_key="invalid",
+                translation_placeholders={"error": "boom"},
+            )
+
+        ctor.assert_called_once()
+        assert err["kwargs"]["translation_domain"] == "copilot_ha"
+        assert err["kwargs"]["translation_key"] == "invalid"
+        assert err["kwargs"]["translation_placeholders"] == {"error": "boom"}
+
+    def test_notify_flow_validation_error_creates_notification(self):
+        hass = _FakeHass()
+        with patch.object(_snapshot_flow.persistent_notification, "async_create") as notify:
+            _snapshot_flow._notify_flow_validation_error(
+                hass,
+                notification_id="copilot_ha_test_error",
+                title="PilotSuite test error",
+                err=ValueError("boom"),
+            )
+
+        notify.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_import_snapshot_confirm_returns_form_on_apply_failure(self):
+        flow = _FakeSnapshotFlow(_FakeConfigEntry())
+        flow._snapshot = {"habitus_zones": [{"id": "living", "name": "Living"}]}
+
+        with patch.object(
+            _snapshot_flow,
+            "async_apply_config_snapshot",
+            new=AsyncMock(side_effect=ValueError("broken snapshot")),
+        ), patch.object(_snapshot_flow.persistent_notification, "async_create") as notify:
+            result = await flow.async_step_import_snapshot_confirm({"confirm": True})
+
+        assert result["type"] == "form"
+        assert result["step_id"] == "import_snapshot_confirm"
+        assert result["errors"] == {"base": "invalid"}
+        notify.assert_called_once()

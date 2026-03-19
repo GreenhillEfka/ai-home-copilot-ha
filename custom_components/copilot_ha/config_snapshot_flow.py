@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.components import persistent_notification
 from homeassistant.data_entry_flow import FlowResult
+from homeassistant.exceptions import ConfigValidationError
 
+from .const import DOMAIN
 from .config_snapshot import (
     EXPORT_DIR,
     PUBLISH_DIR,
@@ -44,6 +48,38 @@ STEP_CONFIRM = vol.Schema(
         vol.Required("confirm", default=False): bool,
     }
 )
+
+_LOGGER = logging.getLogger(__name__)
+
+
+def _as_config_validation_error(
+    message: str,
+    err: Exception,
+    *,
+    translation_key: str,
+    translation_placeholders: dict[str, str] | None = None,
+) -> ConfigValidationError:
+    return ConfigValidationError(
+        message,
+        [err],
+        translation_domain=DOMAIN,
+        translation_key=translation_key,
+        translation_placeholders=translation_placeholders,
+    )
+
+
+
+def _notify_flow_validation_error(hass, *, notification_id: str, title: str, err: Exception) -> None:
+    try:
+        persistent_notification.async_create(
+            hass,
+            title=title,
+            message=str(err),
+            notification_id=notification_id,
+        )
+    except Exception:  # noqa: BLE001
+        _LOGGER.debug("Failed to create persistent notification for flow error", exc_info=True)
+
 
 
 def _resolve_snapshot_import_path(path: str) -> str:
@@ -161,7 +197,26 @@ class ConfigSnapshotOptionsFlow:
                     errors={"base": "confirm_required"},
                 )
 
-            await async_apply_config_snapshot(self.hass, self._resolve_config_entry(), snap)
+            try:
+                await async_apply_config_snapshot(self.hass, self._resolve_config_entry(), snap)
+            except Exception as err:  # noqa: BLE001
+                validation_err = _as_config_validation_error(
+                    "Snapshot import failed",
+                    err,
+                    translation_key="invalid",
+                )
+                _notify_flow_validation_error(
+                    self.hass,
+                    notification_id="copilot_ha_snapshot_import_error",
+                    title="PilotSuite snapshot import failed",
+                    err=validation_err,
+                )
+                return self.async_show_form(
+                    step_id="import_snapshot_confirm",
+                    data_schema=STEP_CONFIRM,
+                    errors={"base": "invalid"},
+                )
+
             return self.async_create_entry(title="", data={"result": "imported"})
 
         # Minimal preview text
