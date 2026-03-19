@@ -659,6 +659,17 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 details={"field": "data", "expected": "object"},
             )
 
+        # Contract drift guard: validate required fields for suggestion events
+        if raw_event_type in (EVENT_TYPE_SUGGESTION, "suggestion_new"):
+            required_fields = ("module_id", "action_type", "title")
+            missing = [f for f in required_fields if f not in data]
+            if missing:
+                _LOGGER.warning("Webhook: suggestion contract drift detected - missing: %s", missing)
+                return _error_response(
+                    code="invalid_payload",
+                    details={"missing_fields": missing, "expected": "ProposalIntent contract"},
+                )
+
         # Typed envelope: {"type": "mood|neuron|suggestion|status", "data": {...}}
         allow_legacy_aliases = _legacy_aliases_enabled()
         raw_event_type = payload.get("type")
