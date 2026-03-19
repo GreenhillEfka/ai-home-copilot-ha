@@ -568,6 +568,5 @@ class HabitusDashboard {
 let dashboard;
 document.addEventListener('DOMContentLoaded', () => {
   dashboard = new HabitusDashboard();
+  window.dashboard = dashboard;
 });
-
-window.dashboard = dashboard;
