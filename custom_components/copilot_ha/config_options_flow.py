@@ -204,17 +204,25 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     # ── Habitus zones ────────────────────────────────────────────────
 
     async def async_step_habitus_zones(self, user_input: dict | None = None) -> FlowResult:
-        return self.async_show_menu(
-            step_id="habitus_zones",
-            menu_options=[
-                "create_zone",
+        """Show zone menu with options tailored to whether zones already exist."""
+        from .habitus_zones_store_v2 import async_get_zones_v2
+
+        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        has_zones = bool(zones)
+
+        menu_options = ["create_zone"]
+        if has_zones:
+            menu_options.extend([
                 "edit_zone",
                 "delete_zone",
                 "generate_dashboard",
                 "publish_dashboard",
-                "bulk_edit",
-                "back",
-            ],
+            ])
+        menu_options.extend(["bulk_edit", "back"])
+
+        return self.async_show_menu(
+            step_id="habitus_zones",
+            menu_options=menu_options,
         )
 
     async def async_step_back(self, user_input: dict | None = None) -> FlowResult:

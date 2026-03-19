@@ -630,10 +630,37 @@ class TestOptionsFlowUnit:
         flow.async_show_menu.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_habitus_zones_menu(self):
+    async def test_habitus_zones_menu_without_existing_zones(self):
         flow = self._build_options_flow()
-        await flow.async_step_habitus_zones()
+        with patch(
+            "custom_components.copilot_ha.habitus_zones_store_v2.async_get_zones_v2",
+            new=AsyncMock(return_value=[]),
+        ):
+            await flow.async_step_habitus_zones()
+
         flow.async_show_menu.assert_called_once()
+        opts = flow.async_show_menu.call_args.kwargs.get(
+            "menu_options", flow.async_show_menu.call_args[1].get("menu_options", [])
+        )
+        assert opts == ["create_zone", "bulk_edit", "back"]
+
+    @pytest.mark.asyncio
+    async def test_habitus_zones_menu_with_existing_zones(self):
+        flow = self._build_options_flow()
+        with patch(
+            "custom_components.copilot_ha.habitus_zones_store_v2.async_get_zones_v2",
+            new=AsyncMock(return_value=[MagicMock(zone_id="zone:test", name="Test")]),
+        ):
+            await flow.async_step_habitus_zones()
+
+        flow.async_show_menu.assert_called_once()
+        opts = flow.async_show_menu.call_args.kwargs.get(
+            "menu_options", flow.async_show_menu.call_args[1].get("menu_options", [])
+        )
+        assert "create_zone" in opts
+        assert "edit_zone" in opts
+        assert "delete_zone" in opts
+        assert "publish_dashboard" in opts
 
     def test_effective_config_merges(self):
         flow = self._build_options_flow(
