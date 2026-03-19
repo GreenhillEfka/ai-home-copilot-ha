@@ -742,13 +742,17 @@ async def async_set_zones_v2_from_raw(
     hass: HomeAssistant, 
     entry_id: str, 
     raw: Any,
-    validate: bool = True
+    validate: bool = True,
+    unmatched_fallback: bool = False,
 ) -> list[HabitusZoneV2]:
     """Validate + normalize and persist zones v2.
     
     Accepts:
     - list[dict]
     - dict with key "zones": list[dict]
+    
+    Args:
+        unmatched_fallback: If True, route unmatched entities to zone:ungeordnet
     """
     if isinstance(raw, dict) and isinstance(raw.get("zones"), list):
         raw = raw.get("zones")
@@ -781,6 +785,20 @@ async def async_set_zones_v2_from_raw(
     if validate:
         for z in uniq:
             _validate_zone_v2(hass, z)
+
+    # Unmatched fallback: ensure zone:ungeordnet exists if flagged
+    if unmatched_fallback:
+        has_fallback = any(z.zone_id == "zone:ungeordnet" for z in uniq)
+        if not has_fallback:
+            fallback_zone = HabitusZoneV2(
+                zone_id="zone:ungeordnet",
+                name="Ungeordnet",
+                zone_type="fallback",
+                entity_ids=(),
+                entities=None,
+                metadata={"unmatched_fallback": True},
+            )
+            uniq.append(fallback_zone)
 
     await async_set_zones_v2(hass, entry_id, uniq, validate=False)
     return uniq

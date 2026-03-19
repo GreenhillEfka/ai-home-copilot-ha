@@ -517,6 +517,21 @@ def aggregate_areas_to_habitus_zones(
             "aggregated": len(area_ids) > 1,
         })
 
+    # Unmatched areas → explicit fallback zone:ungeordnet
+    if unmatched:
+        fallback_zone = {
+            "zone_id": "zone:ungeordnet",
+            "name_de": "Ungeordnet",
+            "zone_type": "fallback",
+            "icon": "mdi:help-circle",
+            "area_ids": [a["area_id"] for a in unmatched],
+            "area_names": [a["name"] for a in unmatched],
+            "confidence": 0.0,
+            "aggregated": len(unmatched) > 1,
+            "unmatched_fallback": True,
+        }
+        result.append(fallback_zone)
+
     # Unmatched areas become standalone zones
     for area in unmatched:
         area_name = area.get("name", "Unbekannt")

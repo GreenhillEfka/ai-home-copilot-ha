@@ -133,6 +133,7 @@ async def async_apply_config_snapshot(
 
     - Habitus zones are written to our store.
     - Options are updated (secrets remain unchanged if redacted).
+    - Unmatched entities route to zone:ungeordnet (fallback).
     - Finally reload config entry.
     """
 
@@ -143,7 +144,9 @@ async def async_apply_config_snapshot(
     if not isinstance(zones, list):
         raise ValueError("Snapshot habitus_zones must be a list")
 
-    await async_set_zones_v2_from_raw(hass, entry.entry_id, zones)
+    # Delta-write pattern: preserve existing zone state, merge snapshot zones
+    # Unmatched entities from snapshot route to zone:ungeordnet
+    await async_set_zones_v2_from_raw(hass, entry.entry_id, zones, unmatched_fallback=True)
 
     snap_opts = snapshot.get("options")
     if isinstance(snap_opts, dict):
