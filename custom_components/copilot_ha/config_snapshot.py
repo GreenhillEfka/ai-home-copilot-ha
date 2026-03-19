@@ -143,7 +143,7 @@ async def async_apply_config_snapshot(
     if not isinstance(zones, list):
         raise ValueError("Snapshot habitus_zones must be a list")
 
-    await async_set_zones_from_raw(hass, entry.entry_id, zones)
+    await async_set_zones_v2_from_raw(hass, entry.entry_id, zones)
 
     snap_opts = snapshot.get("options")
     if isinstance(snap_opts, dict):

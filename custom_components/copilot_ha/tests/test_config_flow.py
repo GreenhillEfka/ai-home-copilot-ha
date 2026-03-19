@@ -795,7 +795,33 @@ class TestManifest:
 # ═══════════════════════════════════════════════════════════════════════════
 # 11. config_snapshot_flow import path resolution
 # ═══════════════════════════════════════════════════════════════════════════
+from custom_components.copilot_ha import config_snapshot as _snapshot
 from custom_components.copilot_ha import config_snapshot_flow as _snapshot_flow
+
+
+class TestConfigSnapshotApply:
+    @pytest.mark.asyncio
+    async def test_apply_snapshot_writes_zones_v2_and_preserves_redacted_secrets(self):
+        hass = MagicMock()
+        hass.config_entries = MagicMock()
+        hass.config_entries.async_update_entry = MagicMock()
+        hass.config_entries.async_reload = AsyncMock()
+        entry = _FakeConfigEntry(options={"token": "keep-me", "host": "old"})
+
+        snapshot = {
+            "habitus_zones": [{"id": "living", "name": "Living", "entity_ids": ["light.a"]}],
+            "options": {"token": "<redacted>", "host": "new"},
+        }
+
+        with patch.object(_snapshot, "async_set_zones_v2_from_raw", new=AsyncMock()) as set_zones:
+            await _snapshot.async_apply_config_snapshot(hass, entry, snapshot)
+
+        set_zones.assert_awaited_once_with(hass, entry.entry_id, snapshot["habitus_zones"])
+        hass.config_entries.async_update_entry.assert_called_once_with(
+            entry,
+            options={"token": "keep-me", "host": "new"},
+        )
+        hass.config_entries.async_reload.assert_awaited_once_with(entry.entry_id)
 
 
 class TestConfigSnapshotFlowPathResolve:
