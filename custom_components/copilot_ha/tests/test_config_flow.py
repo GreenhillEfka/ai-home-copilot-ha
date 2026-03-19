@@ -790,3 +790,41 @@ class TestManifest:
     def test_iot_class_local(self):
         m = self._load_manifest()
         assert m.get("iot_class") == "local_push"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# 11. config_snapshot_flow import path resolution
+# ═══════════════════════════════════════════════════════════════════════════
+from custom_components.copilot_ha import config_snapshot_flow as _snapshot_flow
+
+
+class TestConfigSnapshotFlowPathResolve:
+    def test_maps_local_url_to_www_path(self):
+        resolved = _snapshot_flow._resolve_snapshot_import_path("/local/copilot_ha/snapshot.json")
+        assert resolved == "/config/www/copilot_ha/snapshot.json"
+
+    def test_relative_path_defaults_to_export_dir_when_missing(self, monkeypatch):
+        monkeypatch.setattr(_snapshot_flow.os.path, "exists", lambda p: False)
+        resolved = _snapshot_flow._resolve_snapshot_import_path("snapshot.json")
+        assert resolved == f"{_snapshot_flow.EXPORT_DIR}/snapshot.json"
+
+    def test_load_json_path_resolves_relative_export_path(self, tmp_path):
+        export_dir = tmp_path / "exports"
+        publish_dir = tmp_path / "www"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        publish_dir.mkdir(parents=True, exist_ok=True)
+
+        snapshot_file = export_dir / "snapshot.json"
+        snapshot_file.write_text(json.dumps({"schema": "copilot_ha_config_snapshot"}), encoding="utf-8")
+
+        old_export = _snapshot_flow.EXPORT_DIR
+        old_publish = _snapshot_flow.PUBLISH_DIR
+        try:
+            _snapshot_flow.EXPORT_DIR = str(export_dir)
+            _snapshot_flow.PUBLISH_DIR = str(publish_dir)
+            loaded = _snapshot_flow._load_json_path("snapshot.json")
+        finally:
+            _snapshot_flow.EXPORT_DIR = old_export
+            _snapshot_flow.PUBLISH_DIR = old_publish
+
+        assert loaded["schema"] == "copilot_ha_config_snapshot"

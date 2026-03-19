@@ -11,6 +11,7 @@ from homeassistant.data_entry_flow import FlowResult
 
 from .config_snapshot import (
     EXPORT_DIR,
+    PUBLISH_DIR,
     async_apply_config_snapshot,
 )
 
@@ -45,8 +46,33 @@ STEP_CONFIRM = vol.Schema(
 )
 
 
+def _resolve_snapshot_import_path(path: str) -> str:
+    """Resolve user-entered snapshot paths for import."""
+    candidate = os.path.expandvars(os.path.expanduser(str(path).strip()))
+
+    if candidate.startswith("/local/"):
+        relative = candidate[len("/local/"):].lstrip("/")
+        candidate = os.path.join("/config/www", relative)
+
+    if os.path.isabs(candidate):
+        return candidate
+
+    fallback_candidates = [
+        os.path.join(EXPORT_DIR, candidate),
+        os.path.join(PUBLISH_DIR, candidate),
+        candidate,
+    ]
+    for resolved in fallback_candidates:
+        if os.path.exists(resolved):
+            return resolved
+
+    return os.path.join(EXPORT_DIR, candidate)
+
+
+
 def _load_json_path(path: str) -> dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as fh:
+    resolved = _resolve_snapshot_import_path(path)
+    with open(resolved, "r", encoding="utf-8") as fh:
         raw = json.load(fh)
     if not isinstance(raw, dict):
         raise ValueError("Snapshot must be a JSON object")
