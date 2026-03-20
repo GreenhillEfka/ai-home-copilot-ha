@@ -7,8 +7,7 @@ Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Date
 ### Testing & Validation Improvements
 
 #### Added
-- **presence_ai_predictive.py**: Neues Predictive Presence Modul fuer AI-gestuetzte Praesenz-Vorhersage
-- **test_services_integration.py**: Integrations-Tests fuer Services (22 Tests)
+- **test_services_integration.py**: Integrations-Tests fuer Services
 - **test_zone_flows_integration.py**: Integrations-Tests fuer Zone Flows
 
 #### Fixed

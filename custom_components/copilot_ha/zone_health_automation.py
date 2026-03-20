@@ -23,7 +23,7 @@ import voluptuous as vol
 
 from .zone_health import ZoneHealthMetrics, TEMP_COMFORT_MIN, TEMP_COMFORT_MAX, HUMIDITY_COMFORT_MIN, HUMIDITY_COMFORT_MAX, CO2_GOOD_MAX, CO2_MODERATE_MAX
 from .zone_health_card import create_health_card_state
-from .habitus_zones_store_v2 import async_get_zones_v2, async_update_zone_state
+from .habitus_zones_store_v2 import async_get_zones_v2
 
 _LOGGER = logging.getLogger(__name__)
 

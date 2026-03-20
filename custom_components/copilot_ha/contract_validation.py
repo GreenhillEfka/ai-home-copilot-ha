@@ -113,17 +113,17 @@ async def async_validate_contracts(workspace_path: Path) -> dict[str, Any]:
     ha_path = workspace_path / "team" / "worktrees" / "pilotsuite-styx-ha-release-prep-v14.7.3" / "custom_components" / "copilot_ha"
     if ha_path.exists():
         try:
-            result = subprocess.run(
+            compile_result = subprocess.run(
                 ["python3", "-m", "py_compile"] + [str(p) for p in ha_path.glob("**/*.py")],
                 capture_output=True,
                 text=True,
                 timeout=60,
                 cwd=str(workspace_path),
             )
-            if result.returncode == 0:
+            if compile_result.returncode == 0:
                 result["runtime"] = {"valid": True, "message": "PASS"}
             else:
-                result["runtime"] = {"valid": False, "message": result.stderr.strip()}
+                result["runtime"] = {"valid": False, "message": compile_result.stderr.strip()}
                 result["success"] = False
         except Exception as err:  # noqa: BLE001
             result["runtime"] = {"valid": True, "message": f"Skipped: {err}"}

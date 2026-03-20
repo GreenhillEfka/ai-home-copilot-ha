@@ -22,7 +22,6 @@ import voluptuous as vol
 from .zone_health_service import async_setup_zone_health_services
 from .presence_module import async_setup_presence_tracking
 from .module_health_registry import async_setup_health_module_registry
-from .contract_validation import async_validate_contracts
 from .zone_health_automation import async_evaluate_zone_health_automations
 from .habitus_zones_store_v2 import async_get_zones_v2
 from .zone_health import async_update_all_zone_health
@@ -208,10 +207,11 @@ async def async_setup_pilotsuite_services(hass: HomeAssistant) -> None:
 async def async_validate_all_contracts(hass: HomeAssistant) -> ServiceResponse:
     """Validate all contracts and return result."""
     from pathlib import Path
-    
+    from . import contract_validation
+
     workspace = Path("/config/clawd")
-    result = await async_validate_contracts(workspace)
-    
+    result = await contract_validation.async_validate_contracts(workspace)
+
     return {
         "success": result["success"],
         "core_openapi": result["core_openapi"],
