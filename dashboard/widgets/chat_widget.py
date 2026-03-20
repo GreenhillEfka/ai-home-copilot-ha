@@ -190,6 +190,9 @@ from plugin_registry import WIDGET_REGISTRY, WidgetPlugin
 WIDGET_REGISTRY.register(WidgetPlugin(
     name='chat',
     blueprint_bp=chat_widget_bp,
+    version='1.0.0',
+    author='PilotSuite',
+    description='Eingebetteter Chat mit WebSocket-Anbindung ans RAG-API',
     socketio_register=register_socketio_events,
     broadcast_fn=broadcast_message,
 ))
