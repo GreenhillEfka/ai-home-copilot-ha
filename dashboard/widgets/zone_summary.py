@@ -418,6 +418,9 @@ from plugin_registry import WIDGET_REGISTRY, WidgetPlugin
 WIDGET_REGISTRY.register(WidgetPlugin(
     name='zone_summary',
     blueprint_bp=zone_summary_bp,
+    version='1.0.0',
+    author='PilotSuite',
+    description='Zonenbasiertes Monitoring mit Live-HA-Daten und Szenen-Steuerung',
     socketio_register=register_socketio_events,
     broadcast_fn=broadcast_updates,
 ))

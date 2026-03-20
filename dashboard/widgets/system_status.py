@@ -240,6 +240,9 @@ from plugin_registry import WIDGET_REGISTRY, WidgetPlugin
 WIDGET_REGISTRY.register(WidgetPlugin(
     name='system_status',
     blueprint_bp=system_status_bp,
+    version='1.0.0',
+    author='PilotSuite',
+    description='PS-066 Widget',
     socketio_register=register_socketio_events,
     broadcast_fn=broadcast_updates,
 ))
