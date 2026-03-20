@@ -137,8 +137,11 @@ class HabitusDashboard {
           <button class="quick-action-btn" onclick="dashboard.refreshZone('${zone.id}')">
             <i class="mdi mdi-refresh"></i> Aktualisieren
           </button>
-          <button class="quick-action-btn" onclick="dashboard.showZoneSettings('${zone.id}')">
-            <i class="mdi mdi-cog"></i> Einstellungen
+          <button class="quick-action-btn primary" onclick="dashboard.createZone('${zone.id}')">
+            <i class="mdi mdi-plus"></i> Zone erstellen
+          </button>
+          <button class="quick-action-btn danger" onclick="dashboard.deleteZone('${zone.id}')">
+            <i class="mdi mdi-delete"></i> Zone löschen
           </button>
         </div>
       </div>
@@ -545,6 +548,76 @@ class HabitusDashboard {
         this.renderZoneCards(zoneId);
       }
     }, 400);
+  }
+
+  createZone(zoneId) {
+    const name = prompt(`Name für neue Zone (${zoneId}):`);
+    if (!name || !name.trim()) return;
+
+    const payload = {
+      zone_id: zoneId,
+      name: name.trim(),
+      icon: 'mdi:room',
+      enabled: true,
+      priority: 10,
+      rooms: [],
+      entities: {},
+    };
+
+    this._setZoneMeta(zoneId, { stale: false, lastError: null });
+    this.renderZoneLoading(zoneId, 'Zone wird erstellt…');
+
+    fetch('/api/v1/dashboard/zone-editor/zones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.json();
+      })
+      .then(() => {
+        // Invalidate cache so next refresh gets fresh data
+        if (this.socket && this.connected) {
+          this.socket.emit('request_zone_data', { zones: [zoneId] });
+        }
+      })
+      .catch((err) => {
+        console.error('[Dashboard] createZone error:', err);
+        this._setZoneMeta(zoneId, { stale: true, lastError: String(err) });
+        this.renderZoneError(zoneId, {
+          message: 'Zone konnte nicht erstellt werden.',
+          detail: String(err),
+        });
+      });
+  }
+
+  deleteZone(zoneId) {
+    if (!confirm(`Zone "${zoneId}" wirklich löschen?`)) return;
+
+    this._setZoneMeta(zoneId, { stale: false, lastError: null });
+    this.renderZoneLoading(zoneId, 'Zone wird gelöscht…');
+
+    fetch(`/api/v1/dashboard/zone-editor/zones/${encodeURIComponent(zoneId)}`, {
+      method: 'DELETE',
+    })
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.json();
+      })
+      .then(() => {
+        // Remove zone data and show empty state
+        delete this.zoneData[zoneId];
+        this.renderZoneEmpty(zoneId, 'Zone wurde gelöscht.');
+      })
+      .catch((err) => {
+        console.error('[Dashboard] deleteZone error:', err);
+        this._setZoneMeta(zoneId, { stale: true, lastError: String(err) });
+        this.renderZoneError(zoneId, {
+          message: 'Zone konnte nicht gelöscht werden.',
+          detail: String(err),
+        });
+      });
   }
 
   showZoneSettings(zoneId) {
