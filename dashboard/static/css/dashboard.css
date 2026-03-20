@@ -127,6 +127,25 @@ body {
     font-weight: 500;
 }
 
+.version-pill {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-weight: 600;
+}
+.sync-ok { color: #22c55e; }
+.sync-warn { color: #f59e0b; }
+
+.version-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+    font-weight: 400;
+}
+
 .header-status {
     display: flex;
     align-items: center;

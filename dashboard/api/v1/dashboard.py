@@ -841,6 +841,44 @@ def get_dashboard_config():
     return jsonify(config)
 
 
+@dashboard_bp.route('/version', methods=['GET'])
+def get_versions():
+    """
+    HA + Core Version Sync fuer Dashboard-Header.
+    HA-Version: lokale manifest.json (schnell, kein HA-API-Call noetig).
+    Core-Version: _core_get /api/v1/info (Fallback auf 'unbekannt' wenn Core offline).
+    """
+    import os as _os
+
+    # HA-Version: aus manifest.json oder VERSION-File
+    ha_version = 'unbekannt'
+    manifest_path = '/config/clawd/team/worktrees/pilotsuite-styx-ha-current/custom_components/copilot_ha/manifest.json'
+    if not _os.path.exists(manifest_path):
+        version_file = '/config/clawd/team/worktrees/pilotsuite-styx-ha-current/VERSION'
+        if _os.path.exists(version_file):
+            with open(version_file) as f:
+                ha_version = f.read().strip()
+    else:
+        import json as _json
+        with open(manifest_path) as f:
+            data = _json.load(f)
+            ha_version = data.get('version', ha_version)
+
+    # Core-Version: API-Call
+    core_version = 'unbekannt'
+    core_info = _core_get('/api/v1/info')
+    if core_info:
+        core_version = core_info.get('version', core_info.get('core_version', 'unbekannt'))
+        if isinstance(core_version, dict):
+            core_version = core_version.get('version', 'unbekannt')
+
+    return jsonify({
+        'ha': ha_version,
+        'core': core_version,
+        'sync_status': 'ok' if core_version != 'unbekannt' else 'core_offline',
+    })
+
+
 @dashboard_bp.route('/zones', methods=['GET'])
 def get_zones():
     """Alle Habituszonen mit Live-Daten, Playlists, Todos, Notifications."""

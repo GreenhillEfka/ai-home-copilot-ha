@@ -42,6 +42,7 @@ class HabitusDashboard {
 
   init() {
     console.log('[Dashboard] init');
+    this.loadVersions();
     this.setupTheme();
     this.renderTabs();
     this.renderTabContent();
@@ -63,6 +64,24 @@ class HabitusDashboard {
         this.loadZoneDataDemo();
       }
     }, 3000);
+  }
+
+  loadVersions() {
+    fetch('/api/v1/dashboard/version')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        const haEl = document.getElementById('ha-version');
+        const coreEl = document.getElementById('core-version');
+        const syncEl = document.getElementById('version-sync-status');
+        if (haEl) haEl.textContent = 'HA ' + (data.ha || '?');
+        if (coreEl) coreEl.textContent = 'Core ' + (data.core || '?');
+        if (syncEl) {
+          syncEl.textContent = data.sync_status === 'ok' ? '●' : '⚠';
+          syncEl.className = data.sync_status === 'ok' ? 'sync-ok' : 'sync-warn';
+        }
+      })
+      .catch(() => {});
   }
 
   setupTheme() {
