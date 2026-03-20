@@ -2,6 +2,26 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.7.4] - 2026-03-20
+
+### Testing & Validation Improvements
+
+#### Added
+- **presence_ai_predictive.py**: Neues Predictive Presence Modul fuer AI-gestuetzte Praesenz-Vorhersage
+- **test_services_integration.py**: Integrations-Tests fuer Services (22 Tests)
+- **test_zone_flows_integration.py**: Integrations-Tests fuer Zone Flows
+
+#### Fixed
+- **contract_validation.py**: Variable Rename (result → compile_result) zur Vermeidung von Shadowing
+- **zone_health_automation.py**: Ungenutzter Import async_update_zone_state entfernt
+- **PS-171**: Unmatched fallback + delta-write pattern fuer zuverlaessige Entity-Zuordnung
+- **PS-136**: Fallback zu zone:ungeordnet fuer unmatchbare Entities
+
+### Compatibility
+- HA v14.7.4 <-> Core v14.7.4 (Paired Release)
+
+---
+
 ## [14.7.3] - 2026-03-17
 
 ### Module-per-Zone Schema-Driven Entities
