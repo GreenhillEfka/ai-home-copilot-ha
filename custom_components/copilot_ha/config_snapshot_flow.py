@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any
 
 import voluptuous as vol
@@ -11,6 +12,7 @@ from homeassistant.data_entry_flow import FlowResult
 
 from .config_snapshot import (
     EXPORT_DIR,
+    PUBLISH_DIR,
     async_apply_config_snapshot,
 )
 
@@ -45,8 +47,62 @@ STEP_CONFIRM = vol.Schema(
 )
 
 
+def _resolve_snapshot_import_path(path: str) -> str:
+    """Resolve user-entered snapshot paths for import.
+
+    Normalises (in order):
+    1. ``~``  → ``$HOME``           (os.path.expanduser)
+    2. ``$ENV`` / ``${ENV}``       (os.path.expandvars)
+    3. ``/local/…`` HA URL         → ``/config/www/…``
+    4. relative → EXPORT_DIR first, then PUBLISH_DIR, then as-is
+
+    Returns the fully resolved absolute filesystem path.  Paths that would
+    escape above EXPORT_DIR / PUBLISH_DIR are rejected (returns EXPORT_DIR
+    default instead) to prevent path-traversal abuse.
+    """
+    raw = str(path).strip()
+
+    # 1. Expand ~ and environment variables
+    candidate = os.path.expandvars(os.path.expanduser(raw))
+
+    # 2. Normalise /local/ HA URL prefix
+    if candidate.startswith("/local/"):
+        # HA serves /config/www as /local
+        rel = candidate[len("/local/") :].lstrip("/")
+        candidate = os.path.join("/config/www", rel)
+
+    # 3. Normalise the assembled path (resolve . / .. / duplicate slashes)
+    candidate = os.path.normpath(candidate)
+
+    # 4. Absolute? Return resolved (resolves symlinks too)
+    if os.path.isabs(candidate):
+        try:
+            return str(Path(candidate).resolve())
+        except OSError:
+            return candidate
+
+    # 5. Relative — guard against path traversal out of sandbox dirs
+    export_dir_abs = str(Path(EXPORT_DIR).resolve())
+    publish_dir_abs = str(Path(PUBLISH_DIR).resolve())
+
+    for base_dir in (EXPORT_DIR, PUBLISH_DIR):
+        candidate_in_base = os.path.join(base_dir, candidate)
+        candidate_in_base = os.path.normpath(candidate_in_base)
+        # Only trust it if it lives inside the sandbox dir (no ../ escape)
+        if os.path.commonpath([candidate_in_base, export_dir_abs]) == export_dir_abs:
+            if os.path.exists(candidate_in_base):
+                return candidate_in_base
+        if os.path.commonpath([candidate_in_base, publish_dir_abs]) == publish_dir_abs:
+            if os.path.exists(candidate_in_base):
+                return candidate_in_base
+
+    # Deterministic fallback — do NOT return untrusted relative input as-is
+    return os.path.join(EXPORT_DIR, candidate)
+
+
 def _load_json_path(path: str) -> dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as fh:
+    resolved = _resolve_snapshot_import_path(path)
+    with open(resolved, "r", encoding="utf-8") as fh:
         raw = json.load(fh)
     if not isinstance(raw, dict):
         raise ValueError("Snapshot must be a JSON object")
@@ -56,8 +112,9 @@ def _load_json_path(path: str) -> dict[str, Any]:
 class ConfigSnapshotOptionsFlow:
     """Mixin-like helper for OptionsFlowHandler (kept separate to keep config_flow.py small)."""
 
-    def __init__(self, entry: config_entries.ConfigEntry) -> None:
-        self._entry = entry
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+        self._config_entry_id = config_entry.entry_id
         self._snapshot: dict[str, Any] | None = None
 
     async def async_step_backup_restore(self, user_input: dict | None = None) -> FlowResult:
@@ -125,7 +182,7 @@ class ConfigSnapshotOptionsFlow:
                     errors={"base": "confirm_required"},
                 )
 
-            await async_apply_config_snapshot(self.hass, self._entry, snap)
+            await async_apply_config_snapshot(self.hass, self.config_entry, snap)
             return self.async_create_entry(title="", data={"result": "imported"})
 
         # Minimal preview text

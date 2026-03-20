@@ -129,10 +129,11 @@ async def async_apply_config_snapshot(
     entry: ConfigEntry,
     snapshot: dict[str, Any],
 ) -> None:
-    """Apply snapshot to HA storage/options (no silent actions beyond config storage).
+    """Apply snapshot to HA storage/options using delta-write pattern.
 
     - Habitus zones are written to our store.
     - Options are updated (secrets remain unchanged if redacted).
+    - Only writes deltas, not full overwrites.
     - Finally reload config entry.
     """
 
@@ -143,13 +144,26 @@ async def async_apply_config_snapshot(
     if not isinstance(zones, list):
         raise ValueError("Snapshot habitus_zones must be a list")
 
-    await async_set_zones_from_raw(hass, entry.entry_id, zones)
+    await async_set_zones_v2_from_raw(hass, entry.entry_id, zones)
 
     snap_opts = snapshot.get("options")
     if isinstance(snap_opts, dict):
         # Preserve current secrets when snapshot has redacted values.
         merged = _strip_redacted(dict(snap_opts), keep_existing=dict(entry.options))
-        hass.config_entries.async_update_entry(entry, options=merged)
+        
+        # Only update if there are actual changes (delta-write)
+        if merged != dict(entry.options):
+            hass.config_entries.async_update_entry(entry, options=merged)
 
     # entry.data is treated as setup-time config; we generally do not overwrite it.
+    # But if there are changes, only write the delta
+    snap_data = snapshot.get("data")
+    if isinstance(snap_data, dict):
+        # Preserve current secrets when snapshot has redacted values.
+        merged_data = _strip_redacted(dict(snap_data), keep_existing=dict(entry.data))
+        
+        # Only update if there are actual changes (delta-write)
+        if merged_data != dict(entry.data):
+            hass.config_entries.async_update_entry(entry, data=merged_data)
+
     await hass.config_entries.async_reload(entry.entry_id)

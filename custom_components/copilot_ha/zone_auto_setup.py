@@ -567,6 +567,18 @@ async def async_auto_create_habitus_zones(
         _LOGGER.info("No HA areas found, skipping zone auto-setup")
         return 0
 
+    # PS-178: Load explicit area→zone mapping registry
+    area_zone_config = load_area_zone_map()
+    valid, errors = validate_mapping(area_zone_config)
+    if not valid:
+        _LOGGER.warning("[PS-178] Invalid area zone map: %s", ", ".join(errors))
+    
+    _LOGGER.info(
+        "[PS-178] Area zone map loaded: %d mappings, fallback=%s",
+        len(area_zone_config.get("mappings", [])),
+        get_unmatched_fallback(area_zone_config),
+    )
+
     # Smart aggregation: group areas into logical zones
     aggregated = aggregate_areas_to_habitus_zones(areas)
     _LOGGER.info(

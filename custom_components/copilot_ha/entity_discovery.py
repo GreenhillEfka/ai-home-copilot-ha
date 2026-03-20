@@ -11,6 +11,8 @@ from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
+UNGEORDNET_ZONE_ID = "ungeordnet"
+
 # Known media player domains with location hints
 MEDIA_DEVICE_MAPPINGS = {
     "sonos": {
@@ -96,7 +98,7 @@ async def discover_media_entities(hass: HomeAssistant) -> dict[str, list[dict]]:
             continue
         
         # Infer zone
-        zone = infer_zone_from_entity(entity_id, state) or "unassigned"
+        zone = infer_zone_from_entity(entity_id, state) or UNGEORDNET_ZONE_ID
         
         # Determine device type
         device_type = "unknown"
@@ -159,7 +161,7 @@ async def discover_entities_for_zones(hass: HomeAssistant) -> dict[str, list[dic
     for state in light_states:
         if state.state == "unavailable":
             continue
-        zone = infer_zone_from_entity(state.entity_id, state) or "unassigned"
+        zone = infer_zone_from_entity(state.entity_id, state) or UNGEORDNET_ZONE_ID
         entity_info = {
             "entity_id": state.entity_id,
             "name": state.attributes.get("friendly_name", state.entity_id),
@@ -179,7 +181,7 @@ async def discover_entities_for_zones(hass: HomeAssistant) -> dict[str, list[dic
         attrs = sensor.attributes if hasattr(sensor, "attributes") else {}
         device_class = attrs.get("device_class", "")
         if device_class in sensor_types or any(t in sensor.entity_id for t in sensor_types):
-            zone = infer_zone_from_entity(sensor.entity_id, sensor) or "unassigned"
+            zone = infer_zone_from_entity(sensor.entity_id, sensor) or UNGEORDNET_ZONE_ID
             entity_info = {
                 "entity_id": sensor.entity_id,
                 "name": attrs.get("friendly_name", sensor.entity_id),
