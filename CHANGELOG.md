@@ -2,6 +2,30 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.7.6] - 2026-03-20
+
+### HA Validation & Quality
+
+#### Added
+- **Schema-Validation-Gate**: `validateEditorSchema()` in `dashboard/templates/index.html` — Browser-Gate fuer Zone-Editor-Saves, ConfigValidationError bei Schema-Drift
+- **Dashboard Save-Handler**: `#ez-save` und `#cz-submit` Gate-Checks vor API-Call, 7/7 Testcases passen
+
+#### Fixed
+- **HA 2024.4+ Stub**: `_ConfigFlow._get_reconfigure_entry()` in `conftest.py` — ConfigFlow-Tests scheitern nicht mehr am fehlenden Stub
+- **G1-Fix**: `zone_auto_setup.py` — explizite `area_zone_map.json` als Primary-Source VOR Keyword-Match
+
+### HA UI Cards
+
+#### Added
+- **card-form-helper.ts**: `buildHaFormSchema()`, `validateCardConfig()`, `assertConfig()`, `CardFormHelper` Window-Adapter
+- **editor-schema-validation.ts**: `ConfigValidationError`, `validateEditorSchema()`, `buildConfigValidator<T>()`, `apiSaveWithValidation()`
+- **styx-zone-creator-card.ts**: `static async getConfigForm()`, 7 Module (LIGHT/AUDIO/CLIMATE/COVER/ENERGY/SCENE/SECURITY), grid-layout, context-filter, window.customCards Registration
+
+### Zone Management
+
+#### Added
+- **Zone-Taxonomy-Doc**: `pilotsuite_ops/docs/ZONE_TAXONOMY.md` — 10 Habitus-Zielen, Keyword-Mapping, N:1-Aggregationen, Modul-Per-Zone-Tabelle
+
 ## [14.7.5] - 2026-03-20
 
 ### HA ConfigFlow Modernisierung
