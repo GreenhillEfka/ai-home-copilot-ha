@@ -12,7 +12,7 @@ from .entity import CopilotBaseEntity
 class SystemHealthEntityCountSensor(CopilotBaseEntity, SensorEntity):
     _attr_has_entity_name = False
     _attr_name = "PilotSuite entities (total)"
-    _attr_unique_id = "copilot_ha_systemhealth_entities_total"
+    _attr_unique_id = "copilot_ha_system_health_entities_total"
     _attr_icon = "mdi:counter"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -24,7 +24,7 @@ class SystemHealthEntityCountSensor(CopilotBaseEntity, SensorEntity):
 class SystemHealthSqliteDbSizeSensor(CopilotBaseEntity, SensorEntity):
     _attr_has_entity_name = False
     _attr_name = "PilotSuite recorder db size (sqlite)"
-    _attr_unique_id = "copilot_ha_systemhealth_sqlite_db_size"
+    _attr_unique_id = "copilot_ha_system_health_sqlite_db_size"
     _attr_icon = "mdi:database"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_native_unit_of_measurement = UnitOfInformation.BYTES
