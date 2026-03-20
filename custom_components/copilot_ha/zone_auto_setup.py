@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import unicodedata
-import re
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -84,46 +83,35 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "icon": "mdi:bed",
     },
     {
-        "zone_id": "kinderzimmer",
-        "name_de": "Kinderzimmer",
+        "zone_id": "zimmer_mira",
+        "name_de": "Zimmer Mira",
         "keywords": [
-            "kind", "kinderzimmer", "kinder", "nursery",
-            "spielzimmer", "jugend",
-            "zimmer paul", "zimmer pauli", "zimmer emma",
-            "zimmer lena", "zimmer max", "zimmer anna",
+            "mira", "zimmer mira", "miras zimmer", "kinderzimmer mira",
         ],
         "zone_type": "room",
-        "icon": "mdi:baby-face-outline",
+        "icon": "mdi:bed-single-outline",
     },
     {
-        "zone_id": "terrassenbereich",
-        "name_de": "Terrassenbereich",
+        "zone_id": "zimmer_paul",
+        "name_de": "Zimmer Paul",
         "keywords": [
-            "terrass", "balkon", "veranda", "patio", "loggia",
-            "wintergarten",
+            "paul", "zimmer paul", "zimmer pauli", "pauls zimmer",
+            "kinderzimmer paul",
         ],
-        "zone_type": "outdoor",
-        "icon": "mdi:flower",
+        "zone_type": "room",
+        "icon": "mdi:bed-single-outline",
     },
     {
         "zone_id": "aussenbereich",
         "name_de": "Außenbereich",
         "keywords": [
             "aussen", "außen", "garten", "garage", "carport",
-            "outdoor", "garden", "hof", "parkplatz",
+            "outdoor", "garden", "hof", "parkplatz", "terrasse",
+            "terrass", "balkon", "loggia", "veranda", "patio",
+            "wintergarten",
         ],
         "zone_type": "outdoor",
         "icon": "mdi:tree",
-    },
-    {
-        "zone_id": "kellerbereich",
-        "name_de": "Kellerbereich",
-        "keywords": [
-            "keller", "basement", "wasch", "heizraum", "technik",
-            "hauswirtschaft", "lager", "abstellraum",
-        ],
-        "zone_type": "area",
-        "icon": "mdi:stairs-down",
     },
 ]
 
@@ -517,52 +505,18 @@ def aggregate_areas_to_habitus_zones(
             "aggregated": len(area_ids) > 1,
         })
 
-    # Unmatched areas become standalone zones
-    for area in unmatched:
-        area_name = area.get("name", "Unbekannt")
-        slug = re.sub(
-            r"[^a-z0-9]+", "_",
-            _normalize_text(area_name),
-        ).strip("_") or "zone"
+    # Unmatched areas are collected explicitly in the canonical fallback bucket.
+    if unmatched:
         result.append({
-            "zone_id": f"zone:{slug}",
-            "name_de": area_name,
+            "zone_id": "zone:ungeordnet",
+            "name_de": "Ungeordnet",
             "zone_type": "room",
-            "icon": area.get("icon") or "mdi:home-outline",
-            "area_ids": [area["area_id"]],
-            "area_names": [area_name],
-            "confidence": 0.5,
-            "aggregated": False,
+            "icon": "mdi:help-circle-outline",
+            "area_ids": [area["area_id"] for area in unmatched],
+            "area_names": [area.get("name", "Unbekannt") for area in unmatched],
+            "confidence": 0.0,
+            "aggregated": len(unmatched) > 1,
         })
-
-    # Deduplicate near-identical standalone zones (e.g., "Zimmer Paul" + "Zimmer Pauli")
-    # Only merge standalone zones (not template-matched ones) with Levenshtein ≤ 2
-    deduped: list[dict[str, Any]] = []
-    for zone in result:
-        merged = False
-        if zone.get("confidence", 1.0) <= 0.5:
-            # Standalone zone — check if it's a near-duplicate of an existing one
-            for existing in deduped:
-                if existing.get("confidence", 1.0) > 0.5:
-                    continue
-                dist = _levenshtein_distance(
-                    _normalize_text(zone["name_de"]),
-                    _normalize_text(existing["name_de"]),
-                )
-                if dist <= 2:
-                    # Merge: keep the shorter name, combine areas + entities
-                    existing["area_ids"].extend(zone["area_ids"])
-                    existing["area_names"].extend(zone["area_names"])
-                    existing["aggregated"] = True
-                    _LOGGER.info(
-                        "Zone dedup: merged '%s' into '%s' (Levenshtein=%d)",
-                        zone["name_de"], existing["name_de"], dist,
-                    )
-                    merged = True
-                    break
-        if not merged:
-            deduped.append(zone)
-    result = deduped
 
     # Sort: aggregated zones first (more important), then by name
     result.sort(key=lambda z: (-len(z["area_ids"]), z["name_de"]))

@@ -23,6 +23,7 @@ from .const import (
     HEADER_AUTH_LEGACY,
     ENV_LEGACY_HEADER_SUNSET_AT,
 )
+from .habitat_adapter import normalize_received_webhook_payload
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -681,6 +682,8 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                     "allowed": sorted(_ALLOWED_EVENT_TYPES),
                 },
             )
+
+        data = normalize_received_webhook_payload(event_type, data)
 
         if event_type == EVENT_TYPE_MOOD:
             # Add-on pushes mood change: merge into coordinator data
