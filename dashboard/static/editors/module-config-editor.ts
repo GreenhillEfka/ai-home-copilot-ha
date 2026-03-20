@@ -1,18 +1,35 @@
 /**
- * PS-173: Module Config Editor with HaFormSchema Grid Pattern.
+ * PS-173 + PS-220: Module Config Editor with HaFormSchema Grid + getConfigForm.
  *
  * Migrates module configuration editor to Home Assistant HaFormSchema grid pattern.
  * Supports:
  * - Grid layout with flatten: true for modules-per-zone
  * - Entity, boolean, text, icon, attribute selectors
  * - Context filters (filter_entity, icon_entity)
+ * - static async getConfigForm() (PS-220) for HA Card Editor integration
  *
  * Usage:
  *   const schema = buildModuleConfigSchema(zoneId, modules);
+ *   // or via getConfigForm() for HA card editor:
+ *   const schema = await MyModuleEditor.getConfigForm();
  */
 
 import { HomeAssistant } from '../types/ha';
 import { HabitusZoneV2 } from '../types/zones';
+import { buildConfigValidator, ConfigValidationError } from '../utils/editor-schema-validation.js';
+
+/** HaFormSchema return type — matches HA's internal schema format */
+export type HaFormSchema = {
+  type: string;
+  name: string;
+  title?: string;
+  description?: string;
+  required?: boolean;
+  default?: unknown;
+  selector?: Record<string, unknown>;
+  context?: Record<string, unknown>;
+  flatten?: boolean;
+};
 
 /**
  * Module configuration schema builder.
@@ -352,20 +369,95 @@ export function getAvailableModulesForZone(zone: HabitusZoneV2): ModuleType[] {
 
 /**
  * Validate module configuration against schema.
+ * Uses ConfigValidationError for consistent error reporting.
  *
  * @param config - Configuration object to validate
  * @param schema - HaFormSchema array
- * @returns true if valid, false otherwise
+ * @throws ConfigValidationError on validation failure
  */
 export function validateModuleConfig(
   config: Record<string, any>,
-  schema: ModuleConfigSchema[],
-): boolean {
-  for (const field of schema) {
-    if (field.required && (config[field.name] === undefined || config[field.name] === null)) {
-      console.warn(`[PS-173] Missing required field: ${field.name}`);
-      return false;
+  schema: HaFormSchema[],
+): void {
+  const requiredFields = schema.filter((field) => field.required);
+
+  for (const field of requiredFields) {
+    if (field.name === 'modules') continue; // grid container, not a real field
+    const value = config[field.name];
+    if (value === undefined || value === null || value === '') {
+      throw new ConfigValidationError(
+        `Missing required field: ${field.name}`,
+        field.name,
+        'non-empty value',
+        String(value),
+        'REQUIRED_FIELD_MISSING',
+      );
     }
   }
-  return true;
+
+  // Optional: validate selector types match
+  for (const field of schema) {
+    if (field.name === 'modules') continue;
+    const value = config[field.name];
+    if (value === undefined || value === null) continue;
+
+    if (field.selector) {
+      const selectorType = Object.keys(field.selector)[0];
+      switch (selectorType) {
+        case 'entity':
+          if (typeof value !== 'string' && !Array.isArray(value)) {
+            throw new ConfigValidationError(
+              `Expected entity ID (string), got ${typeof value}`,
+              field.name,
+              'string | string[]',
+              typeof value,
+              'SCHEMA_DRIFT',
+            );
+          }
+          break;
+        case 'boolean':
+          if (typeof value !== 'boolean') {
+            throw new ConfigValidationError(
+              `Expected boolean, got ${typeof value}`,
+              field.name,
+              'boolean',
+              typeof value,
+              'SCHEMA_DRIFT',
+            );
+          }
+          break;
+        case 'number':
+          if (typeof value !== 'number' && !Array.isArray(value)) {
+            throw new ConfigValidationError(
+              `Expected number, got ${typeof value}`,
+              field.name,
+              'number | number[]',
+              typeof value,
+              'SCHEMA_DRIFT',
+            );
+          }
+          break;
+      }
+    }
+  }
 }
+
+// ── HA Card Editor integration (PS-220) ───────────────────────────────────────
+
+/**
+ * PS-220: ModuleConfigEditor — HA Card Editor integration via getConfigForm().
+ *
+ * Provides HA-PR #16142 `static async getConfigForm()` for the module config editor.
+ * Used by the HA card editor UI to render the configuration form.
+ */
+export class ModuleConfigEditor {
+  /**
+   * HA Card Editor integration point.
+   * Returns HaFormSchema[] for the given zone configuration.
+   */
+  static async getConfigForm(zoneId: string, modules: ModuleType[]): Promise<HaFormSchema[]> {
+    // buildModuleConfigSchema already returns the right shape, just cast
+    return buildModuleConfigSchema(zoneId, modules) as HaFormSchema[];
+  }
+}
+
