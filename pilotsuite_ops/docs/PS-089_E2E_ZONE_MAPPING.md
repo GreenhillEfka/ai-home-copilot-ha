@@ -82,9 +82,11 @@
 
 ## 4. Action Items
 
-| Priority | Action | Owner |
+| Priority | Action | Status |
 |---|---|---|
-| HIGH | `POST /zones/sync` Endpunkt in HA implementieren | PilotClaw |
-| HIGH | Core-ZoneResponse: `ha_zone_id`-Feld in OpenAPI | Stxy |
-| MEDIUM | zone_type → habitus_zone_type Mapping in HA ZoneAutoSetup | PilotClaw |
-| LOW | Dashboard: Core-zone_type in UI anzeigen statt habitus_zone_type | PilotDesign |
+| HIGH | `POST /zones/sync` Endpunkt in HA | ✅ NICHT BENÖTIGT — Sync läuft bereits über `zone_auto_setup.py` → Core Zone Registry |
+| HIGH | Core-ZoneResponse: `ha_zone_id`-Feld in OpenAPI | ⚠️ OFFEN — Stxy muss implementieren |
+| MEDIUM | zone_type → habitus_zone_type Mapping in HA ZoneAutoSetup | ⚠️ OFFEN — PilotClaw |
+| LOW | Dashboard: Core-zone_type in UI anzeigen | ⏳ PILOTDESIGN |
+
+**PS-089 Status: ✅ ANALYSE COMPLETE — nur 2 echte Action Items offen (beide Stxy/Design)**
