@@ -3,7 +3,7 @@
  *
  * Provides:
  * - Grid-based HaFormSchema output (flattened)
- * - Supported selector types: entity / boolean / text / number / icon / attribute
+ * - Supported selector types: entity / boolean / text / number / icon / attribute / array
  * - Context-filter support (filter_entity / icon_entity)
  * - Validation helpers for card config payloads
  */
@@ -109,6 +109,8 @@ export interface BuildHaFormSchemaOptions {
 
 export type RawOrBuiltHaFormSchema = HaFormFieldDescriptor | HaFormFieldSchema;
 
+// ── Schema builder ─────────────────────────────────────────────────────────────
+
 /**
  * Build a Home Assistant HaFormSchema with a leading flattened grid container.
  */
@@ -132,15 +134,17 @@ export function buildHaFormSchema(
       schema.push(field);
       continue;
     }
-
     schema.push(buildHaFormFieldSchema(field));
   }
 
   return schema;
 }
 
+// ── Validation ───────────────────────────────────────────────────────────────
+
 /**
  * Validate a card config object against a schema built with this helper.
+ * Returns true if valid, false otherwise. Does not throw.
  */
 export function validateCardConfig(
   config: Record<string, unknown>,
@@ -187,6 +191,7 @@ export function validateCardConfig(
     }
   }
 
+  // Context filter cross-checks
   for (const field of schemaByName.values()) {
     if (!field.context) {
       continue;
@@ -195,7 +200,9 @@ export function validateCardConfig(
     const { filter_entity: filterEntity, icon_entity: iconEntity } = field.context;
 
     if (filterEntity && !schemaByName.has(filterEntity)) {
-      console.warn(`[PS-198] filter_entity '${filterEntity}' referenced by '${field.name}' does not exist`);
+      console.warn(
+        `[PS-198] filter_entity '${filterEntity}' referenced by '${field.name}' does not exist`,
+      );
       return false;
     }
 
@@ -210,7 +217,9 @@ export function validateCardConfig(
     }
 
     if (iconEntity && !schemaByName.has(iconEntity)) {
-      console.warn(`[PS-198] icon_entity '${iconEntity}' referenced by '${field.name}' does not exist`);
+      console.warn(
+        `[PS-198] icon_entity '${iconEntity}' referenced by '${field.name}' does not exist`,
+      );
       return false;
     }
   }
@@ -226,6 +235,8 @@ export function assertConfig(config: Record<string, unknown>, schema: HaFormSche
     throw new Error('[PS-198] Invalid card config');
   }
 }
+
+// ── Field value helpers ───────────────────────────────────────────────────────
 
 export function isMissingFieldValue(field: HaFormFieldSchema, value: unknown): boolean {
   if (value === undefined || value === null) {
@@ -263,16 +274,16 @@ export function isValidFieldValue(field: HaFormFieldSchema, value: unknown): boo
       if (isMultipleField(field)) {
         return isStringArray(value);
       }
-
       if (allowsStringArray(field)) {
         return typeof value === 'string' || isStringArray(value);
       }
-
       return typeof value === 'string';
   }
 }
 
-export function describeFieldValueType(field: Pick<HaFormFieldSchema, 'type' | 'multiple' | 'default' | 'selector'>): string {
+export function describeFieldValueType(
+  field: Pick<HaFormFieldSchema, 'type' | 'multiple' | 'default' | 'selector'>,
+): string {
   const multiple = isMultipleField(field);
 
   switch (field.type) {
@@ -286,10 +297,7 @@ export function describeFieldValueType(field: Pick<HaFormFieldSchema, 'type' | '
     case 'array':
       return multiple ? 'string[]' : 'string';
     case 'text':
-      if (multiple) {
-        return 'string[]';
-      }
-
+      if (multiple) return 'string[]';
       return allowsStringArray(field) ? 'string | string[]' : 'string';
   }
 }
@@ -299,12 +307,18 @@ export function assertFieldSchemaConsistency(field: HaFormFieldSchema): void {
     throw new Error(`[PS-198] Field '${field.name}' cannot be both boolean and multiple`);
   }
 
-  if (field.default !== undefined && field.default !== null && !isValidFieldValue(field, field.default)) {
+  if (
+    field.default !== undefined &&
+    field.default !== null &&
+    !isValidFieldValue(field, field.default)
+  ) {
     throw new Error(
       `[PS-198] Field '${field.name}' default must be ${describeFieldValueType(field)}`,
     );
   }
 }
+
+// ── Internal helpers ──────────────────────────────────────────────────────────
 
 function buildHaFormFieldSchema(field: HaFormFieldDescriptor): HaFormFieldSchema {
   const builtField: HaFormFieldSchema = {
@@ -337,16 +351,10 @@ function selectorForField(field: HaFormFieldDescriptor): HaFormSelector {
       };
 
     case 'boolean':
-      return {
-        boolean: {},
-      };
+      return { boolean: {} };
 
     case 'text':
-      return {
-        text: {
-          ...(field.multiline ? { multiline: true } : {}),
-        },
-      };
+      return { text: { ...(field.multiline ? { multiline: true } : {}) } };
 
     case 'number':
       return {
@@ -358,44 +366,27 @@ function selectorForField(field: HaFormFieldDescriptor): HaFormSelector {
       };
 
     case 'icon':
-      return {
-        icon: {
-          ...(field.iconPlaceholder ? { placeholder: field.iconPlaceholder } : {}),
-        },
-      };
+      return { icon: { ...(field.iconPlaceholder ? { placeholder: field.iconPlaceholder } : {}) } };
 
     case 'attribute': {
-      const entityId = resolveAttributeEntityId(field.attributeEntityId);
-
-      return {
-        attribute: {
-          ...(entityId ? { entity_id: entityId } : {}),
-        },
-      };
+      const entityId = normalizeNonEmptyString(field.attributeEntityId);
+      return { attribute: { ...(entityId ? { entity_id: entityId } : {}) } };
     }
 
     case 'array':
-      return {
-        array: {
-          ...(field.arrayMax !== undefined ? { max: field.arrayMax } : {}),
-        },
-      };
+      return { array: { ...(field.arrayMax !== undefined ? { max: field.arrayMax } : {}) } };
   }
 }
 
-function resolveAttributeEntityId(attributeEntityId: string | undefined): string | undefined {
-  return normalizeNonEmptyString(attributeEntityId);
-}
-
-function isMultipleField(field: Pick<HaFormFieldSchema, 'multiple' | 'default'> | Pick<HaFormFieldDescriptor, 'multiple' | 'defaultValue'>): boolean {
+function isMultipleField(
+  field: Pick<HaFormFieldSchema, 'multiple' | 'default'> | Pick<HaFormFieldDescriptor, 'multiple' | 'defaultValue'>,
+): boolean {
   if (field.multiple !== undefined) {
     return field.multiple;
   }
-
   if ('defaultValue' in field) {
     return Array.isArray(field.defaultValue);
   }
-
   return Array.isArray((field as Pick<HaFormFieldSchema, 'default'>).default);
 }
 
@@ -422,7 +413,10 @@ function normalizeNonEmptyString(value: unknown): string | undefined {
 }
 
 function isFieldSchema(field: RawOrBuiltHaFormSchema): field is HaFormFieldSchema {
-  return (field as HaFormFieldSchema).type !== undefined && (field as HaFormFieldSchema).selector !== undefined;
+  return (
+    (field as HaFormFieldSchema).type !== undefined &&
+    (field as HaFormFieldSchema).selector !== undefined
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -439,11 +433,6 @@ declare global {
  * Stateless adapter so cards registered via window.customCards[]
  * can call `window.CardFormHelper.buildHaFormSchema(fields)` without
  * importing the module directly.
- *
- * Usage in card class:
- *   static async getConfigForm() {
- *     return window.CardFormHelper!.buildHaFormSchema(MY_FIELDS);
- *   }
  */
 export const CardFormHelper = {
   buildHaFormSchema,

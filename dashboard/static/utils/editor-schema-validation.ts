@@ -1,272 +1,506 @@
 /**
- * PS-200: Card Editor Schema Validation Gate
+ * PS-200: Card-Editor Schema Validation Gate
  *
- * Provides runtime schema validation for card config editors.
- * Detects schema drift between form definitions and config interfaces.
- * Throws ConfigValidationError on mismatch.
+ * Browser-side CI-equivalent gate that validates Card-Config payloads
+ * against their HaFormSchema before any save/submit/API call.
  *
- * Integration:
- * - PS-198 (card-form-helper.ts): HaFormSchema types & validation helpers
- * - PS-199 (styx-zone-creator-card.ts): Example card implementation
+ * - Catches schema drift (extra fields, missing required, wrong types)
+ * - Throws ConfigValidationError with field-level detail
+ * - Integrates with:
+ *   - card-form-helper.ts (PS-198): schema source-of-truth
+ *   - zone-editor-api-client.ts: pre-submit gate for zone saves
+ *   - dashboard.js save handlers: per-button save gate
+ *
+ * Usage (card-level):
+ *   import { buildConfigValidator, ConfigValidationError } from './editor-schema-validation.js';
+ *   const validate = buildConfigValidator(MY_CARD_SCHEMA);
+ *   validate(cfg); // throws ConfigValidationError on drift
+ *
+ * Usage (save handler):
+ *   import { validateEditorSchema } from './editor-schema-validation.js';
+ *   // before API call:
+ *   validateEditorSchema(rawFormData, myCardSchema, 'StyxCard');
+ *
+ * Errors are serializable and safe to surface in UI toasts or HA error panels.
  */
 
-import type {
-  HaFormSchema,
-  HaFormFieldSchema,
-} from './card-form-helper.js';
-import {
-  assertFieldSchemaConsistency,
-  describeFieldValueType,
-  isMissingFieldValue,
-  isValidFieldValue,
-} from './card-form-helper.js';
+import type { HaFormSchema } from './card-form-helper.js';
+import { validateCardConfig } from './card-form-helper.js';
+
+// ── ConfigValidationError ────────────────────────────────────────────────────
 
 /**
- * Thrown when schema drift is detected between form schema and config interface.
+ * Thrown by `buildConfigValidator()` and `validateEditorSchema()` when a
+ * card config violates its HaFormSchema.
+ *
+ * Serializable — safe to JSON.stringify and pass to UI toast/title handlers.
  */
 export class ConfigValidationError extends Error {
   constructor(
-    message: string,
-    public readonly field?: string,
-    public readonly expectedType?: string,
-    public readonly actualType?: string,
+    /**
+     * Human-readable summary of the validation failure.
+     */
+    public readonly message: string,
+    /**
+     * Field name that caused the failure (e.g. 'active_modules', 'zone_name').
+     * 'undefined' for schema-level or cross-field failures.
+     */
+    public readonly field: string | undefined,
+    /**
+     * Expected type description (e.g. 'string', 'boolean', 'ZoneCreatorModuleType[]').
+     */
+    public readonly expected: string,
+    /**
+     * Actual type of the received value (e.g. 'number', 'object').
+     */
+    public readonly received: string,
+    /**
+     * Machine-readable error code for programmatic handling.
+     */
+    public readonly code: ConfigValidationErrorCode = 'SCHEMA_DRIFT',
+    /**
+     * Optional nested sub-errors (e.g. for batch field validation).
+     */
+    public readonly causes: ConfigValidationError[] = [],
   ) {
     super(message);
     this.name = 'ConfigValidationError';
+    // Fix prototype chain for proper `instanceof` checks
+    Object.setPrototypeOf(this, ConfigValidationError.prototype);
+  }
+
+  toJSON(): object {
+    return {
+      name: this.name,
+      message: this.message,
+      field: this.field,
+      expected: this.expected,
+      received: this.received,
+      code: this.code,
+      causes: this.causes.map((c) => c.toJSON()),
+    };
+  }
+
+  /** Short one-line summary for toast/UI. */
+  toShortString(): string {
+    if (this.field) {
+      return `${this.field}: ${this.message}`;
+    }
+    return this.message;
   }
 }
 
+export type ConfigValidationErrorCode =
+  | 'SCHEMA_DRIFT'          // unexpected field or type mismatch
+  | 'REQUIRED_FIELD_MISSING' // required field is null / undefined / empty string
+  | 'INVALID_MODULE_TYPE'   // ZoneCreatorModuleType enum violation
+  | 'CONTEXT_FILTER_BROKEN' // filter_entity / icon_entity points to non-existent field
+  | 'SCHEMA_INTERNAL_ERROR' // schema itself is inconsistent (programming error)
+  | 'UNKNOWN';              // fallback
+
+// ── Field-level error accumulator ────────────────────────────────────────────
+
+interface FieldValidationResult {
+  ok: boolean;
+  error?: ConfigValidationError;
+  /** All field names that failed validation. */
+  failedFields: string[];
+  /** Sub-errors for each failed field. */
+  causes: ConfigValidationError[];
+}
+
 /**
- * Validate that a card config object conforms to its editor schema.
- *
- * Checks:
- * - All required fields are present
- * - Field types match schema definitions
- * - No unexpected fields (strict mode)
- * - Context references are valid
- *
- * @param config - The config object to validate
- * @param schema - The HaFormSchema array from getConfigForm()
- * @param options - Validation options (strict mode, allowed extra fields)
- * @throws ConfigValidationError on schema drift
+ * Validate a single field against its HaFormFieldSchema definition.
+ * Returns an error with full type context.
  */
-export function validateEditorSchema(
+function validateFieldAgainstSchema(
+  fieldName: string,
+  fieldSchema: HaFormSchema & { type: string },
+  rawValue: unknown,
+): FieldValidationResult {
+  const causes: ConfigValidationError[] = [];
+
+  // Skip grid entries
+  if (fieldSchema.type === 'grid') {
+    return { ok: true, failedFields: [], causes: [] };
+  }
+
+  const received = receivedType(rawValue);
+
+  // Required field: empty/null/undefined check
+  if (fieldSchema.required) {
+    if (
+      rawValue === undefined ||
+      rawValue === null ||
+      (typeof rawValue === 'string' && rawValue.trim() === '')
+    ) {
+      return {
+        ok: false,
+        error: new ConfigValidationError(
+          `Erforderliches Feld '${fieldName}' ist leer`,
+          fieldName,
+          describeExpectedType(fieldSchema),
+          received,
+          'REQUIRED_FIELD_MISSING',
+        ),
+        failedFields: [fieldName],
+        causes: [],
+      };
+    }
+  }
+
+  // Type validation
+  if (rawValue !== undefined && rawValue !== null) {
+    if (!fieldValueMatchesType(fieldSchema, rawValue)) {
+      return {
+        ok: false,
+        error: new ConfigValidationError(
+          `Feld '${fieldName}' hat ungültigen Typ`,
+          fieldName,
+          describeExpectedType(fieldSchema),
+          received,
+          'SCHEMA_DRIFT',
+        ),
+        failedFields: [fieldName],
+        causes: [],
+      };
+    }
+  }
+
+  return { ok: true, failedFields: [], causes: [] };
+}
+
+/**
+ * Full config validation against a HaFormSchema[].
+ * Accumulates all errors rather than failing on first.
+ */
+function validateConfigFields(
   config: Record<string, unknown>,
   schema: HaFormSchema[],
-  options: ValidateSchemaOptions = {},
-): void {
-  if (!config || typeof config !== 'object') {
-    throw new ConfigValidationError(
-      'Config must be a non-null object',
-      undefined,
-      'object',
-      typeof config,
-    );
+): FieldValidationResult {
+  const allFailedFields: string[] = [];
+  const allCauses: ConfigValidationError[] = [];
+
+  for (const entry of schema) {
+    if (entry.type === 'grid') continue;
+
+    const fieldSchema = entry as HaFormSchema & { type: string };
+    const rawValue = config[fieldSchema.name];
+
+    const result = validateFieldAgainstSchema(fieldSchema.name, fieldSchema, rawValue);
+
+    if (!result.ok && result.error) {
+      allFailedFields.push(fieldSchema.name);
+      allCauses.push(result.error);
+    }
   }
 
-  const { strict = false, allowedExtraFields = [] } = options;
+  return {
+    ok: allFailedFields.length === 0,
+    failedFields: allFailedFields,
+    causes: allCauses,
+  };
+}
 
-  // Extract form fields (skip grid containers)
-  const formFields = schema.filter(
-    (entry): entry is HaFormFieldSchema => entry.type !== 'grid',
+/**
+ * Check for unexpected keys in config that don't appear in schema.
+ */
+function detectUnexpectedFields(
+  config: Record<string, unknown>,
+  schema: HaFormSchema[],
+): string[] {
+  const schemaFieldNames = new Set(
+    schema
+      .filter((entry): entry is HaFormSchema & { name: string } => entry.type !== 'grid' && 'name' in entry)
+      .map((entry) => entry.name),
   );
 
-  const fieldMap = new Map<string, HaFormFieldSchema>(
-    formFields.map((f) => [f.name, f]),
-  );
-
-  validateFieldDefinitions(formFields);
-
-  // Check required fields
-  for (const field of formFields) {
-    if (field.required) {
-      const value = config[field.name];
-      if (isMissingFieldValue(field, value)) {
-        throw new ConfigValidationError(
-          `Required field '${field.name}' is missing or empty`,
-          field.name,
-          'present',
-          String(value),
-        );
-      }
+  const unexpected: string[] = [];
+  for (const key of Object.keys(config)) {
+    if (!schemaFieldNames.has(key)) {
+      unexpected.push(key);
     }
   }
-
-  // Validate field types
-  for (const [fieldName, fieldValue] of Object.entries(config)) {
-    const fieldSchema = fieldMap.get(fieldName);
-
-    if (!fieldSchema) {
-      if (strict && !allowedExtraFields.includes(fieldName)) {
-        throw new ConfigValidationError(
-          `Unexpected field '${fieldName}' in strict mode`,
-          fieldName,
-          'not present',
-          'present',
-        );
-      }
-      continue;
-    }
-
-    validateFieldType(fieldName, fieldValue, fieldSchema);
-  }
-
-  // Validate context references
-  validateContextReferences(formFields, fieldMap);
+  return unexpected;
 }
 
-/**
- * Validate a single field value against its schema type.
- */
-function validateFieldType(
-  fieldName: string,
-  value: unknown,
-  schema: HaFormFieldSchema,
-): void {
-  // Skip validation for optional fields that are undefined/null
-  if (!schema.required && (value === undefined || value === null)) {
-    return;
-  }
+// ── Type description helpers ──────────────────────────────────────────────────
 
-  if (!isValidFieldValue(schema, value)) {
-    throw new ConfigValidationError(
-      `Field '${fieldName}' must be ${describeFieldValueType(schema)}`,
-      fieldName,
-      describeFieldValueType(schema),
-      describeActualValueType(value),
-    );
-  }
-}
-
-/**
- * Validate field definitions before runtime config validation.
- */
-function validateFieldDefinitions(formFields: HaFormFieldSchema[]): void {
-  for (const field of formFields) {
-    try {
-      assertFieldSchemaConsistency(field);
-    } catch (error) {
-      throw new ConfigValidationError(
-        error instanceof Error ? error.message : String(error),
-        field.name,
-        describeFieldValueType(field),
-        describeActualValueType(field.default),
-      );
-    }
-  }
-}
-
-/**
- * Validate that context references point to existing fields.
- */
-function validateContextReferences(
-  formFields: HaFormFieldSchema[],
-  fieldMap: Map<string, HaFormFieldSchema>,
-): void {
-  for (const field of formFields) {
-    if (!field.context) {
-      continue;
-    }
-
-    const { filter_entity: filterEntity, icon_entity: iconEntity } = field.context;
-
-    if (filterEntity && !fieldMap.has(filterEntity)) {
-      throw new ConfigValidationError(
-        `Field '${field.name}' references non-existent context field '${filterEntity}'`,
-        field.name,
-        'valid context reference',
-        `missing '${filterEntity}'`,
-      );
-    }
-
-    if (filterEntity && field.type === 'attribute') {
-      const referencedField = fieldMap.get(filterEntity);
-      if (referencedField && referencedField.type !== 'entity') {
-        throw new ConfigValidationError(
-          `Field '${field.name}' requires filter_entity '${filterEntity}' to reference an entity field`,
-          field.name,
-          'entity context reference',
-          referencedField.type,
-        );
-      }
-    }
-
-    if (iconEntity && !fieldMap.has(iconEntity)) {
-      throw new ConfigValidationError(
-        `Field '${field.name}' references non-existent context field '${iconEntity}'`,
-        field.name,
-        'valid context reference',
-        `missing '${iconEntity}'`,
-      );
-    }
-  }
-}
-
-function describeActualValueType(value: unknown): string {
-  if (Array.isArray(value)) {
-    if (value.every((item) => typeof item === 'string')) {
-      return 'string[]';
-    }
-
-    if (value.every((item) => typeof item === 'number' && Number.isFinite(item))) {
-      return 'number[]';
-    }
-
-    return 'array';
-  }
-
-  if (value === null) {
-    return 'null';
-  }
-
+function receivedType(value: unknown): string {
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (Array.isArray(value)) return 'array';
   return typeof value;
 }
 
-/**
- * Type guard: check if value matches expected primitive type.
- */
-export function isType(value: unknown, type: string): boolean {
-  return typeof value === type;
+function describeExpectedType(field: HaFormSchema & { type: string }): string {
+  if (field.type === 'grid') return 'grid';
+  if (field.type === 'boolean') return 'boolean';
+  if (field.type === 'number') return field.multiple ? 'number[]' : 'number';
+  if (field.type === 'text') {
+    if (field.multiple) return 'string[]';
+    if ((field as { selector?: { text?: { multiline?: boolean } } }).selector?.text?.multiline) {
+      return 'string | string[]';
+    }
+    return 'string';
+  }
+  return field.multiple ? 'string[]' : 'string';
 }
 
-/**
- * Assert that a condition is truthy, throw ConfigValidationError if not.
- */
-export function assert(condition: boolean, message: string, field?: string): void {
-  if (!condition) {
-    throw new ConfigValidationError(message, field);
+function fieldValueMatchesType(
+  field: HaFormSchema & { type: string },
+  value: unknown,
+): boolean {
+  switch (field.type) {
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'number':
+      if (field.multiple) return Array.isArray(value) && value.every((v) => typeof v === 'number' && Number.isFinite(v));
+      return typeof value === 'number' && Number.isFinite(value);
+    case 'entity':
+    case 'icon':
+    case 'attribute':
+    case 'array':
+      if (field.multiple) return Array.isArray(value) && value.every((v) => typeof v === 'string');
+      return typeof value === 'string';
+    case 'text':
+      if (field.multiple) return Array.isArray(value) && value.every((v) => typeof v === 'string');
+      if ((field as { selector?: { text?: { multiline?: boolean } } }).selector?.text?.multiline) {
+        return typeof value === 'string' || (Array.isArray(value) && value.every((v) => typeof v === 'string'));
+      }
+      return typeof value === 'string';
+    default:
+      return false;
   }
 }
 
-/**
- * Validation options for validateEditorSchema().
- */
-export interface ValidateSchemaOptions {
-  /**
-   * If true, reject any fields not defined in schema.
-   * Default: false (allows extra fields).
-   */
-  strict?: boolean;
-
-  /**
-   * List of field names allowed even in strict mode.
-   * Useful for legacy fields or metadata.
-   */
-  allowedExtraFields?: string[];
-}
+// ── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Build a type validator for a specific config interface.
+ * Build a typed validator for a specific card schema.
+ * The returned function throws ConfigValidationError on any schema drift.
  *
- * Usage:
- *   const validateZoneConfig = buildConfigValidator<StyxZoneCreatorCardConfig>(zoneSchema);
- *   validateZoneConfig(config); // throws ConfigValidationError
+ * @example
+ * const validate = buildConfigValidator(MY_CARD_SCHEMA);
+ * validate(userSubmittedConfig); // throws or returns void
+ *
+ * @param schema - HaFormSchema[] from card-form-helper (PS-198)
  */
 export function buildConfigValidator<T extends Record<string, unknown>>(
   schema: HaFormSchema[],
-  options?: ValidateSchemaOptions,
 ): (config: unknown) => asserts config is T {
-  return (config: unknown): asserts config is T => {
-    validateEditorSchema(config as Record<string, unknown>, schema, options);
+  return function (config: unknown): asserts config is T {
+    if (config === null || config === undefined || typeof config !== 'object') {
+      throw new ConfigValidationError(
+        'Konfiguration muss ein Objekt sein',
+        undefined,
+        'object',
+        receivedType(config),
+        'SCHEMA_DRIFT',
+      );
+    }
+
+    const record = config as Record<string, unknown>;
+
+    // 1. Check for unexpected fields (schema drift)
+    const unexpected = detectUnexpectedFields(record, schema);
+    if (unexpected.length > 0) {
+      throw new ConfigValidationError(
+        `Unbekannte Felder: ${unexpected.join(', ')}`,
+        undefined,
+        schemaFieldsSummary(schema),
+        `unknown: ${unexpected.join(', ')}`,
+        'SCHEMA_DRIFT',
+        [],
+      );
+    }
+
+    // 2. Validate via PS-198 helper (required fields, types, context filters)
+    const ps198Valid = validateCardConfig(record, schema);
+    if (!ps198Valid) {
+      // Try to extract field-level errors from causes
+      const fieldResult = validateConfigFields(record, schema);
+      const topError = new ConfigValidationError(
+        fieldResult.failedFields.length > 0
+          ? `Validierungsfehler in: ${fieldResult.failedFields.join(', ')}`
+          : 'Konfiguration entspricht nicht dem Schema',
+        undefined,
+        schemaFieldsSummary(schema),
+        'object',
+        'SCHEMA_DRIFT',
+        fieldResult.causes,
+      );
+      throw topError;
+    }
+
+    // 3. Run any card-specific validation extensions
+    const cardResult = validateConfigFields(record, schema);
+    if (!cardResult.ok) {
+      throw new ConfigValidationError(
+        `Validierungsfehler in: ${cardResult.failedFields.join(', ')}`,
+        undefined,
+        schemaFieldsSummary(schema),
+        'object',
+        'SCHEMA_DRIFT',
+        cardResult.causes,
+      );
+    }
   };
+}
+
+/**
+ * Summarize schema field names for error messages.
+ */
+function schemaFieldsSummary(schema: HaFormSchema[]): string {
+  const names = schema
+    .filter((entry): entry is HaFormSchema & { name: string } => entry.type !== 'grid' && 'name' in entry)
+    .map((entry) => entry.name);
+  return names.length > 0 ? names.join(' | ') : 'unknown';
+}
+
+// ── Primary gate function ─────────────────────────────────────────────────────
+
+/**
+ * CI-equivalent validation gate.
+ * Call this in every save/submit handler before sending data to the API.
+ *
+ * Integrates with:
+ * - Card form helpers (PS-198) for schema-driven validation
+ * - Zone editor API client for pre-submit zone saves
+ * - Dashboard save handlers for inline edits
+ *
+ * @param config - Raw form / API payload to validate
+ * @param schema - HaFormSchema[] (from card's ZONE_CREATOR_SCHEMA etc.)
+ * @param cardName - Human-readable card name for error messages (e.g. 'StyxZoneCreator')
+ * @throws ConfigValidationError on any drift
+ *
+ * @example
+ * // In a save button handler:
+ * try {
+ *   const raw = getFormData();
+ *   validateEditorSchema(raw, MY_CARD_SCHEMA, 'MyCard');
+ *   await zoneEditorApi.createZone(raw);
+ * } catch (err) {
+ *   if (err instanceof ConfigValidationError) {
+ *     showToast('Validierung fehlgeschlagen: ' + err.toShortString());
+ *   }
+ * }
+ */
+export function validateEditorSchema(
+  config: unknown,
+  schema: HaFormSchema[],
+  cardName = 'Card',
+): void {
+  if (!schema || schema.length === 0) {
+    throw new ConfigValidationError(
+      `${cardName}: Kein Schema definiert — Validierung nicht möglich`,
+      undefined,
+      'HaFormSchema[]',
+      receivedType(schema),
+      'SCHEMA_INTERNAL_ERROR',
+    );
+  }
+
+  if (config === null || config === undefined || typeof config !== 'object') {
+    throw new ConfigValidationError(
+      `${cardName}: Konfiguration muss ein Objekt sein`,
+      undefined,
+      'object',
+      receivedType(config),
+      'SCHEMA_DRIFT',
+    );
+  }
+
+  const record = config as Record<string, unknown>;
+
+  // Gate 1: unexpected fields
+  const unexpected = detectUnexpectedFields(record, schema);
+  if (unexpected.length > 0) {
+    throw new ConfigValidationError(
+      `${cardName}: Unbekannte Felder — mögliche Schema-Drift: ${unexpected.join(', ')}`,
+      undefined,
+      schemaFieldsSummary(schema),
+      `extra: ${unexpected.join(', ')}`,
+      'SCHEMA_DRIFT',
+    );
+  }
+
+  // Gate 2: PS-198 validation pass
+  if (!validateCardConfig(record, schema)) {
+    const fieldResult = validateConfigFields(record, schema);
+    const detail = fieldResult.failedFields.length > 0
+      ? `Fehlgeschlagen: ${fieldResult.failedFields.join(', ')}`
+      : 'Typ-/Pflichtfeld-Fehler';
+    throw new ConfigValidationError(
+      `${cardName}: ${detail}`,
+      undefined,
+      schemaFieldsSummary(schema),
+      'object',
+      'SCHEMA_DRIFT',
+      fieldResult.causes,
+    );
+  }
+}
+
+// ── Integration helpers ──────────────────────────────────────────────────────
+
+/**
+ * Wrap a zone-editor API save operation with pre-validate.
+ * Use this instead of calling zoneEditorApi.createZone / updateZone directly.
+ *
+ * @example
+ * import { apiSaveWithValidation } from './editor-schema-validation.js';
+ * await apiSaveWithValidation(
+ *   zoneEditorApi.createZone.bind(zoneEditorApi),
+ *   rawConfig,
+ *   ZONE_CREATOR_SCHEMA,
+ *   { name: rawConfig.zone_name },
+ * );
+ */
+export async function apiSaveWithValidation<T extends Record<string, unknown>, R>(
+  apiCall: (payload: T) => Promise<R>,
+  rawConfig: unknown,
+  schema: HaFormSchema[],
+  payload: T,
+  cardName = 'ZoneEditor',
+): Promise<R> {
+  // Browser-side gate — throws ConfigValidationError before any network call
+  validateEditorSchema(rawConfig, schema, cardName);
+
+  return apiCall(payload);
+}
+
+/**
+ * Validate a partial config update (e.g. inline edit in dashboard grid).
+ * Skips required-field checks for fields that are not being updated.
+ */
+export function validatePartialUpdate(
+  currentConfig: Record<string, unknown>,
+  partialUpdate: Partial<Record<string, unknown>>,
+  schema: HaFormSchema[],
+  cardName = 'Card',
+): void {
+  // Merge: apply partial, keep current for untouched fields
+  const merged: Record<string, unknown> = { ...currentConfig, ...partialUpdate };
+
+  // Validate merged config
+  validateEditorSchema(merged, schema, cardName);
+}
+
+// ── Window export for non-module contexts ─────────────────────────────────────
+
+declare global {
+  interface Window {
+    ConfigValidationError?: typeof ConfigValidationError;
+    validateEditorSchema?: typeof validateEditorSchema;
+    buildConfigValidator?: typeof buildConfigValidator;
+    apiSaveWithValidation?: typeof apiSaveWithValidation;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.ConfigValidationError = ConfigValidationError;
+  window.validateEditorSchema = validateEditorSchema;
+  window.buildConfigValidator = buildConfigValidator;
+  window.apiSaveWithValidation = apiSaveWithValidation;
 }

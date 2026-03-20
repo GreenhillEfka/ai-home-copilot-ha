@@ -42,27 +42,73 @@ class HabitusDashboard {
 
   init() {
     console.log('[Dashboard] init');
+    this.loadVersions();
+    this.loadZones();
     this.setupTheme();
-    this.renderTabs();
-    this.renderTabContent();
     this.setupTabNavigation();
     this.setupScrollButtons();
     this.setupWebSocket();
     this.setupThemeToggle();
-    this.updateScrollButtons();
+    // renderTabs/renderTabContent called by loadZones once zones are available
+  }
 
-    // Start in Loading-State
-    this.zones.forEach(z => this.renderZoneLoading(z.id));
+  loadZones() {
+    // Load zones from Core API (falls back to hardcoded list on error)
+    fetch('/api/v1/dashboard/zones')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.zones && data.zones.length) {
+          this.zones = data.zones.map(z => ({
+            id: z.id,
+            name: z.name,
+            icon: z.icon || 'mdi:home-floor-1',
+          }));
+        }
+        // Always render — even if API failed we use hardcoded this.zones
+        this.renderTabs();
+        this.renderTabContent();
+        this.updateScrollButtons();
+        this.zones.forEach(z => this.renderZoneLoading(z.id));
 
-    // Simulierter First Paint: Loading-Overlay nach kurzer Zeit ausblenden,
-    // danach mindestens Empty/Content für E2E/UX.
-    setTimeout(() => {
-      this.hideLoading();
-      // Wenn bis dahin keine Daten kamen, fall back auf Demo-Daten.
-      if (!Object.keys(this.zoneData).length) {
-        this.loadZoneDataDemo();
-      }
-    }, 3000);
+        // Fallback demo data after timeout
+        setTimeout(() => {
+          this.hideLoading();
+          if (!Object.keys(this.zoneData).length) {
+            this.loadZoneDataDemo();
+          }
+        }, 3000);
+      })
+      .catch(() => {
+        // Core unreachable — render with hardcoded zones
+        this.renderTabs();
+        this.renderTabContent();
+        this.updateScrollButtons();
+        this.zones.forEach(z => this.renderZoneLoading(z.id));
+        setTimeout(() => {
+          this.hideLoading();
+          if (!Object.keys(this.zoneData).length) {
+            this.loadZoneDataDemo();
+          }
+        }, 3000);
+      });
+  }
+
+  loadVersions() {
+    fetch('/api/v1/dashboard/version')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        const haEl = document.getElementById('ha-version');
+        const coreEl = document.getElementById('core-version');
+        const syncEl = document.getElementById('version-sync-status');
+        if (haEl) haEl.textContent = 'HA ' + (data.ha || '?');
+        if (coreEl) coreEl.textContent = 'Core ' + (data.core || '?');
+        if (syncEl) {
+          syncEl.textContent = data.sync_status === 'ok' ? '●' : '⚠';
+          syncEl.className = data.sync_status === 'ok' ? 'sync-ok' : 'sync-warn';
+        }
+      })
+      .catch(() => {});
   }
 
   setupTheme() {
@@ -137,8 +183,11 @@ class HabitusDashboard {
           <button class="quick-action-btn" onclick="dashboard.refreshZone('${zone.id}')">
             <i class="mdi mdi-refresh"></i> Aktualisieren
           </button>
-          <button class="quick-action-btn" onclick="dashboard.showZoneSettings('${zone.id}')">
-            <i class="mdi mdi-cog"></i> Einstellungen
+          <button class="quick-action-btn primary" onclick="dashboard.showCreateZoneModal('${zone.id}')">
+            <i class="mdi mdi-plus"></i> Zone erstellen
+          </button>
+          <button class="quick-action-btn danger" onclick="dashboard.showDeleteZoneModal('${zone.id}')">
+            <i class="mdi mdi-delete"></i> Zone löschen
           </button>
         </div>
       </div>
@@ -439,8 +488,14 @@ class HabitusDashboard {
     const statusDotClass = isStale ? 'warning' : (isPartial ? 'warning' : '');
 
     const zoneBannerHtml = isStale
-      ? `<div class="zone-card-banner warn">Offline · letzte bekannte Daten</div>`
-      : (isPartial ? `<div class="zone-card-banner warn">Teildaten · ${missingKeys.length} Feld(er) fehlen</div>` : '');
+      ? `<div class="zone-card-banner warn">Offline · letzte bekannte Daten</div>
+         <button class="quick-action-btn" style="margin:4px 0;" onclick="dashboard.showEditZoneModal('${zoneId}')"><i class="mdi mdi-pencil"></i> Zone bearbeiten</button>`
+      : (isPartial ? `<div class="zone-card-banner warn">Teildaten · ${missingKeys.length} Feld(er) fehlen</div>
+         <button class="quick-action-btn" style="margin:4px 0;" onclick="dashboard.showEditZoneModal('${zoneId}')"><i class="mdi mdi-pencil"></i> Zone bearbeiten</button>`
+      : `<div style="padding:4px 0;">
+         <button class="quick-action-btn primary" style="margin:4px 4px 4px 0;" onclick="dashboard.showEditZoneModal('${zoneId}')"><i class="mdi mdi-pencil"></i> Bearbeiten</button>
+         <button class="quick-action-btn danger" style="margin:4px 0;" onclick="dashboard.showDeleteZoneModal('${zoneId}')"><i class="mdi mdi-delete"></i> Löschen</button>
+         </div>`);
 
     // Mindestens 1 Element mit .widget/.card/.zone-item für E2E
     grid.innerHTML = `${zoneBannerHtml}
@@ -547,6 +602,209 @@ class HabitusDashboard {
     }, 400);
   }
 
+  createZone(zoneId) {
+    const name = prompt(`Name für neue Zone (${zoneId}):`);
+    if (!name || !name.trim()) return;
+
+    const actionBtns = document.querySelectorAll(`#actions-${zoneId} .quick-action-btn`);
+    actionBtns.forEach(b => b.setAttribute('disabled', 'true'));
+
+    const payload = {
+      zone_id: zoneId,
+      name: name.trim(),
+      icon: 'mdi:room',
+      enabled: true,
+      priority: 10,
+      rooms: [],
+      entities: {},
+    };
+
+    this._setZoneMeta(zoneId, { stale: false, lastError: null });
+    this.renderZoneLoading(zoneId, 'Zone wird erstellt…');
+
+    fetch('/api/v1/dashboard/zone-editor/zones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.json();
+      })
+      .then(() => {
+        // Invalidate cache so next refresh gets fresh data
+        if (this.socket && this.connected) {
+          this.socket.emit('request_zone_data', { zones: [zoneId] });
+        }
+      })
+      .catch((err) => {
+        console.error('[Dashboard] createZone error:', err);
+        this._setZoneMeta(zoneId, { stale: true, lastError: String(err) });
+        this.renderZoneError(zoneId, {
+          message: 'Zone konnte nicht erstellt werden.',
+          detail: String(err),
+        });
+      })
+      .finally(() => {
+        actionBtns.forEach(b => b.removeAttribute('disabled'));
+      });
+  }
+
+  showEditZoneModal(zoneId) {
+    const existing = document.getElementById('edit-zone-modal');
+    if (existing) existing.remove();
+
+    const zone = this.zones.find(z => z.id === zoneId) || { id: zoneId, name: zoneId };
+    const data = this.zoneData[zoneId] || {};
+
+    const html = `
+      <div id="edit-zone-modal" style="
+        position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
+        background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;
+        font-family:system-ui,sans-serif;
+      ">
+        <div style="
+          background:#fff;padding:24px;border-radius:12px;width:340px;max-width:90vw;
+          box-shadow:0 8px 32px rgba(0,0,0,0.2);
+        ">
+          <h3 style="margin:0 0 16px;font-size:18px;">Zone bearbeiten — ${zoneId}</h3>
+          <input id="ez-zone-id" type="hidden" value="${zoneId}">
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Name</label>
+            <input id="ez-name" value="${zone.name}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Icon (MDI)</label>
+            <input id="ez-icon" value="${zone.icon || 'mdi:home-floor-1'}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input id="ez-enabled" type="checkbox" ${data.enabled !== false ? 'checked' : ''}>
+              Zone aktiv
+            </label>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="ez-cancel" style="padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:6px;cursor:pointer;">Abbrechen</button>
+            <button id="ez-save" style="padding:8px 16px;border:none;background:#1976d2;color:#fff;border-radius:6px;cursor:pointer;">Speichern</button>
+          </div>
+          <p id="ez-error" style="color:#d32f2f;font-size:12px;margin:8px 0 0;display:none;"></p>
+        </div>
+      </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = document.getElementById('edit-zone-modal');
+
+    const cleanup = () => modal.remove();
+
+    document.getElementById('ez-cancel').onclick = cleanup;
+    modal.onclick = (e) => { if (e.target === modal) cleanup(); };
+
+
+    document.getElementById('ez-save').onclick = () => {
+      const idVal    = document.getElementById('ez-zone-id').value;
+      const nameVal  = document.getElementById('ez-name').value.trim();
+      const iconVal = document.getElementById('ez-icon').value.trim() || 'mdi:home-floor-1';
+      const enabledVal = document.getElementById('ez-enabled').checked;
+
+      const err = document.getElementById('ez-error');
+
+      // Basic guard (also covered by schema validation, but gives immediate feedback)
+      if (!nameVal) { err.textContent = 'Name erforderlich.'; err.style.display = 'block'; return; }
+
+      const payload = { name: nameVal, icon: iconVal, enabled: enabledVal };
+
+      document.getElementById('ez-save').disabled = true;
+      document.getElementById('ez-save').textContent = '…';
+
+      fetch(`/api/v1/dashboard/zone-editor/zones/${encodeURIComponent(idVal)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+        .then(() => {
+          // Update local zone data on success
+          const z = this.zones.find(z => z.id === idVal);
+          if (z) { z.name = nameVal; z.icon = iconVal; }
+          if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [idVal] });
+          cleanup();
+        })
+        .catch(err => {
+          err.textContent = 'Fehler: ' + err.message;
+          err.style.display = 'block';
+          document.getElementById('ez-save').disabled = false;
+          document.getElementById('ez-save').textContent = 'Speichern';
+        });
+    };
+  }
+
+  showDeleteZoneModal(zoneId) {
+    const existing = document.getElementById('delete-zone-modal');
+    if (existing) existing.remove();
+
+    const btns = document.querySelectorAll('#actions-' + zoneId + ' .quick-action-btn');
+    btns.forEach(b => b.setAttribute('disabled', 'true'));
+
+    const html = `
+      <div id="delete-zone-modal" style="
+        position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
+        background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;
+        font-family:system-ui,sans-serif;
+      ">
+        <div style="
+          background:#fff;padding:24px;border-radius:12px;width:340px;max-width:90vw;
+          box-shadow:0 8px 32px rgba(0,0,0,0.2);
+        ">
+          <h3 style="margin:0 0 8px;font-size:18px;">Zone löschen</h3>
+          <p style="margin:0 0 16px;color:#444;font-size:14px;">
+            Zone <strong id="dz-zone-name"></strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+          </p>
+          <input id="dz-zone-id" type="hidden" value="${zoneId}">
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="dz-cancel" style="padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:6px;cursor:pointer;">Abbrechen</button>
+            <button id="dz-confirm" style="padding:8px 16px;border:none;background:#d32f2f;color:#fff;border-radius:6px;cursor:pointer;">Löschen</button>
+          </div>
+          <p id="dz-error" style="color:#d32f2f;font-size:12px;margin:8px 0 0;display:none;"></p>
+        </div>
+      </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = document.getElementById('delete-zone-modal');
+    document.getElementById('dz-zone-name').textContent = zoneId;
+
+    const cleanup = () => { modal.remove(); btns.forEach(b => b.removeAttribute('disabled')); };
+
+    document.getElementById('dz-cancel').onclick = cleanup;
+    modal.onclick = (e) => { if (e.target === modal) cleanup(); };
+
+    document.getElementById('dz-confirm').onclick = () => {
+      this._setZoneMeta(zoneId, { stale: false, lastError: null });
+      this.renderZoneLoading(zoneId, 'Zone wird gelöscht…');
+      document.getElementById('dz-confirm').disabled = true;
+      document.getElementById('dz-confirm').textContent = '…';
+
+      fetch(`/api/v1/dashboard/zone-editor/zones/${encodeURIComponent(zoneId)}`, {
+        method: 'DELETE',
+      })
+        .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+        .then(() => {
+          if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [zoneId] });
+          delete this.zoneData[zoneId];
+          this.renderZoneEmpty(zoneId, 'Zone wurde gelöscht.');
+          cleanup();
+        })
+        .catch(err => {
+          console.error('[Dashboard] deleteZone error:', err);
+          this._setZoneMeta(zoneId, { stale: true, lastError: String(err) });
+          this.renderZoneError(zoneId, { message: 'Zone konnte nicht gelöscht werden.', detail: String(err) });
+          document.getElementById('dz-error').textContent = 'Fehler: ' + err.message;
+          document.getElementById('dz-error').style.display = 'block';
+          document.getElementById('dz-confirm').disabled = false;
+          document.getElementById('dz-confirm').textContent = 'Löschen';
+        });
+    };
+  }
+
   showZoneSettings(zoneId) {
     alert(`Einstellungen für ${zoneId} werden geöffnet…`);
   }
@@ -562,10 +820,88 @@ class HabitusDashboard {
     const element = document.getElementById('last-update-time');
     if (element) element.textContent = timeString;
   }
+
+  // ── Zone Create Modal ─────────────────────────────────────────────────────
+
+  showCreateZoneModal(zoneId) {
+    const existing = document.getElementById('create-zone-modal');
+    if (existing) existing.remove();
+
+    const btns = document.querySelectorAll('#actions-' + zoneId + ' .quick-action-btn');
+    btns.forEach(b => b.setAttribute('disabled', 'true'));
+
+    const html = `
+      <div id="create-zone-modal" style="
+        position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
+        background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;
+        font-family:system-ui, sans-serif;
+      ">
+        <div style="
+          background:#fff;padding:24px;border-radius:12px;width:360px;max-width:90vw;
+          box-shadow:0 8px 32px rgba(0,0,0,0.2);
+        ">
+          <h3 style="margin:0 0 16px;font-size:18px;">Neue Zone erstellen</h3>
+          <input id="cz-zone-id" type="hidden" value="${zoneId}">
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Zone-ID</label>
+            <input id="cz-id" value="${zoneId}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;" disabled>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Name</label>
+            <input id="cz-name" placeholder="z.B. Wohnbereich" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Icon (MDI)</label>
+            <input id="cz-icon" value="mdi:home-floor-1" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="cz-cancel" style="padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:6px;cursor:pointer;">Abbrechen</button>
+            <button id="cz-submit" style="padding:8px 16px;border:none;background:#1976d2;color:#fff;border-radius:6px;cursor:pointer;">Erstellen</button>
+          </div>
+          <p id="cz-error" style="color:#d32f2f;font-size:12px;margin:8px 0 0;display:none;"></p>
+        </div>
+      </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = document.getElementById('create-zone-modal');
+
+    document.getElementById('cz-cancel').onclick = () => {
+      modal.remove();
+      btns.forEach(b => b.removeAttribute('disabled'));
+    };
+    modal.onclick = (e) => { if (e.target === modal) { modal.remove(); btns.forEach(b => b.removeAttribute('disabled')); }};
+
+    document.getElementById('cz-submit').onclick = () => {
+      const idVal    = document.getElementById('cz-id').value;
+      const nameVal  = document.getElementById('cz-name').value.trim();
+      const iconVal = document.getElementById('cz-icon').value.trim() || 'mdi:home-floor-1';
+
+      const err = document.getElementById('cz-error');
+      if (!nameVal) { err.textContent = 'Name erforderlich.'; err.style.display = 'block'; return; }
+
+      const payload = { zone_id: idVal, name: nameVal, icon: iconVal };
+
+
+      document.getElementById('cz-submit').disabled = true;
+      document.getElementById('cz-submit').textContent = '…';
+
+      fetch('/api/v1/dashboard/zone-editor/zones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+        .then(() => {
+          modal.remove();
+          if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [idVal] });
+        })
+        .catch(err => { err.textContent = 'Fehler: ' + err.message; err.style.display = 'block'; document.getElementById('cz-submit').disabled = false; document.getElementById('cz-submit').textContent = 'Erstellen'; })
+        .finally(() => { btns.forEach(b => b.removeAttribute('disabled')); });
+    };
+  }
 }
 
-// Dashboard initialisieren — window.dashboard VOR init() setzen,
-// damit inline onclick-Handler (renderTabs/renderTabContent) zugreifen können.
+// Dashboard initialisieren — IIFE, window.dashboard VOR Constructor
 (function () {
   window.dashboard = new HabitusDashboard();
 })();
