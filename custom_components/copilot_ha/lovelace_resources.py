@@ -34,6 +34,7 @@ LOCAL_CARD_FILES = [
     "styx-habitus-card.js",
     "styx-zone-card.js",
     "styx-neural-card.js",
+    "pilotstack-zone-cards.mjs",  # TS zone cards bundle (PS-198/199/200)
 ]
 
 
