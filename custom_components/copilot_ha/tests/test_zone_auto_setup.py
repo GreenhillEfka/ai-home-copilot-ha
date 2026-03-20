@@ -108,3 +108,28 @@ async def test_async_auto_create_habitus_zones_triggers_entity_tag_sync(monkeypa
     create_zone_tag.assert_awaited_once_with(hass, "zone:badbereich", "Badbereich")
     tag_zone_entities.assert_awaited_once()
     tags_module.async_sync_tags_to_core.assert_awaited_once()
+
+
+def test_aggregate_areas_routes_unmatched_to_ungeordnet_fallback() -> None:
+    """Areas that match no template must carry unmatched_fallback=True in zone:ungeordnet."""
+    areas = [
+        # "Labor" has no keyword match in any template → unmatched
+        {"area_id": "a_labor", "name": "Labor", "icon": None},
+        # "Bad" matches → template zone (not unmatched)
+        {"area_id": "a_bad", "name": "Bad", "icon": None},
+    ]
+
+    zones = zone_auto_setup.aggregate_areas_to_habitus_zones(areas)
+
+    # Sort zones by name to make assertion deterministic
+    zones_by_id = {z["zone_id"]: z for z in zones}
+
+    # Bad → zone:badbereich (template match, not unmatched)
+    assert "zone:badbereich" in zones_by_id
+    assert zones_by_id["zone:badbereich"].get("unmatched_fallback") is not True
+
+    # Labor → zone:ungeordnet with unmatched_fallback=True
+    assert "zone:ungeordnet" in zones_by_id
+    ungeordnet = zones_by_id["zone:ungeordnet"]
+    assert ungeordnet["unmatched_fallback"] is True
+    assert "a_labor" in ungeordnet["area_ids"]

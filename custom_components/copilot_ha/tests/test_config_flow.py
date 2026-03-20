@@ -892,3 +892,161 @@ class TestConfigFlowErrorHandling:
         assert result["step_id"] == "import_snapshot_confirm"
         assert result["errors"] == {"base": "invalid"}
         notify.assert_called_once()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 12. Delta-Write-Pattern: async_apply_config_snapshot
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestDeltaWritePattern:
+    """Verify delta-write semantics in async_apply_config_snapshot.
+
+    Delta-write guarantees:
+    1. Zones: merge-only via unmatched_fallback routing (no full overwrite).
+    2. Options: only keys that differ from current entry.options are written.
+    3. Data: only keys that differ from current entry.data are written.
+    4. Redacted secrets from snapshot are replaced with current values.
+    """
+
+    @pytest.mark.asyncio
+    async def test_zones_always_use_unmatched_fallback(self):
+        """Zones path must always call async_set_zones_v2_from_raw with unmatched_fallback=True."""
+        entry = _FakeConfigEntry()
+        hass = MagicMock()
+        hass.config_entries.async_update_entry = MagicMock()
+        hass.config_entries.async_reload = AsyncMock()
+
+        snapshot = {
+            "habitus_zones": [{"id": "zone:test", "name": "Test", "entity_ids": ["light.x"]}],
+            "options": {},
+            "data": {},
+        }
+
+        with patch.object(
+            _snapshot,
+            "async_set_zones_v2_from_raw",
+            new=AsyncMock(),
+        ) as mock_set:
+            await _snapshot.async_apply_config_snapshot(hass, entry, snapshot)
+
+        mock_set.assert_awaited_once()
+        _, kwargs = mock_set.call_args
+        assert kwargs.get("unmatched_fallback") is True
+
+    @pytest.mark.asyncio
+    async def test_options_only_writes_delta(self):
+        """Options: only keys whose value differs from current entry.options are written."""
+        entry = _FakeConfigEntry(options={"host": "old", "port": 8909, "token": "secret"})
+        hass = MagicMock()
+        hass.config_entries.async_update_entry = MagicMock()
+        hass.config_entries.async_reload = AsyncMock()
+
+        snapshot = {
+            "habitus_zones": [],
+            "options": {"host": "new", "port": 8909, "token": "<redacted>"},
+            "data": {},
+        }
+
+        with patch.object(
+            _snapshot,
+            "async_set_zones_v2_from_raw",
+            new=AsyncMock(),
+        ):
+            await _snapshot.async_apply_config_snapshot(hass, entry, snapshot)
+
+        update_call = hass.config_entries.async_update_entry
+        update_call.assert_called()
+        _, kwargs = update_call.call_args
+        written_opts = kwargs.get("options", {})
+
+        # "host" changed → must be written; "port" unchanged → must NOT be written;
+        # "token" was redacted → replaced with current "secret" → same as current → NOT written.
+        assert written_opts.get("host") == "new"
+        assert "port" not in written_opts
+        assert "token" not in written_opts
+
+    @pytest.mark.asyncio
+    async def test_data_only_writes_delta(self):
+        """Data: only keys whose value differs from current entry.data are written."""
+        entry = _FakeConfigEntry(data={"title": "Old Title", "entry_id": "e123"})
+        hass = MagicMock()
+        hass.config_entries.async_update_entry = MagicMock()
+        hass.config_entries.async_reload = AsyncMock()
+
+        snapshot = {
+            "habitus_zones": [],
+            "options": {},
+            "data": {"title": "New Title", "entry_id": "e123"},  # title changed, entry_id same
+        }
+
+        with patch.object(
+            _snapshot,
+            "async_set_zones_v2_from_raw",
+            new=AsyncMock(),
+        ):
+            await _snapshot.async_apply_config_snapshot(hass, entry, snapshot)
+
+        update_call = hass.config_entries.async_update_entry
+        update_call.assert_called()
+        _, kwargs = update_call.call_args
+        written_data = kwargs.get("data", {})
+
+        # title changed → written; entry_id unchanged → not written
+        assert written_data.get("title") == "New Title"
+        assert "entry_id" not in written_data
+
+    @pytest.mark.asyncio
+    async def test_redacted_token_preserved_from_current(self):
+        """Redacted <redacted> token in snapshot → current secret value is kept."""
+        entry = _FakeConfigEntry(options={"token": "current-secret"})
+        hass = MagicMock()
+        hass.config_entries.async_update_entry = MagicMock()
+        hass.config_entries.async_reload = AsyncMock()
+
+        snapshot = {
+            "habitus_zones": [],
+            "options": {"token": "<redacted>"},
+            "data": {},
+        }
+
+        with patch.object(
+            _snapshot,
+            "async_set_zones_v2_from_raw",
+            new=AsyncMock(),
+        ):
+            await _snapshot.async_apply_config_snapshot(hass, entry, snapshot)
+
+        update_call = hass.config_entries.async_update_entry
+        _, kwargs = update_call.call_args
+        written_opts = kwargs.get("options", {})
+
+        # Redacted sentinel replaced by current secret; since current == current-secret,
+        # no delta exists → token must NOT appear in written options.
+        assert "token" not in written_opts
+
+    @pytest.mark.asyncio
+    async def test_no_write_when_options_fully_match(self):
+        """When snapshot options are identical to current, no options update should happen."""
+        entry = _FakeConfigEntry(options={"host": "same", "port": 8909})
+        hass = MagicMock()
+        hass.config_entries.async_update_entry = MagicMock()
+        hass.config_entries.async_reload = AsyncMock()
+
+        snapshot = {
+            "habitus_zones": [],
+            "options": {"host": "same", "port": 8909},
+            "data": {},
+        }
+
+        with patch.object(
+            _snapshot,
+            "async_set_zones_v2_from_raw",
+            new=AsyncMock(),
+        ):
+            await _snapshot.async_apply_config_snapshot(hass, entry, snapshot)
+
+        # Neither options nor data update should be called
+        update_call = hass.config_entries.async_update_entry
+        update_call.assert_not_called()
+
