@@ -662,6 +662,8 @@ class HabitusDashboard {
         if (this.socket && this.connected) {
           this.socket.emit('request_zone_data', { zones: [zoneId] });
         }
+        // Refresh zone list so new zone appears in tabs
+        this.loadZones();
       })
       .catch((err) => {
         console.error('[Dashboard] createZone error:', err);
