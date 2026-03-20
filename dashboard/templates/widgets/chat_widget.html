@@ -19,6 +19,13 @@
             </div>
         </div>
         
+        <!-- Quick Reply Suggestions -->
+        <div id="quick-replies" class="quick-replies hidden">
+            <button class="quick-reply-btn" data-msg="Status?">Status?</button>
+            <button class="quick-reply-btn" data-msg="Welche Zonen sind aktiv?">Welche Zonen?</button>
+            <button class="quick-reply-btn" data-msg="Energieverbrauch">Energie</button>
+        </div>
+        
         <!-- Typing Indicator -->
         <div id="typing-indicator" class="typing-indicator hidden">
             <span class="typing-dot"></span>
@@ -69,6 +76,7 @@
     const messageCountEl = document.getElementById('message-count');
     
     let messageCount = 0;
+    let userScrolled = false;
     
     // Socket.IO events
     chatSocket.on('connect', () => {
@@ -149,7 +157,7 @@
                 <span class="message-role">${message.role === 'user' ? '👤 You' : '🤖 Assistant'}</span>
                 <span class="message-time">${timestamp}</span>
             </div>
-            <div class="message-content">${escapeHtml(message.content)}</div>
+            <div class="message-content">${renderMarkdown(message.content)}</div>
             ${message.metadata && message.metadata.sources ? `
                 <div class="message-sources">
                     <small>📚 Sources: ${message.metadata.sources.length}</small>
@@ -181,9 +189,17 @@
         typingIndicator.classList.add('hidden');
     }
     
+    // Auto-scroll lock: don't auto-scroll if user scrolled up
+    messagesContainer.addEventListener('scroll', () => {
+        const atBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 80;
+        userScrolled = !atBottom;
+    });
+    
     // Scroll to bottom
     function scrollToBottom() {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (!userScrolled) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
     }
     
     // Update message count
@@ -221,6 +237,15 @@
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // Simple Markdown rendering: bold, italic, inline code
+    function renderMarkdown(text) {
+        return escapeHtml(text)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/`(.+?)`/g, '<code>$1</code>')
+            .replace(/\n/g, '<br>');
+    }
     
     // Event listeners
     sendButton.addEventListener('click', sendMessage);
@@ -243,6 +268,19 @@
         if (confirm('Clear all chat history?')) {
             chatSocket.emit('clear_history');
         }
+    });
+    
+    // Quick reply buttons
+    document.querySelectorAll('.quick-reply-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            chatInput.value = btn.dataset.msg;
+            sendMessage();
+        });
+    });
+    
+    // Show quick replies when input is focused
+    chatInput.addEventListener('focus', () => {
+        document.getElementById('quick-replies').classList.remove('hidden');
     });
     
     // Request initial history
@@ -370,6 +408,34 @@
 
 .typing-dot:nth-child(3) {
     animation-delay: 0.4s;
+}
+
+.quick-replies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 0;
+}
+
+.quick-replies.hidden {
+    display: none;
+}
+
+.quick-reply-btn {
+    background: var(--bg-tertiary, #e9ecef);
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: 16px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--text-primary, #333);
+    transition: all 0.15s;
+}
+
+.quick-reply-btn:hover {
+    background: var(--primary-color, #4A90D9);
+    color: #fff;
+    border-color: var(--primary-color, #4A90D9);
 }
 
 @keyframes typing {
