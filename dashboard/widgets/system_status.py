@@ -242,7 +242,7 @@ WIDGET_REGISTRY.register(WidgetPlugin(
     blueprint_bp=system_status_bp,
     version='1.0.0',
     author='PilotSuite',
-    description='PS-066 Widget',
+    description='CPU, RAM, Disk, Uptime + Core/HA Health Status mit WebSocket Live-Updates',
     socketio_register=register_socketio_events,
     broadcast_fn=broadcast_updates,
 ))
