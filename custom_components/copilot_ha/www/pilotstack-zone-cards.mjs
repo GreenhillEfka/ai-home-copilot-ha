@@ -1,4 +1,7 @@
 /* PilotStack Zone Cards Bundle | Do not edit – built from TS sources */
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // static/utils/card-form-helper.ts
 function buildHaFormSchema(fields, options = {}) {
@@ -351,6 +354,137 @@ if (typeof window !== "undefined" && window.customCards) {
   validateCardDocumentation();
 }
 
+// static/utils/zone-editor-api-client.ts
+function resolveZoneEditorUrl(path, baseUrl) {
+  if (baseUrl) return `${baseUrl}${path}`;
+  const dashboardBase = window.PILOTSUITE_DASHBOARD_BASE;
+  if (dashboardBase) return `${dashboardBase}${path}`;
+  return `/api/v1/dashboard${path.replace("/api/v1/zone-editor", "")}`;
+}
+async function apiFetch(url, options = {}) {
+  const { timeoutMs = 8e3, ...fetchOpts } = options;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(url, {
+      ...fetchOpts,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...fetchOpts.headers
+      }
+    });
+    if (!resp.ok) {
+      let errorBody = resp.statusText;
+      try {
+        const json = await resp.json();
+        errorBody = json.error || json;
+      } catch {
+      }
+      throw new ZoneEditorApiError(
+        `HTTP ${resp.status}: ${resp.statusText}`,
+        resp.status,
+        errorBody
+      );
+    }
+    return await resp.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+var ZoneEditorApiError = class extends Error {
+  constructor(message, statusCode, body) {
+    super(message);
+    this.statusCode = statusCode;
+    this.body = body;
+    this.name = "ZoneEditorApiError";
+  }
+};
+var ZoneEditorApiClient = class {
+  constructor(baseUrl) {
+    this.baseUrl = baseUrl;
+  }
+  // ── List ──────────────────────────────────────────────────────────────────
+  /**
+   * List all zones from the zone-editor store.
+   */
+  async listZones() {
+    const url = resolveZoneEditorUrl("/api/v1/zone-editor/zones", this.baseUrl);
+    return apiFetch(url);
+  }
+  /**
+   * Get a single zone by ID.
+   */
+  async getZone(zoneId) {
+    const url = resolveZoneEditorUrl(
+      `/api/v1/zone-editor/zones/${encodeURIComponent(zoneId)}`,
+      this.baseUrl
+    );
+    return apiFetch(url);
+  }
+  // ── Create ────────────────────────────────────────────────────────────────
+  /**
+   * Create a new zone.
+   *
+   * Payload shape is derived from the StyxZoneCreatorCardConfig fields
+   * that are persisted to Core (zone_name, zone_icon, active_modules, etc.).
+   */
+  async createZone(payload) {
+    const url = resolveZoneEditorUrl("/api/v1/zone-editor/zones", this.baseUrl);
+    return apiFetch(url, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  }
+  // ── Update ───────────────────────────────────────────────────────────────
+  /**
+   * Update an existing zone (partial update — only send changed fields).
+   */
+  async updateZone(zoneId, payload) {
+    const url = resolveZoneEditorUrl(
+      `/api/v1/zone-editor/zones/${encodeURIComponent(zoneId)}`,
+      this.baseUrl
+    );
+    return apiFetch(url, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+  }
+  // ── Delete ───────────────────────────────────────────────────────────────
+  /**
+   * Delete a zone by ID.
+   */
+  async deleteZone(zoneId) {
+    const url = resolveZoneEditorUrl(
+      `/api/v1/zone-editor/zones/${encodeURIComponent(zoneId)}`,
+      this.baseUrl
+    );
+    return apiFetch(url, {
+      method: "DELETE"
+    });
+  }
+  // ── Rooms ───────────────────────────────────────────────────────────────
+  /**
+   * List all rooms (optionally filtered to unassigned only).
+   */
+  async listRooms(unassignedOnly = false) {
+    const url = resolveZoneEditorUrl(
+      `/api/v1/zone-editor/rooms${unassignedOnly ? "?unassigned=true" : ""}`,
+      this.baseUrl
+    );
+    return apiFetch(url);
+  }
+  // ── Templates ────────────────────────────────────────────────────────────
+  /**
+   * List available zone templates.
+   */
+  async listTemplates() {
+    const url = resolveZoneEditorUrl("/api/v1/zone-editor/templates", this.baseUrl);
+    return apiFetch(url);
+  }
+};
+var zoneEditorApi = new ZoneEditorApiClient();
+
 // static/cards/styx-zone-creator-card.ts
 var ZONE_CREATOR_MODULE_TYPES = [
   "LIGHT",
@@ -554,6 +688,14 @@ function parseAndValidateActiveModules(raw) {
 }
 var validateZoneCreatorConfig = buildConfigValidator(ZONE_CREATOR_SCHEMA);
 var StyxZoneCreatorCard = class extends HTMLElement {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "_zoneId");
+    __publicField(this, "_config");
+    __publicField(this, "_saveBtn");
+    __publicField(this, "_deleteBtn");
+    __publicField(this, "_statusEl");
+  }
   static get type() {
     return "styx-zone-creator";
   }
@@ -584,6 +726,162 @@ var StyxZoneCreatorCard = class extends HTMLElement {
     validateZoneCreatorConfig(config);
     const cfg = config;
     parseAndValidateActiveModules(cfg?.active_modules);
+  }
+  setConfig(config) {
+    this._config = config;
+    this._zoneId = config.zone_name?.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") ?? void 0;
+    this._render();
+  }
+  connectedCallback() {
+    this._render();
+  }
+  _render() {
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: "open" });
+    }
+    const cfg = this._config ?? {};
+    const MODULES = ZONE_CREATOR_MODULE_TYPES.join(", ");
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display: block; font-family: system-ui, sans-serif; }
+        .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .header i { font-size: 24px; color: #1976d2; }
+        h3 { margin: 0; font-size: 16px; color: #222; }
+        .field { margin-bottom: 12px; }
+        label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+        input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .module-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+        .module-grid label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #333; }
+        .actions { display: flex; gap: 8px; margin-top: 16px; }
+        button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-save { background: #1976d2; color: #fff; }
+        .btn-save:hover:not(:disabled) { background: #1565c0; }
+        .btn-delete { background: #d32f2f; color: #fff; }
+        .btn-delete:hover:not(:disabled) { background: #b71c1c; }
+        .btn-delete { display: ${this._zoneId ? "inline-block" : "none"}; }
+        .status { font-size: 12px; margin-top: 8px; min-height: 16px; }
+        .status.error { color: #d32f2f; }
+        .status.success { color: #388e3c; }
+      </style>
+      <div class="card">
+        <div class="header">
+          <i class="mdi ${cfg.zone_icon ?? "mdi:room"}"></i>
+          <h3>${cfg.zone_name ?? "Neue Zone"}</h3>
+        </div>
+        <div class="field">
+          <label>Zonen-Name</label>
+          <input type="text" id="zc-name" value="${cfg.zone_name ?? ""}" placeholder="z.B. Wohnzimmer">
+        </div>
+        <div class="field">
+          <label>Icon (MDI)</label>
+          <input type="text" id="zc-icon" value="${cfg.zone_icon ?? "mdi:room"}" placeholder="mdi:room">
+        </div>
+        <div class="field">
+          <label>Aktive Module</label>
+          <div class="module-grid">
+            ${ZONE_CREATOR_MODULE_TYPES.map((m) => {
+      const active = (cfg.active_modules ?? "LIGHT").split(",").map((s) => s.trim().toUpperCase()).includes(m);
+      return `<label><input type="checkbox" class="zc-module" value="${m}" ${active ? "checked" : ""}> ${m}</label>`;
+    }).join("")}
+          </div>
+          <small style="color:#999;font-size:11px;">Verf\xFCgbar: ${MODULES}</small>
+        </div>
+        <div class="actions">
+          <button class="btn-save" id="zc-save">\u{1F4BE} Speichern</button>
+          <button class="btn-delete" id="zc-delete">\u{1F5D1} L\xF6schen</button>
+        </div>
+        <p class="status" id="zc-status"></p>
+      </div>`;
+    this._saveBtn = this.shadowRoot.querySelector("#zc-save");
+    this._deleteBtn = this.shadowRoot.querySelector("#zc-delete");
+    this._statusEl = this.shadowRoot.querySelector("#zc-status");
+    this._saveBtn.addEventListener("click", () => this._handleSave());
+    this._deleteBtn.addEventListener("click", () => this._handleDelete());
+  }
+  _status(msg, kind = "info") {
+    if (this._statusEl) {
+      this._statusEl.textContent = msg;
+      this._statusEl.className = `status ${kind}`;
+    }
+  }
+  _buttonsDisabled(disabled) {
+    if (this._saveBtn) this._saveBtn.disabled = disabled;
+    if (this._deleteBtn) this._deleteBtn.disabled = disabled;
+  }
+  async _handleSave() {
+    const nameEl = this.shadowRoot.querySelector("#zc-name");
+    const iconEl = this.shadowRoot.querySelector("#zc-icon");
+    const moduleEls = this.shadowRoot.querySelectorAll(".zc-module:checked");
+    const name = nameEl.value.trim();
+    if (!name) {
+      this._status("Name erforderlich.", "error");
+      return;
+    }
+    const modules = Array.from(moduleEls).map((el) => el.value);
+    const icon = iconEl.value.trim() || "mdi:room";
+    this._buttonsDisabled(true);
+    this._status("\u2026 speichern", "info");
+    try {
+      if (this._zoneId) {
+        const payload = {
+          name,
+          icon,
+          active_modules: modules
+        };
+        const result = await zoneEditorApi.updateZone(this._zoneId, payload);
+        if (!result.ok) throw new Error(result.error ?? "Update fehlgeschlagen");
+        this._status("\u2713 Zone aktualisiert", "success");
+      } else {
+        const payload = {
+          zone_id: name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
+          name,
+          icon,
+          active_modules: modules,
+          enabled: true,
+          priority: 10,
+          rooms: [],
+          entities: {}
+        };
+        const result = await zoneEditorApi.createZone(payload);
+        if (!result.ok) throw new Error(result.error ?? "Create fehlgeschlagen");
+        this._zoneId = result.zone?.zone_id;
+        this._status("\u2713 Zone erstellt", "success");
+        if (this._deleteBtn) this._deleteBtn.style.display = "inline-block";
+      }
+      if (typeof window !== "undefined" && window.dashboard?.socket?.emit) {
+        window.dashboard.socket.emit("zone_update", { zones: [] });
+      }
+    } catch (err) {
+      const msg = err instanceof ZoneEditorApiError ? err.message : err instanceof Error ? err.message : String(err);
+      this._status(`\u2717 ${msg}`, "error");
+    } finally {
+      this._buttonsDisabled(false);
+    }
+  }
+  async _handleDelete() {
+    if (!this._zoneId) return;
+    if (!confirm(`Zone "${this._zoneId}" wirklich l\xF6schen?`)) return;
+    this._buttonsDisabled(true);
+    this._status("\u2026 l\xF6schen", "info");
+    try {
+      const result = await zoneEditorApi.deleteZone(this._zoneId);
+      if (!result.ok) throw new Error(result.error ?? "Delete fehlgeschlagen");
+      this._status("\u2713 Zone gel\xF6scht", "success");
+      this._zoneId = void 0;
+      if (typeof window !== "undefined" && window.dashboard?.socket?.emit) {
+        window.dashboard.socket.emit("zone_update", { zones: [] });
+      }
+      const nameEl = this.shadowRoot.querySelector("#zc-name");
+      if (nameEl) nameEl.value = "";
+      if (this._deleteBtn) this._deleteBtn.style.display = "none";
+    } catch (err) {
+      const msg = err instanceof ZoneEditorApiError ? err.message : err instanceof Error ? err.message : String(err);
+      this._status(`\u2717 ${msg}`, "error");
+    } finally {
+      this._buttonsDisabled(false);
+    }
   }
 };
 registerCustomCard({

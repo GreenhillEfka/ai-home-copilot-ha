@@ -8,7 +8,7 @@
  * - Validation helpers for card config payloads
  */
 
-export type HaFormSelectorType = 'entity' | 'boolean' | 'text' | 'number' | 'icon' | 'attribute';
+export type HaFormSelectorType = 'entity' | 'boolean' | 'text' | 'number' | 'icon' | 'attribute' | 'array';
 
 export interface HaFormContextFilter {
   filter_entity?: string;
@@ -59,6 +59,9 @@ export interface HaFormSelector {
   attribute?: {
     entity_id?: string;
   };
+  array?: {
+    max?: number;
+  };
 }
 
 export interface HaFormFieldDescriptor {
@@ -86,6 +89,9 @@ export interface HaFormFieldDescriptor {
 
   // Attribute selector options.
   attributeEntityId?: string;
+
+  // Array selector options.
+  arrayMax?: number;
 
   // Multi-value support.
   multiple?: boolean;
@@ -250,6 +256,7 @@ export function isValidFieldValue(field: HaFormFieldSchema, value: unknown): boo
     case 'entity':
     case 'icon':
     case 'attribute':
+    case 'array':
       return isMultipleField(field) ? isStringArray(value) : typeof value === 'string';
 
     case 'text':
@@ -276,6 +283,7 @@ export function describeFieldValueType(field: Pick<HaFormFieldSchema, 'type' | '
     case 'entity':
     case 'icon':
     case 'attribute':
+    case 'array':
       return multiple ? 'string[]' : 'string';
     case 'text':
       if (multiple) {
@@ -365,6 +373,13 @@ function selectorForField(field: HaFormFieldDescriptor): HaFormSelector {
         },
       };
     }
+
+    case 'array':
+      return {
+        array: {
+          ...(field.arrayMax !== undefined ? { max: field.arrayMax } : {}),
+        },
+      };
   }
 }
 
@@ -408,4 +423,34 @@ function normalizeNonEmptyString(value: unknown): string | undefined {
 
 function isFieldSchema(field: RawOrBuiltHaFormSchema): field is HaFormFieldSchema {
   return (field as HaFormFieldSchema).type !== undefined && (field as HaFormFieldSchema).selector !== undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Window adapter — exposes CardFormHelper to window.customCards[] cards
+// ---------------------------------------------------------------------------
+
+declare global {
+  interface Window {
+    CardFormHelper?: typeof CardFormHelper;
+  }
+}
+
+/**
+ * Stateless adapter so cards registered via window.customCards[]
+ * can call `window.CardFormHelper.buildHaFormSchema(fields)` without
+ * importing the module directly.
+ *
+ * Usage in card class:
+ *   static async getConfigForm() {
+ *     return window.CardFormHelper!.buildHaFormSchema(MY_FIELDS);
+ *   }
+ */
+export const CardFormHelper = {
+  buildHaFormSchema,
+  validateCardConfig,
+  assertConfig,
+} as const;
+
+if (typeof window !== 'undefined') {
+  window.CardFormHelper = CardFormHelper;
 }
