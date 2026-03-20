@@ -29,6 +29,11 @@ import {
   ConfigValidationError,
 } from '../utils/editor-schema-validation.js';
 import { registerCustomCard } from '../utils/card-registration.js';
+import {
+  zoneEditorApi,
+  ZoneEditorApiError,
+  ZoneEditorZone,
+} from '../utils/zone-editor-api-client.js';
 
 /**
  * Zone module types — each maps to a set of entity selectors.
@@ -312,6 +317,12 @@ const validateZoneCreatorConfig: (
 // ---------------------------------------------------------------------------
 
 export class StyxZoneCreatorCard extends HTMLElement {
+  private _zoneId?: string;
+  private _config?: StyxZoneCreatorCardConfig;
+  private _saveBtn?: HTMLButtonElement;
+  private _deleteBtn?: HTMLButtonElement;
+  private _statusEl?: HTMLElement;
+
   static get type(): string {
     return 'styx-zone-creator';
   }
@@ -347,6 +358,194 @@ export class StyxZoneCreatorCard extends HTMLElement {
     const cfg = config as StyxZoneCreatorCardConfig;
     // Throws ConfigValidationError on invalid module types
     parseAndValidateActiveModules(cfg?.active_modules);
+  }
+
+  setConfig(config: Record<string, unknown>): void {
+    this._config = config as StyxZoneCreatorCardConfig;
+    this._zoneId =
+      (config.zone_name as string)
+        ?.toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '') ?? undefined;
+    this._render();
+  }
+
+  connectedCallback(): void {
+    this._render();
+  }
+
+  private _render(): void {
+    if (!this.shadowRoot) {
+      this.attachShadow({ mode: 'open' });
+    }
+    const cfg = this._config ?? ({} as StyxZoneCreatorCardConfig);
+    const MODULES = ZONE_CREATOR_MODULE_TYPES.join(', ');
+
+    this.shadowRoot!.innerHTML = `
+      <style>
+        :host { display: block; font-family: system-ui, sans-serif; }
+        .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .header i { font-size: 24px; color: #1976d2; }
+        h3 { margin: 0; font-size: 16px; color: #222; }
+        .field { margin-bottom: 12px; }
+        label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+        input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .module-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+        .module-grid label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #333; }
+        .actions { display: flex; gap: 8px; margin-top: 16px; }
+        button { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-save { background: #1976d2; color: #fff; }
+        .btn-save:hover:not(:disabled) { background: #1565c0; }
+        .btn-delete { background: #d32f2f; color: #fff; }
+        .btn-delete:hover:not(:disabled) { background: #b71c1c; }
+        .btn-delete { display: ${this._zoneId ? 'inline-block' : 'none'}; }
+        .status { font-size: 12px; margin-top: 8px; min-height: 16px; }
+        .status.error { color: #d32f2f; }
+        .status.success { color: #388e3c; }
+      </style>
+      <div class="card">
+        <div class="header">
+          <i class="mdi ${cfg.zone_icon ?? 'mdi:room'}"></i>
+          <h3>${cfg.zone_name ?? 'Neue Zone'}</h3>
+        </div>
+        <div class="field">
+          <label>Zonen-Name</label>
+          <input type="text" id="zc-name" value="${cfg.zone_name ?? ''}" placeholder="z.B. Wohnzimmer">
+        </div>
+        <div class="field">
+          <label>Icon (MDI)</label>
+          <input type="text" id="zc-icon" value="${cfg.zone_icon ?? 'mdi:room'}" placeholder="mdi:room">
+        </div>
+        <div class="field">
+          <label>Aktive Module</label>
+          <div class="module-grid">
+            ${ZONE_CREATOR_MODULE_TYPES.map(m => {
+              const active = (cfg.active_modules ?? 'LIGHT')
+                .split(',')
+                .map((s: string) => s.trim().toUpperCase())
+                .includes(m);
+              return `<label><input type="checkbox" class="zc-module" value="${m}" ${active ? 'checked' : ''}> ${m}</label>`;
+            }).join('')}
+          </div>
+          <small style="color:#999;font-size:11px;">Verfügbar: ${MODULES}</small>
+        </div>
+        <div class="actions">
+          <button class="btn-save" id="zc-save">💾 Speichern</button>
+          <button class="btn-delete" id="zc-delete">🗑 Löschen</button>
+        </div>
+        <p class="status" id="zc-status"></p>
+      </div>`;
+
+    this._saveBtn = this.shadowRoot!.querySelector('#zc-save')!;
+    this._deleteBtn = this.shadowRoot!.querySelector('#zc-delete')!;
+    this._statusEl = this.shadowRoot!.querySelector('#zc-status')!;
+
+    this._saveBtn!.addEventListener('click', () => this._handleSave());
+    this._deleteBtn!.addEventListener('click', () => this._handleDelete());
+  }
+
+  private _status(msg: string, kind: 'error' | 'success' | 'info' = 'info'): void {
+    if (this._statusEl) {
+      this._statusEl.textContent = msg;
+      this._statusEl.className = `status ${kind}`;
+    }
+  }
+
+  private _buttonsDisabled(disabled: boolean): void {
+    if (this._saveBtn) this._saveBtn.disabled = disabled;
+    if (this._deleteBtn) this._deleteBtn!.disabled = disabled;
+  }
+
+  private async _handleSave(): Promise<void> {
+    const nameEl = this.shadowRoot!.querySelector<HTMLInputElement>('#zc-name')!;
+    const iconEl = this.shadowRoot!.querySelector<HTMLInputElement>('#zc-icon')!;
+    const moduleEls = this.shadowRoot!.querySelectorAll<HTMLInputElement>('.zc-module:checked');
+
+    const name = nameEl.value.trim();
+    if (!name) { this._status('Name erforderlich.', 'error'); return; }
+
+    const modules = Array.from(moduleEls).map(el => el.value);
+    const icon = iconEl.value.trim() || 'mdi:room';
+
+    this._buttonsDisabled(true);
+    this._status('… speichern', 'info');
+
+    try {
+      if (this._zoneId) {
+        // Update existing zone
+        const payload = {
+          name,
+          icon,
+          active_modules: modules,
+        };
+        const result = await zoneEditorApi.updateZone(this._zoneId, payload);
+        if (!result.ok) throw new Error(result.error ?? 'Update fehlgeschlagen');
+        this._status('✓ Zone aktualisiert', 'success');
+      } else {
+        // Create new zone
+        const payload = {
+          zone_id: name
+            .toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_]/g, ''),
+          name,
+          icon,
+          active_modules: modules,
+          enabled: true,
+          priority: 10,
+          rooms: [],
+          entities: {},
+        };
+        const result = await zoneEditorApi.createZone(payload);
+        if (!result.ok) throw new Error(result.error ?? 'Create fehlgeschlagen');
+        this._zoneId = (result as { zone?: ZoneEditorZone }).zone?.zone_id;
+        this._status('✓ Zone erstellt', 'success');
+        // Show delete button after create
+        if (this._deleteBtn) this._deleteBtn.style.display = 'inline-block';
+      }
+
+      // Invalidate socket cache
+      if (typeof window !== 'undefined' && (window as Window & { dashboard?: { socket?: { emit?: (ev: string, d: unknown) => void } } }).dashboard?.socket?.emit) {
+        (window as Window & { dashboard?: { socket?: { emit?: (ev: string, d: unknown) => void } } }).dashboard!.socket!.emit!('zone_update', { zones: [] });
+      }
+    } catch (err) {
+      const msg = err instanceof ZoneEditorApiError ? err.message : (err instanceof Error ? err.message : String(err));
+      this._status(`✗ ${msg}`, 'error');
+    } finally {
+      this._buttonsDisabled(false);
+    }
+  }
+
+  private async _handleDelete(): Promise<void> {
+    if (!this._zoneId) return;
+    if (!confirm(`Zone "${this._zoneId}" wirklich löschen?`)) return;
+
+    this._buttonsDisabled(true);
+    this._status('… löschen', 'info');
+
+    try {
+      const result = await zoneEditorApi.deleteZone(this._zoneId);
+      if (!result.ok) throw new Error(result.error ?? 'Delete fehlgeschlagen');
+      this._status('✓ Zone gelöscht', 'success');
+      this._zoneId = undefined;
+
+      // Invalidate socket cache
+      if (typeof window !== 'undefined' && (window as Window & { dashboard?: { socket?: { emit?: (ev: string, d: unknown) => void } } }).dashboard?.socket?.emit) {
+        (window as Window & { dashboard?: { socket?: { emit?: (ev: string, d: unknown) => void } } }).dashboard!.socket!.emit!('zone_update', { zones: [] });
+      }
+
+      // Reset form
+      const nameEl = this.shadowRoot!.querySelector<HTMLInputElement>('#zc-name')!;
+      if (nameEl) nameEl.value = '';
+      if (this._deleteBtn) this._deleteBtn.style.display = 'none';
+    } catch (err) {
+      const msg = err instanceof ZoneEditorApiError ? err.message : (err instanceof Error ? err.message : String(err));
+      this._status(`✗ ${msg}`, 'error');
+    } finally {
+      this._buttonsDisabled(false);
+    }
   }
 }
 
