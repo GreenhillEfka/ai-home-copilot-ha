@@ -122,6 +122,9 @@ def get_widgets():
         'widgets': [
             {
                 'name': w.name,
+                'version': w.version,
+                'author': w.author,
+                'description': w.description,
                 'url_prefix': w.blueprint_bp.url_prefix if w.blueprint_bp else None,
                 'depends_on': w.depends_on,
             }

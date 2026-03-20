@@ -20,6 +20,9 @@ class WidgetPlugin:
     broadcast_fn: Callable[[], None] | None = None          # optional broadcast_updates()
     static_assets: tuple[str, str] | None = None  # (folder, url_prefix)
     depends_on: list[str] = field(default_factory=list)       # other widget names
+    version: str = "1.0.0"
+    author: str = "PilotSuite"
+    description: str = ""
 
 
 class WidgetRegistry:
