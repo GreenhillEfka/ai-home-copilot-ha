@@ -183,3 +183,13 @@ def register_socketio_events(socketio, app_config=None):
 def broadcast_message(socketio, message):
     """Broadcast a new message to all connected clients"""
     socketio.emit('new_message', message, namespace='/chat')
+
+
+# ── Plugin Registration ────────────────────────────────────────────────────────
+from plugin_registry import WIDGET_REGISTRY, WidgetPlugin
+WIDGET_REGISTRY.register(WidgetPlugin(
+    name='chat',
+    blueprint_bp=chat_widget_bp,
+    socketio_register=register_socketio_events,
+    broadcast_fn=broadcast_message,
+))

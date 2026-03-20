@@ -239,3 +239,13 @@ def register_socketio_events(socketio):
 def broadcast_updates(socketio):
     """Broadcast sensor updates (call periodically)"""
     socketio.emit('sensor_data', get_all_sensors(), namespace='/sensor_overview')
+
+
+# ── Plugin Registration ────────────────────────────────────────────────────────
+from plugin_registry import WIDGET_REGISTRY, WidgetPlugin
+WIDGET_REGISTRY.register(WidgetPlugin(
+    name='sensor_overview',
+    blueprint_bp=sensor_overview_bp,
+    socketio_register=register_socketio_events,
+    broadcast_fn=broadcast_updates,
+))

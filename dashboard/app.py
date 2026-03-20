@@ -104,13 +104,29 @@ def dashboard_home():
 @app.route('/api/status')
 def get_status():
     """Get dashboard status"""
+    from widgets.plugin_registry import WIDGET_REGISTRY
     return jsonify({
         'status': 'running',
         'version': DASHBOARD_VERSION,
         'port': app.config['PORT'],
         'rag_api': app.config['RAG_API_URL'],
-        'widgets': ['system_status', 'brain_graph', 'chat', 'sensor_overview'],
+        'widgets': WIDGET_REGISTRY.names(),
         'optimizations': ['batch_updates', 'client_debouncing', 'gzip_compression']
+    })
+
+@app.route('/api/v1/widgets')
+def get_widgets():
+    """List all registered widgets via WidgetRegistry."""
+    from widgets.plugin_registry import WIDGET_REGISTRY
+    return jsonify({
+        'widgets': [
+            {
+                'name': w.name,
+                'url_prefix': w.blueprint_bp.url_prefix if w.blueprint_bp else None,
+                'depends_on': w.depends_on,
+            }
+            for w in WIDGET_REGISTRY.all()
+        ]
     })
 
 @app.route('/api/overview')

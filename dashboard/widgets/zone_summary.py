@@ -411,3 +411,13 @@ def start_zone_simulation(socketio):
 
 # Initialize stores on module load
 initialize_zone_stores()
+
+
+# ── Plugin Registration ────────────────────────────────────────────────────────
+from plugin_registry import WIDGET_REGISTRY, WidgetPlugin
+WIDGET_REGISTRY.register(WidgetPlugin(
+    name='zone_summary',
+    blueprint_bp=zone_summary_bp,
+    socketio_register=register_socketio_events,
+    broadcast_fn=broadcast_updates,
+))
