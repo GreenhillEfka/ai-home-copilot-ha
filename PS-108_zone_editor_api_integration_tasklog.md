@@ -2,7 +2,7 @@
 
 **Datum:** 2026-03-20  
 **Agent:** PilotClaw (HA/UI-Spur)  
-**Status:** ✅ Abgeschlossen
+**Status:** ✅ Abgeschlossen (CRUD-Proxy), 🟡 UI-Integration ausstehend
 
 ---
 
@@ -19,9 +19,9 @@
   - `DELETE /api/v1/zone-editor/zones/<zone_id>`
   - `GET    /api/v1/zone-editor/zones`
 
-### 2. Änderungen
+### 2. Änderungen (Stand 2026-03-20)
 
-#### A) `dashboard/api/v1/dashboard.py` — CRUD-Proxy-Endpunkte
+#### A) `dashboard/api/v1/dashboard.py` — CRUD-Proxy-Endpunkte ✅
 
 Proxy-Routen hinzugefügt (Forward to Core zone-editor API):
 
@@ -30,19 +30,21 @@ Proxy-Routen hinzugefügt (Forward to Core zone-editor API):
 | `POST /api/v1/dashboard/zone-editor/zones` | `/api/v1/zone-editor/zones` | Create |
 | `PUT /api/v1/dashboard/zone-editor/zones/<zone_id>` | `/api/v1/zone-editor/zones/<zone_id>` | Update |
 | `DELETE /api/v1/dashboard/zone-editor/zones/<zone_id>` | `/api/v1/zone-editor/zones/<zone_id>` | Delete |
+| `POST /api/v1/dashboard/zone-editor/zones/<zone_id>/rooms` | `/api/v1/zone-editor/zones/<zone_id>/rooms` | Add Room |
+| `DELETE /api/v1/dashboard/zone-editor/zones/<zone_id>/rooms/<room_id>` | `/api/v1/zone-editor/zones/<zone_id>/rooms/<room_id>` | Remove Room |
+| `GET /api/v1/dashboard/zone-editor/rooms` | `/api/v1/zone-editor/rooms` | List Rooms |
+| `GET /api/v1/dashboard/zone-editor/templates` | `/api/v1/zone-editor/templates` | List Templates |
 
 Jeweils Cache-Invalidierung (`_invalidate_cache()`) nach Mutation. Helper `_core_post()`, `_core_put()`, `_core_delete()` analog zu bestehendem `_core_get()`.
 
-#### B) `dashboard/static/utils/zone-editor-api-client.ts` — NEU
+#### B) Core `zone_editor.ts` — Modernisierung ✅ (separate Core-Branch)
 
-TypeScript-API-Client (PS-108), nutzt `card-form-helper.ts` als Basis:
-
-- **`ZoneEditorApiClient`** mit: `listZones()`, `getZone()`, `createZone()`, `updateZone()`, `deleteZone()`, `listRooms()`, `listTemplates()`
-- **`resolveZoneEditorUrl()`**: Universelle URL-Auflösung (Dashboard-Proxy vs. Core-Direct)
-- **`ZoneEditorApiError`**: Typsicheres Error-Handling
-- **`cardConfigToCreatePayload()`** / **`cardConfigToUpdatePayload()`**: Mapper von StyxZoneCreatorCardConfig → API-Payload
-- **Python `py_compile`**: ✅ Kompiliert sauber
-- **TypeScript `tsc --strict`**: ✅ Keine Fehler
+- **API-Default** auf `/api/v1/zone-editor/zones` gesetzt
+- **Type-Safety**: `ZoneRoom`-Type hinzugefügt, `ZoneApiResponse` erweitert (`ok`, `zones`, `zone`, `rooms`)
+- **Payload-Normalisierung**: `buildCreatePayload()`, `buildUpdatePayload()` mappen auf Core-Contract (`rooms` statt `entities`)
+- **Room-basierte Entity-Zuordnung**: `loadAvailableEntities()` ruft `/api/v1/zone-editor/rooms` und filtert nach Zuordenbarkeit
+- **URL-Param-Support**: `?zone_id=...` lädt initiale Zone beim Start
+- **Tests aktualisiert**: TypeScript-Tests auf neuen API-Contract umgestellt
 
 ### 3. Nicht benötigt / Kein Eingriff
 
@@ -54,14 +56,21 @@ TypeScript-API-Client (PS-108), nutzt `card-form-helper.ts` als Basis:
 ### 4. Verifikation
 
 ```bash
-# Python compile check
+# HA Dashboard: Python compile check
 python3 -m py_compile dashboard/api/v1/dashboard.py  # → OK
 
-# TypeScript strict check
+# Core: TypeScript strict check (in worktree)
 tsc --noEmit --strict --target ES2020 \
     --moduleResolution node --skipLibCheck \
-    zone-editor-api-client.ts  # → no output (clean)
+    static/zone/zone_editor.ts  # → no output (clean)
 ```
+
+### 5. Git-Status
+
+| Repo | Branch | Commit | Status |
+|---|---|---|---|
+| pilotsuite-styx-core | `feature/zone-editor-modern-crud` | `db2e3d45` | ✅ Gepusht |
+| pilotsuite-styx-ha | `feature/habitus-zone-creator-card` | `263afbcc` | ✅ Gepusht |
 
 ---
 
@@ -70,10 +79,13 @@ tsc --noEmit --strict --target ES2020 \
 1. **`styx-zone-creator-card.ts`**: Integration des `ZoneEditorApiClient` in den Card-Renderer, sodass Save/DELETE-Buttons im UI die API-Endpunkte aufrufen (Card-seitiger Eingriff, PS-199-Erweiterung)
 2. **`dashboard.js`**: CRUD-Aktionen (Zone erstellen/löschen) in die Tab-Actions einbauen (Button-Handler → `zoneEditorApi.createZone()` / `deleteZone()`)
 3. **Cache-Invalidierung**: Prüfen ob `dashboard/app.py` den SocketIO-Broadcast nach Zone-Mutation triggert (evtl. `socketio.emit('zone_update', ...)` nach Create/Update/Delete)
+4. **PR-Merge**: Core-Branch und HA-Branch zusammenführen, End-to-End-Test im laufenden System
 
 ---
 
 ## Archiv
 
-- Neuer File: `dashboard/static/utils/zone-editor-api-client.ts` (PS-108)
-- Geänderter File: `dashboard/api/v1/dashboard.py` (CRUD-Proxies)
+- Neuer File: `dashboard/static/utils/zone-editor-api-client.ts` (PS-108) — *bereits vorhanden*
+- Geänderter File: `dashboard/api/v1/dashboard.py` (CRUD-Proxies) — ✅
+- Core: `static/zone/zone_editor.ts` modernisiert — ✅
+- Core: `tests/typescript/test_zone_editor.test.ts` aktualisiert — ✅
