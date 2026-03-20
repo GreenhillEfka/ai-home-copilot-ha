@@ -588,6 +588,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to set up ZoneDetector")
 
+    # Pattern Proposal Engine (PS-085)
+    try:
+        from .pattern_proposal import async_setup_pattern_proposal
+        await async_setup_pattern_proposal(hass)
+        _LOGGER.info("Pattern proposal engine initialized")
+    except Exception:
+        _LOGGER.exception("Failed to set up pattern proposal engine")
+
     # Auto-create Habitus Zones from HA areas (ZeroConfig, v14.4.0)
     try:
         from .zone_auto_setup import async_auto_create_habitus_zones
