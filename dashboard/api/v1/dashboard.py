@@ -109,6 +109,60 @@ def _core_get(path, timeout=5):
     return None
 
 
+def _core_post(path, data, timeout=5):
+    """POST request to Core API."""
+    base_url = _get_core_url()
+    url = f"{base_url}{path}"
+    try:
+        resp = requests.post(url, json=data, headers=_get_core_headers(), timeout=timeout)
+        if resp.status_code < 400:
+            return resp.json() if resp.content else {'success': True}
+        _LOGGER.debug("Core POST %s returned status %d", path, resp.status_code)
+    except requests.exceptions.ConnectionError:
+        _LOGGER.debug("Core POST not reachable at %s", base_url)
+    except requests.exceptions.Timeout:
+        _LOGGER.debug("Core POST timeout for %s", path)
+    except Exception as e:
+        _LOGGER.debug("Core POST error for %s: %s", path, e)
+    return None
+
+
+def _core_put(path, data, timeout=5):
+    """PUT request to Core API."""
+    base_url = _get_core_url()
+    url = f"{base_url}{path}"
+    try:
+        resp = requests.put(url, json=data, headers=_get_core_headers(), timeout=timeout)
+        if resp.status_code < 400:
+            return resp.json() if resp.content else {'success': True}
+        _LOGGER.debug("Core PUT %s returned status %d", path, resp.status_code)
+    except requests.exceptions.ConnectionError:
+        _LOGGER.debug("Core PUT not reachable at %s", base_url)
+    except requests.exceptions.Timeout:
+        _LOGGER.debug("Core PUT timeout for %s", path)
+    except Exception as e:
+        _LOGGER.debug("Core PUT error for %s: %s", path, e)
+    return None
+
+
+def _core_delete(path, timeout=5):
+    """DELETE request to Core API."""
+    base_url = _get_core_url()
+    url = f"{base_url}{path}"
+    try:
+        resp = requests.delete(url, headers=_get_core_headers(), timeout=timeout)
+        if resp.status_code < 400:
+            return resp.json() if resp.content else {'success': True}
+        _LOGGER.debug("Core DELETE %s returned status %d", path, resp.status_code)
+    except requests.exceptions.ConnectionError:
+        _LOGGER.debug("Core DELETE not reachable at %s", base_url)
+    except requests.exceptions.Timeout:
+        _LOGGER.debug("Core DELETE timeout for %s", path)
+    except Exception as e:
+        _LOGGER.debug("Core DELETE error for %s: %s", path, e)
+    return None
+
+
 def _invalidate_cache(path=None):
     """Invalidate Core cache, optionally for a specific path."""
     with _core_cache_lock:
@@ -874,6 +928,79 @@ def get_zone(zone_id):
         'alert_count': zone_data.get('alert_count', 0),
         'last_update': zone_data.get('last_update')
     })
+
+
+# ── Zone-Editor CRUD Proxy (forwards to Core zone-editor API) ──────────────
+
+@dashboard_bp.route('/zone-editor/zones', methods=['POST'])
+def create_zone():
+    """Create a new zone via Core zone-editor API."""
+    payload = request.get_json() or {}
+    result = _core_post('/api/v1/zone-editor/zones', payload)
+    if result is None:
+        return jsonify({'error': 'Core not reachable or zone creation failed'}), 502
+    _invalidate_cache('/api/v1/zone-editor/zones')
+    return jsonify(result), 201
+
+
+@dashboard_bp.route('/zone-editor/zones/<zone_id>', methods=['PUT', 'PATCH'])
+def update_zone(zone_id):
+    """Update an existing zone via Core zone-editor API."""
+    payload = request.get_json() or {}
+    result = _core_put(f'/api/v1/zone-editor/zones/{zone_id}', payload)
+    if result is None:
+        return jsonify({'error': 'Core not reachable or zone update failed'}), 502
+    _invalidate_cache('/api/v1/zone-editor/zones')
+    return jsonify(result)
+
+
+@dashboard_bp.route('/zone-editor/zones/<zone_id>', methods=['DELETE'])
+def delete_zone(zone_id):
+    """Delete a zone via Core zone-editor API."""
+    result = _core_delete(f'/api/v1/zone-editor/zones/{zone_id}')
+    if result is None:
+        return jsonify({'error': 'Core not reachable or zone deletion failed'}), 502
+    _invalidate_cache('/api/v1/zone-editor/zones')
+    return jsonify(result)
+
+
+@dashboard_bp.route('/zone-editor/zones/<zone_id>/rooms', methods=['POST'])
+def add_room_to_zone(zone_id):
+    """Add a room to a zone via Core zone-editor API."""
+    payload = request.get_json() or {}
+    result = _core_post(f'/api/v1/zone-editor/zones/{zone_id}/rooms', payload)
+    if result is None:
+        return jsonify({'error': 'Core not reachable or room creation failed'}), 502
+    _invalidate_cache('/api/v1/zone-editor/zones')
+    return jsonify(result), 201
+
+
+@dashboard_bp.route('/zone-editor/zones/<zone_id>/rooms/<room_id>', methods=['DELETE'])
+def remove_room_from_zone(zone_id, room_id):
+    """Remove a room from a zone via Core zone-editor API."""
+    result = _core_delete(f'/api/v1/zone-editor/zones/{zone_id}/rooms/{room_id}')
+    if result is None:
+        return jsonify({'error': 'Core not reachable or room removal failed'}), 502
+    _invalidate_cache('/api/v1/zone-editor/zones')
+    return jsonify(result)
+
+
+@dashboard_bp.route('/zone-editor/rooms', methods=['GET'])
+def list_rooms():
+    """List all rooms via Core zone-editor API."""
+    result = _core_get('/api/v1/zone-editor/rooms')
+    if result is None:
+        return jsonify({'error': 'Core not reachable'}), 502
+    return jsonify(result)
+
+
+@dashboard_bp.route('/zone-editor/templates', methods=['GET'])
+def list_templates():
+    """List available zone templates via Core zone-editor API."""
+    result = _core_get('/api/v1/zone-editor/templates')
+    if result is None:
+        return jsonify({'error': 'Core not reachable'}), 502
+    return jsonify(result)
 
 
 @dashboard_bp.route('/zones/<zone_id>/data', methods=['PUT'])
