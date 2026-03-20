@@ -485,7 +485,14 @@ def aggregate_areas_to_habitus_zones(
         if _is_virtual_area(area_name):
             continue
 
-        template, confidence = _match_area_to_template(area_name)
+        # PS-178: Check explicit map first — explicit mappings override keyword matching
+        explicit_zone = get_zone_for_area(area["area_id"], area_zone_config)
+        if explicit_zone:
+            tid = explicit_zone
+            template = _get_template_by_zone_id(tid)
+            confidence = 1.0  # explicit = 100% confidence
+        else:
+            template, confidence = _match_area_to_template(area_name)
 
         if template and confidence >= 0.6:
             tid = template["zone_id"]
