@@ -564,10 +564,7 @@ class HabitusDashboard {
   }
 }
 
-// Dashboard initialisieren
-let dashboard;
-document.addEventListener('DOMContentLoaded', () => {
-  dashboard = new HabitusDashboard();
-});
-
-window.dashboard = dashboard;
+// Dashboard initialisieren — IIFE, window.dashboard VOR Constructor
+(function () {
+  window.dashboard = new HabitusDashboard();
+})();
