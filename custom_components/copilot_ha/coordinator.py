@@ -505,6 +505,17 @@ class CopilotApiClient(SharedCopilotApiClient):
             label=f"Zone override {zone_id}/{target}",
         )
 
+    async def async_set_zone_presence_hold(self, zone_id: str, hold: str) -> dict[str, Any]:
+        """Set zone presence hold state (auto, force_on, force_off).
+
+        Used by AreaPresenceSensor to persist hold-switch changes to Core.
+        """
+        return await self._safe_post(
+            f"/api/v1/zone/presence/{zone_id}/hold",
+            {"hold": hold},
+            label=f"Zone presence hold {zone_id}/{hold}",
+        )
+
     async def async_get_musikwolke_zone_map(self) -> dict[str, Any]:
         """Get zone-to-speaker mapping."""
         return await self._safe_get(
