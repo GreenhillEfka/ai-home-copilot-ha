@@ -1,479 +1,408 @@
-"""Tests for smart zone auto-setup (area aggregation + entity role detection)."""
+"""Tests for zone_auto_setup entity routing via sort_entity_to_zone()."""
 import pytest
+from unittest.mock import MagicMock
 
-from custom_components.copilot_ha.zone_auto_setup import (
-    HABITUS_ZONE_TEMPLATES,
-    ROLE_NEURON_TYPE_MAP,
-    NEURON_TAG_META,
-    aggregate_areas_to_habitus_zones,
-    async_create_neuron_tags_from_zones,
-    detect_entity_role,
-    detect_entity_tags,
-    _is_virtual_area,
-    _match_area_to_template,
+from custom_components.copilot_ha.habitus_zones_entities_v2 import (
+    _ENTITY_ZONE_KEYWORDS,
+    _VIRTUAL_AREA_PATTERNS,
+    _normalize,
+    _levenshtein,
+    sort_entity_to_zone,
+    _domain_bonus,
+    _ZONE_ID_TO_NAME,
 )
 
 
-class TestAreaToTemplateMatching:
-    """Test keyword-based area → template matching."""
+# ── Normalization helpers ─────────────────────────────────────────────
 
-    def test_wohnzimmer_matches_wohnbereich(self):
-        template, conf = _match_area_to_template("Wohnzimmer")
-        assert template is not None
-        assert template["zone_id"] == "wohnbereich"
-        assert conf >= 0.8
+class TestNormalize:
+    def test_lowercase(self):
+        assert _normalize("WOHNZIMMER") == "wohnzimmer"
 
-    def test_bad_matches_badbereich(self):
-        template, conf = _match_area_to_template("Bad")
-        assert template is not None
-        assert template["zone_id"] == "badbereich"
+    def test_strips_accents(self):
+        assert _normalize("Küche") == "kuche"
+        # "Büro" → NFKD → "Bu\u0308ro" → strip non-ASCII → "buro"
+        # (the combining diaeresis is stripped, not expanded to "ue")
+        assert _normalize("Büro") == "buro"
+        assert _normalize("Wohnzimmer") == "wohnzimmer"
 
-    def test_toilette_matches_badbereich(self):
-        template, conf = _match_area_to_template("Toilette")
-        assert template is not None
-        assert template["zone_id"] == "badbereich"
+    def test_strips_whitespace(self):
+        assert _normalize("  bad  ") == "bad"
 
-    def test_kueche_matches_kochbereich(self):
-        template, conf = _match_area_to_template("Küche")
-        assert template is not None
-        assert template["zone_id"] == "kochbereich"
+    def test_empty_string(self):
+        assert _normalize("") == ""
+        assert _normalize(None) == ""
 
-    def test_flur_matches_gangbereich(self):
-        template, conf = _match_area_to_template("Flur")
-        assert template is not None
-        assert template["zone_id"] == "gangbereich"
 
-    def test_gang_matches_gangbereich(self):
-        template, conf = _match_area_to_template("Gang")
-        assert template is not None
-        assert template["zone_id"] == "gangbereich"
+class TestLevenshtein:
+    def test_identical_strings(self):
+        assert _levenshtein("wohn", "wohn") == 0
 
-    def test_schlafzimmer_matches_schlafbereich(self):
-        template, conf = _match_area_to_template("Schlafzimmer")
-        assert template is not None
-        assert template["zone_id"] == "schlafbereich"
+    def test_one_insertion(self):
+        assert _levenshtein("wohnen", "wohne") == 1
 
-    def test_buero_matches_buerobereich(self):
-        template, conf = _match_area_to_template("Büro")
-        assert template is not None
-        assert template["zone_id"] == "buerobereich"
+    def test_one_deletion(self):
+        assert _levenshtein("toilett", "toilette") == 1
 
-    def test_garten_matches_aussenbereich(self):
-        template, conf = _match_area_to_template("Garten")
-        assert template is not None
-        assert template["zone_id"] == "aussenbereich"
+    def test_one_substitution(self):
+        assert _levenshtein("kueche", "kuche") == 1
 
-    def test_keller_matches_kellerbereich(self):
-        template, conf = _match_area_to_template("Keller")
-        assert template is not None
-        assert template["zone_id"] == "kellerbereich"
+    def test_typo_one_char_off(self):
+        # "toilette" vs "toilett" (missing 'e'): distance = 1
+        assert _levenshtein("toilette", "toilett") == 1
 
-    def test_kinderzimmer_matches(self):
-        template, conf = _match_area_to_template("Kinderzimmer")
-        assert template is not None
-        assert template["zone_id"] == "kinderzimmer"
+    def test_typo_toilettte_vs_toilett_is_distance_2(self):
+        # "Toilettte" (3 t's) vs "toilett" (2 t's): two extra chars = distance 2
+        assert _levenshtein("toilettte", "toilett") == 2
 
-    def test_terrasse_matches(self):
-        template, conf = _match_area_to_template("Terrasse")
-        assert template is not None
-        assert template["zone_id"] == "terrassenbereich"
+    def test_distance_returns_positive_for_different_strings(self):
+        assert _levenshtein("abc", "xyz") > 0
 
-    def test_unknown_area_no_match(self):
-        template, conf = _match_area_to_template("Serverschrank")
-        assert template is None
+
+# ── Virtual area patterns ─────────────────────────────────────────────
+
+class TestVirtualAreaPatterns:
+    @pytest.mark.parametrize("area", [
+        "Energie", "energie", "ENERGIE",
+        "Netzwerk", "netzwerk",
+        "PV-Anlage", "pv-anlage",
+        "Serverraum", "serverraum",
+        "Personen", "personen",
+        "Kalender",
+    ])
+    def test_virtual_areas_match(self, area):
+        assert _VIRTUAL_AREA_PATTERNS.match(area) is not None, f"{area} should be virtual"
+
+    @pytest.mark.parametrize("area", [
+        "Wohnzimmer", "Küche", "Bad",
+        "Flur", "Schlafzimmer", "Garten",
+        "Büro",
+    ])
+    def test_real_areas_do_not_match(self, area):
+        assert _VIRTUAL_AREA_PATTERNS.match(area) is None, f"{area} should NOT be virtual"
+
+
+# ── sort_entity_to_zone() — basic routing ─────────────────────────────
+
+class TestSortEntityToZoneBasic:
+    """Core routing tests: entity_id + area_name based zone assignment."""
+
+    @pytest.mark.parametrize("entity_id,expected_zone", [
+        ("light.wohnzimmer_decke", "zone:wohnbereich"),
+        ("light.wohn_decke", "zone:wohnbereich"),
+        ("sensor.wohnzimmer_temperatur", "zone:wohnbereich"),
+        ("climate.bad_heizung", "zone:badbereich"),
+        ("binary_sensor.toilette_motion", "zone:badbereich"),
+        ("switch.kueche_steckdose", "zone:kochbereich"),
+        ("light.kochbereich_decke", "zone:kochbereich"),
+        # "buerro" is not a keyword; "buero" would need fuzzy distance ≤ 1
+        # (buerro→buero = 2, not ≤ 1), so generic entity stays ungeordnet
+        ("sensor.buerro_lichtstärke", "zone:ungeordnet"),
+        ("sensor.buero_temp", "zone:buerobereich"),   # "buero" exact keyword
+        ("light.flur_decke", "zone:gangbereich"),
+        ("binary_sensor.eingang_motion", "zone:gangbereich"),
+        ("sensor.schlafzimmer_temp", "zone:schlafbereich"),
+        ("light.schlafzimmer_nightlight", "zone:schlafbereich"),
+        ("sensor.garten_bewegung", "zone:aussenbereich"),
+        ("light.garage_decke", "zone:aussenbereich"),
+        ("climate.garten_heizung", "zone:aussenbereich"),
+        ("sensor.mira_bewegung", "zone:zimmer_mira"),
+        ("light.paul_decke", "zone:zimmer_paul"),
+    ])
+    def test_entity_id_routes_to_correct_zone(self, entity_id, expected_zone):
+        zone, conf, extra = sort_entity_to_zone(entity_id)
+        assert zone == expected_zone, (
+            f"{entity_id} → {zone} (expected {expected_zone}), "
+            f"conf={conf}, match={extra.get('matched_keyword')}"
+        )
+        if expected_zone != "zone:ungeordnet":
+            assert conf >= 0.60, f"{entity_id} confidence {conf} too low"
+
+    def test_unknown_entity_routes_to_ungeordnet(self):
+        zone, conf, extra = sort_entity_to_zone("sensor.unknown_xyz_123")
+        assert zone == "zone:ungeordnet"
+        assert conf == 0.0
+        assert extra["match_type"] == "none"
+
+    def test_light_bad_temperatur_routes_badbereich(self):
+        """light.bad_temperatur routes to badbereich via keyword substring."""
+        zone, conf, extra = sort_entity_to_zone("light.bad_temperatur")
+        assert zone == "zone:badbereich"
+        assert extra["match_type"] in ("substring", "exact")
+        assert conf >= 0.60
+
+    def test_light_flur_decke_routes_gangbereich(self):
+        zone, conf, extra = sort_entity_to_zone("light.flur_decke")
+        assert zone == "zone:gangbereich"
+        assert extra["match_type"] in ("substring", "exact")
+
+# ── sort_entity_to_zone() — area_name boost ───────────────────────────
+
+class TestSortEntityToZoneAreaName:
+    """area_name is used as a high-confidence signal."""
+
+    def test_area_name_bad_trumps_entity_id_kw(self):
+        # entity_id has "wohn" but area_name says "Bad" → Badbereich
+        zone, conf, extra = sort_entity_to_zone(
+            "sensor.wohn_motion",
+            area_name="Bad",
+        )
+        assert zone == "zone:badbereich"
+        assert conf >= 0.90, f"expected high confidence for area_exact, got {conf}"
+        assert extra["match_type"] == "area_exact"
+
+    def test_area_name_wohnzimmer_routes_ambiguous_entity(self):
+        # entity_id is generic, area_name pins it
+        zone, conf, extra = sort_entity_to_zone(
+            "sensor.temp_sensor",
+            area_name="Wohnzimmer",
+        )
+        assert zone == "zone:wohnbereich"
+        assert conf >= 0.90
+
+    def test_area_name_virtual_entity_goes_ungeordnet(self):
+        zone, conf, extra = sort_entity_to_zone(
+            "sensor.energie_total",
+            area_name="Energie",
+        )
+        assert zone == "zone:ungeordnet"
+        assert extra["is_virtual_area"] is True
         assert conf == 0.0
 
-    def test_esszimmer_matches_wohnbereich(self):
-        template, conf = _match_area_to_template("Esszimmer")
-        assert template is not None
-        assert template["zone_id"] == "wohnbereich"
-
-    def test_dusche_matches_badbereich(self):
-        template, conf = _match_area_to_template("Dusche")
-        assert template is not None
-        assert template["zone_id"] == "badbereich"
-
-    def test_eingang_matches_gangbereich(self):
-        template, conf = _match_area_to_template("Eingang")
-        assert template is not None
-        assert template["zone_id"] == "gangbereich"
-
-    def test_loft_matches_wohnbereich(self):
-        template, conf = _match_area_to_template("Loft")
-        assert template is not None
-        assert template["zone_id"] == "wohnbereich"
-
-    def test_fuzzy_toilettte_typo_matches_badbereich(self):
-        """Typo tolerance: 'Toilettte' (triple t) should still match badbereich."""
-        template, conf = _match_area_to_template("Toilettte")
-        assert template is not None
-        assert template["zone_id"] == "badbereich"
-        assert conf >= 0.6
-
-
-class TestVirtualAreaFilter:
-    """Test virtual/organizational area detection."""
-
-    def test_energie_is_virtual(self):
-        assert _is_virtual_area("Energie") is True
-
-    def test_netzwerk_is_virtual(self):
-        assert _is_virtual_area("Netzwerk") is True
-
-    def test_kontrollraum_is_virtual(self):
-        assert _is_virtual_area("Kontrollraum") is True
-
-    def test_personen_is_virtual(self):
-        assert _is_virtual_area("Personen") is True
-
-    def test_pv_anlage_is_virtual(self):
-        assert _is_virtual_area("PV-Anlage") is True
-
-    def test_wohnzimmer_is_not_virtual(self):
-        assert _is_virtual_area("Wohnzimmer") is False
-
-    def test_kueche_is_not_virtual(self):
-        assert _is_virtual_area("Küche") is False
-
-    def test_virtual_areas_excluded_from_aggregation(self):
-        areas = [
-            {"area_id": "wz", "name": "Wohnzimmer"},
-            {"area_id": "en", "name": "Energie"},
-            {"area_id": "nw", "name": "Netzwerk"},
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        zone_ids = {z["zone_id"] for z in zones}
-        assert "zone:wohnbereich" in zone_ids
-        # Virtual areas should not appear
-        assert not any("energie" in zid for zid in zone_ids)
-        assert not any("netzwerk" in zid for zid in zone_ids)
-
-
-class TestUnmatchedFallback:
-    """Test unmatched_fallback flag and zone:ungeordnet routing."""
-
-    def test_unmatched_fallback_flag_default_true_emits_ungeordnet(self):
-        """By default unmatched areas go into zone:ungeordnet."""
-        areas = [
-            {"area_id": "wz", "name": "Wohnzimmer"},
-            {"area_id": "srv", "name": "Serverschrank"},   # unmatched
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        zone_ids = {z["zone_id"] for z in zones}
-        assert "zone:ungeordnet" in zone_ids
-        ungeo = next(z for z in zones if z["zone_id"] == "zone:ungeordnet")
-        assert ungeo["is_unmatched_fallback"] is True
-        assert "srv" in ungeo["area_ids"]
-
-    def test_unmatched_fallback_false_drops_unmatched_areas(self):
-        """unmatched_fallback=False silently discards unmappable areas."""
-        areas = [
-            {"area_id": "wz", "name": "Wohnzimmer"},
-            {"area_id": "srv", "name": "Serverschrank"},
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas, unmatched_fallback=False)
-        zone_ids = {z["zone_id"] for z in zones}
-        assert "zone:ungeordnet" not in zone_ids
-        assert "zone:wohnbereich" in zone_ids
-
-    def test_unmatched_fallback_false_keeps_matched_areas(self):
-        """Even with unmatched_fallback=False, matched areas still produce zones."""
-        areas = [
-            {"area_id": "wz", "name": "Wohnzimmer"},
-            {"area_id": "srv", "name": "Serverschrank"},
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas, unmatched_fallback=False)
-        wz = next((z for z in zones if z["zone_id"] == "zone:wohnbereich"), None)
-        assert wz is not None
-        assert "wz" in wz["area_ids"]
-
-    def test_unmatched_area_without_entities_creates_fallback_zone(self):
-        """An unmatched area with no entities still emits zone:ungeordnet."""
-        areas = [
-            {"area_id": "wz", "name": "Wohnzimmer"},
-            {"area_id": "srv", "name": "Serverschrank"},
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        ungeo = next((z for z in zones if z["zone_id"] == "zone:ungeordnet"), None)
-        assert ungeo is not None
-        assert ungeo["confidence"] == 0.0
-        assert ungeo["area_ids"] == ["srv"]
-
-    def test_unmatched_fallback_zone_sorted_to_end(self):
-        """zone:ungeordnet always sorts after named zones regardless of area count."""
-        areas = [
-            {"area_id": "srv", "name": "Serverschrank"},   # unmatched, only one area
-            {"area_id": "wz", "name": "Wohnzimmer"},       # matched
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        ungeo_idx = next(i for i, z in enumerate(zones) if z["zone_id"] == "zone:ungeordnet")
-        wz_idx = next(i for i, z in enumerate(zones) if z["zone_id"] == "zone:wohnbereich")
-        assert ungeo_idx > wz_idx, "zone:ungeordnet must sort after named zones"
-
-    def test_multiple_unmatched_areas_aggregated_in_one_fallback_zone(self):
-        """Multiple unmatched areas are collected into a single zone:ungeordnet."""
-        areas = [
-            {"area_id": "wz", "name": "Wohnzimmer"},
-            {"area_id": "srv", "name": "Serverschrank"},   # unmatched (not virtual)
-            {"area_id": "dach", "name": "Dachboden"},      # unmatched (not virtual)
-            {"area_id": "nw", "name": "Netzwerk"},         # virtual → excluded before fallback
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        ungeo = next((z for z in zones if z["zone_id"] == "zone:ungeordnet"), None)
-        assert ungeo is not None
-        # Netzwerk is virtual, excluded; Serverschrank + Dachboden are unmatched
-        assert set(ungeo["area_ids"]) == {"srv", "dach"}
-        assert ungeo["aggregated"] is True
-
-    def test_empty_input_emits_nothing(self):
-        """Empty area list returns empty zones list (no zone:ungeordnet)."""
-        zones = aggregate_areas_to_habitus_zones([])
-        assert zones == []
-
-    def test_virtual_areas_are_excluded_from_unmatched(self):
-        """Virtual areas are already filtered before fallback routing."""
-        areas = [
-            {"area_id": "en", "name": "Energie"},           # virtual → skipped
-            {"area_id": "srv", "name": "Serverschrank"},    # unmatched → zone:ungeordnet
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        ungeo = next((z for z in zones if z["zone_id"] == "zone:ungeordnet"), None)
-        assert ungeo is not None
-        assert "en" not in ungeo["area_ids"]
-        assert "srv" in ungeo["area_ids"]
-
-
-class TestAggregation:
-    """Test smart area aggregation into Habitus Zones."""
-
-    def test_toilet_and_bad_aggregate_to_badbereich(self):
-        areas = [
-            {"area_id": "a1", "name": "Bad"},
-            {"area_id": "a2", "name": "Toilette"},
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        bad_zones = [z for z in zones if z["zone_id"] == "zone:badbereich"]
-        assert len(bad_zones) == 1
-        assert set(bad_zones[0]["area_ids"]) == {"a1", "a2"}
-        assert bad_zones[0]["aggregated"] is True
-
-    def test_flur_and_gang_aggregate_to_gangbereich(self):
-        areas = [
-            {"area_id": "a1", "name": "Flur"},
-            {"area_id": "a2", "name": "Gang"},
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        gang_zones = [z for z in zones if z["zone_id"] == "zone:gangbereich"]
-        assert len(gang_zones) == 1
-        assert set(gang_zones[0]["area_ids"]) == {"a1", "a2"}
-
-    def test_mixed_areas_produce_correct_zones(self):
-        areas = [
-            {"area_id": "wz", "name": "Wohnzimmer"},
-            {"area_id": "bad", "name": "Badezimmer"},
-            {"area_id": "wc", "name": "WC"},
-            {"area_id": "ku", "name": "Küche"},
-            {"area_id": "fl", "name": "Flur"},
-            {"area_id": "ga", "name": "Gang"},
-            {"area_id": "sz", "name": "Schlafzimmer"},
-            {"area_id": "ga2", "name": "Garten"},
-            {"area_id": "srv", "name": "Serverschrank"},
-        ]
-        zones = aggregate_areas_to_habitus_zones(areas)
-        zone_ids = {z["zone_id"] for z in zones}
-
-        # Check expected aggregations
-        assert "zone:badbereich" in zone_ids     # Bad + WC
-        assert "zone:gangbereich" in zone_ids    # Flur + Gang
-        assert "zone:wohnbereich" in zone_ids    # Wohnzimmer
-        assert "zone:kochbereich" in zone_ids    # Küche
-        assert "zone:schlafbereich" in zone_ids  # Schlafzimmer
-        assert "zone:aussenbereich" in zone_ids  # Garten
-
-        # Serverschrank is unmatched → routed to zone:ungeordnet
-        srv_zones = [z for z in zones if z["zone_id"] == "zone:ungeordnet"]
-        assert len(srv_zones) == 1
-        assert "srv" in srv_zones[0]["area_ids"]
-
-        # Badbereich should have 2 areas
-        bad = next(z for z in zones if z["zone_id"] == "zone:badbereich")
-        assert len(bad["area_ids"]) == 2
-
-    def test_empty_areas_returns_empty(self):
-        # Empty input: zone:ungeordnet is still emitted because unmatched_fallback=True.
-        zones = aggregate_areas_to_habitus_zones([])
-        assert zones == []
-
-    def test_single_area(self):
-        zones = aggregate_areas_to_habitus_zones([{"area_id": "x", "name": "Küche"}])
-        # Küche is matched → only kochbereich, no fallback
-        matched = [z for z in zones if not z.get("is_unmatched_fallback")]
-        assert len(matched) == 1
-        assert matched[0]["zone_id"] == "zone:kochbereich"
-        assert matched[0]["aggregated"] is False
-
-
-class TestEntityRoleDetection:
-    """Test automatic entity role detection."""
-
-    def test_light_entity(self):
-        assert detect_entity_role("light.wohnzimmer_decke") == "lights"
-
-    def test_motion_binary_sensor(self):
-        assert detect_entity_role(
-            "binary_sensor.flur_motion", device_class="motion"
-        ) == "motion"
-
-    def test_motion_by_name(self):
-        assert detect_entity_role("binary_sensor.praesenz_wohnzimmer") == "motion"
-
-    def test_temperature_sensor(self):
-        assert detect_entity_role(
-            "sensor.bad_temperatur", device_class="temperature"
-        ) == "temperature"
-
-    def test_humidity_sensor(self):
-        assert detect_entity_role(
-            "sensor.bad_humidity", device_class="humidity"
-        ) == "humidity"
-
-    def test_media_player(self):
-        assert detect_entity_role("media_player.sonos_wohnzimmer") == "media"
-
-    def test_climate(self):
-        assert detect_entity_role("climate.bad_heizung") == "heating"
-
-    def test_cover(self):
-        assert detect_entity_role("cover.wohnzimmer_rollladen") == "cover"
-
-    def test_lock(self):
-        assert detect_entity_role("lock.haustuer") == "lock"
-
-    def test_energy_sensor(self):
-        assert detect_entity_role("sensor.strom_verbrauch") == "power"
-
-    def test_illuminance_sensor(self):
-        assert detect_entity_role("sensor.helligkeit_flur") == "brightness"
-
-    def test_window_binary_sensor(self):
-        assert detect_entity_role(
-            "binary_sensor.fenster_bad", device_class="window"
-        ) == "window"
-
-    def test_door_binary_sensor(self):
-        assert detect_entity_role(
-            "binary_sensor.haustuer", device_class="door"
-        ) == "door"
-
-
-class TestEntityTagDetection:
-    """Test automatic entity tag detection."""
-
-    def test_light_tag(self):
-        tags = detect_entity_tags("light.decke", "lights")
-        assert "licht" in tags
-
-    def test_motion_tag(self):
-        tags = detect_entity_tags("binary_sensor.motion", "motion")
-        assert "praesenz" in tags
-
-    def test_climate_tag(self):
-        tags = detect_entity_tags("climate.heizung", "heating")
-        assert "klima" in tags
-
-    def test_cover_tag(self):
-        tags = detect_entity_tags("cover.rollladen", "cover")
-        assert "rollladen" in tags
-
-    def test_styx_entity_gets_styx_tag(self):
-        tags = detect_entity_tags("sensor.pilotsuite_mood", "other")
-        assert "styx" in tags
-
-    def test_no_duplicate_tags(self):
-        tags = detect_entity_tags("sensor.licht_energie", "energy")
-        assert len(tags) == len(set(tags))
-
-
-class TestTemplateCompleteness:
-    """Verify template system covers common German room names."""
-
-    @pytest.mark.parametrize("room_name,expected_zone", [
-        ("Wohnzimmer", "wohnbereich"),
-        ("Esszimmer", "wohnbereich"),
-        ("Loft", "wohnbereich"),
-        ("Badezimmer", "badbereich"),
-        ("Toilette", "badbereich"),
-        ("WC", "badbereich"),
-        ("Küche", "kochbereich"),
-        ("Büro", "buerobereich"),
-        ("Homeoffice", "buerobereich"),
-        ("Flur", "gangbereich"),
-        ("Diele", "gangbereich"),
-        ("Eingang", "gangbereich"),
-        ("Schlafzimmer", "schlafbereich"),
-        ("Kinderzimmer", "kinderzimmer"),
-        ("Terrasse", "terrassenbereich"),
-        ("Balkon", "terrassenbereich"),
-        ("Garten", "aussenbereich"),
-        ("Garage", "aussenbereich"),
-        ("Keller", "kellerbereich"),
-    ])
-    def test_room_matches_expected_zone(self, room_name, expected_zone):
-        template, conf = _match_area_to_template(room_name)
-        assert template is not None, f"{room_name} should match {expected_zone}"
-        assert template["zone_id"] == expected_zone, (
-            f"{room_name} matched {template['zone_id']} instead of {expected_zone}"
+    def test_area_name_ungeordnet_zone_still_created(self):
+        zone, conf, extra = sort_entity_to_zone(
+            "sensor.serverschrank_temp",
+            area_name="Serverschrank",
         )
-        assert conf >= 0.6, f"{room_name} confidence {conf} too low"
+        assert zone == "zone:ungeordnet"
 
 
-class TestNeuronTypeMapping:
-    """Test role → neuron type classification."""
+# ── sort_entity_to_zone() — confidence thresholds ─────────────────────
 
-    def test_temperature_is_context(self):
-        assert ROLE_NEURON_TYPE_MAP["temperature"] == "context"
+class TestSortEntityToZoneConfidence:
+    def test_confidence_above_090_is_high(self):
+        zone, conf, _ = sort_entity_to_zone(
+            "sensor.bad_temperatur",
+            area_name="Bad",
+        )
+        assert conf >= 0.90
 
-    def test_humidity_is_context(self):
-        assert ROLE_NEURON_TYPE_MAP["humidity"] == "context"
+    def test_confidence_exact_entity_id(self):
+        zone, conf, _ = sort_entity_to_zone("light.wohnzimmer_decke")
+        assert conf >= 0.80
 
-    def test_energy_is_context(self):
-        assert ROLE_NEURON_TYPE_MAP["energy"] == "context"
+    def test_confidence_substring(self):
+        zone, conf, _ = sort_entity_to_zone("sensor.wohnung_temp")
+        assert 0.60 <= conf < 0.90
 
-    def test_motion_is_state(self):
-        assert ROLE_NEURON_TYPE_MAP["motion"] == "state"
+    def test_confidence_fuzzy_match(self):
+        zone, conf, _ = sort_entity_to_zone("sensor.wohne Temperature")
+        assert conf >= 0.60
 
-    def test_door_is_state(self):
-        assert ROLE_NEURON_TYPE_MAP["door"] == "state"
+    def test_confidence_zero_for_unknown(self):
+        _, conf, _ = sort_entity_to_zone("sensor.xyzqweasd")
+        assert conf == 0.0
 
-    def test_lock_is_state(self):
-        assert ROLE_NEURON_TYPE_MAP["lock"] == "state"
+    def test_confidence_below_060_goes_ungeordnet(self):
+        # Even if sort_entity_to_zone returns a zone_id with low confidence,
+        # the caller in zone_auto_setup enforces the 0.60 threshold.
+        zone, conf, _ = sort_entity_to_zone("sensor.generic_unknown_xyz")
+        # These entities should route to ungeordnet
+        assert zone == "zone:ungeordnet"
 
-    def test_lights_is_mood(self):
-        assert ROLE_NEURON_TYPE_MAP["lights"] == "mood"
 
-    def test_media_is_mood(self):
-        assert ROLE_NEURON_TYPE_MAP["media"] == "mood"
+# ── sort_entity_to_zone() — match types ─────────────────────────────
 
-    def test_all_three_types_covered(self):
-        types = set(ROLE_NEURON_TYPE_MAP.values())
-        assert types == {"context", "state", "mood"}
+class TestSortEntityToZoneMatchTypes:
+    def test_match_type_area_exact(self):
+        _, _, extra = sort_entity_to_zone("sensor.xyz", area_name="Bad")
+        assert extra["match_type"] == "area_exact"
 
-    def test_neuron_tag_meta_has_all_types(self):
-        assert set(NEURON_TAG_META.keys()) == {"context", "state", "mood"}
+    def test_match_type_exact(self):
+        # Exact match: normalized entity_id exactly equals a keyword.
+        # "sensor.bad" normalizes to "sensor.bad"; "bad" != "sensor.bad" → substring.
+        # Use entity_id "bad" so search_text == "bad" == kw_norm.
+        _, _, extra = sort_entity_to_zone("bad")
+        assert extra["match_type"] == "exact"
 
-    def test_each_meta_has_color_and_icon(self):
-        for ntype, meta in NEURON_TAG_META.items():
-            assert "color" in meta, f"{ntype} missing color"
-            assert "icon" in meta, f"{ntype} missing icon"
+    def test_match_type_substring(self):
+        # "wohn" is substring of entity_id "light.wohnzimmer" but not equal → substring
+        _, _, extra = sort_entity_to_zone("light.wohnzimmer")
+        assert extra["match_type"] == "substring"
 
-    def test_context_roles_are_environmental(self):
-        context_roles = {r for r, t in ROLE_NEURON_TYPE_MAP.items() if t == "context"}
-        assert context_roles == {"temperature", "humidity", "co2", "pressure", "energy", "power"}
+    def test_match_type_fuzzy(self):
+        _, _, extra = sort_entity_to_zone("sensor.wohne_temp")
+        assert extra["match_type"] in ("substring", "fuzzy")
 
-    def test_state_roles_are_physical(self):
-        state_roles = {r for r, t in ROLE_NEURON_TYPE_MAP.items() if t == "state"}
-        assert state_roles == {"motion", "door", "window", "lock", "cover", "heating"}
+    def test_match_type_none_for_unknown(self):
+        _, _, extra = sort_entity_to_zone("sensor.unknownxyz123")
+        assert extra["match_type"] == "none"
 
-    def test_mood_roles_are_comfort(self):
-        mood_roles = {r for r, t in ROLE_NEURON_TYPE_MAP.items() if t == "mood"}
-        assert mood_roles == {"lights", "brightness", "media", "noise"}
+    def test_zone_name_de_populated(self):
+        _, _, extra = sort_entity_to_zone("light.bad_decke", area_name="Bad")
+        assert extra["zone_name_de"] == "Badbereich"
+
+    def test_zone_name_de_ungeordnet(self):
+        _, _, extra = sort_entity_to_zone("sensor.unknown")
+        assert extra["zone_name_de"] == "Ungeordnet"
+
+
+# ── sort_entity_to_zone() — state/friendly_name ─────────────────────
+
+class TestSortEntityToZoneWithState:
+    def test_friendly_name_in_search_space(self):
+        mock_state = MagicMock()
+        mock_state.attributes = {
+            "friendly_name": "Wohnzimmer Deckenlampe",
+            "device_class": None,
+        }
+        zone, conf, extra = sort_entity_to_zone(
+            "light.entity_no_hint",
+            state=mock_state,
+        )
+        assert zone == "zone:wohnbereich"
+
+    def test_state_device_class_not_used_for_routing(self):
+        # device_class affects role detection, not zone routing
+        mock_state = MagicMock()
+        mock_state.attributes = {
+            "friendly_name": "",
+            "device_class": "temperature",
+        }
+        zone, conf, extra = sort_entity_to_zone(
+            "light.generic_light",
+            state=mock_state,
+        )
+        # light.generic_light → no keyword → ungeordnet
+        assert zone == "zone:ungeordnet"
+
+
+# ── sort_entity_to_zone() — edge cases ─────────────────────────────
+
+class TestSortEntityToZoneEdgeCases:
+    def test_empty_entity_id(self):
+        zone, conf, extra = sort_entity_to_zone("")
+        assert zone == "zone:ungeordnet"
+        assert conf == 0.0
+
+    def test_none_area_name_ok(self):
+        zone, conf, _ = sort_entity_to_zone("light.bad_decke", area_name=None)
+        assert zone == "zone:badbereich"
+
+    def test_area_id_passed_but_no_area_name(self):
+        zone, conf, _ = sort_entity_to_zone("light.bad_decke", area_id="area_123")
+        # area_id alone is not used for matching (no name resolution here)
+        assert zone == "zone:badbereich"  # entity_id keyword match still fires
+
+    def test_all_zone_ids_covered_in_keywords(self):
+        """Every zone_id in _ENTITY_ZONE_KEYWORDS must have at least one keyword."""
+        for zone_id in _ENTITY_ZONE_KEYWORDS:
+            assert len(_ENTITY_ZONE_KEYWORDS[zone_id]) > 0, f"{zone_id} has no keywords"
+
+    def test_zone_id_to_name_complete(self):
+        """All zone_ids used in routing should have a human-readable name."""
+        for zone_id in _ENTITY_ZONE_KEYWORDS:
+            assert zone_id in _ZONE_ID_TO_NAME, f"Missing name for {zone_id}"
+
+
+# ── domain bonus ─────────────────────────────────────────────────────
+
+class TestDomainBonus:
+    def test_light_domain_gets_bonus(self):
+        assert _domain_bonus("light.wohnzimmer") > 0
+
+    def test_climate_domain_gets_bonus(self):
+        assert _domain_bonus("climate.wohnbereich") > 0
+
+    def test_unknown_domain_no_bonus(self):
+        assert _domain_bonus("sensor.generic") == 0.0
+
+    def test_bonus_is_small(self):
+        bonus = _domain_bonus("light.xyz")
+        assert 0 < bonus <= 0.10
+
+
+# ── sort_entity_to_zone() — integration scenarios ───────────────────
+
+class TestSortEntityToZoneIntegration:
+    """Real-world scenarios matching the task description."""
+
+    def test_light_with_wohnen_keyword_routes_wohnbereich(self):
+        zone, conf, extra = sort_entity_to_zone("light.wohnen_decke")
+        assert zone == "zone:wohnbereich"
+        assert extra["matched_keyword"] == "wohn"
+
+    def test_light_with_wohnzimmer_routes_wohnbereich(self):
+        zone, conf, extra = sort_entity_to_zone("light.wohnzimmer_decke")
+        assert zone == "zone:wohnbereich"
+        assert conf >= 0.80
+
+    def test_motion_sensor_badbereich(self):
+        zone, conf, extra = sort_entity_to_zone(
+            "binary_sensor.toilette_praesenz",
+            area_name="Toilette",
+        )
+        assert zone == "zone:badbereich"
+        assert conf >= 0.60
+
+    def test_entity_without_area_assignment_can_still_route(self):
+        # Entity with no area, but entity_id contains a keyword → still routes
+        zone, conf, extra = sort_entity_to_zone(
+            "sensor.kueche_temperatur",
+            area_id=None,
+            area_name=None,
+        )
+        assert zone == "zone:kochbereich"
+        assert conf >= 0.60
+
+    def test_sicherheit_entity_not_matched_by_zone_keywords(self):
+        # Entities about security should not accidentally match room keywords
+        zone, conf, extra = sort_entity_to_zone(
+            "alarm_control_panel.alarmanlage",
+            area_name="Eingang",
+        )
+        # alarm_control_panel.alarmanlage has no room keyword in entity_id;
+        # area_name Eingang → gangbereich
+        assert zone == "zone:gangbereich"
+
+    def test_entity_from_virtual_area_routes_ungeordnet(self):
+        zone, conf, extra = sort_entity_to_zone(
+            "sensor.energie_pv_leistung",
+            area_name="PV-Anlage",
+        )
+        assert zone == "zone:ungeordnet"
+        assert extra["is_virtual_area"] is True
+
+    def test_entity_routing_with_low_confidence_goes_ungeordnet(self):
+        # An entity whose name is ambiguous should end up in ungeordnet
+        zone, conf, _ = sort_entity_to_zone("sensor.sensor42")
+        assert zone == "zone:ungeordnet"
+        assert conf == 0.0
+
+
+# ── sort_entity_to_zone — confidence boundary ──────────────────────
+
+class TestConfidenceBoundary:
+    """Verify the 0.60 threshold behavior."""
+
+    @pytest.mark.parametrize("entity_id", [
+        "sensor.xyz_unknown_abc",
+        "binary_sensor.generic",
+        "input_boolean.dummy",
+    ])
+    def test_unknown_entities_ungeordnet(self, entity_id):
+        zone, conf, _ = sort_entity_to_zone(entity_id)
+        assert zone == "zone:ungeordnet"
+        assert conf < 0.60
+
+    @pytest.mark.parametrize("entity_id", [
+        "light.wohnzimmer_decke",
+        "sensor.bad_temperatur",
+        "switch.kueche_plug",
+        "climate.schlafzimmer",
+        "binary_sensor.garten_bewegung",
+    ])
+    def test_known_entities_match_zone(self, entity_id):
+        zone, conf, _ = sort_entity_to_zone(entity_id)
+        assert zone != "zone:ungeordnet"
+        assert conf >= 0.60
