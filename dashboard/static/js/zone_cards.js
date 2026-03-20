@@ -139,6 +139,10 @@ class ZoneCardsManager {
         const humidityStatus = this.getHumidityStatus(data.humidity, zoneId);
         const lightState = data.light_state || 'off';
         const motionClass = data.motion ? 'active' : 'idle';
+        const presenceState = data.presence || 'unknown';
+        const personCount = data.person_count !== undefined ? data.person_count : null;
+        const mediaState = data.media_playing ? 'playing' : 'idle';
+        const mediaTitle = data.media_title || null;
         const hasAlerts = data.alerts && data.alerts.length > 0;
         const statusClass = hasAlerts ? 'has-alerts' : 'ok';
         const statusText = hasAlerts ? `${data.alerts.length} Probleme` : 'OK';
@@ -215,6 +219,29 @@ class ZoneCardsManager {
                         <span class="value">${data.motion ? 'Ja' : 'Nein'}</span>
                     </div>
                     <div class="metric-label">Bewegung</div>
+                </div>
+                
+                <!-- Presence -->
+                <div class="metric-item presence-status ${presenceState !== 'unknown' ? (presenceState === 'occupied' ? 'occupied' : 'empty') : ''}" title="Anwesenheit">
+                    <div class="metric-icon">
+                        <span class="mdi mdi-${personCount !== null ? 'account-group' : 'account-outline'}"></span>
+                    </div>
+                    <div class="metric-value">
+                        <span class="value">${presenceState === 'occupied' ? (personCount !== null ? `${personCount}` : 'Ja') : presenceState === 'vacant' ? 'Nein' : '--'}</span>
+                        ${personCount !== null ? `<span class="unit">${personCount === 1 ? 'Person' : 'Personen'}</span>` : ''}
+                    </div>
+                    <div class="metric-label">Anwesenheit</div>
+                </div>
+                
+                <!-- Media Status -->
+                <div class="metric-item media-status ${mediaState}" title="Medien">
+                    <div class="metric-icon">
+                        <span class="mdi mdi-${mediaState === 'playing' ? 'music' : 'music-off'}"></span>
+                    </div>
+                    <div class="metric-value">
+                        <span class="value">${mediaState === 'playing' ? (mediaTitle || 'Playing') : 'Idle'}</span>
+                    </div>
+                    <div class="metric-label">Medien</div>
                 </div>
             </div>
             
@@ -313,6 +340,54 @@ class ZoneCardsManager {
             const motionValue = motionMetric.querySelector('.metric-value .value');
             if (motionValue) {
                 motionValue.textContent = data.motion ? 'Ja' : 'Nein';
+            }
+        }
+        
+        // Update presence
+        const presenceMetric = card.querySelector('.presence-status');
+        if (presenceMetric) {
+            const presence = data.presence || 'unknown';
+            presenceMetric.classList.remove('occupied', 'empty');
+            if (presence !== 'unknown') {
+                presenceMetric.classList.add(presence === 'occupied' ? 'occupied' : 'empty');
+            }
+            
+            const presenceValue = presenceMetric.querySelector('.metric-value .value');
+            const presenceUnit = presenceMetric.querySelector('.metric-value .unit');
+            if (presenceValue) {
+                const personCount = data.person_count;
+                if (presence === 'occupied') {
+                    presenceValue.textContent = personCount !== undefined ? String(personCount) : 'Ja';
+                } else if (presence === 'vacant') {
+                    presenceValue.textContent = 'Nein';
+                } else {
+                    presenceValue.textContent = '--';
+                }
+            }
+            if (presenceUnit) {
+                if (personCount !== undefined && personCount !== null) {
+                    presenceUnit.textContent = personCount === 1 ? 'Person' : 'Personen';
+                } else {
+                    presenceUnit.textContent = '';
+                }
+            }
+        }
+        
+        // Update media status
+        const mediaMetric = card.querySelector('.media-status');
+        if (mediaMetric) {
+            const mediaState = data.media_playing ? 'playing' : 'idle';
+            mediaMetric.classList.remove('playing', 'idle');
+            mediaMetric.classList.add(mediaState);
+            
+            const mediaIcon = mediaMetric.querySelector('.metric-icon .mdi');
+            if (mediaIcon) {
+                mediaIcon.className = `mdi mdi-${mediaState === 'playing' ? 'music' : 'music-off'}`;
+            }
+            
+            const mediaValue = mediaMetric.querySelector('.metric-value .value');
+            if (mediaValue) {
+                mediaValue.textContent = mediaState === 'playing' ? (data.media_title || 'Playing') : 'Idle';
             }
         }
         
