@@ -919,7 +919,8 @@ class HabitusDashboard {
         .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
         .then(() => {
           modal.remove();
-          if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [idVal] });
+          // Refresh zone list from Core so new zone appears in tabs
+          this.loadZones();
         })
         .catch(err => { err.textContent = 'Fehler: ' + err.message; err.style.display = 'block'; document.getElementById('cz-submit').disabled = false; document.getElementById('cz-submit').textContent = 'Erstellen'; })
         .finally(() => { btns.forEach(b => b.removeAttribute('disabled')); });
