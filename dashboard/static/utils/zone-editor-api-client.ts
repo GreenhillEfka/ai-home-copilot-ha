@@ -113,6 +113,16 @@ export interface ZonePayload {
   compact_mode?: boolean;
 }
 
+/**
+ * Alias for backward-compatibility with cards that reference ZoneEditorZone.
+ * The newer ZonePayload interface is the canonical shape.
+ */
+export interface ZoneEditorZone extends ZonePayload {
+  zone_id?: string;
+  enabled?: boolean;
+  priority?: number;
+}
+
 export interface RoomPayload {
   id?: string;
   name: string;

@@ -2,6 +2,17 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.7.5] - 2026-03-20
+
+### Release-Gate: OpenAPI Path-Count Verification
+
+#### OpenAPI Sync Status
+- **572/572 paths, 100%** — HA and Core OpenAPI specs fully in sync
+- Verified via `pilotsuite_ops/scripts/check_openapi_count.py`
+- Core: v14.7.4 (db2e3d45) | HA: v14.7.4
+
+---
+
 ## [14.7.3] - 2026-03-17
 
 ### Module-per-Zone Schema-Driven Entities

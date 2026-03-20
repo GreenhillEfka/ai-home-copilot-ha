@@ -20,6 +20,11 @@ from .camera_entities import (
     PresenceCamera,
 )
 from .unifi_context_entities import build_unifi_binary_entities
+from .sensors.zone_presence_trigger import (
+    ZonePresenceTriggerSensor,
+    ZonePresenceOverviewSensor,
+)
+from .habitus_zones_store_v2 import HabitusZoneV2, async_get_zones_v2
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
@@ -74,6 +79,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         ZWaveMeshStatusBinarySensor(hass, entry),
         ZigbeeMeshStatusBinarySensor(hass, entry),
     ])
+
+    # Zone Presence Trigger Sensors — Multi-Source Aggregation (PS-135)
+    # Creates binary_sensor.pilotsuite_zone_presence_{zone_id}
+    # and binary_sensor.pilotsuite_zone_presence_overview.
+    # Powered by Core /api/v1/zone-automation/dashboard with
+    # any-on source aggregation, timeout-reset, and hold-switch.
+    try:
+        zones: list[HabitusZoneV2] = await async_get_zones_v2(hass, entry.entry_id)
+        entities.append(ZonePresenceOverviewSensor(coordinator))
+        for zone in zones:
+            zone_short = zone.zone_id.replace("zone:", "")
+            entities.append(
+                ZonePresenceTriggerSensor(
+                    coordinator=coordinator,
+                    zone_id=zone_short,
+                    zone_name=zone.name,
+                )
+            )
+        _LOGGER.info(
+            "Zone presence trigger sensors registered: %d zones + 1 overview",
+            len(zones),
+        )
+    except Exception:  # noqa: BLE001
+        _LOGGER.warning(
+            "Zone presence trigger sensor setup failed, continuing without",
+            exc_info=True,
+        )
 
     # UniFi context binary sensors
     entities.extend(_collect_dynamic_context_binaries())

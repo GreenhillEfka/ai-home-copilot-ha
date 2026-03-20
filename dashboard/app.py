@@ -15,6 +15,10 @@ import gzip
 from collections import defaultdict
 from datetime import datetime
 
+# Dynamic dashboard version from VERSION file
+_VERSION_FILE = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), 'VERSION')
+DASHBOARD_VERSION = open(_VERSION_FILE).read().strip() if _os.path.exists(_VERSION_FILE) else 'unknown'
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(config['default'])
@@ -102,7 +106,7 @@ def get_status():
     """Get dashboard status"""
     return jsonify({
         'status': 'running',
-        'version': '13.0.4',
+        'version': DASHBOARD_VERSION,
         'port': app.config['PORT'],
         'rag_api': app.config['RAG_API_URL'],
         'widgets': ['system_status', 'brain_graph', 'chat', 'sensor_overview'],

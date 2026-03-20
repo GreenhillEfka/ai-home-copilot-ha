@@ -149,6 +149,100 @@ class TestVirtualAreaFilter:
         assert not any("netzwerk" in zid for zid in zone_ids)
 
 
+class TestUnmatchedFallback:
+    """Test unmatched_fallback flag and zone:ungeordnet routing."""
+
+    def test_unmatched_fallback_flag_default_true_emits_ungeordnet(self):
+        """By default unmatched areas go into zone:ungeordnet."""
+        areas = [
+            {"area_id": "wz", "name": "Wohnzimmer"},
+            {"area_id": "srv", "name": "Serverschrank"},   # unmatched
+        ]
+        zones = aggregate_areas_to_habitus_zones(areas)
+        zone_ids = {z["zone_id"] for z in zones}
+        assert "zone:ungeordnet" in zone_ids
+        ungeo = next(z for z in zones if z["zone_id"] == "zone:ungeordnet")
+        assert ungeo["is_unmatched_fallback"] is True
+        assert "srv" in ungeo["area_ids"]
+
+    def test_unmatched_fallback_false_drops_unmatched_areas(self):
+        """unmatched_fallback=False silently discards unmappable areas."""
+        areas = [
+            {"area_id": "wz", "name": "Wohnzimmer"},
+            {"area_id": "srv", "name": "Serverschrank"},
+        ]
+        zones = aggregate_areas_to_habitus_zones(areas, unmatched_fallback=False)
+        zone_ids = {z["zone_id"] for z in zones}
+        assert "zone:ungeordnet" not in zone_ids
+        assert "zone:wohnbereich" in zone_ids
+
+    def test_unmatched_fallback_false_keeps_matched_areas(self):
+        """Even with unmatched_fallback=False, matched areas still produce zones."""
+        areas = [
+            {"area_id": "wz", "name": "Wohnzimmer"},
+            {"area_id": "srv", "name": "Serverschrank"},
+        ]
+        zones = aggregate_areas_to_habitus_zones(areas, unmatched_fallback=False)
+        wz = next((z for z in zones if z["zone_id"] == "zone:wohnbereich"), None)
+        assert wz is not None
+        assert "wz" in wz["area_ids"]
+
+    def test_unmatched_area_without_entities_creates_fallback_zone(self):
+        """An unmatched area with no entities still emits zone:ungeordnet."""
+        areas = [
+            {"area_id": "wz", "name": "Wohnzimmer"},
+            {"area_id": "srv", "name": "Serverschrank"},
+        ]
+        zones = aggregate_areas_to_habitus_zones(areas)
+        ungeo = next((z for z in zones if z["zone_id"] == "zone:ungeordnet"), None)
+        assert ungeo is not None
+        assert ungeo["confidence"] == 0.0
+        assert ungeo["area_ids"] == ["srv"]
+
+    def test_unmatched_fallback_zone_sorted_to_end(self):
+        """zone:ungeordnet always sorts after named zones regardless of area count."""
+        areas = [
+            {"area_id": "srv", "name": "Serverschrank"},   # unmatched, only one area
+            {"area_id": "wz", "name": "Wohnzimmer"},       # matched
+        ]
+        zones = aggregate_areas_to_habitus_zones(areas)
+        ungeo_idx = next(i for i, z in enumerate(zones) if z["zone_id"] == "zone:ungeordnet")
+        wz_idx = next(i for i, z in enumerate(zones) if z["zone_id"] == "zone:wohnbereich")
+        assert ungeo_idx > wz_idx, "zone:ungeordnet must sort after named zones"
+
+    def test_multiple_unmatched_areas_aggregated_in_one_fallback_zone(self):
+        """Multiple unmatched areas are collected into a single zone:ungeordnet."""
+        areas = [
+            {"area_id": "wz", "name": "Wohnzimmer"},
+            {"area_id": "srv", "name": "Serverschrank"},   # unmatched (not virtual)
+            {"area_id": "dach", "name": "Dachboden"},      # unmatched (not virtual)
+            {"area_id": "nw", "name": "Netzwerk"},         # virtual → excluded before fallback
+        ]
+        zones = aggregate_areas_to_habitus_zones(areas)
+        ungeo = next((z for z in zones if z["zone_id"] == "zone:ungeordnet"), None)
+        assert ungeo is not None
+        # Netzwerk is virtual, excluded; Serverschrank + Dachboden are unmatched
+        assert set(ungeo["area_ids"]) == {"srv", "dach"}
+        assert ungeo["aggregated"] is True
+
+    def test_empty_input_emits_nothing(self):
+        """Empty area list returns empty zones list (no zone:ungeordnet)."""
+        zones = aggregate_areas_to_habitus_zones([])
+        assert zones == []
+
+    def test_virtual_areas_are_excluded_from_unmatched(self):
+        """Virtual areas are already filtered before fallback routing."""
+        areas = [
+            {"area_id": "en", "name": "Energie"},           # virtual → skipped
+            {"area_id": "srv", "name": "Serverschrank"},    # unmatched → zone:ungeordnet
+        ]
+        zones = aggregate_areas_to_habitus_zones(areas)
+        ungeo = next((z for z in zones if z["zone_id"] == "zone:ungeordnet"), None)
+        assert ungeo is not None
+        assert "en" not in ungeo["area_ids"]
+        assert "srv" in ungeo["area_ids"]
+
+
 class TestAggregation:
     """Test smart area aggregation into Habitus Zones."""
 
@@ -196,23 +290,27 @@ class TestAggregation:
         assert "zone:schlafbereich" in zone_ids  # Schlafzimmer
         assert "zone:aussenbereich" in zone_ids  # Garten
 
-        # Serverschrank is unmatched → standalone zone
-        srv_zones = [z for z in zones if "serverschrank" in z["zone_id"]]
+        # Serverschrank is unmatched → routed to zone:ungeordnet
+        srv_zones = [z for z in zones if z["zone_id"] == "zone:ungeordnet"]
         assert len(srv_zones) == 1
-        assert srv_zones[0]["aggregated"] is False
+        assert "srv" in srv_zones[0]["area_ids"]
 
         # Badbereich should have 2 areas
         bad = next(z for z in zones if z["zone_id"] == "zone:badbereich")
         assert len(bad["area_ids"]) == 2
 
     def test_empty_areas_returns_empty(self):
-        assert aggregate_areas_to_habitus_zones([]) == []
+        # Empty input: zone:ungeordnet is still emitted because unmatched_fallback=True.
+        zones = aggregate_areas_to_habitus_zones([])
+        assert zones == []
 
     def test_single_area(self):
         zones = aggregate_areas_to_habitus_zones([{"area_id": "x", "name": "Küche"}])
-        assert len(zones) == 1
-        assert zones[0]["zone_id"] == "zone:kochbereich"
-        assert zones[0]["aggregated"] is False
+        # Küche is matched → only kochbereich, no fallback
+        matched = [z for z in zones if not z.get("is_unmatched_fallback")]
+        assert len(matched) == 1
+        assert matched[0]["zone_id"] == "zone:kochbereich"
+        assert matched[0]["aggregated"] is False
 
 
 class TestEntityRoleDetection:

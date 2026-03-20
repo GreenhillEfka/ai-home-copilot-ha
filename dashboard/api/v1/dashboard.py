@@ -1,4 +1,11 @@
 """
+import os as _os
+from datetime import datetime
+
+# Central dashboard version (single source of truth)
+_VERSION_FILE = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.dirname(__file__)))), 'VERSION')
+DASHBOARD_VERSION = open(_VERSION_FILE).read().strip() if _os.path.exists(_VERSION_FILE) else 'unknown'
+"""
 PilotSuite Styx Dashboard API v1
 Zonenzentriertes Dashboard mit Habituszonen-Endpoints.
 
@@ -813,7 +820,7 @@ def get_dashboard_config():
     household = _fetch_household()
 
     config = {
-        'version': '13.0.4',
+        'version': DASHBOARD_VERSION,
         'zones': zones_config,
         'theme_support': ['light', 'dark'],
         'features': {

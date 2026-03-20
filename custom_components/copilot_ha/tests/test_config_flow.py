@@ -534,6 +534,108 @@ class TestConfigFlowUnit:
             await flow.async_step_reauth()
             mock_manual.assert_awaited_once()
 
+    # ── Reconfigure helpers ────────────────────────────────────────────
+
+    def _build_reconfigure_flow(self, entry_data: dict | None = None, entry_options: dict | None = None):
+        """Construct a ConfigFlow in reconfigure mode, bound to a fake entry."""
+        from custom_components.copilot_ha.config_flow import ConfigFlow
+
+        entry = _FakeConfigEntry(
+            data=entry_data or {"host": "192.168.1.10", "port": 8909, "token": "tok"},
+            options=entry_options or {},
+        )
+        flow = ConfigFlow.__new__(ConfigFlow)
+        flow.hass = _FakeHass()
+        object.__setattr__(flow, "context", {"source": "reconfigure", "config_entry_id": entry.entry_id})
+        flow._entry = entry
+        flow._async_current_entries = MagicMock(return_value=[])
+        flow.async_set_unique_id = AsyncMock()
+        flow._abort_if_unique_id_configured = MagicMock()
+        flow.async_show_menu = MagicMock(return_value={"type": "menu"})
+        flow.async_show_form = MagicMock(return_value={"type": "form"})
+        flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+        flow.async_abort = MagicMock(return_value={"type": "abort"})
+        flow._get_reconfigure_entry = MagicMock(return_value=entry)
+        return flow
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_step_shows_menu(self):
+        """async_step_reconfigure shows the reconfigure menu with connection/zones/back."""
+        flow = self._build_reconfigure_flow()
+        result = await flow.async_step_reconfigure()
+        flow.async_show_menu.assert_called_once()
+        opts = flow.async_show_menu.call_args.kwargs.get(
+            "menu_options", flow.async_show_menu.call_args[1].get("menu_options", [])
+        )
+        assert "reconfigure_connection" in opts
+        assert "reconfigure_zones" in opts
+        assert "back" in opts
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_seeds_reconfigure_data(self):
+        """Reconfigure seeds ConfigFlow._reconfigure_data from entry data."""
+        flow = self._build_reconfigure_flow(
+            entry_data={"host": "10.0.0.1", "port": 9000, "token": "mytok"},
+        )
+        from custom_components.copilot_ha.config_flow import ConfigFlow
+
+        ConfigFlow._reconfigure_data = {}
+        await flow.async_step_reconfigure()
+        assert ConfigFlow._reconfigure_data.get("host") == "10.0.0.1"
+        assert ConfigFlow._reconfigure_data.get("port") == 9000
+        assert ConfigFlow._reconfigure_data.get("token") == "mytok"
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_connection_shows_form(self):
+        """Reconfigure connection step renders the form on first call (user_input=None)."""
+        flow = self._build_reconfigure_flow(
+            entry_data={"host": "192.168.1.10", "port": 8909, "token": "tok"},
+        )
+        result = await flow.async_step_reconfigure_connection()
+        flow.async_show_form.assert_called_once()
+        step_id = flow.async_show_form.call_args.kwargs.get("step_id")
+        assert step_id == "reconfigure_connection"
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_connection_accumulates_params(self):
+        """Reconfigure connection accumulates host/port/token in _reconfigure_data."""
+        flow = self._build_reconfigure_flow(
+            entry_data={"host": "old.local", "port": 8909, "token": "old"},
+        )
+        from custom_components.copilot_ha.config_flow import ConfigFlow
+
+        ConfigFlow._reconfigure_data = {}
+        user_input = {"host": "new.local", "port": 9000, "token": "new"}
+        result = await flow.async_step_reconfigure_connection(user_input)
+        # After save, shows menu again
+        flow.async_show_menu.assert_called()
+        assert ConfigFlow._reconfigure_data.get("host") == "new.local"
+        assert ConfigFlow._reconfigure_data.get("port") == 9000
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_back_commits_and_returns_menu(self):
+        """Back step commits _reconfigure_data to entry and returns to menu."""
+        flow = self._build_reconfigure_flow(
+            entry_data={"host": "192.168.1.10", "port": 8909, "token": "tok"},
+        )
+        from custom_components.copilot_ha.config_flow import ConfigFlow
+
+        ConfigFlow._reconfigure_data = {"host": "committed.local", "port": 8123}
+        # Mock hass.config_entries.async_update_entry
+        flow.hass.config_entries = MagicMock()
+        flow.hass.config_entries.async_update_entry = MagicMock()
+
+        result = await flow.async_step_back()
+        flow.hass.config_entries.async_update_entry.assert_called_once()
+        call_args = flow.hass.config_entries.async_update_entry.call_args
+        updated_entry = call_args[0][0]
+        assert updated_entry is flow._entry
+        updated_data = call_args[0][1]
+        assert updated_data["host"] == "committed.local"
+        assert updated_data["port"] == 8123
+        # Staging dict should be cleared
+        assert ConfigFlow._reconfigure_data == {}
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 7. OptionsFlowHandler
