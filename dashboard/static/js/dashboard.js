@@ -554,6 +554,9 @@ class HabitusDashboard {
     const name = prompt(`Name für neue Zone (${zoneId}):`);
     if (!name || !name.trim()) return;
 
+    const actionBtns = document.querySelectorAll(`#actions-${zoneId} .quick-action-btn`);
+    actionBtns.forEach(b => b.setAttribute('disabled', 'true'));
+
     const payload = {
       zone_id: zoneId,
       name: name.trim(),
@@ -589,11 +592,17 @@ class HabitusDashboard {
           message: 'Zone konnte nicht erstellt werden.',
           detail: String(err),
         });
+      })
+      .finally(() => {
+        actionBtns.forEach(b => b.removeAttribute('disabled'));
       });
   }
 
   deleteZone(zoneId) {
     if (!confirm(`Zone "${zoneId}" wirklich löschen?`)) return;
+
+    const actionBtns = document.querySelectorAll(`#actions-${zoneId} .quick-action-btn`);
+    actionBtns.forEach(b => b.setAttribute('disabled', 'true'));
 
     this._setZoneMeta(zoneId, { stale: false, lastError: null });
     this.renderZoneLoading(zoneId, 'Zone wird gelöscht…');
@@ -606,6 +615,10 @@ class HabitusDashboard {
         return resp.json();
       })
       .then(() => {
+        // Invalidate cache so next refresh gets fresh data
+        if (this.socket && this.connected) {
+          this.socket.emit('request_zone_data', { zones: [zoneId] });
+        }
         // Remove zone data and show empty state
         delete this.zoneData[zoneId];
         this.renderZoneEmpty(zoneId, 'Zone wurde gelöscht.');
@@ -617,6 +630,9 @@ class HabitusDashboard {
           message: 'Zone konnte nicht gelöscht werden.',
           detail: String(err),
         });
+      })
+      .finally(() => {
+        actionBtns.forEach(b => b.removeAttribute('disabled'));
       });
   }
 
