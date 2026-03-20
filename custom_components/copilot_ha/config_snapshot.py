@@ -131,10 +131,17 @@ async def async_apply_config_snapshot(
 ) -> None:
     """Apply snapshot to HA storage/options (no silent actions beyond config storage).
 
-    - Habitus zones are written to our store.
-    - Options are updated (secrets remain unchanged if redacted).
-    - Unmatched entities route to zone:ungeordnet (fallback).
-    - Finally reload config entry.
+    Delta-write pattern:
+    - Habitus zones: merge-only write via async_set_zones_v2_from_raw(..., unmatched_fallback=True)
+      Unmatched entities from snapshot route to zone:ungeordnet.
+    - Options: compute delta against current entry.options, write only changed keys.
+      Secrets (redacted in snapshot) are preserved from current entry.options.
+    - entry.data is setup-time config; only explicitly snapshot-diff keys are written.
+
+    Args:
+        hass: HomeAssistant instance.
+        entry: ConfigEntry being updated.
+        snapshot: Snapshot dict from export (schema: copilot_ha_config_snapshot v1).
     """
 
     zones = snapshot.get("habitus_zones")
@@ -144,15 +151,45 @@ async def async_apply_config_snapshot(
     if not isinstance(zones, list):
         raise ValueError("Snapshot habitus_zones must be a list")
 
-    # Delta-write pattern: preserve existing zone state, merge snapshot zones
-    # Unmatched entities from snapshot route to zone:ungeordnet
+    # ── Zones: always use unmatched_fallback routing ─────────────────────
+    # async_set_zones_v2_from_raw handles deduplication internally;
+    # unmatched entities (not mapped to any named zone) are routed to zone:ungeordnet.
     await async_set_zones_v2_from_raw(hass, entry.entry_id, zones, unmatched_fallback=True)
 
+    # ── Options: delta-write against current entry.options ───────────────
     snap_opts = snapshot.get("options")
-    if isinstance(snap_opts, dict):
-        # Preserve current secrets when snapshot has redacted values.
-        merged = _strip_redacted(dict(snap_opts), keep_existing=dict(entry.options))
-        hass.config_entries.async_update_entry(entry, options=merged)
+    current_opts: dict[str, Any] = dict(entry.options) if entry.options else {}
 
-    # entry.data is treated as setup-time config; we generally do not overwrite it.
+    if isinstance(snap_opts, dict):
+        # Strip <redacted> sentinel values, replacing with current secret values.
+        clean_opts = _strip_redacted(dict(snap_opts), keep_existing=current_opts)
+
+        # Compute delta: only write keys that actually differ from current state.
+        delta_opts: dict[str, Any] = {}
+        for k, v in clean_opts.items():
+            import copy
+            if copy.deepcopy(current_opts.get(k)) != copy.deepcopy(v):
+                delta_opts[k] = v
+
+        # Persist only if there is a real delta.
+        if delta_opts:
+            hass.config_entries.async_update_entry(entry, options=delta_opts)
+
+    # ── entry.data: setup-time config — minimal touch ───────────────────
+    # Only write deltas if snapshot carries explicit data keys that differ from current.
+    snap_data = snapshot.get("data")
+    current_data: dict[str, Any] = dict(entry.data) if entry.data else {}
+
+    if isinstance(snap_data, dict):
+        delta_data: dict[str, Any] = {}
+        for k, v in snap_data.items():
+            import copy
+            if copy.deepcopy(current_data.get(k)) != copy.deepcopy(v):
+                delta_data[k] = v
+
+        if delta_data:
+            # Merge: new values win, existing keys not in delta are preserved.
+            merged_data = {**current_data, **delta_data}
+            hass.config_entries.async_update_entry(entry, data=merged_data)
+
     await hass.config_entries.async_reload(entry.entry_id)
