@@ -656,7 +656,6 @@ class HabitusDashboard {
 
     const zone = this.zones.find(z => z.id === zoneId) || { id: zoneId, name: zoneId };
     const data = this.zoneData[zoneId] || {};
-    const MODULES = ['LIGHT', 'AUDIO', 'CLIMATE', 'COVER', 'ENERGY', 'SCENE', 'SECURITY'];
 
     const html = `
       <div id="edit-zone-modal" style="
@@ -665,8 +664,8 @@ class HabitusDashboard {
         font-family:system-ui,sans-serif;
       ">
         <div style="
-          background:#fff;padding:24px;border-radius:12px;width:380px;max-width:90vw;
-          box-shadow:0 8px 32px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;
+          background:#fff;padding:24px;border-radius:12px;width:340px;max-width:90vw;
+          box-shadow:0 8px 32px rgba(0,0,0,0.2);
         ">
           <h3 style="margin:0 0 16px;font-size:18px;">Zone bearbeiten — ${zoneId}</h3>
           <input id="ez-zone-id" type="hidden" value="${zoneId}">
@@ -679,13 +678,10 @@ class HabitusDashboard {
             <input id="ez-icon" value="${zone.icon || 'mdi:home-floor-1'}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
           </div>
           <div style="margin-bottom:16px;">
-            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Aktive Module</label>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              ${MODULES.map(m => `
-                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
-                  <input type="checkbox" class="ez-module" value="${m}"> ${m}
-                </label>`).join('')}
-            </div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input id="ez-enabled" type="checkbox" ${data.enabled !== false ? 'checked' : ''}>
+              Zone aktiv
+            </label>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;">
             <button id="ez-cancel" style="padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:6px;cursor:pointer;">Abbrechen</button>
@@ -703,16 +699,19 @@ class HabitusDashboard {
     document.getElementById('ez-cancel').onclick = cleanup;
     modal.onclick = (e) => { if (e.target === modal) cleanup(); };
 
+
     document.getElementById('ez-save').onclick = () => {
-      const idVal = document.getElementById('ez-zone-id').value;
-      const nameVal = document.getElementById('ez-name').value.trim();
+      const idVal    = document.getElementById('ez-zone-id').value;
+      const nameVal  = document.getElementById('ez-name').value.trim();
       const iconVal = document.getElementById('ez-icon').value.trim() || 'mdi:home-floor-1';
-      const modules = Array.from(document.querySelectorAll('.ez-module:checked')).map(c => c.value);
+      const enabledVal = document.getElementById('ez-enabled').checked;
 
       const err = document.getElementById('ez-error');
+
+      // Basic guard (also covered by schema validation, but gives immediate feedback)
       if (!nameVal) { err.textContent = 'Name erforderlich.'; err.style.display = 'block'; return; }
 
-      const payload = { name: nameVal, icon: iconVal, active_modules: modules };
+      const payload = { name: nameVal, icon: iconVal, enabled: enabledVal };
 
       document.getElementById('ez-save').disabled = true;
       document.getElementById('ez-save').textContent = '…';
@@ -724,7 +723,7 @@ class HabitusDashboard {
       })
         .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
         .then(() => {
-          // Update local zone name/icon if successful
+          // Update local zone data on success
           const z = this.zones.find(z => z.id === idVal);
           if (z) { z.name = nameVal; z.icon = iconVal; }
           if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [idVal] });
@@ -831,7 +830,6 @@ class HabitusDashboard {
     const btns = document.querySelectorAll('#actions-' + zoneId + ' .quick-action-btn');
     btns.forEach(b => b.setAttribute('disabled', 'true'));
 
-    const MODULES = ['LIGHT', 'AUDIO', 'CLIMATE', 'COVER', 'ENERGY', 'SCENE', 'SECURITY'];
     const html = `
       <div id="create-zone-modal" style="
         position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
@@ -856,15 +854,6 @@ class HabitusDashboard {
             <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Icon (MDI)</label>
             <input id="cz-icon" value="mdi:home-floor-1" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
           </div>
-          <div style="margin-bottom:16px;">
-            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Module</label>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              ${MODULES.map(m => `
-                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
-                  <input type="checkbox" class="cz-module" value="${m}"> ${m}
-                </label>`).join('')}
-            </div>
-          </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;">
             <button id="cz-cancel" style="padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:6px;cursor:pointer;">Abbrechen</button>
             <button id="cz-submit" style="padding:8px 16px;border:none;background:#1976d2;color:#fff;border-radius:6px;cursor:pointer;">Erstellen</button>
@@ -881,16 +870,17 @@ class HabitusDashboard {
       btns.forEach(b => b.removeAttribute('disabled'));
     };
     modal.onclick = (e) => { if (e.target === modal) { modal.remove(); btns.forEach(b => b.removeAttribute('disabled')); }};
+
     document.getElementById('cz-submit').onclick = () => {
-      const idVal = document.getElementById('cz-id').value;
-      const nameVal = document.getElementById('cz-name').value.trim();
+      const idVal    = document.getElementById('cz-id').value;
+      const nameVal  = document.getElementById('cz-name').value.trim();
       const iconVal = document.getElementById('cz-icon').value.trim() || 'mdi:home-floor-1';
-      const modules = Array.from(document.querySelectorAll('.cz-module:checked')).map(c => c.value);
 
       const err = document.getElementById('cz-error');
       if (!nameVal) { err.textContent = 'Name erforderlich.'; err.style.display = 'block'; return; }
 
-      const payload = { zone_id: idVal, name: nameVal, icon: iconVal, active_modules: modules, enabled: true, priority: 10, rooms: [], entities: {} };
+      const payload = { zone_id: idVal, name: nameVal, icon: iconVal };
+
 
       document.getElementById('cz-submit').disabled = true;
       document.getElementById('cz-submit').textContent = '…';
