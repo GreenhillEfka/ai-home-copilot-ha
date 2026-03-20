@@ -815,3 +815,35 @@ body {
         font-size: 1.5rem;
     }
 }
+
+/* PS-062: Chat-UI Responsive — Handy + Tablet */
+@media (max-width: 768px) {
+    .chat-messages {
+        max-height: 300px;
+    }
+    .chat-message {
+        max-width: 92%;
+    }
+    .chat-input-area {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .chat-input {
+        min-height: 44px;
+        max-height: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .chat-messages {
+        max-height: 250px;
+        padding: 10px;
+    }
+    .chat-message {
+        padding: 8px 12px;
+        max-width: 95%;
+    }
+    .chat-status-bar {
+        font-size: 0.7rem;
+    }
+}
