@@ -43,27 +43,54 @@ class HabitusDashboard {
   init() {
     console.log('[Dashboard] init');
     this.loadVersions();
+    this.loadZones();
     this.setupTheme();
-    this.renderTabs();
-    this.renderTabContent();
     this.setupTabNavigation();
     this.setupScrollButtons();
     this.setupWebSocket();
     this.setupThemeToggle();
-    this.updateScrollButtons();
+    // renderTabs/renderTabContent called by loadZones once zones are available
+  }
 
-    // Start in Loading-State
-    this.zones.forEach(z => this.renderZoneLoading(z.id));
+  loadZones() {
+    // Load zones from Core API (falls back to hardcoded list on error)
+    fetch('/api/v1/dashboard/zones')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.zones && data.zones.length) {
+          this.zones = data.zones.map(z => ({
+            id: z.id,
+            name: z.name,
+            icon: z.icon || 'mdi:home-floor-1',
+          }));
+        }
+        // Always render — even if API failed we use hardcoded this.zones
+        this.renderTabs();
+        this.renderTabContent();
+        this.updateScrollButtons();
+        this.zones.forEach(z => this.renderZoneLoading(z.id));
 
-    // Simulierter First Paint: Loading-Overlay nach kurzer Zeit ausblenden,
-    // danach mindestens Empty/Content für E2E/UX.
-    setTimeout(() => {
-      this.hideLoading();
-      // Wenn bis dahin keine Daten kamen, fall back auf Demo-Daten.
-      if (!Object.keys(this.zoneData).length) {
-        this.loadZoneDataDemo();
-      }
-    }, 3000);
+        // Fallback demo data after timeout
+        setTimeout(() => {
+          this.hideLoading();
+          if (!Object.keys(this.zoneData).length) {
+            this.loadZoneDataDemo();
+          }
+        }, 3000);
+      })
+      .catch(() => {
+        // Core unreachable — render with hardcoded zones
+        this.renderTabs();
+        this.renderTabContent();
+        this.updateScrollButtons();
+        this.zones.forEach(z => this.renderZoneLoading(z.id));
+        setTimeout(() => {
+          this.hideLoading();
+          if (!Object.keys(this.zoneData).length) {
+            this.loadZoneDataDemo();
+          }
+        }, 3000);
+      });
   }
 
   loadVersions() {
