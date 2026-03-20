@@ -1200,5 +1200,163 @@ def refresh_zone_data_from_core():
                 }
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Zone Editor CRUD Proxy  (PS-108)
+# Forwards create / update / delete requests from the HA dashboard frontend
+# to the Core /api/v1/zone-editor API.  Read operations (GET /zones, etc.)
+# are already handled by _fetch_zones_config() which calls the same Core API.
+# ═══════════════════════════════════════════════════════════════════════════
+
+@dashboard_bp.route('/zone-editor/zones', methods=['POST'])
+def proxy_zone_create():
+    """
+    Proxy: POST /api/v1/zone-editor/zones
+    Creates a new zone in Core via the zone-editor API.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'error': 'Missing request body'}), 400
+
+    zone_id = str(data.get('zone_id') or '').strip()
+    name = str(data.get('name') or '').strip()
+    if not zone_id:
+        return jsonify({'ok': False, 'error': 'Missing required field: zone_id'}), 400
+    if not name:
+        return jsonify({'ok': False, 'error': 'Missing required field: name'}), 400
+
+    # Forward to Core zone-editor API
+    core_data = _core_post('/api/v1/zone-editor/zones', data)
+    if core_data is None:
+        return jsonify({'ok': False, 'error': 'Core zone-editor API unreachable'}), 503
+
+    if not core_data.get('ok', False):
+        return jsonify(core_data), 409
+
+    # Invalidate zone config cache so next read picks up the new zone
+    _invalidate_cache('/api/v1/zone-editor/zones')
+    _invalidate_cache()
+
+    return jsonify(core_data), 201
+
+
+@dashboard_bp.route('/zone-editor/zones/<zone_id>', methods=['PUT', 'PATCH'])
+def proxy_zone_update(zone_id):
+    """
+    Proxy: PUT /api/v1/zone-editor/zones/<zone_id>
+    Updates an existing zone in Core via the zone-editor API.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({'ok': False, 'error': 'Missing request body'}), 400
+
+    # Forward to Core zone-editor API
+    core_data = _core_put(
+        f'/api/v1/zone-editor/zones/{zone_id}',
+        data,
+    )
+    if core_data is None:
+        return jsonify({'ok': False, 'error': 'Core zone-editor API unreachable'}), 503
+
+    if not core_data.get('ok', False):
+        status = 404 if 'not found' in str(core_data.get('error', '')).lower() else 400
+        return jsonify(core_data), status
+
+    # Invalidate zone config cache
+    _invalidate_cache(f'/api/v1/zone-editor/zones/{zone_id}')
+    _invalidate_cache('/api/v1/zone-editor/zones')
+    _invalidate_cache()
+
+    return jsonify(core_data)
+
+
+@dashboard_bp.route('/zone-editor/zones/<zone_id>', methods=['DELETE'])
+def proxy_zone_delete(zone_id):
+    """
+    Proxy: DELETE /api/v1/zone-editor/zones/<zone_id>
+    Deletes a zone from Core via the zone-editor API.
+    """
+    core_data = _core_delete(f'/api/v1/zone-editor/zones/{zone_id}')
+    if core_data is None:
+        return jsonify({'ok': False, 'error': 'Core zone-editor API unreachable'}), 503
+
+    if not core_data.get('ok', False):
+        return jsonify(core_data), 404
+
+    # Invalidate zone config cache
+    _invalidate_cache(f'/api/v1/zone-editor/zones/{zone_id}')
+    _invalidate_cache('/api/v1/zone-editor/zones')
+    _invalidate_cache()
+
+    return jsonify(core_data)
+
+
+def _core_post(path, data, timeout=5):
+    """POST to Core API with error handling."""
+    base_url = _get_core_url()
+    url = f"{base_url}{path}"
+    try:
+        resp = requests.post(
+            url,
+            json=data,
+            headers=_get_core_headers(),
+            timeout=timeout,
+        )
+        if resp.status_code < 400:
+            return resp.json()
+        _LOGGER.debug("Core POST %s returned status %d", path, resp.status_code)
+    except requests.exceptions.ConnectionError:
+        _LOGGER.debug("Core API not reachable at %s", base_url)
+    except requests.exceptions.Timeout:
+        _LOGGER.debug("Core API timeout for POST %s", path)
+    except Exception as e:
+        _LOGGER.debug("Core API POST error for %s: %s", path, e)
+    return None
+
+
+def _core_put(path, data, timeout=5):
+    """PUT to Core API with error handling."""
+    base_url = _get_core_url()
+    url = f"{base_url}{path}"
+    try:
+        resp = requests.put(
+            url,
+            json=data,
+            headers=_get_core_headers(),
+            timeout=timeout,
+        )
+        if resp.status_code < 400:
+            return resp.json()
+        _LOGGER.debug("Core PUT %s returned status %d", path, resp.status_code)
+    except requests.exceptions.ConnectionError:
+        _LOGGER.debug("Core API not reachable at %s", base_url)
+    except requests.exceptions.Timeout:
+        _LOGGER.debug("Core API timeout for PUT %s", path)
+    except Exception as e:
+        _LOGGER.debug("Core API PUT error for %s: %s", path, e)
+    return None
+
+
+def _core_delete(path, timeout=5):
+    """DELETE to Core API with error handling."""
+    base_url = _get_core_url()
+    url = f"{base_url}{path}"
+    try:
+        resp = requests.delete(
+            url,
+            headers=_get_core_headers(),
+            timeout=timeout,
+        )
+        if resp.status_code < 400:
+            return resp.json()
+        _LOGGER.debug("Core DELETE %s returned status %d", path, resp.status_code)
+    except requests.exceptions.ConnectionError:
+        _LOGGER.debug("Core API not reachable at %s", base_url)
+    except requests.exceptions.Timeout:
+        _LOGGER.debug("Core API timeout for DELETE %s", path)
+    except Exception as e:
+        _LOGGER.debug("Core API DELETE error for %s: %s", path, e)
+    return None
+
+
 # Initiale Grundstruktur beim Modul-Import
 initialize_zone_data()

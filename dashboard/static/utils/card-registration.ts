@@ -13,13 +13,20 @@
  *   });
  */
 
-interface CustomCardRegistration {
+export interface CustomCardRegistration {
   type: string;
   name: string;
   description?: string;
   documentationURL?: string;
   icon?: string;
   preview?: boolean;
+  default?: unknown;
+}
+
+declare global {
+  interface Window {
+    customCards?: CustomCardRegistration[];
+  }
 }
 
 /**
@@ -46,14 +53,15 @@ export function registerCustomCard(card: CustomCardRegistration): void {
     window.customCards = [];
   }
 
-  const existing = window.customCards.find((c: any) => c.type === card.type);
+  const customCards = window.customCards;
+  const existing = customCards.find((registeredCard) => registeredCard.type === card.type);
   if (existing) {
     // Update existing registration
     Object.assign(existing, card);
     console.log(`[PS-174] Updated card registration: ${card.type}`);
   } else {
     // Add new registration
-    window.customCards.push(card);
+    customCards.push(card);
     console.log(`[PS-174] Registered card: ${card.type} → ${card.documentationURL}`);
   }
 }
@@ -74,7 +82,7 @@ export function registerCustomCards(cards: CustomCardRegistration[]): void {
  * @returns Documentation URL or undefined if not found
  */
 export function getCardDocumentationURL(type: string): string | undefined {
-  const card = window.customCards?.find((c: any) => c.type === type);
+  const card = window.customCards?.find((registeredCard) => registeredCard.type === type);
   return card?.documentationURL;
 }
 
@@ -86,9 +94,9 @@ export function getCardDocumentationURL(type: string): string | undefined {
 export function validateCardDocumentation(): string[] {
   const missing: string[] = [];
   
-  window.customCards?.forEach((card: any) => {
-    if (!card.documentationURL) {
-      missing.push(card.type);
+  window.customCards?.forEach((registeredCard) => {
+    if (!registeredCard.documentationURL) {
+      missing.push(registeredCard.type);
     }
   });
   

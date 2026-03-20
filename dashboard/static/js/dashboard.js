@@ -37,10 +37,6 @@ class HabitusDashboard {
       ? new window.UiState.UiStateToolkit({ scope: 'dashboard/home' })
       : null;
 
-    // Global binding FIRST — bevor init() Render-Methoden ausführt, die
-    // onclick="dashboard.switchZone(...)" inline Handler erzeugen
-    window.dashboard = this;
-
     this.init();
   }
 
@@ -568,11 +564,8 @@ class HabitusDashboard {
   }
 }
 
-// Dashboard initialisieren
-// Global binding jetzt im Constructor — vor init() — damit inline onclick-Handler
-// wie onclick="dashboard.switchZone(...)" bereits existieren, wenn renderTabs() läuft.
-document.addEventListener('DOMContentLoaded', () => {
-  const dashboard = new HabitusDashboard();
-  // Fallback-Export für externe Scripts / Debug-Konsole (optional, nicht kritisch)
-  window._habitusDashboardInstance = dashboard;
-});
+// Dashboard initialisieren — window.dashboard VOR init() setzen,
+// damit inline onclick-Handler (renderTabs/renderTabContent) zugreifen können.
+(function () {
+  window.dashboard = new HabitusDashboard();
+})();
