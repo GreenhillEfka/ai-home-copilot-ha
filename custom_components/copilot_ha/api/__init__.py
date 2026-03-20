@@ -104,6 +104,23 @@ class CopilotApiClient:
     async def async_put(self, path: str, payload: dict) -> dict:
         return await self._put_json(path, payload)
 
+    async def async_set_zone_presence_hold(
+        self,
+        person_id: str,
+        state: str,
+        reason: str = "manual",
+        duration: int | None = None,
+    ) -> dict:
+        """Set manual presence hold for a person via Core /api/v1/presence/hold."""
+        payload: dict[str, Any] = {"person_id": person_id, "state": state, "reason": reason}
+        if duration is not None:
+            payload["duration"] = duration
+        return await self._post_json("/api/v1/presence/hold", payload)
+
+    async def async_clear_zone_presence_hold(self, person_id: str) -> dict:
+        """Clear manual presence hold for a person via Core DELETE /api/v1/presence/hold."""
+        return await self._post_json("/api/v1/presence/hold", {"person_id": person_id})
+
     async def async_get_status(self) -> CopilotStatus:
         health: dict | None = None
         version: dict | None = None
