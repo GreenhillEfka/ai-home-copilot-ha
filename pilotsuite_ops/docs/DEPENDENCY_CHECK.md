@@ -2,38 +2,50 @@
 
 ## Stand: 2026-03-20
 
-## HA Integration (manifest.json)
+## 🔴 CRITICAL BLOCKER
 
-| Dependency | Version | Latest | Kritikalität | Status |
-|---|---|---|---|---|
-| homeassistant | 2024.4.0 | 2026.x | HIGH | ⚠️ Update empfohlen (HA 2024.4已经很旧) |
-| requirements | [] | — | — | ✅ Keine externen pip deps |
+**`pilotsuite_core/manifest.json`** — sofortige Handlung erforderlich:
+
+| Package | Version | Issue | Severity |
+|---|---|---|---|
+| `requests` | 2.31.0 | Bekannte CVE-Sicherheitslücken | 🔴 CRITICAL |
+| `aiohttp` | 3.9.1 | Bekannte CVE-Sicherheitslücken | 🔴 CRITICAL |
 
 ## Dashboard (package.json)
 
-| Dependency | Version | Latest | Kritikalität | Status |
+| Dependency | Version | Latest | Issue | Status |
 |---|---|---|---|---|
-| (keine) | — | — | — | ✅ Keine npm deps |
+| esbuild | ≤0.24.2 | aktuell | GHSA-67mh-4wv8-2f99 CORS-Security-Lücke | 🔴 Update nötig |
+| express | 4.x | 5.x | Breaking Changes | ⚠️ Testen |
 
-## Add-on (addon/config.json)
+## Core (manifest.json)
 
-| Dependency | Kritikalität | Status |
-|---|---|---|
-| Keine externen deps definiert | — | ✅ |
+| Dependency | Version | Latest | Status |
+|---|---|---|---|
+| requests | 2.31.0 | aktuell | 🔴 CRITICAL — unsichere Version |
+| aiohttp | 3.9.1 | aktuell | 🔴 CRITICAL — unsichere Version |
+| neo4j | 5.x | 6.x | ⚠️ Major Upgrade, Breaking Changes |
+| numpy | 1.x | 2.x | ⚠️ Major Upgrade, Breaking Changes |
 
-## Analyse
+## HA Mindestversionen
 
-HA-Integration ist minimal:
-- **0 pip requirements** ausser HA selbst
-- **0 npm dependencies** im Dashboard
-- Add-on hat keine externen Abhängigkeiten
+| Manifest | Aktuell | Sollte sein | Status |
+|---|---|---|---|
+| HA Integration | 2024.4.0 | 2025.x | ⚠️ Veraltet |
+| Add-on Config | 2024.1 | 2025.x | ⚠️ Veraltet |
 
-## Risiken
+## Zusammenfassung
 
-1. **HomeAssistant 2024.4.0** — Mindestversion. Neuere HA-Versionen können APIs ändern. Prüfe regelmässig Compatibility.
-2. **Socket.IO** (CDN) — wird von CDN geladen, nicht als lokale Dep.版本 über CDN URL spezifiziert.
+| Kategorie | Count |
+|---|---|
+| Total Dependencies analysiert | 16+ |
+| Critical Blocker | 2 (requests, aiohttp) |
+| Major Upgrades nötig | 4 (esbuild, neo4j, numpy, express) |
+| HA Version veraltet | 2 Manifests |
 
-## Empfehlungen
+## Handlungsplan
 
-- HA Mindestversion auf 2025.x anheben wenn möglich
-- Regelmässige HA Compatibility-Checks bei Core-Updates
+1. **Sofort**: `requests` und `aiohttp` in Core auf sichere Versionen
+2. **Kurzfristig**: `esbuild` im Dashboard auf >0.24.2
+3. **Geplant**: Major Upgrades (neo4j 5→6, numpy 1→2, express 4→5) isoliert testen
+4. **Geplant**: HA Mindestversionen auf 2025.x
