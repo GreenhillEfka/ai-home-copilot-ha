@@ -461,8 +461,14 @@ class HabitusDashboard {
     const statusDotClass = isStale ? 'warning' : (isPartial ? 'warning' : '');
 
     const zoneBannerHtml = isStale
-      ? `<div class="zone-card-banner warn">Offline · letzte bekannte Daten</div>`
-      : (isPartial ? `<div class="zone-card-banner warn">Teildaten · ${missingKeys.length} Feld(er) fehlen</div>` : '');
+      ? `<div class="zone-card-banner warn">Offline · letzte bekannte Daten</div>
+         <button class="quick-action-btn" style="margin:4px 0;" onclick="dashboard.showEditZoneModal('${zoneId}')"><i class="mdi mdi-pencil"></i> Zone bearbeiten</button>`
+      : (isPartial ? `<div class="zone-card-banner warn">Teildaten · ${missingKeys.length} Feld(er) fehlen</div>
+         <button class="quick-action-btn" style="margin:4px 0;" onclick="dashboard.showEditZoneModal('${zoneId}')"><i class="mdi mdi-pencil"></i> Zone bearbeiten</button>`
+      : `<div style="padding:4px 0;">
+         <button class="quick-action-btn primary" style="margin:4px 4px 4px 0;" onclick="dashboard.showEditZoneModal('${zoneId}')"><i class="mdi mdi-pencil"></i> Bearbeiten</button>
+         <button class="quick-action-btn danger" style="margin:4px 0;" onclick="dashboard.showDeleteZoneModal('${zoneId}')"><i class="mdi mdi-delete"></i> Löschen</button>
+         </div>`);
 
     // Mindestens 1 Element mit .widget/.card/.zone-item für E2E
     grid.innerHTML = `${zoneBannerHtml}
@@ -615,6 +621,95 @@ class HabitusDashboard {
       .finally(() => {
         actionBtns.forEach(b => b.removeAttribute('disabled'));
       });
+  }
+
+  showEditZoneModal(zoneId) {
+    const existing = document.getElementById('edit-zone-modal');
+    if (existing) existing.remove();
+
+    const zone = this.zones.find(z => z.id === zoneId) || { id: zoneId, name: zoneId };
+    const data = this.zoneData[zoneId] || {};
+    const MODULES = ['LIGHT', 'AUDIO', 'CLIMATE', 'COVER', 'ENERGY', 'SCENE', 'SECURITY'];
+
+    const html = `
+      <div id="edit-zone-modal" style="
+        position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
+        background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;
+        font-family:system-ui,sans-serif;
+      ">
+        <div style="
+          background:#fff;padding:24px;border-radius:12px;width:380px;max-width:90vw;
+          box-shadow:0 8px 32px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;
+        ">
+          <h3 style="margin:0 0 16px;font-size:18px;">Zone bearbeiten — ${zoneId}</h3>
+          <input id="ez-zone-id" type="hidden" value="${zoneId}">
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Name</label>
+            <input id="ez-name" value="${zone.name}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Icon (MDI)</label>
+            <input id="ez-icon" value="${zone.icon || 'mdi:home-floor-1'}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Aktive Module</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${MODULES.map(m => `
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                  <input type="checkbox" class="ez-module" value="${m}"> ${m}
+                </label>`).join('')}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="ez-cancel" style="padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:6px;cursor:pointer;">Abbrechen</button>
+            <button id="ez-save" style="padding:8px 16px;border:none;background:#1976d2;color:#fff;border-radius:6px;cursor:pointer;">Speichern</button>
+          </div>
+          <p id="ez-error" style="color:#d32f2f;font-size:12px;margin:8px 0 0;display:none;"></p>
+        </div>
+      </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = document.getElementById('edit-zone-modal');
+
+    const cleanup = () => modal.remove();
+
+    document.getElementById('ez-cancel').onclick = cleanup;
+    modal.onclick = (e) => { if (e.target === modal) cleanup(); };
+
+    document.getElementById('ez-save').onclick = () => {
+      const idVal = document.getElementById('ez-zone-id').value;
+      const nameVal = document.getElementById('ez-name').value.trim();
+      const iconVal = document.getElementById('ez-icon').value.trim() || 'mdi:home-floor-1';
+      const modules = Array.from(document.querySelectorAll('.ez-module:checked')).map(c => c.value);
+
+      const err = document.getElementById('ez-error');
+      if (!nameVal) { err.textContent = 'Name erforderlich.'; err.style.display = 'block'; return; }
+
+      const payload = { name: nameVal, icon: iconVal, active_modules: modules };
+
+      document.getElementById('ez-save').disabled = true;
+      document.getElementById('ez-save').textContent = '…';
+
+      fetch(`/api/v1/dashboard/zone-editor/zones/${encodeURIComponent(idVal)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+        .then(() => {
+          // Update local zone name/icon if successful
+          const z = this.zones.find(z => z.id === idVal);
+          if (z) { z.name = nameVal; z.icon = iconVal; }
+          if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [idVal] });
+          cleanup();
+        })
+        .catch(err => {
+          err.textContent = 'Fehler: ' + err.message;
+          err.style.display = 'block';
+          document.getElementById('ez-save').disabled = false;
+          document.getElementById('ez-save').textContent = 'Speichern';
+        });
+    };
   }
 
   showDeleteZoneModal(zoneId) {
