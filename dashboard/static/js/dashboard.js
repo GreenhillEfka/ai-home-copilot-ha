@@ -137,7 +137,7 @@ class HabitusDashboard {
           <button class="quick-action-btn" onclick="dashboard.refreshZone('${zone.id}')">
             <i class="mdi mdi-refresh"></i> Aktualisieren
           </button>
-          <button class="quick-action-btn primary" onclick="dashboard.createZone('${zone.id}')">
+          <button class="quick-action-btn primary" onclick="dashboard.showCreateZoneModal('${zone.id}')">
             <i class="mdi mdi-plus"></i> Zone erstellen
           </button>
           <button class="quick-action-btn danger" onclick="dashboard.deleteZone('${zone.id}')">
@@ -650,6 +650,94 @@ class HabitusDashboard {
     const timeString = now.toLocaleTimeString('de-DE');
     const element = document.getElementById('last-update-time');
     if (element) element.textContent = timeString;
+  }
+
+  // ── Zone Create Modal ─────────────────────────────────────────────────────
+
+  showCreateZoneModal(zoneId) {
+    const existing = document.getElementById('create-zone-modal');
+    if (existing) existing.remove();
+
+    const btns = document.querySelectorAll('#actions-' + zoneId + ' .quick-action-btn');
+    btns.forEach(b => b.setAttribute('disabled', 'true'));
+
+    const MODULES = ['LIGHT', 'AUDIO', 'CLIMATE', 'COVER', 'ENERGY', 'SCENE', 'SECURITY'];
+    const html = `
+      <div id="create-zone-modal" style="
+        position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
+        background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;
+        font-family:system-ui, sans-serif;
+      ">
+        <div style="
+          background:#fff;padding:24px;border-radius:12px;width:360px;max-width:90vw;
+          box-shadow:0 8px 32px rgba(0,0,0,0.2);
+        ">
+          <h3 style="margin:0 0 16px;font-size:18px;">Neue Zone erstellen</h3>
+          <input id="cz-zone-id" type="hidden" value="${zoneId}">
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Zone-ID</label>
+            <input id="cz-id" value="${zoneId}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;" disabled>
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Name</label>
+            <input id="cz-name" placeholder="z.B. Wohnbereich" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="margin-bottom:12px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Icon (MDI)</label>
+            <input id="cz-icon" value="mdi:home-floor-1" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;color:#666;margin-bottom:4px;">Module</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${MODULES.map(m => `
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                  <input type="checkbox" class="cz-module" value="${m}"> ${m}
+                </label>`).join('')}
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="cz-cancel" style="padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:6px;cursor:pointer;">Abbrechen</button>
+            <button id="cz-submit" style="padding:8px 16px;border:none;background:#1976d2;color:#fff;border-radius:6px;cursor:pointer;">Erstellen</button>
+          </div>
+          <p id="cz-error" style="color:#d32f2f;font-size:12px;margin:8px 0 0;display:none;"></p>
+        </div>
+      </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = document.getElementById('create-zone-modal');
+
+    document.getElementById('cz-cancel').onclick = () => {
+      modal.remove();
+      btns.forEach(b => b.removeAttribute('disabled'));
+    };
+    modal.onclick = (e) => { if (e.target === modal) { modal.remove(); btns.forEach(b => b.removeAttribute('disabled')); }};
+    document.getElementById('cz-submit').onclick = () => {
+      const idVal = document.getElementById('cz-id').value;
+      const nameVal = document.getElementById('cz-name').value.trim();
+      const iconVal = document.getElementById('cz-icon').value.trim() || 'mdi:home-floor-1';
+      const modules = Array.from(document.querySelectorAll('.cz-module:checked')).map(c => c.value);
+
+      const err = document.getElementById('cz-error');
+      if (!nameVal) { err.textContent = 'Name erforderlich.'; err.style.display = 'block'; return; }
+
+      const payload = { zone_id: idVal, name: nameVal, icon: iconVal, active_modules: modules, enabled: true, priority: 10, rooms: [], entities: {} };
+
+      document.getElementById('cz-submit').disabled = true;
+      document.getElementById('cz-submit').textContent = '…';
+
+      fetch('/api/v1/dashboard/zone-editor/zones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+        .then(() => {
+          modal.remove();
+          if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [idVal] });
+        })
+        .catch(err => { err.textContent = 'Fehler: ' + err.message; err.style.display = 'block'; document.getElementById('cz-submit').disabled = false; document.getElementById('cz-submit').textContent = 'Erstellen'; })
+        .finally(() => { btns.forEach(b => b.removeAttribute('disabled')); });
+    };
   }
 }
 
