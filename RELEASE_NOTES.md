@@ -1,101 +1,71 @@
-# Release v13.9.0 — Offizielles Release mit allen Beitraegen
+# PilotSuite HA Add-on — Release Notes v14.7.5
 
-**Datum:** 2026-03-13
-**Branch:** main
-**Tag:** `v13.9.0`
-**HA hassfest:** compliant
-**Paired Release:** Core v13.9.0 <-> HA v13.9.0
-
----
-
-## Ueberblick
-
-PilotSuite HA v13.9.0 ist das konsolidierte offizielle Release, das **alle Entwicklungen seit v13.5.8** zusammenfasst. Die HA-Integration wurde umfassend erweitert mit neuen Services, Modulen, Dashboard-Features und verbesserter Core-Kommunikation.
+**Datum:** 2026-03-20  
+**Version:** 14.7.5  
+**Minimale Home Assistant Version:** 2024.4.0  
+**Gepaart mit:** Core v14.7.5
 
 ---
 
-## Highlights
+## Was ist neu
 
-### 1. 8 Musikwolke HA-Services
-Direkte Steuerung aller Musikwolke-Funktionen aus HA Automations:
-| Service | Beschreibung |
-|---------|-------------|
-| `copilot_ha.musikwolke_create` | Musikwolke-Gruppe erstellen |
-| `copilot_ha.musikwolke_dissolve` | Musikwolke-Gruppe aufloesen |
-| `copilot_ha.musikwolke_play` | Wiedergabe starten |
-| `copilot_ha.musikwolke_pause` | Wiedergabe pausieren |
-| `copilot_ha.musikwolke_volume` | Lautstaerke setzen (0-100%) |
-| `copilot_ha.musikwolke_start_follow` | Follow-Session starten |
-| `copilot_ha.musikwolke_stop_follow` | Follow-Session beenden |
-| `copilot_ha.zone_automation_set_mode` | Automatisierungsmodus setzen |
+### HA ConfigFlow Modernisierung
 
-### 2. 5 PilotSuite HA Module
-- Licht, Helligkeit, Heiz, Bewegung, Praesenz als eigenstaendige HA-Module
-- Beispiel-Dashboard mit realen Entities
-- Integration in Zone Dashboard
+- **Delta-Write-Pattern:** ConfigEntry State wird nur noch als Delta geschrieben — kein Full-Overwrite mehr bei Updates
+- **Reconfigure-Step:** `async_step_reconfigure()` mit `_get_reconfigure_entry()` ab sofort nach HA 2024.4+ Muster
+- **OptionsFlow Parameter-Sync:** Gemeinsame Parameter (host/port/token) werden beim Reconfigure akkumuliert statt verworfen
+- **ConfigFlow Helper-Migration:** Alle Flows auf `self.config_entry` + `self._config_entry_id` umgestellt
 
-### 3. Living BrainGraph Dashboard
-- Pulsierender BrainGraph mit Echtzeit-Visualisierung
-- Neurale Cross-Dependencies sichtbar
-- Automation Repair direkt aus dem Dashboard
+### HA UI Cards
 
-### 4. Core<->HA Kommunikations-Pipeline
-- Vollstaendige bidirektionale Kommunikation verdrahtet
-- Webhook Receiver fuer zone_update Events (Echtzeit)
-- Memory API Client, Services und Coordinator Wiring
-- 14 neue Coordinator-API-Methoden
+- **Zone-Creator-Card `getConfigForm()`:** `static async getConfigForm()` mit HaFormSchema nach HA-PR #16142
+- **habitus-brain-card.ts:** Number-Felder (`stale_threshold_seconds`, `mood_history_hours`), Mehrfachfelder (`zones`, `monitored_modules`)
+- **zone-module-editor-card.ts:** Modulabhaengige Pflichtfeld-Validierung, Secondary-Zone-States (dark/sleep/extended)
+- **card-form-helper.ts:** number/array/attribute-Support mit zentraler Validierung
+- **editor-schema-validation.ts:** Typsichere Schema-Validierung
+- **zone-editor-api-client.ts:** CRUD-Client fuer `/api/v1/zone-editor` Endpunkte
 
-### 5. Zone Dashboard Erweiterungen
-- Habituszonen-IDs synchron mit Core
-- Reichere Datenstruktur mit Controls, Musik, Playlists
-- Notifications, Birthdays, Todos pro Zone
-- Bidirektionale Tag-Synchronisierung mit Core
+### HA Tests & Schema
 
-### 6. Code-Qualitaet & Hardening
-- Button Base Class fuer alle Button-Entities
-- Lovelace Card Base fuer wiederverwendbare Custom Cards
-- Coordinator API Cleanup mit `_safe_get`/`_safe_post` Wrappers
-- Zentralisierte Coordinator Timeouts
-- 6 tote Button-Dateien mit doppelten unique_ids entfernt
-- 13 vergessene Sensoren verdrahtet
-- Translations korrigiert
+- **conftest.py:** Standardisierte Test-Fixtures (MockHass, ConfigEntry, Flow-Handler-Factories)
+- **Module-per-Zone Schemas:** Pydantic-v2-Schema-Dateien fuer alle 8 Modultypen (Light/Audio/Climate/Cover/Energy/Scene/Security/Zone)
+- **Integration-Tests Zone-Flows:** 46 neue Tests fuer ConfigFlow/OptionsFlow/SnapshotFlow
+- **Dynamic-Entity-Generation-Tests:** 57 Tests fuer schema-getriebene Entity-Generierung
+
+### HA Add-on
+
+- **hacs.json:** HACS-Listing-Konfiguration hinzugefuegt
 
 ---
 
-## Bug Fixes
+## Was wurde behoben
 
-- Fehlender `asyncio`-Import und Auth-Header-Alignment in API Client
-- Warning Logs fuer fehlenden Coordinator in Musikwolke Service Handlers
-- Ungebundene Variable `e` in coordinator.py
-- Edge Cases, Type Safety und Automation Hardening
-- CrossDependencySensor Registration und Edge Count
-- Decision-Sync Retry Queue fuer Offline-Core-Resilienz
-- Module Lifecycle, SQLite Safety, Nonce Cache Cleanup
+- **Dashboard-Init-Binding:** `window.dashboard` wird jetzt per IIFE vor `init()` gesetzt — inline onclick-Handler funktionieren korrekt
+- **Snapshot-Import Path-Resolve:** Robust gegen `/local/...`, `~`, `$ENV` und Path-Traversal
+
+---
+
+## Breaking Changes
+
+**Keine.**
+
+Es gibt keine Breaking Changes in diesem Release. Das Update kann ohne Migrationsschritte oder Konfigurationsanpassungen eingespielt werden.
 
 ---
 
 ## Upgrade-Hinweise
 
-- **Breaking Changes:** Keine
-- **Neue Dependencies:** Keine
-- **Migration:** Standard HA-Update (HACS -> Update)
-- **Mindestversion Core:** v13.9.0
-- **Mindestversion HA:** 2024.1.0
+- **Home Assistant 2024.4.0+ erforderlich.** Bitte stelle sicher, dass dein Home Assistant auf Version 2024.4.0 oder höher aktualisiert ist, bevor du dieses Add-on installierst.
+- Bei einem Update von einer Version < 14.7.5 werden bestehende ConfigEntry-Daten automatisch migriert (Delta-Write-Pattern kompatibel).
+- Nach dem Update einen Restart der Integration durchführen, damit alle neuen Zone-Editor-UI-Komponenten initialisiert werden.
 
 ---
 
-## Statistiken
+## Kompatibilität
 
-| Metrik | Wert |
-|--------|------|
-| Commits seit v13.5.8 | 28+ |
-| Neue/Geaenderte Dateien | 50+ |
-| HA-Services (neu) | 8 |
-| Coordinator-Methoden (neu) | 14 |
-| HA-Module (neu) | 5 |
-| Sensoren (gesamt) | 94+ |
-| Dashboard Cards | 15+ |
-
----
-
-**PilotSuite v13.9.0** — Local-first, Privacy-first, Governance-first.
+| Komponente | Version |
+|---|---|
+| PilotSuite HA Add-on | **14.7.5** |
+| PilotSuite Core | **14.7.5** (Paired Release) |
+| Home Assistant | **2024.4.0+** |
+| Integration Type | hub (`local_push`) |
