@@ -1,156 +1,122 @@
-"""Shared test fixtures for all PilotSuite ConfigFlow tests.
+"""Pytest fixtures for PilotSuite Config Flow tests.
 
-Provides:
-- MockHass         : FakeHass — no HA import, no __init__ interception
-- ConfigEntry      : dataclass mimicking config_entries.ConfigEntry
-- config_entry     : empty ConfigEntry fixture
-- config_entry_with_data : ConfigEntry with standard connection data
-- make_config_flow_handler()  : ConfigFlow handler with all HA methods mocked
-- make_options_flow_handler() : OptionsFlowHandler with HA methods mocked
-- make_snapshot_flow()        : ConfigSnapshotOptionsFlow with HA methods mocked
-- mock_module_registry()      : clean ModuleRegistry + helpers
-- mock_module()               : MagicMock satisfying CopilotModule protocol
+This module provides standardized pytest fixtures following the
+pytest-homeassistant-custom-component pattern for testing PilotSuite
+Config Flows and Options Flows.
 
-All classes/factories are importable directly from this module so tests can
-call them without going through pytest's fixture engine.
-pytest-homeassistant-custom-component pattern: shared conftest at component level,
-with per-test-class or per-test-function usage via import.
+Usage:
+    Tests can use these fixtures directly:
+    
+    async def test_something(hass, config_entry, mock_config_flow):
+        # Use fixtures...
+        pass
 """
 
 from __future__ import annotations
 
-import sys
+import asyncio
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest  # noqa: F401 — activates @pytest.fixture decorators
+import pytest
+import voluptuous as vol
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Ensure the custom_component package resolves on all import paths
-# (venv, CI container, bare python).
-# ──────────────────────────────────────────────────────────────────────────────
 
-THIS_FILE = Path(__file__).resolve()
-COMPONENT_ROOT = THIS_FILE.parent.parent  # …/custom_components/copilot_ha
-if str(COMPONENT_ROOT) not in sys.path:
-    sys.path.insert(0, str(COMPONENT_ROOT))
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 1.  Minimal HA stubs  (replace inline stubs that lived scattered in test files)
-# ──────────────────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+# Fake HA Objects (Lightweight stubs for unit tests)
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
-class ConfigEntry:
-    """Minimal ConfigEntry mimic — dataclass, not HA's class."""
+class FakeConfigEntry:
+    """Minimal config entry stub for tests."""
 
     entry_id: str = "test_entry_1"
     domain: str = "copilot_ha"
-    title: str = "Styx — PilotSuite"
-    data: dict[str, Any] = field(default_factory=dict)
-    options: dict[str, Any] = field(default_factory=dict)
-    state: str = "loaded"
-    minor_version: int = 1
-    version: int = 1
+    data: dict = field(default_factory=dict)
+    options: dict = field(default_factory=dict)
+    title: str = "Test Entry"
+    unique_id: str | None = None
+    state: str = "loaded"  # loaded, setup_retry, not_loaded
 
     def __post_init__(self):
-        if not isinstance(self.data, dict):
+        if self.data is None:
             self.data = {}
-        if not isinstance(self.options, dict):
+        if self.options is None:
             self.options = {}
 
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "entry_id": self.entry_id,
-            "domain": self.domain,
-            "title": self.title,
-            "data": self.data,
-            "options": self.options,
-            "state": self.state,
-            "version": self.version,
-            "minor_version": self.minor_version,
-        }
 
+class FakeHass:
+    """Minimal hass stub for tests that need hass.data / hass.config."""
 
-class MockHass:
-    """Minimal hass stub — no HA import, no __init_subclass__ interference."""
-
-    def __init__(self, **extra: Any) -> None:
+    def __init__(self) -> None:
         self.data: dict[str, Any] = {}
         self.config = MagicMock()
         self.config.internal_url = None
         self.config.external_url = None
         self.config_entries = MagicMock()
         self.config_entries.async_get_entry = MagicMock(return_value=None)
-        for k, v in extra.items():
-            setattr(self, k, v)
+        self.config_entries.async_update_entry = MagicMock()
+        self.config_entries.async_reload = AsyncMock()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 2.  Pytest fixtures  (consume the classes above)
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def mock_hass() -> MockHass:
-    """Fresh MockHass instance with empty data store."""
-    return MockHass()
+# ═══════════════════════════════════════════════════════════════════════════
+# Core Fixtures
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 @pytest.fixture
-def config_entry() -> ConfigEntry:
-    """Minimal ConfigEntry with empty data/options."""
-    return ConfigEntry()
+def hass() -> FakeHass:
+    """Return a minimal FakeHass instance for unit tests."""
+    return FakeHass()
 
 
 @pytest.fixture
-def config_entry_with_data() -> ConfigEntry:
-    """ConfigEntry pre-loaded with standard connection data."""
-    return ConfigEntry(
-        entry_id="entry_with_data",
+def config_entry() -> FakeConfigEntry:
+    """Return a default FakeConfigEntry for testing."""
+    return FakeConfigEntry()
+
+
+@pytest.fixture
+def config_entry_with_data() -> FakeConfigEntry:
+    """Return a FakeConfigEntry with sample connection data."""
+    return FakeConfigEntry(
+        entry_id="test_entry_123",
         data={
-            "host": "192.168.1.10",
+            "host": "192.168.1.100",
             "port": 8909,
-            "token": "test_token_abc",
+            "token": "test_token_123",
             "assistant_name": "Styx",
-            "entity_profile": "default",
+            "entity_profile": "standard",
+        },
+        options={
+            "neuron_enabled": True,
+            "neuron_evaluation_interval": 60,
         },
     )
 
 
-# ── ConfigFlow ────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════
+# Config Flow Fixtures
+# ═══════════════════════════════════════════════════════════════════════════
 
 
-def make_config_flow_handler(
-    hass: MockHass | None = None,
-) -> Any:
-    """Build a ConfigFlow instance with all HA data-entry-flow methods mocked.
-
-    Usage::
-
-        flow = make_config_flow_handler(hass)
-        result = await flow.async_step_user()
-        assert flow.async_show_menu.called
-
-    Or via pytest fixture::
-
-        def test_something(mock_hass):
-            flow = make_config_flow_handler(mock_hass)
-            ...
+@pytest.fixture
+def mock_config_flow(hass: FakeHass):
+    """Build a ConfigFlow instance with mocked HA methods.
+    
+    Returns a ConfigFlow instance with all HA-specific methods mocked
+    for isolated unit testing.
     """
     from custom_components.copilot_ha.config_flow import ConfigFlow
 
-    if hass is None:
-        hass = MockHass()
-
     flow = ConfigFlow.__new__(ConfigFlow)
     flow.hass = hass
-    # HA 2024.3.3: source/context are read-only properties on ConfigFlow.
-    # source is a read-only @property that reads self.context["source"].
-    # Set context via __setattr__ then assign fields directly.
-    object.__setattr__(flow, "context", {"source": "user"})
+    flow.context = {}
+    flow.source = "user"
+
+    # Mock HA flow methods
     flow._async_current_entries = MagicMock(return_value=[])
     flow.async_set_unique_id = AsyncMock()
     flow._abort_if_unique_id_configured = MagicMock()
@@ -158,180 +124,275 @@ def make_config_flow_handler(
     flow.async_show_form = MagicMock(return_value={"type": "form"})
     flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
     flow.async_abort = MagicMock(return_value={"type": "abort"})
+
     return flow
 
 
 @pytest.fixture
-def make_config_flow():
-    """Pytest-compatible wrapper: returns the factory so tests get a fresh instance."""
-    return make_config_flow_handler
+def mock_config_flow_with_entry(hass: FakeHass, config_entry: FakeConfigEntry):
+    """Build a ConfigFlow instance that reports an existing entry.
+    
+    Useful for testing single-instance guard behavior.
+    """
+    from custom_components.copilot_ha.config_flow import ConfigFlow
+
+    flow = ConfigFlow.__new__(ConfigFlow)
+    flow.hass = hass
+    flow.context = {}
+    flow.source = "user"
+
+    # Report existing entry
+    flow._async_current_entries = MagicMock(return_value=[config_entry])
+    flow.async_set_unique_id = AsyncMock()
+    flow._abort_if_unique_id_configured = MagicMock()
+    flow.async_show_menu = MagicMock(return_value={"type": "menu"})
+    flow.async_show_form = MagicMock(return_value={"type": "form"})
+    flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+    flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+    return flow
 
 
-# ── OptionsFlowHandler ────────────────────────────────────────────────────────
+@pytest.fixture
+def mock_config_flow_reauth(hass: FakeHass, config_entry: FakeConfigEntry):
+    """Build a ConfigFlow instance configured for reauth flow."""
+    from custom_components.copilot_ha.config_flow import ConfigFlow
+
+    flow = ConfigFlow.__new__(ConfigFlow)
+    flow.hass = hass
+    flow.context = {"entry_id": config_entry.entry_id}
+    flow.source = "reauth"
+
+    # Mock HA flow methods
+    flow._async_current_entries = MagicMock(return_value=[config_entry])
+    flow.async_set_unique_id = AsyncMock()
+    flow._abort_if_unique_id_configured = MagicMock()
+    flow.async_show_menu = MagicMock(return_value={"type": "menu"})
+    flow.async_show_form = MagicMock(return_value={"type": "form"})
+    flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+    flow.async_abort = MagicMock(return_value={"type": "abort"})
+
+    # Mock config entry retrieval for reauth
+    hass.config_entries.async_get_entry = MagicMock(return_value=config_entry)
+
+    return flow
 
 
-def make_options_flow_handler(
-    entry: ConfigEntry | None = None,
-    hass: MockHass | None = None,
-) -> Any:
-    """Build an OptionsFlowHandler bound to a ConfigEntry, with HA methods mocked.
+# ═══════════════════════════════════════════════════════════════════════════
+# Options Flow Fixtures
+# ═══════════════════════════════════════════════════════════════════════════
 
-    Usage::
 
-        flow = make_options_flow_handler(entry, hass)
-        result = await flow.async_step_init()
-        assert flow.async_show_menu.called
+@pytest.fixture
+def mock_options_flow(hass: FakeHass, config_entry: FakeConfigEntry):
+    """Build an OptionsFlowHandler instance with mocked HA methods.
+    
+    Returns an OptionsFlowHandler instance with all HA-specific methods mocked
+    for isolated unit testing.
     """
     from custom_components.copilot_ha.config_options_flow import OptionsFlowHandler
 
-    if entry is None:
-        entry = ConfigEntry()
-    if hass is None:
-        hass = MockHass()
-
-    # Patch __init__ so we can call __new__ without running HA's __init__
-    # (which would call ConfigSnapshotOptionsFlow.__init__ and need hass context).
-    with _patch_init(OptionsFlowHandler, lambda self, cfg: None):
-        flow = OptionsFlowHandler.__new__(OptionsFlowHandler)
-
-    flow._entry = entry
+    flow = OptionsFlowHandler.__new__(OptionsFlowHandler)
+    flow._entry = config_entry
     flow._snapshot = None
     flow.hass = hass
-    flow.context: dict[str, Any] = {}
+
+    # Mock HA flow methods
     flow.async_show_menu = MagicMock(return_value={"type": "menu"})
     flow.async_show_form = MagicMock(return_value={"type": "form"})
     flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
     flow.async_abort = MagicMock(return_value={"type": "abort"})
+
     return flow
 
 
 @pytest.fixture
-def make_options_flow():
-    return make_options_flow_handler
+def options_flow_with_data(hass: FakeHass, config_entry_with_data: FakeConfigEntry):
+    """Build an OptionsFlowHandler with pre-populated entry data."""
+    from custom_components.copilot_ha.config_options_flow import OptionsFlowHandler
 
-
-# ── ConfigSnapshotOptionsFlow ──────────────────────────────────────────────────
-
-
-def make_snapshot_flow(
-    entry: ConfigEntry | None = None,
-    hass: MockHass | None = None,
-) -> Any:
-    """Build a ConfigSnapshotOptionsFlow bound to a ConfigEntry, HA methods mocked.
-
-    Usage::
-
-        flow = make_snapshot_flow(entry, hass)
-        result = await flow.async_step_backup_restore()
-        assert flow.async_show_menu.called
-    """
-    from custom_components.copilot_ha.config_snapshot_flow import (
-        ConfigSnapshotOptionsFlow,
-    )
-
-    if entry is None:
-        entry = ConfigEntry()
-    if hass is None:
-        hass = MockHass()
-
-    with _patch_init(ConfigSnapshotOptionsFlow, lambda self, cfg: None):
-        flow = ConfigSnapshotOptionsFlow.__new__(ConfigSnapshotOptionsFlow)
-
-    flow._entry = entry
+    flow = OptionsFlowHandler.__new__(OptionsFlowHandler)
+    flow._entry = config_entry_with_data
     flow._snapshot = None
     flow.hass = hass
-    flow.context: dict[str, Any] = {}
+
+    # Mock HA flow methods
     flow.async_show_menu = MagicMock(return_value={"type": "menu"})
     flow.async_show_form = MagicMock(return_value={"type": "form"})
     flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
     flow.async_abort = MagicMock(return_value={"type": "abort"})
+
     return flow
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Module/Registry Fixtures
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 @pytest.fixture
-def make_snapshot():
-    return make_snapshot_flow
+def mock_module():
+    """Return a mock CopilotModule for testing."""
+    mod = MagicMock()
+    mod.name = "test_module"
+    mod.async_setup_entry = AsyncMock()
+    mod.async_unload_entry = AsyncMock(return_value=True)
+    return mod
 
 
-# ── Internal helpers ──────────────────────────────────────────────────────────
-
-from contextlib import contextmanager
-from unittest.mock import patch
-
-
-@contextmanager
-def _patch_init(klass, replacement):
-    """Temporarily replace klass.__init__ so __new__ bypasses the original."""
-    original = klass.__init__
-    klass.__init__ = replacement
-    try:
-        yield
-    finally:
-        klass.__init__ = original
+@pytest.fixture
+def mock_failing_module():
+    """Return a mock module that fails setup for error handling tests."""
+    mod = MagicMock()
+    mod.name = "failing_module"
+    mod.async_setup_entry = AsyncMock(side_effect=RuntimeError("Setup failed"))
+    mod.async_unload_entry = AsyncMock(return_value=True)
+    return mod
 
 
-# ── Module registry helpers ───────────────────────────────────────────────────
-
-
-def mock_module_registry() -> Any:
-    """Clean ModuleRegistry with helper wrappers for test readability.
-
-    Returns a ModuleRegistry with two extra convenience methods:
-      .register(name, factory)  — add a module to the registry
-      .make(name)               — alias for .create(name)
-
-    Usage::
-
-        reg = mock_module_registry()
-        reg.register("alpha", lambda: mock_module("alpha"))
-        mod = reg.make("alpha")
-    """
+@pytest.fixture
+def module_registry():
+    """Return a fresh ModuleRegistry instance."""
     from custom_components.copilot_ha.core.registry import ModuleRegistry
-
-    reg = ModuleRegistry()
-
-    # Wrap original methods so test code uses descriptive names
-    # instead of accidentally calling the wrapper recursively.
-    _orig_register = reg.register
-    _orig_create = reg.create
-
-    def _register(name: str, factory) -> None:
-        _orig_register(name, factory)
-
-    def _make(name: str):
-        return _orig_create(name)
-
-    reg.register = _register
-    reg.make = _make
-    return reg
+    return ModuleRegistry()
 
 
 @pytest.fixture
-def mock_module_registry_fixture():
-    return mock_module_registry
+def copilot_runtime(hass: FakeHass):
+    """Return a CopilotRuntime singleton for the given hass."""
+    from custom_components.copilot_ha.core.runtime import CopilotRuntime
+    return CopilotRuntime.get(hass)
 
 
-def mock_module(name: str = "stub") -> MagicMock:
-    """Returns a MagicMock that satisfies the CopilotModule protocol."""
-    m = MagicMock()
-    m.name = name
-    m.async_setup_entry = AsyncMock()
-    m.async_unload_entry = AsyncMock(return_value=True)
-    return m
+# ═══════════════════════════════════════════════════════════════════════════
+# Patch Fixtures (Common mocking patterns)
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 @pytest.fixture
-def mock_module_fixture():
-    return mock_module
+def patch_discover_reachable():
+    """Patch discover_reachable_core_endpoint to return a reachable endpoint."""
+    with patch(
+        "custom_components.copilot_ha.config_flow.discover_reachable_core_endpoint",
+        new_callable=AsyncMock,
+        return_value=("192.168.1.10", 8909),
+    ) as mock:
+        yield mock
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 3.  Pytest configuration
-# ──────────────────────────────────────────────────────────────────────────────
+@pytest.fixture
+def patch_discover_unreachable():
+    """Patch discover_reachable_core_endpoint to return None (unreachable)."""
+    with patch(
+        "custom_components.copilot_ha.config_flow.discover_reachable_core_endpoint",
+        new_callable=AsyncMock,
+        return_value=None,
+    ) as mock:
+        yield mock
 
-pytest_plugins = []
+
+@pytest.fixture
+def patch_validate_input_success():
+    """Patch validate_input to succeed."""
+    with patch(
+        "custom_components.copilot_ha.config_flow.validate_input",
+        new_callable=AsyncMock,
+    ) as mock:
+        yield mock
+
+
+@pytest.fixture
+def patch_validate_input_failure():
+    """Patch validate_input to raise an exception."""
+    with patch(
+        "custom_components.copilot_ha.config_flow.validate_input",
+        new_callable=AsyncMock,
+        side_effect=Exception("Connection failed"),
+    ) as mock:
+        yield mock
+
+
+@pytest.fixture
+def patch_fetch_setup_token():
+    """Patch fetch_setup_token to return a test token."""
+    with patch(
+        "custom_components.copilot_ha.config_flow.fetch_setup_token",
+        new_callable=AsyncMock,
+        return_value="auto_fetched_test_token",
+    ) as mock:
+        yield mock
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Schema Fixtures
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.fixture
+def sample_connection_data():
+    """Return sample connection configuration data."""
+    return {
+        "host": "192.168.1.100",
+        "port": 8909,
+        "token": "test_token",
+        "assistant_name": "Styx",
+        "entity_profile": "standard",
+    }
+
+
+@pytest.fixture
+def sample_modules_data():
+    """Return sample modules configuration data."""
+    return {
+        "watchdog_enabled": True,
+        "events_forwarder_enabled": False,
+        "waste_enabled": True,
+        "birthday_enabled": False,
+        "user_preference_enabled": True,
+    }
+
+
+@pytest.fixture
+def sample_neuron_data():
+    """Return sample neuron configuration data."""
+    return {
+        "neuron_enabled": True,
+        "neuron_evaluation_interval": 60,
+        "neuron_context_entities": ["sensor.temperature", "sensor.humidity"],
+        "neuron_state_entities": [],
+        "neuron_mood_entities": "sensor.mood1, sensor.mood2",
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Async Event Loop Fixture (for pytest-asyncio)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an instance of the default event loop for the test session."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Marker Configuration
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "unit: unit tests (no HA runtime)")
-    config.addinivalue_line("markers", "integration: integration tests (full HA)")
+    """Register custom markers."""
+    config.addinivalue_line(
+        "markers", "config_flow: marks tests as ConfigFlow tests"
+    )
+    config.addinivalue_line(
+        "markers", "options_flow: marks tests as OptionsFlow tests"
+    )
+    config.addinivalue_line(
+        "markers", "unit: marks tests as unit tests (no HA runtime required)"
+    )
+    config.addinivalue_line(
+        "markers", "integration: marks tests as integration tests"
+    )

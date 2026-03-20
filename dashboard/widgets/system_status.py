@@ -1,5 +1,5 @@
 """
-System Status Widget - CPU, RAM, Disk, Uptime monitoring
+System Status Widget - CPU, RAM, Disk, Uptime monitoring + Core/HA Health
 Flask Blueprint with REST API and WebSocket live updates
 """
 from flask import Blueprint, jsonify, render_template
@@ -7,8 +7,12 @@ from flask_socketio import emit
 import psutil
 import time
 import threading
+import json
+import os
 from collections import deque
 from datetime import datetime
+from urllib.request import urlopen
+from urllib.error import URLError
 
 # Create blueprint
 system_status_bp = Blueprint('system_status', __name__, url_prefix='/widget/system_status')
@@ -47,6 +51,66 @@ def _compute_trends():
             'avg': round(sum(mem_vals) / n, 1),
         },
     }
+
+
+# Config - can be overridden via environment
+CORE_API_URL = os.environ.get('CORE_API_URL', 'http://localhost:8909')
+CORE_AUTH_TOKEN = os.environ.get('COPILOT_AUTH_TOKEN', '')
+_HA_VERSION_CACHE = None
+_CORE_VERSION_CACHE = None
+_CORE_HEALTH_CACHE = None
+_VERSION_CACHE_TTL = 60  # seconds
+
+
+def _fetch_ha_version():
+    """Fetch HA version from the Home Assistant REST API."""
+    global _HA_VERSION_CACHE
+    now = time.time()
+    if _HA_VERSION_CACHE and (_HA_VERSION_CACHE.get('_ts', 0) + _VERSION_CACHE_TTL) > now:
+        return _HA_VERSION_CACHE
+    try:
+        # HA supervisor API
+        with urlopen('http://supervisor/info', timeout=3) as resp:
+            import json as _json
+            data = _json.loads(resp.read())
+            version = data.get('data', {}).get('homeassistant', {}).get('version', 'unknown')
+            _HA_VERSION_CACHE = {'version': version, 'available': True, '_ts': now}
+    except Exception:
+        _HA_VERSION_CACHE = {'version': 'unavailable', 'available': False, '_ts': now}
+    return _HA_VERSION_CACHE
+
+
+def _fetch_core_version():
+    """Fetch Styx Core version from the Core API health endpoint."""
+    global _CORE_VERSION_CACHE, _CORE_HEALTH_CACHE
+    now = time.time()
+    if _CORE_VERSION_CACHE and (_CORE_VERSION_CACHE.get('_ts', 0) + _VERSION_CACHE_TTL) > now:
+        return _CORE_VERSION_CACHE
+    try:
+        headers = {}
+        if CORE_AUTH_TOKEN:
+            headers['Authorization'] = f'Bearer {CORE_AUTH_TOKEN}'
+        import urllib.request
+        req = urllib.request.Request(f'{CORE_API_URL}/health', headers=headers)
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read())
+            version = data.get('version', data.get('core_version', 'unknown'))
+            _CORE_VERSION_CACHE = {'version': version, 'available': True, '_ts': now}
+            _CORE_HEALTH_CACHE = {'status': 'healthy', '_ts': now}
+    except Exception:
+        _CORE_VERSION_CACHE = {'version': 'unavailable', 'available': False, '_ts': now}
+        _CORE_HEALTH_CACHE = {'status': 'unreachable', '_ts': now}
+    return _CORE_VERSION_CACHE
+
+
+def _fetch_core_health():
+    """Fetch Core health status separately (used for real-time health widget)."""
+    global _CORE_HEALTH_CACHE
+    now = time.time()
+    if _CORE_HEALTH_CACHE and (_CORE_HEALTH_CACHE.get('_ts', 0) + _VERSION_CACHE_TTL) > now:
+        return _CORE_HEALTH_CACHE
+    _fetch_core_version()  # side-effect: populates both caches
+    return _CORE_HEALTH_CACHE or {'status': 'unknown', '_ts': now}
 
 
 def get_system_metrics():
@@ -91,6 +155,13 @@ def get_system_metrics():
             'seconds': uptime_seconds,
             'formatted': f"{days}d {hours}h {minutes}m"
         },
+        'versions': {
+            'ha': _fetch_ha_version().get('version', 'unknown'),
+            'ha_available': _fetch_ha_version().get('available', False),
+            'core': _fetch_core_version().get('version', 'unknown'),
+            'core_available': _fetch_core_version().get('available', False),
+            'core_health': _fetch_core_health().get('status', 'unknown'),
+        },
         'timestamp': datetime.now().isoformat()
     }
 
@@ -134,6 +205,15 @@ def api_uptime():
     """REST API endpoint for uptime only"""
     metrics = get_system_metrics()
     return jsonify(metrics['uptime'])
+
+@system_status_bp.route('/api/versions')
+def api_versions():
+    """REST API endpoint for HA/Core versions"""
+    return jsonify({
+        'ha': _fetch_ha_version(),
+        'core': _fetch_core_version(),
+        'core_health': _fetch_core_health(),
+    })
 
 def register_socketio_events(socketio):
     """Register WebSocket events for system status"""

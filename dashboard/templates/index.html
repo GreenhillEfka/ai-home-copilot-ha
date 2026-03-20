@@ -182,6 +182,39 @@
 
         // Initial update
         updateLastUpdateTime();
+
+        // PS-200: Schema validation gate for Zone-Editor saves
+        // Exposes validateEditorSchema as window-level function
+        (function() {
+          var ZONE_EDITOR_SCHEMA = [
+            {name:'name',          type:'text',    required:true},
+            {name:'icon',         type:'icon',    required:false},
+            {name:'enabled',      type:'boolean', required:false},
+            {name:'priority',     type:'number',  required:false},
+          ];
+          function validateField(name, ft, val, req) {
+            if (req && (val===undefined||val===null||(typeof val==='string'&&!val.trim())))
+              return 'REQUIRED_FIELD_MISSING: '+name;
+            if (val===undefined||val===null) return null;
+            if (ft==='boolean'&&typeof val!=='boolean') return 'SCHEMA_DRIFT: '+name+' expected boolean got '+typeof val;
+            if (ft==='text'&&typeof val!=='string') return 'SCHEMA_DRIFT: '+name+' expected string got '+typeof val;
+            if (ft==='icon'&&typeof val!=='string') return 'SCHEMA_DRIFT: '+name+' expected icon-string got '+typeof val;
+            if (ft==='number'&&typeof val!=='number') return 'SCHEMA_DRIFT: '+name+' expected number got '+typeof val;
+            return null;
+          }
+          window.validateEditorSchema = function(raw, schema, cardName) {
+            var s = schema || ZONE_EDITOR_SCHEMA;
+            for (var i=0;i<s.length;i++) {
+              var f=s[i], err=validateField(f.name,f.type,raw[f.name],f.required);
+              if (err) throw new Error(err);
+            }
+            return true;
+          };
+          window.ConfigValidationError = function(msg,field,code) {
+            this.message=msg; this.field=field||''; this.code=code||'VALIDATION_ERROR';
+            this.toShortString=function(){return this.message;};
+          };
+        })();
     </script>
 </body>
 </html>

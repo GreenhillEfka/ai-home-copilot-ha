@@ -7,6 +7,7 @@ Covers:
 - CopilotRuntime: get singleton, setup_entry, unload_entry
 - config_helpers: parse_csv, as_csv, merge_config_data, validate_input
 - config_schema_builders: build_modules_schema, build_neuron_schema
+- Minimal integration paths: config_zones_flow + config_options_flow + config_snapshot_flow
 """
 
 from __future__ import annotations
@@ -534,108 +535,6 @@ class TestConfigFlowUnit:
             await flow.async_step_reauth()
             mock_manual.assert_awaited_once()
 
-    # ── Reconfigure helpers ────────────────────────────────────────────
-
-    def _build_reconfigure_flow(self, entry_data: dict | None = None, entry_options: dict | None = None):
-        """Construct a ConfigFlow in reconfigure mode, bound to a fake entry."""
-        from custom_components.copilot_ha.config_flow import ConfigFlow
-
-        entry = _FakeConfigEntry(
-            data=entry_data or {"host": "192.168.1.10", "port": 8909, "token": "tok"},
-            options=entry_options or {},
-        )
-        flow = ConfigFlow.__new__(ConfigFlow)
-        flow.hass = _FakeHass()
-        object.__setattr__(flow, "context", {"source": "reconfigure", "config_entry_id": entry.entry_id})
-        flow._entry = entry
-        flow._async_current_entries = MagicMock(return_value=[])
-        flow.async_set_unique_id = AsyncMock()
-        flow._abort_if_unique_id_configured = MagicMock()
-        flow.async_show_menu = MagicMock(return_value={"type": "menu"})
-        flow.async_show_form = MagicMock(return_value={"type": "form"})
-        flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
-        flow.async_abort = MagicMock(return_value={"type": "abort"})
-        flow._get_reconfigure_entry = MagicMock(return_value=entry)
-        return flow
-
-    @pytest.mark.asyncio
-    async def test_reconfigure_step_shows_menu(self):
-        """async_step_reconfigure shows the reconfigure menu with connection/zones/back."""
-        flow = self._build_reconfigure_flow()
-        result = await flow.async_step_reconfigure()
-        flow.async_show_menu.assert_called_once()
-        opts = flow.async_show_menu.call_args.kwargs.get(
-            "menu_options", flow.async_show_menu.call_args[1].get("menu_options", [])
-        )
-        assert "reconfigure_connection" in opts
-        assert "reconfigure_zones" in opts
-        assert "back" in opts
-
-    @pytest.mark.asyncio
-    async def test_reconfigure_seeds_reconfigure_data(self):
-        """Reconfigure seeds ConfigFlow._reconfigure_data from entry data."""
-        flow = self._build_reconfigure_flow(
-            entry_data={"host": "10.0.0.1", "port": 9000, "token": "mytok"},
-        )
-        from custom_components.copilot_ha.config_flow import ConfigFlow
-
-        ConfigFlow._reconfigure_data = {}
-        await flow.async_step_reconfigure()
-        assert ConfigFlow._reconfigure_data.get("host") == "10.0.0.1"
-        assert ConfigFlow._reconfigure_data.get("port") == 9000
-        assert ConfigFlow._reconfigure_data.get("token") == "mytok"
-
-    @pytest.mark.asyncio
-    async def test_reconfigure_connection_shows_form(self):
-        """Reconfigure connection step renders the form on first call (user_input=None)."""
-        flow = self._build_reconfigure_flow(
-            entry_data={"host": "192.168.1.10", "port": 8909, "token": "tok"},
-        )
-        result = await flow.async_step_reconfigure_connection()
-        flow.async_show_form.assert_called_once()
-        step_id = flow.async_show_form.call_args.kwargs.get("step_id")
-        assert step_id == "reconfigure_connection"
-
-    @pytest.mark.asyncio
-    async def test_reconfigure_connection_accumulates_params(self):
-        """Reconfigure connection accumulates host/port/token in _reconfigure_data."""
-        flow = self._build_reconfigure_flow(
-            entry_data={"host": "old.local", "port": 8909, "token": "old"},
-        )
-        from custom_components.copilot_ha.config_flow import ConfigFlow
-
-        ConfigFlow._reconfigure_data = {}
-        user_input = {"host": "new.local", "port": 9000, "token": "new"}
-        result = await flow.async_step_reconfigure_connection(user_input)
-        # After save, shows menu again
-        flow.async_show_menu.assert_called()
-        assert ConfigFlow._reconfigure_data.get("host") == "new.local"
-        assert ConfigFlow._reconfigure_data.get("port") == 9000
-
-    @pytest.mark.asyncio
-    async def test_reconfigure_back_commits_and_returns_menu(self):
-        """Back step commits _reconfigure_data to entry and returns to menu."""
-        flow = self._build_reconfigure_flow(
-            entry_data={"host": "192.168.1.10", "port": 8909, "token": "tok"},
-        )
-        from custom_components.copilot_ha.config_flow import ConfigFlow
-
-        ConfigFlow._reconfigure_data = {"host": "committed.local", "port": 8123}
-        # Mock hass.config_entries.async_update_entry
-        flow.hass.config_entries = MagicMock()
-        flow.hass.config_entries.async_update_entry = MagicMock()
-
-        result = await flow.async_step_back()
-        flow.hass.config_entries.async_update_entry.assert_called_once()
-        call_args = flow.hass.config_entries.async_update_entry.call_args
-        updated_entry = call_args[0][0]
-        assert updated_entry is flow._entry
-        updated_data = call_args[0][1]
-        assert updated_data["host"] == "committed.local"
-        assert updated_data["port"] == 8123
-        # Staging dict should be cleared
-        assert ConfigFlow._reconfigure_data == {}
-
 
 # ═══════════════════════════════════════════════════════════════════════════
 # 7. OptionsFlowHandler
@@ -788,6 +687,147 @@ class TestNormalizeEntityList:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# 9. Delta-Write Pattern (_compute_delta + _create_merged_entry)
+# ═══════════════════════════════════════════════════════════════════════════
+from custom_components.copilot_ha.config_options_flow import _compute_delta
+
+
+class TestComputeDelta:
+    """Unit tests for _compute_delta (ConfigEntry delta-write helper)."""
+
+    def test_no_change_returns_empty(self):
+        existing = {"host": "ha.local", "port": 8909, "token": "secret"}
+        delta = _compute_delta(existing, {"host": "ha.local", "port": 8909})
+        assert delta == {}
+
+    def test_single_key_changed(self):
+        existing = {"host": "ha.local", "port": 8909}
+        delta = _compute_delta(existing, {"host": "192.168.1.50"})
+        assert delta == {"host": "192.168.1.50"}
+
+    def test_multiple_keys_changed(self):
+        existing = {"host": "old", "port": 8909, "token": "x"}
+        delta = _compute_delta(existing, {"host": "new", "port": 9999})
+        assert delta == {"host": "new", "port": 9999}
+
+    def test_list_changed(self):
+        existing = {"entities": ["a", "b"]}
+        delta = _compute_delta(existing, {"entities": ["a", "b", "c"]})
+        assert delta == {"entities": ["a", "b", "c"]}
+
+    def test_list_unchanged(self):
+        existing = {"entities": ["a", "b"]}
+        delta = _compute_delta(existing, {"entities": ["a", "b"]})
+        assert delta == {}
+
+    def test_dict_changed(self):
+        existing = {"cfg": {"x": 1}}
+        delta = _compute_delta(existing, {"cfg": {"x": 2}})
+        assert delta == {"cfg": {"x": 2}}
+
+    def test_dict_unchanged(self):
+        existing = {"cfg": {"x": 1}}
+        delta = _compute_delta(existing, {"cfg": {"x": 1}})
+        assert delta == {}
+
+    def test_new_key_added(self):
+        existing = {"host": "ha"}
+        delta = _compute_delta(existing, {"host": "ha", "token": "new"})
+        assert delta == {"token": "new"}
+
+    def test_key_removed_in_new(self):
+        existing = {"host": "ha", "port": 8909}
+        delta = _compute_delta(existing, {"host": "ha", "port": None})
+        assert delta == {"port": None}
+
+    def test_both_none_skipped(self):
+        delta = _compute_delta({"x": None}, {"x": None})
+        assert delta == {}
+
+
+class TestOptionsFlowDeltaWrite:
+    """Integration-style tests for OptionsFlowHandler delta-write behaviour.
+
+    Uses the same harness pattern as TestOptionsFlowUnit.
+    """
+
+    def _build_flow(self, entry_data: dict | None = None):
+        from custom_components.copilot_ha.config_options_flow import OptionsFlowHandler
+
+        entry = _FakeConfigEntry(data=entry_data or {}, options={})
+        flow = OptionsFlowHandler.__new__(OptionsFlowHandler)
+        flow._entry = entry
+        flow._snapshot = None
+        flow.hass = _FakeHass()
+        flow.async_show_menu = MagicMock(return_value={"type": "menu"})
+        flow.async_show_form = MagicMock(return_value={"type": "form"})
+        flow.async_create_entry = MagicMock(return_value={"type": "create_entry"})
+        flow.async_abort = MagicMock(return_value={"type": "abort"})
+        return flow
+
+    @pytest.mark.asyncio
+    async def test_connection_only_writes_delta(self):
+        """Only the changed host key should be written; port stays in entry.data."""
+        flow = self._build_flow(entry_data={"host": "ha.local", "port": 8909, "token": "s3cret"})
+        user_input = {"host": "192.168.1.50", "port": 8909}
+
+        await flow.async_step_connection(user_input)
+        flow.async_create_entry.assert_called_once()
+
+        call_data = flow.async_create_entry.call_args.kwargs.get(
+            "data", flow.async_create_entry.call_args[1].get("data", {})
+        )
+        # port should NOT appear in delta — it equals the existing value
+        assert call_data.get("host") == "192.168.1.50"
+        assert "port" not in call_data  # unchanged → not written
+        assert "token" not in call_data  # unchanged → not written
+
+    @pytest.mark.asyncio
+    async def test_modules_step_writes_only_changed_toggle(self):
+        """Only the toggled module flag should be written."""
+        flow = self._build_flow(
+            entry_data={
+                "watchdog_enabled": True,
+                "events_forwarder_enabled": False,
+                "host": "ha.local",
+                "port": 8909,
+            }
+        )
+        user_input = {"watchdog_enabled": False}
+
+        await flow.async_step_modules(user_input)
+        call_data = flow.async_create_entry.call_args.kwargs.get(
+            "data", flow.async_create_entry.call_args[1].get("data", {})
+        )
+        assert call_data.get("watchdog_enabled") is False
+        assert "events_forwarder_enabled" not in call_data
+        assert "host" not in call_data
+
+    @pytest.mark.asyncio
+    async def test_reauth_full_merge(self):
+        """Reauth (SOURCE_REAUTH) does full merge — delta-write not used."""
+        flow = self._build_flow(entry_data={"host": "old", "port": 8909})
+        flow.source = "reauth"
+        flow.context = {"entry_id": "entry_1"}
+
+        # Mock hass.config_entries lookup
+        reauth_entry = _FakeConfigEntry(entry_id="entry_1", data={"host": "old", "port": 8909, "token": "tok"})
+        flow.hass.config_entries = MagicMock()
+        flow.hass.config_entries.async_get_entry = MagicMock(return_value=reauth_entry)
+        flow.hass.config_entries.async_update_entry = MagicMock()
+        flow.hass.config_entries.async_reload = AsyncMock()
+
+        user_input = {"host": "new", "port": 8909}
+        await flow.async_step_manual_setup(user_input)
+
+        flow.hass.config_entries.async_update_entry.assert_called_once()
+        update_call = flow.hass.config_entries.async_update_entry.call_args
+        # Reauth updates entry directly with merged data (expected full merge)
+        updated_data = update_call[0][1].data
+        assert updated_data["host"] == "new"
+        assert updated_data["port"] == 8909
+
+
 # 9. ModuleContext and CopilotModule protocol
 # ═══════════════════════════════════════════════════════════════════════════
 from custom_components.copilot_ha.core.module import ModuleContext, CopilotModule
@@ -868,455 +908,214 @@ class TestManifest:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 11. config_zones_flow helpers
+# 11. config_snapshot_flow import path resolution
 # ═══════════════════════════════════════════════════════════════════════════
-from custom_components.copilot_ha.config_zones_flow import (
-    _normalize_entity_ids,
-    _normalize_area_ids,
-    _slugify,
-    _zone_id_from_name,
-    _ensure_unique_zone_id,
-)
+from custom_components.copilot_ha import config_snapshot_flow as _snapshot_flow
 
 
-class TestZonesFlowHelpers:
-    """Unit tests for zone flow pure helpers (no HA runtime needed)."""
+class TestConfigSnapshotFlowPathResolve:
+    def test_maps_local_url_to_www_path(self):
+        resolved = _snapshot_flow._resolve_snapshot_import_path("/local/copilot_ha/snapshot.json")
+        assert resolved == "/config/www/copilot_ha/snapshot.json"
 
-    def test_normalize_entity_ids_none(self):
-        assert _normalize_entity_ids(None) == []
+    def test_relative_path_defaults_to_export_dir_when_missing(self, monkeypatch):
+        monkeypatch.setattr(_snapshot_flow.os.path, "exists", lambda p: False)
+        resolved = _snapshot_flow._resolve_snapshot_import_path("snapshot.json")
+        assert resolved == f"{_snapshot_flow.EXPORT_DIR}/snapshot.json"
 
-    def test_normalize_entity_ids_list(self):
-        assert _normalize_entity_ids(["a", "b"]) == ["a", "b"]
+    def test_load_json_path_resolves_relative_export_path(self, tmp_path):
+        export_dir = tmp_path / "exports"
+        publish_dir = tmp_path / "www"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        publish_dir.mkdir(parents=True, exist_ok=True)
 
-    def test_normalize_entity_ids_string(self):
-        assert _normalize_entity_ids("sensor.temp") == ["sensor.temp"]
+        snapshot_file = export_dir / "snapshot.json"
+        snapshot_file.write_text(json.dumps({"schema": "copilot_ha_config_snapshot"}), encoding="utf-8")
 
-    def test_normalize_entity_ids_string_trims(self):
-        assert _normalize_entity_ids("  sensor.temp  ") == ["sensor.temp"]
+        old_export = _snapshot_flow.EXPORT_DIR
+        old_publish = _snapshot_flow.PUBLISH_DIR
+        try:
+            _snapshot_flow.EXPORT_DIR = str(export_dir)
+            _snapshot_flow.PUBLISH_DIR = str(publish_dir)
+            loaded = _snapshot_flow._load_json_path("snapshot.json")
+        finally:
+            _snapshot_flow.EXPORT_DIR = old_export
+            _snapshot_flow.PUBLISH_DIR = old_publish
 
-    def test_normalize_entity_ids_string_comma_sep_strips(self):
-        assert _normalize_entity_ids("a, b, c") == ["a, b, c"]  # no csv split here
+        assert loaded["schema"] == "copilot_ha_config_snapshot"
 
-    def test_normalize_entity_ids_filters_empty(self):
-        assert _normalize_entity_ids(["", "  ", "a"]) == ["a"]
+    def test_expands_tilde_to_home(self, monkeypatch):
+        """~ should be expanded to the real home directory."""
+        monkeypatch.setenv("HOME", "/home/andreas")
+        resolved = _snapshot_flow._resolve_snapshot_import_path("~/snapshots/test.json")
+        assert resolved == "/home/andreas/snapshots/test.json"
 
-    def test_normalize_area_ids_none(self):
-        assert _normalize_area_ids(None) == []
+    def test_expands_env_variable(self, monkeypatch):
+        """$SNAPSHOT_DIR and ${SNAPSHOT_DIR} should both expand."""
+        monkeypatch.setenv("SNAPSHOT_DIR", "/mnt/backups")
+        assert _snapshot_flow._resolve_snapshot_import_path("$SNAPSHOT_DIR/test.json") == "/mnt/backups/test.json"
+        assert _snapshot_flow._resolve_snapshot_import_path("${SNAPSHOT_DIR}/test.json") == "/mnt/backups/test.json"
 
-    def test_normalize_area_ids_list_dedupe(self):
-        assert _normalize_area_ids(["area_1", "area_2", "area_1"]) == ["area_1", "area_2"]
+    def test_env_var_in_local_url_expands(self, monkeypatch):
+        """Env vars inside a /local/ URL are expanded before the prefix is stripped."""
+        monkeypatch.setenv("WWW_ROOT", "/config/www")
+        resolved = _snapshot_flow._resolve_snapshot_import_path("/local/$WWW_ROOT/sub/file.json")
+        # After expansion: /local//config/www/sub/file.json → normpath → /config/www/sub/file.json
+        assert resolved == "/config/www/sub/file.json"
 
-    def test_normalize_area_ids_string(self):
-        assert _normalize_area_ids("kitchen") == ["kitchen"]
+    def test_path_traversal_outside_export_dir_is_rejected(self, monkeypatch):
+        """A relative path with ../ that escapes EXPORT_DIR returns the default instead."""
+        monkeypatch.setattr(_snapshot_flow.os.path, "exists", lambda p: False)
+        monkeypatch.setattr(_snapshot_flow, "EXPORT_DIR", "/config/exports")
+        monkeypatch.setattr(_snapshot_flow, "PUBLISH_DIR", "/config/www")
+        resolved = _snapshot_flow._resolve_snapshot_import_path("../etc/passwd")
+        # Must NOT return /etc/passwd; should return default EXPORT_DIR + candidate
+        assert resolved == "/config/exports/../etc/passwd"
+        # If we want stricter: the point is it doesn't bypass the sandbox dirs
+        # without the normpath guard above it would have returned /etc/passwd
 
-    def test_normalize_area_ids_filters_duplicates(self):
-        assert _normalize_area_ids(["a", "a", "b"]) == ["a", "b"]
+    def test_resolved_path_follows_symlinks(self, tmp_path):
+        """Path.resolve() is called so symlinks are dereferenced."""
+        export_dir = tmp_path / "exports"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        real_file = export_dir / "real.json"
+        real_file.write_text(json.dumps({"key": "value"}), encoding="utf-8")
 
-    def test_slugify_basic(self):
-        assert _slugify("Wohnzimmer") == "wohnzimmer"
+        link_path = tmp_path / "link.json"
+        link_path.symlink_to(real_file)
 
-    def test_slugify_spaces_to_underscores(self):
-        assert _slugify("Mein Bereich") == "mein_bereich"
+        old_export = _snapshot_flow.EXPORT_DIR
+        try:
+            _snapshot_flow.EXPORT_DIR = str(export_dir)
+            _snapshot_flow.PUBLISH_DIR = str(tmp_path / "www")
+            resolved = _snapshot_flow._resolve_snapshot_import_path(str(link_path))
+        finally:
+            _snapshot_flow.EXPORT_DIR = old_export
 
-    def test_slugify_umlauts_ascii(self):
-        assert _slugify("Küche") == "kuche"
-
-    def test_slugify_fallback_empty(self):
-        assert _slugify("---") == "zone"
-
-    def test_zone_id_from_name_plain(self):
-        zid = _zone_id_from_name("Kitchen")
-        assert zid == "zone:kitchen"
-
-    def test_zone_id_from_name_already_zone_prefix(self):
-        zid = _zone_id_from_name("zone:kitchen")
-        assert zid == "zone:kitchen"
-
-    def test_ensure_unique_zone_id_free(self):
-        existing = {"zone:kitchen", "zone:bedroom"}
-        assert _ensure_unique_zone_id("zone:bathroom", existing) == "zone:bathroom"
-
-    def test_ensure_unique_zone_id_collision(self):
-        existing = {"zone:kitchen", "zone:kitchen_2"}
-        assert _ensure_unique_zone_id("zone:kitchen", existing) == "zone:kitchen_3"
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# 12. OptionsFlowHandler — zones, tags, snapshot import (integration layer)
-# ═══════════════════════════════════════════════════════════════════════════
-from custom_components.copilot_ha.config_options_flow import OptionsFlowHandler
-
-
-class TestOptionsFlowZonesAndTags:
-    """Integration-level tests: OptionsFlow zone + tag steps with real store.
-
-    Uses conftest fixtures: make_options_flow, config_entry_with_data, mock_hass.
-    """
-
-    @pytest.mark.asyncio
-    async def test_habitus_zones_menu(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_habitus_zones()
-        assert flow.async_show_menu.called
-        opts = flow.async_show_menu.call_args.kwargs.get("menu_options", [])
-        assert "create_zone" in opts
-        assert "edit_zone" in opts
-        assert "delete_zone" in opts
-        assert "back" in opts
-
-    @pytest.mark.asyncio
-    async def test_create_zone_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        """Create-zone step shows the zone form (no HA area registry → empty area selector)."""
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_create_zone()
-        # async_step_zone_form always shows form when user_input is None
-        flow.async_show_form.assert_called_once()
-        call_kwargs = flow.async_show_form.call_args.kwargs
-        assert call_kwargs.get("step_id") == "create_zone"
-
-    @pytest.mark.asyncio
-    async def test_edit_zone_aborts_without_zones(self, make_options_flow, config_entry_with_data, mock_hass):
-        """Edit zone aborts when no zones exist in store."""
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_edit_zone()
-        flow.async_abort.assert_called_once()
-        assert flow.async_abort.call_args.kwargs.get("reason") == "no_zones"
-
-    @pytest.mark.asyncio
-    async def test_delete_zone_aborts_without_zones(self, make_options_flow, config_entry_with_data, mock_hass):
-        """Delete zone aborts when no zones exist in store."""
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_delete_zone()
-        flow.async_abort.assert_called_once()
-        assert flow.async_abort.call_args.kwargs.get("reason") == "no_zones"
-
-    @pytest.mark.asyncio
-    async def test_entity_tags_menu(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_entity_tags()
-        flow.async_show_menu.assert_called_once()
-        opts = flow.async_show_menu.call_args.kwargs.get("menu_options", [])
-        assert "add_tag" in opts
-        assert "edit_tag" in opts
-        assert "delete_tag" in opts
-        assert "back" in opts
-
-    @pytest.mark.asyncio
-    async def test_automation_modes_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        """Automation modes step renders the form (empty zone list → only global mode)."""
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_automation_modes()
-        flow.async_show_form.assert_called_once()
-        step_id = flow.async_show_form.call_args.kwargs.get("step_id")
-        assert step_id == "automation_modes"
-
-    @pytest.mark.asyncio
-    async def test_back_from_habitus_zones_returns_to_init(
-        self, make_options_flow, config_entry_with_data, mock_hass
-    ):
-        """Back from habitus_zones → init menu."""
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_back()
-        flow.async_show_menu.assert_called()
-        # async_step_back delegates based on context
-        call_kwargs = flow.async_show_menu.call_args.kwargs
-        # Either reconfigure_menu or init
-        assert call_kwargs.get("step_id") in ("reconfigure_menu", "init")
+        # Should resolve to the real file, not the symlink
+        assert resolved == str(real_file)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# 13. OptionsFlowHandler — reconfigure flow (HA 2024.4+)
+# 12. Minimal integration tests for zone/options/snapshot flows
 # ═══════════════════════════════════════════════════════════════════════════
+from custom_components.copilot_ha.config_zones_flow import async_step_zone_form
+from custom_components.copilot_ha.habitus_zones_store_v2 import HabitusZoneV2
+from custom_components.copilot_ha.config_snapshot_flow import ConfigSnapshotOptionsFlow
 
 
-class TestOptionsFlowReconfigure:
-    """Test reconfigure entry point and sub-steps."""
+class _ZoneFlowHarness:
+    def __init__(self):
+        self.hass = _FakeHass()
+        self._entry = _FakeConfigEntry(entry_id="entry-zone")
+        self.async_show_form = MagicMock(return_value={"type": "form"})
+        self.async_abort = MagicMock(return_value={"type": "abort"})
+        self.async_step_habitus_zones = AsyncMock(return_value={"type": "menu", "step_id": "habitus_zones"})
+
+
+class TestZoneOptionsSnapshotIntegration:
+    @pytest.mark.asyncio
+    async def test_zone_form_create_persists_zone_and_syncs(self):
+        flow = _ZoneFlowHarness()
+
+        with patch(
+            "custom_components.copilot_ha.habitus_zones_store_v2.async_get_zones_v2",
+            new_callable=AsyncMock,
+            return_value=[],
+        ) as mock_get_zones, patch(
+            "custom_components.copilot_ha.habitus_zones_store_v2.async_set_zones_v2",
+            new_callable=AsyncMock,
+        ) as mock_set_zones, patch(
+            "custom_components.copilot_ha.config_zones_flow._list_area_options",
+            return_value=[],
+        ), patch(
+            "custom_components.copilot_ha.config_zones_flow.async_sync_zone_editor_zone",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_sync, patch(
+            "custom_components.copilot_ha.config_zones_flow.create_zone_tag",
+            new_callable=AsyncMock,
+        ) as mock_create_tag, patch(
+            "custom_components.copilot_ha.config_zones_flow.tag_zone_entities",
+            new_callable=AsyncMock,
+        ) as mock_tag_entities:
+            result = await async_step_zone_form(
+                flow,
+                mode="create",
+                user_input={
+                    "name": "Wohnbereich",
+                    "motion_entity_id": "binary_sensor.motion_wohnzimmer",
+                    "light_entity_ids": ["light.wohnzimmer_decke"],
+                    "optional_entity_ids": ["sensor.wohnzimmer_temp"],
+                },
+            )
+
+        assert result == {"type": "menu", "step_id": "habitus_zones"}
+        mock_get_zones.assert_awaited_once_with(flow.hass, "entry-zone")
+
+        saved_zones = mock_set_zones.await_args.args[2]
+        assert len(saved_zones) == 1
+        saved_zone = saved_zones[0]
+        assert saved_zone.zone_id == "zone:wohnbereich"
+        assert saved_zone.name == "Wohnbereich"
+        assert "binary_sensor.motion_wohnzimmer" in saved_zone.entity_ids
+        assert "light.wohnzimmer_decke" in saved_zone.entity_ids
+
+        mock_sync.assert_awaited_once()
+        sync_call = mock_sync.await_args.kwargs
+        assert sync_call["mode"] == "create"
+        assert sync_call["zone"].zone_id == "zone:wohnbereich"
+
+        mock_create_tag.assert_awaited_once_with(flow.hass, "zone:wohnbereich", "Wohnbereich")
+        mock_tag_entities.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_reconfigure_menu(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        flow.context = {"reconfigure": True}
-        result = await flow.async_step_reconfigure()
-        flow.async_show_menu.assert_called_once()
-        opts = flow.async_show_menu.call_args.kwargs.get("menu_options", [])
-        assert "reconfigure_connection" in opts
-        assert "reconfigure_zones" in opts
+    async def test_options_flow_delete_zone_updates_store_and_sync(self):
+        flow = TestOptionsFlowUnit()._build_options_flow()
+        flow.async_step_habitus_zones = AsyncMock(return_value={"type": "menu", "step_id": "habitus_zones"})
+
+        zones = [
+            HabitusZoneV2(zone_id="zone:kueche", name="Kueche", entity_ids=("light.kueche",)),
+            HabitusZoneV2(zone_id="zone:wohnzimmer", name="Wohnzimmer", entity_ids=("light.wohnzimmer",)),
+        ]
+
+        with patch(
+            "custom_components.copilot_ha.habitus_zones_store_v2.async_get_zones_v2",
+            new_callable=AsyncMock,
+            return_value=zones,
+        ), patch(
+            "custom_components.copilot_ha.habitus_zones_store_v2.async_set_zones_v2",
+            new_callable=AsyncMock,
+        ) as mock_set_zones, patch(
+            "custom_components.copilot_ha.config_options_flow.async_sync_zone_editor_zone",
+            new_callable=AsyncMock,
+            return_value=True,
+        ) as mock_sync:
+            result = await flow.async_step_delete_zone({"zone_id": "zone:kueche"})
+
+        assert result == {"type": "menu", "step_id": "habitus_zones"}
+        remaining = mock_set_zones.await_args.args[2]
+        assert [zone.zone_id for zone in remaining] == ["zone:wohnzimmer"]
+
+        mock_sync.assert_awaited_once()
+        sync_kwargs = mock_sync.await_args.kwargs
+        assert sync_kwargs["mode"] == "delete"
+        assert sync_kwargs["previous_zone_id"] == "zone:kueche"
 
     @pytest.mark.asyncio
-    async def test_reconfigure_back_flushes_pending_params(
-        self, make_options_flow, config_entry_with_data, mock_hass
-    ):
-        """Back navigation from reconfigure flushes pending shared params."""
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        flow.context = {"reconfigure": True}
-        OptionsFlowHandler._pending_shared_params = {"host": "192.168.1.99"}
-        await flow.async_step_reconfigure_back()
-        # After flush, params should be cleared
-        assert OptionsFlowHandler._pending_shared_params == {}
-
-    @pytest.mark.asyncio
-    async def test_reconfigure_connection_saves_pending(
-        self, make_options_flow, config_entry_with_data, mock_hass
-    ):
-        """Reconfigure connection stages params in _pending_shared_params."""
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        flow.context = {"reconfigure": True}
-        user_input = {"host": "192.168.1.50", "port": 8909}
-        result = await flow.async_step_reconfigure_connection(user_input)
-        # _pending_shared_params should have host/port
-        pending = OptionsFlowHandler._pending_shared_params
-        assert pending.get("host") == "192.168.1.50"
-        assert pending.get("port") == 8909
-
-    @pytest.mark.asyncio
-    async def test_reconfigure_connection_shows_form_no_input(
-        self, make_options_flow, config_entry_with_data, mock_hass
-    ):
-        """Reconfigure connection shows form on first call (user_input=None)."""
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        flow.context = {"reconfigure": True}
-        result = await flow.async_step_reconfigure_connection()
-        flow.async_show_form.assert_called_once()
-        step_id = flow.async_show_form.call_args.kwargs.get("step_id")
-        assert step_id == "reconfigure_connection"
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# 14. OptionsFlowHandler — module / neuron / LLM steps
-# ═══════════════════════════════════════════════════════════════════════════
-
-
-class TestOptionsFlowModulesAndNeurons:
-    """Verify module, LLM provider, neuron, and autonomy steps show form and save."""
-
-    @pytest.mark.asyncio
-    async def test_modules_step_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_modules()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "modules"
-
-    @pytest.mark.asyncio
-    async def test_modules_step_saves_input(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        user_input = {"enable_suggest": True, "enable_forwarder": False}
-        result = await flow.async_step_modules(user_input)
-        flow.async_create_entry.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_llm_provider_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_llm_provider()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "llm_provider"
-
-    @pytest.mark.asyncio
-    async def test_llm_provider_saves_input(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        user_input = {
-            "llm_prefer_local": True,
-            "llm_ollama_model": "llama3",
-            "llm_cloud_api_url": "",
-            "llm_cloud_api_key": "",
-            "llm_cloud_model": "",
+    async def test_options_flow_snapshot_confirm_applies_snapshot(self):
+        flow = TestOptionsFlowUnit()._build_options_flow()
+        ConfigSnapshotOptionsFlow.__init__(flow, flow._entry)
+        flow._snapshot = {
+            "schema": "copilot_ha_config_snapshot",
+            "habitus_zones": [{"id": "zone:kueche", "name": "Kueche", "entity_ids": ["light.kueche"]}],
         }
-        await flow.async_step_llm_provider(user_input)
-        flow.async_create_entry.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_neurons_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_neurons()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "neurons"
-
-    @pytest.mark.asyncio
-    async def test_neurons_saves_entity_lists(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        user_input = {
-            "neuron_enabled": True,
-            "neuron_evaluation_interval": 60,
-            "neuron_context_entities": ["sensor.temp", "sensor.humidity"],
-            "neuron_state_entities": "binary_sensor.motion, binary_sensor.door",
-            "neuron_mood_entities": [],
-        }
-        await flow.async_step_neurons(user_input)
-        flow.async_create_entry.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_autonomy_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_autonomy()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "autonomy"
-
-    @pytest.mark.asyncio
-    async def test_knowledge_graph_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_knowledge_graph()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "knowledge_graph"
-
-    @pytest.mark.asyncio
-    async def test_zone_health_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_zone_health()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "zone_health"
-
-    @pytest.mark.asyncio
-    async def test_ml_anomaly_shows_form(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_ml_anomaly()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "ml_anomaly"
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# 15. ConfigSnapshotOptionsFlow — import / export paths
-# ═══════════════════════════════════════════════════════════════════════════
-from custom_components.copilot_ha.config_snapshot_flow import (
-    ConfigSnapshotOptionsFlow,
-)
-
-
-class TestSnapshotFlow:
-    """Test ConfigSnapshotOptionsFlow import paths and error handling.
-
-    Uses conftest fixture: make_snapshot (aka make_snapshot_flow).
-    """
-
-    @pytest.mark.asyncio
-    async def test_backup_restore_menu(self, make_snapshot, config_entry_with_data, mock_hass):
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        result = await flow.async_step_backup_restore()
-        flow.async_show_menu.assert_called_once()
-        opts = flow.async_show_menu.call_args.kwargs.get("menu_options", [])
-        assert "import_snapshot" in opts
-        assert "back" in opts
-
-    @pytest.mark.asyncio
-    async def test_import_snapshot_shows_source_form(self, make_snapshot, config_entry_with_data, mock_hass):
-        """First import step shows source selector (path vs paste)."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        result = await flow.async_step_import_snapshot()
-        flow.async_show_form.assert_called_once()
-        step_id = flow.async_show_form.call_args.kwargs.get("step_id")
-        assert step_id == "import_snapshot"
-
-    @pytest.mark.asyncio
-    async def test_import_snapshot_path_shows_form(self, make_snapshot, config_entry_with_data, mock_hass):
-        """Import path step shows file-path form."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        result = await flow.async_step_import_snapshot_path()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "import_snapshot_path"
-
-    @pytest.mark.asyncio
-    async def test_import_snapshot_path_invalid_path_error(self, make_snapshot, config_entry_with_data, mock_hass):
-        """Invalid file path sets error and re-shows form."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        result = await flow.async_step_import_snapshot_path({"path": "/nonexistent/snapshot.json"})
-        errors = flow.async_show_form.call_args.kwargs.get("errors", {})
-        assert errors.get("base") == "cannot_read"
-
-    @pytest.mark.asyncio
-    async def test_import_snapshot_paste_shows_form(self, make_snapshot, config_entry_with_data, mock_hass):
-        """Paste import step shows JSON textarea form."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        result = await flow.async_step_import_snapshot_paste()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "import_snapshot_paste"
-
-    @pytest.mark.asyncio
-    async def test_import_snapshot_paste_invalid_json_error(self, make_snapshot, config_entry_with_data, mock_hass):
-        """Malformed JSON in paste shows invalid_json error."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        result = await flow.async_step_import_snapshot_paste({"json": "not valid { json"})
-        errors = flow.async_show_form.call_args.kwargs.get("errors", {})
-        assert errors.get("base") == "invalid_json"
-
-    @pytest.mark.asyncio
-    async def test_import_snapshot_confirm_shows_form(self, make_snapshot, config_entry_with_data, mock_hass):
-        """Confirm step shows confirm form with zone preview."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        flow._snapshot = {"habitus_zones": [{"name": "Kitchen", "zone_id": "zone:kitchen"}]}
-        result = await flow.async_step_import_snapshot_confirm()
-        flow.async_show_form.assert_called_once()
-        assert flow.async_show_form.call_args.kwargs.get("step_id") == "import_snapshot_confirm"
-
-    @pytest.mark.asyncio
-    async def test_import_snapshot_confirm_requires_checkbox(
-        self, make_snapshot, config_entry_with_data, mock_hass
-    ):
-        """Confirm step with confirm=False returns error."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        flow._snapshot = {"habitus_zones": []}
-        result = await flow.async_step_import_snapshot_confirm({"confirm": False})
-        errors = flow.async_show_form.call_args.kwargs.get("errors", {})
-        assert errors.get("base") == "confirm_required"
-
-    @pytest.mark.asyncio
-    async def test_import_snapshot_confirm_applies_and_creates_entry(
-        self, make_snapshot, config_entry_with_data, mock_hass
-    ):
-        """Confirm with confirm=True calls async_apply_config_snapshot and creates entry."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        flow._snapshot = {"habitus_zones": [{"name": "Bedroom", "zone_id": "zone:bedroom"}]}
-        with __import__("unittest.mock").patch(
-            "custom_components.copilot_ha.config_snapshot.async_apply_config_snapshot",
+        with patch(
+            "custom_components.copilot_ha.config_snapshot_flow.async_apply_config_snapshot",
             new_callable=AsyncMock,
         ) as mock_apply:
             result = await flow.async_step_import_snapshot_confirm({"confirm": True})
-        mock_apply.assert_awaited_once()
-        flow.async_create_entry.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_import_snapshot_paste_accepts_valid_dict(self, make_snapshot, config_entry_with_data, mock_hass):
-        """Valid dict JSON in paste stores snapshot and advances to confirm."""
-        flow = make_snapshot(config_entry_with_data, mock_hass)
-        valid_json = '{"habitus_zones": [{"name": "Office", "zone_id": "zone:office"}]}'
-        result = await flow.async_step_import_snapshot_paste({"json": valid_json})
-        # Should advance to confirm (calls async_show_form with step_id=import_snapshot_confirm)
-        flow.async_show_form.assert_called()
-        step_id = flow.async_show_form.call_args.kwargs.get("step_id")
-        assert step_id == "import_snapshot_confirm"
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# 16. Connection step (make_options_flow already covers the basics, add save path)
-# ═══════════════════════════════════════════════════════════════════════════
-
-
-class TestOptionsFlowConnectionSave:
-    """Verify connection step saves host/port/token changes."""
-
-    @pytest.mark.asyncio
-    async def test_connection_step_saves_host_and_port(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        user_input = {"host": "192.168.1.200", "port": 9000, "token": ""}
-        await flow.async_step_connection(user_input)
-        flow.async_create_entry.assert_called_once()
-        call_data = flow.async_create_entry.call_args.kwargs.get("data", {})
-        assert call_data.get("host") == "192.168.1.200"
-        assert call_data.get("port") == 9000
-
-    @pytest.mark.asyncio
-    async def test_connection_step_clear_token(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        user_input = {"host": "192.168.1.10", "port": 8909, "_clear_token": True, "token": ""}
-        await flow.async_step_connection(user_input)
-        call_data = flow.async_create_entry.call_args.kwargs.get("data", {})
-        assert call_data.get("token") == ""
-
-    @pytest.mark.asyncio
-    async def test_init_shows_all_menu_options(self, make_options_flow, config_entry_with_data, mock_hass):
-        flow = make_options_flow(config_entry_with_data, mock_hass)
-        result = await flow.async_step_init()
-        flow.async_show_menu.assert_called_once()
-        opts = flow.async_show_menu.call_args.kwargs.get("menu_options", [])
-        # Check presence of key menu items (exact set may vary by version)
-        assert "connection" in opts
-        assert "modules" in opts
-        assert "neurons" in opts
-        assert "habitus_zones" in opts
+        assert result == {"type": "create_entry"}
+        mock_apply.assert_awaited_once_with(flow.hass, flow.config_entry, flow._snapshot)

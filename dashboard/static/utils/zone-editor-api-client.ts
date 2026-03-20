@@ -1,237 +1,323 @@
 /**
  * PS-108: Zone Editor API Client
  *
- * TypeScript client for HA Dashboard → Core zone-editor CRUD operations.
- * Used by styx-zone-creator-card.ts (PS-199) for zone create/update/delete
- * and by dashboard.js for inline CRUD actions.
+ * TypeScript client for the /api/v1/zone-editor CRUD endpoints.
+ * Uses card-form-helper.ts (PS-198) HaFormSchema pattern for type safety.
  *
- * Endpoints (HA Dashboard proxy → Core zone-editor):
- *   POST   /api/v1/dashboard/zone-editor/zones
- *   PUT    /api/v1/dashboard/zone-editor/zones/<zone_id>
- *   DELETE /api/v1/dashboard/zone-editor/zones/<zone_id>
- *   POST   /api/v1/dashboard/zone-editor/zones/<zone_id>/rooms
- *   DELETE /api/v1/dashboard/zone-editor/zones/<zone_id>/rooms/<room_id>
- *   GET    /api/v1/dashboard/zone-editor/rooms
- *   GET    /api/v1/dashboard/zone-editor/templates
+ * Endpoints (Core zone-editor API):
+ *   GET    /api/v1/zone-editor/zones           → list all zones
+ *   GET    /api/v1/zone-editor/zones/<zone_id> → get single zone
+ *   POST   /api/v1/zone-editor/zones           → create zone
+ *   PUT    /api/v1/zone-editor/zones/<zone_id> → update zone
+ *   DELETE /api/v1/zone-editor/zones/<zone_id> → delete zone
+ *   GET    /api/v1/zone-editor/rooms           → list rooms
+ *   GET    /api/v1/zone-editor/templates       → list templates
  *
- * Also supports direct Core mode (when dashboard acts as passthrough).
+ * The HA dashboard proxies these via its own /api/v1/dashboard/* endpoints
+ * so the frontend always talks to the same origin.  Pass resolveUrl() as
+ * baseUrl when running inside the HA dashboard context, otherwise use the
+ * Core base URL directly.
  */
 
-import type { StyxZoneCreatorCardConfig } from '../cards/styx-zone-creator-card.js';
+import type { HaFormSchema } from './card-form-helper.js';
 
-// ── Error type ────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface ZoneEditorZone {
+  zone_id: string;
+  name: string;
+  icon: string;
+  color?: string;
+  enabled?: boolean;
+  priority?: number;
+  mode?: string;
+  rooms?: string[];
+  entities?: Record<string, unknown>;
+}
+
+export interface ZoneEditorRoom {
+  room_id: string;
+  name: string;
+  zone?: string | null;
+  entities?: string[];
+}
+
+export interface ZoneEditorTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  modules?: string[];
+}
+
+export interface CreateZonePayload {
+  zone_id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  priority?: number;
+  rooms?: string[];
+  enabled?: boolean;
+  mode?: string;
+  entities?: Record<string, unknown>;
+}
+
+export interface UpdateZonePayload {
+  name?: string;
+  icon?: string;
+  color?: string;
+  enabled?: boolean;
+  priority?: number;
+  mode?: string;
+  rooms?: string[];
+  entities?: Record<string, unknown>;
+}
+
+export interface ApiResponse<T = unknown> {
+  ok: boolean;
+  error?: string;
+  zone?: T;
+  zones?: T[];
+  rooms?: ZoneEditorRoom[];
+  templates?: ZoneEditorTemplate[];
+  total?: number;
+}
+
+// ─── URL Resolution ───────────────────────────────────────────────────────────
+
+/**
+ * Resolve an API URL.  When running inside the HA dashboard, all requests
+ * go to the same origin; otherwise fall back to the Core base URL.
+ */
+export function resolveZoneEditorUrl(
+  path: string,
+  baseUrl?: string,
+): string {
+  if (baseUrl) return `${baseUrl}${path}`;
+
+  // Detect if we are inside the HA dashboard (Flask server on same host)
+  const dashboardBase = (window as Window & { PILOTSUITE_DASHBOARD_BASE?: string })
+    .PILOTSUITE_DASHBOARD_BASE;
+
+  if (dashboardBase) return `${dashboardBase}${path}`;
+
+  // Inside HA dashboard: same origin + /api/v1/dashboard prefix for proxy
+  // We always proxy through the HA dashboard, never call Core directly
+  return `/api/v1/dashboard${path.replace('/api/v1/zone-editor', '')}`;
+}
+
+// ─── Fetch Helper ─────────────────────────────────────────────────────────────
+
+interface FetchOptions extends RequestInit {
+  timeoutMs?: number;
+}
+
+async function apiFetch<T>(
+  url: string,
+  options: FetchOptions = {},
+): Promise<T> {
+  const { timeoutMs = 8000, ...fetchOpts } = options;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const resp = await fetch(url, {
+      ...fetchOpts,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(fetchOpts.headers as Record<string, string>),
+      },
+    });
+
+    if (!resp.ok) {
+      let errorBody: string | unknown = resp.statusText;
+      try {
+        const json = await resp.json();
+        errorBody = json.error || json;
+      } catch {
+        // ignore parse error
+      }
+      throw new ZoneEditorApiError(
+        `HTTP ${resp.status}: ${resp.statusText}`,
+        resp.status,
+        errorBody,
+      );
+    }
+
+    return (await resp.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ─── Custom Error ─────────────────────────────────────────────────────────────
 
 export class ZoneEditorApiError extends Error {
   constructor(
     message: string,
-    public statusCode: number | undefined,
-    public zoneId: string | undefined
+    public readonly statusCode: number,
+    public readonly body?: unknown,
   ) {
     super(message);
     this.name = 'ZoneEditorApiError';
   }
 }
 
-// ── URL resolution ────────────────────────────────────────────────────────────
+// ─── API Client ───────────────────────────────────────────────────────────────
 
-/**
- * Resolve the zone-editor API base URL.
- * In HA dashboard context: use relative path (dashboard proxy).
- * In direct/Core context: use window.location or explicit coreBase.
- */
-export function resolveZoneEditorUrl(coreBase?: string): string {
-  if (coreBase) return coreBase;
-  // Dashboard proxy mode (default)
-  return '/api/v1/dashboard/zone-editor';
+export class ZoneEditorApiClient {
+  constructor(private baseUrl?: string) {}
+
+  // ── List ──────────────────────────────────────────────────────────────────
+
+  /**
+   * List all zones from the zone-editor store.
+   */
+  async listZones(): Promise<ApiResponse<ZoneEditorZone>> {
+    const url = resolveZoneEditorUrl('/api/v1/zone-editor/zones', this.baseUrl);
+    return apiFetch<ApiResponse<ZoneEditorZone>>(url);
+  }
+
+  /**
+   * Get a single zone by ID.
+   */
+  async getZone(zoneId: string): Promise<ApiResponse<ZoneEditorZone>> {
+    const url = resolveZoneEditorUrl(
+      `/api/v1/zone-editor/zones/${encodeURIComponent(zoneId)}`,
+      this.baseUrl,
+    );
+    return apiFetch<ApiResponse<ZoneEditorZone>>(url);
+  }
+
+  // ── Create ────────────────────────────────────────────────────────────────
+
+  /**
+   * Create a new zone.
+   *
+   * Payload shape is derived from the StyxZoneCreatorCardConfig fields
+   * that are persisted to Core (zone_name, zone_icon, active_modules, etc.).
+   */
+  async createZone(payload: CreateZonePayload): Promise<ApiResponse<ZoneEditorZone>> {
+    const url = resolveZoneEditorUrl('/api/v1/zone-editor/zones', this.baseUrl);
+    return apiFetch<ApiResponse<ZoneEditorZone>>(url, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // ── Update ───────────────────────────────────────────────────────────────
+
+  /**
+   * Update an existing zone (partial update — only send changed fields).
+   */
+  async updateZone(
+    zoneId: string,
+    payload: UpdateZonePayload,
+  ): Promise<ApiResponse<ZoneEditorZone>> {
+    const url = resolveZoneEditorUrl(
+      `/api/v1/zone-editor/zones/${encodeURIComponent(zoneId)}`,
+      this.baseUrl,
+    );
+    return apiFetch<ApiResponse<ZoneEditorZone>>(url, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  // ── Delete ───────────────────────────────────────────────────────────────
+
+  /**
+   * Delete a zone by ID.
+   */
+  async deleteZone(zoneId: string): Promise<ApiResponse> {
+    const url = resolveZoneEditorUrl(
+      `/api/v1/zone-editor/zones/${encodeURIComponent(zoneId)}`,
+      this.baseUrl,
+    );
+    return apiFetch<ApiResponse>(url, {
+      method: 'DELETE',
+    });
+  }
+
+  // ── Rooms ───────────────────────────────────────────────────────────────
+
+  /**
+   * List all rooms (optionally filtered to unassigned only).
+   */
+  async listRooms(unassignedOnly = false): Promise<ApiResponse<ZoneEditorRoom>> {
+    const url = resolveZoneEditorUrl(
+      `/api/v1/zone-editor/rooms${unassignedOnly ? '?unassigned=true' : ''}`,
+      this.baseUrl,
+    );
+    return apiFetch<ApiResponse<ZoneEditorRoom>>(url);
+  }
+
+  // ── Templates ────────────────────────────────────────────────────────────
+
+  /**
+   * List available zone templates.
+   */
+  async listTemplates(): Promise<ApiResponse<ZoneEditorTemplate>> {
+    const url = resolveZoneEditorUrl('/api/v1/zone-editor/templates', this.baseUrl);
+    return apiFetch<ApiResponse<ZoneEditorTemplate>>(url);
+  }
 }
 
-// ── Zone payload mappers ─────────────────────────────────────────────────────
+// ─── Singleton (resolves URL per execution context) ───────────────────────────
 
-function moduleStringToArray(modules: string): string[] {
-  if (!modules) return [];
-  return modules
-    .split(',')
-    .map((m) => m.trim().toUpperCase())
-    .filter(Boolean);
-}
+export const zoneEditorApi = new ZoneEditorApiClient();
+
+// ─── StyxZoneCreatorCard CRUD helpers ────────────────────────────────────────
+// These functions bridge the card config schema (PS-199) to the API client.
+// Card authors should import zoneEditorApi directly; these are for
+// StyxZoneCreatorCard internal use only.
 
 /**
- * Map StyxZoneCreatorCardConfig (card form) → Core zone-editor create payload.
- * Used by POST /zones.
+ * Map a StyxZoneCreatorCardConfig to the CreateZonePayload expected by
+ * /api/v1/zone-editor/zones (POST).
  */
 export function cardConfigToCreatePayload(
-  config: StyxZoneCreatorCardConfig,
-  rooms: string[] = []
-): Record<string, unknown> {
+  config: Record<string, unknown>,
+): CreateZonePayload {
   return {
-    name: config.zone_name,
-    icon: config.zone_icon || 'mdi:home',
-    active_modules: moduleStringToArray(config.active_modules),
-    entities: {
-      light: config.light_entity,
-      audio: config.audio_entity,
-      climate: config.climate_entity,
-      cover: config.cover_entity,
-      energy: config.energy_entity,
-      scene: config.scene_entity,
-      security: config.security_entity,
-    },
-    rooms,
-    show_grid: config.show_grid ?? true,
-    compact_mode: config.compact_mode ?? false,
+    zone_id: String(config.zone_name ?? '')
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, ''),
+    name: String(config.zone_name ?? ''),
+    icon: String(config.zone_icon ?? 'mdi:room'),
+    enabled: true,
+    priority: 10,
+    rooms: [],
+    entities: {},
   };
 }
 
 /**
- * Map StyxZoneCreatorCardConfig → Core zone-editor update payload.
- * Used by PUT /zones/<zone_id>.
+ * Map a StyxZoneCreatorCardConfig to the UpdateZonePayload expected by
+ * /api/v1/zone-editor/zones/<zone_id> (PUT).
  */
 export function cardConfigToUpdatePayload(
-  config: Partial<StyxZoneCreatorCardConfig>
-): Record<string, unknown> {
-  const payload: Record<string, unknown> = {};
-  if (config.zone_name !== undefined) payload.name = config.zone_name;
-  if (config.zone_icon !== undefined) payload.icon = config.zone_icon;
-  if (config.active_modules !== undefined)
-    payload.active_modules = moduleStringToArray(config.active_modules);
-  if (config.entities !== undefined) payload.entities = config.entities;
-  payload.show_grid = config.show_grid ?? true;
-  payload.compact_mode = config.compact_mode ?? false;
+  zoneId: string,
+  config: Record<string, unknown>,
+): UpdateZonePayload {
+  const payload: UpdateZonePayload = {
+    name: String(config.zone_name ?? ''),
+    icon: String(config.zone_icon ?? 'mdi:room'),
+  };
+
+  if (typeof config.active_modules === 'string') {
+    const modules = config.active_modules
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    // Store active modules in entities for module activation
+    payload.entities = { active_modules: modules };
+  } else if (Array.isArray(config.active_modules)) {
+    payload.entities = { active_modules: config.active_modules };
+  }
+
   return payload;
 }
-
-// ── API Client ───────────────────────────────────────────────────────────────
-
-export interface ZonePayload {
-  id?: string;
-  name: string;
-  icon?: string;
-  active_modules?: string[];
-  entities?: Record<string, string | undefined>;
-  rooms?: string[];
-  show_grid?: boolean;
-  compact_mode?: boolean;
-}
-
-/**
- * Alias for backward-compatibility with cards that reference ZoneEditorZone.
- * The newer ZonePayload interface is the canonical shape.
- */
-export interface ZoneEditorZone extends ZonePayload {
-  zone_id?: string;
-  enabled?: boolean;
-  priority?: number;
-}
-
-export interface RoomPayload {
-  id?: string;
-  name: string;
-  zone_id?: string;
-}
-
-const DEFAULT_TIMEOUT_MS = 8000;
-
-export class ZoneEditorApiClient {
-  constructor(private baseUrl: string = resolveZoneEditorUrl()) {}
-
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-    timeout = DEFAULT_TIMEOUT_MS
-  ): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      const resp = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(window.dashboard?.authToken
-            ? { Authorization: `Bearer ${window.dashboard.authToken}` }
-            : {}),
-        },
-        body: body != null ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timer);
-
-      if (resp.status >= 400) {
-        let errBody: string | undefined;
-        try {
-          errBody = await resp.text();
-        } catch {}
-        const zoneId = path.split('/').pop();
-        throw new ZoneEditorApiError(
-          `ZoneEditor API ${method} ${path} failed (${resp.status}): ${errBody}`,
-          resp.status,
-          zoneId
-        );
-      }
-
-      // 204 No Content
-      if (resp.status === 204 || resp.headers.get('content-length') === '0') {
-        return {} as T;
-      }
-
-      return (await resp.json()) as T;
-    } catch (e) {
-      clearTimeout(timer);
-      if (e instanceof ZoneEditorApiError) throw e;
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        throw new ZoneEditorApiError('ZoneEditor API timeout', undefined, path.split('/').pop());
-      }
-      throw new ZoneEditorApiError(
-        `ZoneEditor API ${method} ${path} network error: ${String(e)}`,
-        undefined,
-        path.split('/').pop()
-      );
-    }
-  }
-
-  // Zone CRUD
-  async listZones(): Promise<{ zones: ZonePayload[] }> {
-    return this.request<{ zones: ZonePayload[] }>('GET', '/zones');
-  }
-
-  async getZone(zoneId: string): Promise<ZonePayload> {
-    return this.request<ZonePayload>('GET', `/zones/${zoneId}`);
-  }
-
-  async createZone(payload: ZonePayload): Promise<ZonePayload> {
-    return this.request<ZonePayload>('POST', '/zones', payload);
-  }
-
-  async updateZone(zoneId: string, payload: Partial<ZonePayload>): Promise<ZonePayload> {
-    return this.request<ZonePayload>('PUT', `/zones/${zoneId}`, payload);
-  }
-
-  async deleteZone(zoneId: string): Promise<void> {
-    await this.request<void>('DELETE', `/zones/${zoneId}`);
-  }
-
-  // Room management
-  async listRooms(): Promise<{ rooms: RoomPayload[] }> {
-    return this.request<{ rooms: RoomPayload[] }>('GET', '/rooms');
-  }
-
-  async addRoomToZone(zoneId: string, room: RoomPayload): Promise<RoomPayload> {
-    return this.request<RoomPayload>('POST', `/zones/${zoneId}/rooms`, room);
-  }
-
-  async removeRoomFromZone(zoneId: string, roomId: string): Promise<void> {
-    await this.request<void>('DELETE', `/zones/${zoneId}/rooms/${roomId}`);
-  }
-
-  // Templates
-  async listTemplates(): Promise<unknown> {
-    return this.request<unknown>('GET', '/templates');
-  }
-}
-
-// ── Singleton export ─────────────────────────────────────────────────────────
-
-export const zoneEditorApi = new ZoneEditorApiClient();

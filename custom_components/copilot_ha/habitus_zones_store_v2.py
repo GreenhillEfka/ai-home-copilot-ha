@@ -61,6 +61,297 @@ _MOTION_HINTS = (
     "besetzt",
 )
 
+MODULE_OVERRIDE_IDS: tuple[str, ...] = (
+    "light",
+    "motion",
+    "music",
+    "volume",
+    "tv",
+    "climate",
+    "camera",
+)
+
+DEFAULT_MODULE_SUGGESTION_MODE = "explainable_manual"
+
+_BASE_MODULE_PRIORITIES: dict[str, int] = {
+    "motion": 100,
+    "light": 95,
+    "climate": 80,
+    "music": 72,
+    "volume": 68,
+    "tv": 62,
+    "camera": 58,
+}
+
+_ZONE_MODULE_DEFAULTS: dict[str, set[str]] = {
+    "wohnbereich": {"light", "motion", "music", "volume", "tv", "climate"},
+    "badbereich": {"light", "motion", "climate"},
+    "kochbereich": {"light", "motion", "music", "volume", "climate"},
+    "buerobereich": {"light", "motion", "music", "volume", "climate"},
+    "gangbereich": {"light", "motion", "camera"},
+    "schlafbereich": {"light", "motion", "music", "volume", "climate"},
+    "kinderzimmer": {"light", "motion", "music", "volume", "climate"},
+    "terrassenbereich": {"light", "motion", "music", "volume", "camera"},
+    "aussenbereich": {"light", "motion", "camera"},
+}
+
+_ZONE_MODULE_NOTES: dict[str, dict[str, str]] = {
+    "wohnbereich": {
+        "tv": "TV remains suggestion-first in shared living areas.",
+        "camera": "Indoor cameras stay disabled by default in shared living areas.",
+    },
+    "badbereich": {
+        "camera": "Cameras stay disabled by default in private bathroom zones.",
+    },
+    "schlafbereich": {
+        "tv": "Bedroom TV control remains opt-in and suggestion-first.",
+        "camera": "Cameras stay disabled by default in sleeping zones.",
+    },
+    "kinderzimmer": {
+        "tv": "Child-room TV control remains opt-in and suggestion-first.",
+        "camera": "Child-room cameras stay disabled by default for privacy.",
+    },
+    "terrassenbereich": {
+        "camera": "Terrace cameras may suggest actions, but direct execution remains disabled.",
+    },
+    "aussenbereich": {
+        "camera": "Outdoor cameras may suggest security actions, but direct execution remains disabled.",
+        "music": "Outside audio stays disabled by default unless explicitly enabled.",
+    },
+}
+
+_ZONE_TYPE_FALLBACK_DEFAULTS: dict[str, set[str]] = {
+    "room": {"light", "motion", "music", "volume", "climate"},
+    "area": {"light", "motion", "music", "volume", "climate"},
+    "outdoor": {"light", "motion", "camera"},
+    "floor": {"light", "motion", "climate"},
+}
+
+
+def _zone_slug(zone_id: str | None) -> str:
+    if not zone_id:
+        return ""
+    slug = str(zone_id).strip().lower()
+    return slug.split(":", 1)[1] if ":" in slug else slug
+
+
+
+def default_module_overrides_for_zone(
+    zone_id: str | None,
+    zone_type: str = "room",
+    overrides: dict[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Return normalized per-zone module override metadata.
+
+    The schema is suggestion-first by default: direct execution is disabled,
+    approval is required, and explanations are expected.
+    """
+    slug = _zone_slug(zone_id)
+    enabled_modules = set(_ZONE_MODULE_DEFAULTS.get(slug, _ZONE_TYPE_FALLBACK_DEFAULTS.get(zone_type, set())))
+    existing = overrides if isinstance(overrides, dict) else {}
+    result: dict[str, dict[str, Any]] = {}
+
+    for module_id in MODULE_OVERRIDE_IDS:
+        payload = existing.get(module_id) if isinstance(existing.get(module_id), dict) else {}
+        enabled = bool(payload.get("enabled")) if "enabled" in payload else module_id in enabled_modules
+        notes = str(payload.get("notes") or _ZONE_MODULE_NOTES.get(slug, {}).get(module_id, ""))
+        if not notes:
+            notes = (
+                "Suggestion-first with explanation; direct execution stays disabled by default."
+                if enabled
+                else "Disabled by default for this zone; explicitly enable if you want suggestions here."
+            )
+
+        try:
+            priority = int(payload.get("priority", _BASE_MODULE_PRIORITIES.get(module_id, 50)))
+        except (TypeError, ValueError):
+            priority = _BASE_MODULE_PRIORITIES.get(module_id, 50)
+
+        result[module_id] = {
+            "module_id": module_id,
+            "enabled": enabled,
+            "suggestion_mode": str(payload.get("suggestion_mode") or DEFAULT_MODULE_SUGGESTION_MODE),
+            "direct_execution_enabled": bool(payload.get("direct_execution_enabled", False)),
+            "approval_required": bool(payload.get("approval_required", True)),
+            "explanation_required": bool(payload.get("explanation_required", True)),
+            "autonomy_mode": str(payload.get("autonomy_mode") or "learning"),
+            "module_category": str(payload.get("module_category") or "habitat"),
+            "input_model": str(payload.get("input_model") or "NeuronInputV1"),
+            "pipeline_role": str(payload.get("pipeline_role") or "adapter_to_brain"),
+            "priority": priority,
+            "input_adapter": str(payload.get("input_adapter") or "homeassistant"),
+            "input_signals": [str(v) for v in payload.get("input_signals", []) if v],
+            "neuron_targets": [str(v) for v in payload.get("neuron_targets", []) if v],
+            "output_adapter": str(payload.get("output_adapter") or "homeassistant"),
+            "output_mode": str(payload.get("output_mode") or "proposal_then_service_call"),
+            "notes": notes,
+        }
+
+    return result
+
+
+VALID_AUTONOMY_MODES: tuple[str, ...] = ("autonomous", "learning", "off")
+
+
+def normalize_autonomy_mode(value: Any) -> str:
+    """Return a supported autonomy mode with a safe default."""
+    mode = str(value or "learning").strip().lower()
+    return mode if mode in VALID_AUTONOMY_MODES else "learning"
+
+
+def infer_module_id_for_action(action: Mapping[str, Any] | None) -> str | None:
+    """Infer the module policy bucket for a proposal/action payload."""
+    if not isinstance(action, Mapping):
+        return None
+
+    domain = str(action.get("domain") or "").strip().lower()
+    service = str(action.get("suggested_service") or action.get("service") or "").strip().lower()
+    entity_id = str(action.get("entity_id") or "").strip().lower()
+    haystack = " ".join(
+        str(value or "")
+        for value in (
+            action.get("label"),
+            action.get("title"),
+            action.get("summary"),
+            action.get("state"),
+            entity_id,
+            service,
+        )
+    ).lower()
+
+    if domain == "light" or entity_id.startswith("light."):
+        return "light"
+    if domain == "climate" or entity_id.startswith("climate."):
+        return "climate"
+    if domain == "camera" or entity_id.startswith("camera."):
+        return "camera"
+    if domain in {"media_player", "remote"} or entity_id.startswith("media_player.") or entity_id.startswith("remote."):
+        if "volume" in service or any(token in haystack for token in ("volume", "lautst", "louder", "quieter")):
+            return "volume"
+        if any(token in haystack for token in (" tv", "tv.", "television", "chromecast", "apple tv", "fire tv", "roku", "webos", "samsung", "lg")):
+            return "tv"
+        return "music"
+    return None
+
+
+def resolve_module_override_for_action(
+    zone_id: str | None,
+    zone_type: str,
+    module_id: str | None,
+    overrides: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Resolve the policy override for a proposal/action module."""
+    if not module_id:
+        return None
+
+    if isinstance(overrides, Mapping):
+        payload = overrides.get(module_id)
+        if isinstance(payload, Mapping):
+            return dict(payload)
+
+    return default_module_overrides_for_zone(zone_id, zone_type).get(module_id)
+
+
+def evaluate_action_policy(
+    module_id: str | None,
+    module_override: Mapping[str, Any] | None,
+    *,
+    explicit_styx_instruction: bool = False,
+) -> dict[str, Any]:
+    """Evaluate whether an accepted proposal may become an executable action."""
+    override = dict(module_override) if isinstance(module_override, Mapping) else None
+    autonomy_mode = normalize_autonomy_mode(override.get("autonomy_mode") if override else "learning")
+    enabled = bool(override.get("enabled", True)) if override is not None else False
+    direct_execution_enabled = bool(override.get("direct_execution_enabled", False)) if override is not None else False
+    approval_required = bool(override.get("approval_required", True)) if override is not None else True
+    explanation_required = bool(override.get("explanation_required", True)) if override is not None else True
+    suggestion_mode = str(override.get("suggestion_mode") or DEFAULT_MODULE_SUGGESTION_MODE) if override is not None else DEFAULT_MODULE_SUGGESTION_MODE
+
+    blocked_reasons: list[str] = []
+    if not module_id:
+        blocked_reasons.append("module_unmapped")
+    if override is None:
+        blocked_reasons.append("zone_policy_unresolved")
+    if override is not None and not enabled:
+        blocked_reasons.append("module_disabled")
+    if autonomy_mode == "off":
+        blocked_reasons.append("autonomy_off")
+
+    if blocked_reasons:
+        return {
+            "module_id": module_id,
+            "autonomy_mode": autonomy_mode,
+            "suggestion_mode": suggestion_mode,
+            "enabled": enabled,
+            "direct_execution_enabled": direct_execution_enabled,
+            "approval_required": approval_required,
+            "explanation_required": explanation_required,
+            "explicit_styx_instruction": bool(explicit_styx_instruction),
+            "needs_explicit_styx_instruction": False,
+            "eligible_for_execution": False,
+            "execution_state": "blocked",
+            "decision_source": "policy_block",
+            "blocked_reasons": blocked_reasons,
+        }
+
+    if explicit_styx_instruction:
+        return {
+            "module_id": module_id,
+            "autonomy_mode": autonomy_mode,
+            "suggestion_mode": suggestion_mode,
+            "enabled": enabled,
+            "direct_execution_enabled": direct_execution_enabled,
+            "approval_required": approval_required,
+            "explanation_required": explanation_required,
+            "explicit_styx_instruction": True,
+            "needs_explicit_styx_instruction": False,
+            "eligible_for_execution": True,
+            "execution_state": "ready_for_execution",
+            "decision_source": "styx_instruction",
+            "blocked_reasons": [],
+        }
+
+    if autonomy_mode == "autonomous" and direct_execution_enabled and not approval_required:
+        return {
+            "module_id": module_id,
+            "autonomy_mode": autonomy_mode,
+            "suggestion_mode": suggestion_mode,
+            "enabled": enabled,
+            "direct_execution_enabled": direct_execution_enabled,
+            "approval_required": approval_required,
+            "explanation_required": explanation_required,
+            "explicit_styx_instruction": False,
+            "needs_explicit_styx_instruction": False,
+            "eligible_for_execution": True,
+            "execution_state": "ready_for_execution",
+            "decision_source": "policy_autonomous",
+            "blocked_reasons": [],
+        }
+
+    waiting_reasons: list[str] = []
+    if autonomy_mode == "learning":
+        waiting_reasons.append("learning_mode_requires_styx_instruction")
+    if not direct_execution_enabled:
+        waiting_reasons.append("direct_execution_disabled_by_default")
+    if approval_required:
+        waiting_reasons.append("approval_required")
+
+    return {
+        "module_id": module_id,
+        "autonomy_mode": autonomy_mode,
+        "suggestion_mode": suggestion_mode,
+        "enabled": enabled,
+        "direct_execution_enabled": direct_execution_enabled,
+        "approval_required": approval_required,
+        "explanation_required": explanation_required,
+        "explicit_styx_instruction": False,
+        "needs_explicit_styx_instruction": True,
+        "eligible_for_execution": False,
+        "execution_state": "awaiting_styx_instruction",
+        "decision_source": "accepted_pending_instruction",
+        "blocked_reasons": waiting_reasons,
+    }
+
 
 @dataclass(frozen=True, slots=True)
 class HabitusZoneV2:
@@ -115,6 +406,14 @@ class HabitusZoneV2:
         if self.graph_node_id is None:
             object.__setattr__(self, 'graph_node_id', self.zone_id)
 
+        metadata = dict(self.metadata) if isinstance(self.metadata, dict) else {}
+        metadata["module_overrides"] = default_module_overrides_for_zone(
+            self.zone_id,
+            self.zone_type,
+            metadata.get("module_overrides"),
+        )
+        object.__setattr__(self, 'metadata', metadata)
+
     @property
     def hierarchy_level(self) -> int:
         """Calculate hierarchy level (0=root, 1=area, 2=room)."""
@@ -139,6 +438,15 @@ class HabitusZoneV2:
             for entities in self.entities.values():
                 result.update(entities)
         return result
+
+    @property
+    def module_overrides(self) -> dict[str, dict[str, Any]]:
+        """Normalized per-zone module override schema."""
+        if isinstance(self.metadata, dict):
+            value = self.metadata.get("module_overrides")
+            if isinstance(value, dict):
+                return value
+        return default_module_overrides_for_zone(self.zone_id, self.zone_type)
 
 
 @dataclass(frozen=True, slots=True)

@@ -34,6 +34,7 @@ LOCAL_CARD_FILES = [
     "styx-habitus-card.js",
     "styx-zone-card.js",
     "styx-neural-card.js",
+    "pilotstack-zone-cards.mjs",  # TS zone cards bundle (PS-198/199/200)
 ]
 
 
@@ -113,8 +114,21 @@ async def async_register_card_resources(
         else:
             _LOGGER.debug("All PilotSuite card resources already registered")
 
+        # Runtime stability: log card state for report
+        _LOGGER.info(
+            "Lovelace card registration complete: %d Core cards, %d local cards",
+            1 if any(CARD_JS_PATH in u for u in existing_urls) else 0,
+            sum(1 for f in LOCAL_CARD_FILES if any(f in u for u in existing_urls)),
+        )
+
     except Exception as err:
         _LOGGER.warning(
             "Could not auto-register Lovelace cards: %s",
             err,
+        )
+        # Graceful degradation: cards can be added manually
+        _LOGGER.info(
+            "Manual recovery: Settings > Dashboards > Resources > Add "
+            "→ Module → http://%s:%s%s",
+            host, port, CARD_JS_PATH,
         )

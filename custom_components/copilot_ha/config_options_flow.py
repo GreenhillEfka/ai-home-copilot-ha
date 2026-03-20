@@ -12,6 +12,32 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .config_helpers import merge_config_data, parse_csv
+
+
+def _compute_delta(existing: dict, new_partial: dict) -> dict:
+    """Return only the keys in new_partial that differ from existing.
+
+    Compares values deeply for list/dict, identity for everything else.
+    Keys present in new_partial with the same value as in existing are
+    excluded — only actual deltas are written back to the config entry.
+    This prevents unrelated keys from being overwritten when a user changes
+    only one setting in a multi-step options flow.
+    """
+    delta: dict[str, object] = {}
+    for key, new_val in new_partial.items():
+        old_val = existing.get(key)
+        if old_val is None and new_val is None:
+            continue
+        # Deep-compare lists and dicts; identity compare for primitives.
+        if isinstance(new_val, list) and isinstance(old_val, list):
+            if new_val != old_val:
+                delta[key] = new_val
+        elif isinstance(new_val, dict) and isinstance(old_val, dict):
+            if new_val != old_val:
+                delta[key] = new_val
+        elif new_val != old_val:
+            delta[key] = new_val
+    return delta
 from .core_endpoint import normalize_host_port
 from .config_schema_builders import (
     build_neuron_schema,
@@ -22,7 +48,7 @@ from .config_schema_builders import (
     build_anomaly_habitus_schema,
 )
 from .config_snapshot_flow import ConfigSnapshotOptionsFlow
-from .config_zones_flow import async_step_zone_form
+from .config_zones_flow import async_step_zone_form, async_sync_zone_editor_zone
 from .config_tags_flow import async_step_add_tag, async_step_edit_tag, async_step_delete_tag
 from .const import (
     CONF_HOST,
@@ -74,16 +100,30 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     _pending_shared_params: dict = {}
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self._entry = config_entry
+        self.config_entry = config_entry
+        self._config_entry_id = config_entry.entry_id
         ConfigSnapshotOptionsFlow.__init__(self, config_entry)
 
     def _effective_config(self) -> dict:
         """Return merged live config (entry.data + entry.options)."""
-        return merge_config_data(self._entry.data, self._entry.options)
+        return merge_config_data(self.config_entry.data, self.config_entry.options)
 
     def _create_merged_entry(self, updates: dict) -> FlowResult:
-        """Persist options without dropping unrelated keys from previous steps."""
-        return self.async_create_entry(title="", data=merge_config_data(self._entry.data, self._entry.options, updates))
+        """Write only the delta between the current config entry state and the submitted form data.
+
+        Uses ``self.config_entry.data`` as the authoritative baseline (the last committed state),
+        diffs it against ``updates``, and passes only changed keys to the options layer.
+        This prevents form re-submissions from overwriting keys that exist in
+        ``entry.data`` but were not touched in the current step.
+        """
+        # entry.data is the stable baseline; entry.options may carry in-flight state.
+        # We always diff from entry.data so that options-flow re-navigation does not
+        # corrupt keys that belong to other steps.
+        current = dict(self.config_entry.data)
+        delta = _compute_delta(current, updates)
+        if delta:
+            _LOGGER.debug("Delta-write: writing %d changed key(s): %s", len(delta), list(delta.keys()))
+        return self.async_create_entry(title="", data=delta)
 
     def _flush_pending_shared_params(self) -> None:
         """Write accumulated shared params to entry.data exactly once (on back/exit).
@@ -404,7 +444,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     async def async_step_edit_zone(self, user_input: dict | None = None) -> FlowResult:
         from .habitus_zones_store_v2 import async_get_zones_v2
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._config_entry_id)
         if not zones:
             return self.async_abort(reason="no_zones")
 
@@ -432,7 +472,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
     async def async_step_delete_zone(self, user_input: dict | None = None) -> FlowResult:
         from .habitus_zones_store_v2 import async_get_zones_v2, async_set_zones_v2
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._config_entry_id)
         if not zones:
             return self.async_abort(reason="no_zones")
 
@@ -456,14 +496,24 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
 
         zid = str(user_input.get("zone_id", ""))
         remain = [z for z in zones if z.zone_id != zid]
-        await async_set_zones_v2(self.hass, self._entry.entry_id, remain)
+        await async_set_zones_v2(self.hass, self._config_entry_id, remain)
+
+        synced = await async_sync_zone_editor_zone(
+            self,
+            mode="delete",
+            zone=None,
+            previous_zone_id=zid,
+        )
+        if not synced:
+            _LOGGER.debug("Core zone-editor sync not confirmed for deleted zone: %s", zid)
+
         return await self.async_step_habitus_zones()
 
     async def async_step_bulk_edit(self, user_input: dict | None = None) -> FlowResult:
         """Bulk editor to paste YAML/JSON (no 255-char limit) with validation."""
         from .habitus_zones_store_v2 import async_get_zones_v2, async_set_zones_v2_from_raw
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._config_entry_id)
         current = []
         for z in zones:
             item = {"id": z.zone_id, "name": z.name}
@@ -484,7 +534,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
                 except Exception:  # noqa: BLE001
                     raw = yaml.safe_load(raw_text)
 
-                await async_set_zones_v2_from_raw(self.hass, self._entry.entry_id, raw)
+                await async_set_zones_v2_from_raw(self.hass, self._config_entry_id, raw)
             except Exception as err:  # noqa: BLE001
                 return self.async_show_form(
                     step_id="bulk_edit",
@@ -530,7 +580,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
 
         if user_input is not None:
             try:
-                path = await async_generate_habitus_zones_dashboard(self.hass, self._entry.entry_id)
+                path = await async_generate_habitus_zones_dashboard(self.hass, self._config_entry_id)
                 return self.async_abort(
                     reason="dashboard_generated",
                     description_placeholders={"path": str(path)},
@@ -605,7 +655,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
         """
         from .habitus_zones_store_v2 import async_get_zones_v2
 
-        zones = await async_get_zones_v2(self.hass, self._entry.entry_id)
+        zones = await async_get_zones_v2(self.hass, self._config_entry_id)
         data = self._effective_config()
 
         # Load existing mode config

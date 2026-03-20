@@ -186,15 +186,13 @@ def _as_entity_list(value: object) -> list[str]:
     return [item] if item else []
 
 
-def build_network_schema(data: dict, webhook_url: str, token_hint: str) -> dict:
-    """Build schema fields for network settings (HOST, PORT, TOKEN)."""
+def _build_connection_fields(data: dict, token_hint: str) -> dict:
+    """Build shared connection fields used by both config and options flows."""
     test_light_default = data.get(CONF_TEST_LIGHT) or None
     return {
-        vol.Optional(CONF_WEBHOOK_URL, default=webhook_url): str,
         vol.Required(CONF_HOST, default=data.get(CONF_HOST, DEFAULT_HOST)): str,
         vol.Required(CONF_PORT, default=data.get(CONF_PORT, DEFAULT_PORT)): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
         vol.Optional(CONF_TOKEN, default="", description={"suggested_value": token_hint}): str,
-        vol.Optional("_clear_token"): bool,
         vol.Optional(CONF_TEST_LIGHT, default=test_light_default): vol.Any(
             None,
             selector.EntitySelector(
@@ -202,6 +200,21 @@ def build_network_schema(data: dict, webhook_url: str, token_hint: str) -> dict:
             ),
         ),
     }
+
+
+def build_network_schema(data: dict, webhook_url: str, token_hint: str) -> dict:
+    """Build schema fields for network settings (HOST, PORT, TOKEN)."""
+    schema = _build_connection_fields(data, token_hint)
+    schema.update({
+        vol.Optional(CONF_WEBHOOK_URL, default=webhook_url): str,
+        vol.Optional("_clear_token"): bool,
+    })
+    return schema
+
+
+def build_config_flow_connection_schema(data: dict, token_hint: str = "") -> dict:
+    """Build connection schema fields for manual setup config flow."""
+    return _build_connection_fields(data, token_hint)
 
 
 def build_connection_schema(data: dict, webhook_url: str, token_hint: str) -> dict:

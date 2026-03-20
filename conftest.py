@@ -144,6 +144,8 @@ if "homeassistant" not in sys.modules:
         def async_abort(self, **kwargs): pass
         @staticmethod
         def async_get_options_flow(config_entry): pass
+        def _get_reconfigure_entry(self):
+            return None
 
     _config_entries.ConfigEntry = _ConfigEntry
     _config_entries.OptionsFlow = _OptionsFlow

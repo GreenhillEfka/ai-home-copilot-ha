@@ -57,6 +57,26 @@
             <div class="metric-value" id="uptime-value">--</div>
             <div class="metric-detail" id="uptime-detail">System running</div>
         </div>
+        
+        <!-- HA Version Card -->
+        <div class="metric-card" id="ha-version-card">
+            <div class="metric-header">
+                <span class="metric-icon">🏠</span>
+                <span class="metric-title">HA Core</span>
+            </div>
+            <div class="metric-value version-value" id="ha-version-value">--</div>
+            <div class="metric-detail" id="ha-version-detail">checking...</div>
+        </div>
+        
+        <!-- Styx Core Version Card -->
+        <div class="metric-card" id="core-version-card">
+            <div class="metric-header">
+                <span class="metric-icon">⚙️</span>
+                <span class="metric-title">Styx Core</span>
+            </div>
+            <div class="metric-value version-value" id="core-version-value">--</div>
+            <div class="metric-detail" id="core-version-detail">checking...</div>
+        </div>
     </div>
     
     <div class="widget-footer">
@@ -111,6 +131,21 @@
         
         // Uptime
         document.getElementById('uptime-value').textContent = data.uptime.formatted;
+        
+        // HA Version
+        const haVersion = data.versions.ha || 'unavailable';
+        const haAvailable = data.versions.ha_available;
+        document.getElementById('ha-version-value').textContent = haVersion;
+        document.getElementById('ha-version-detail').textContent = haAvailable ? 'HA Core' : 'unreachable';
+        document.getElementById('ha-version-card').style.opacity = haAvailable ? '1' : '0.5';
+        
+        // Styx Core Version
+        const coreVersion = data.versions.core || 'unavailable';
+        const coreAvailable = data.versions.core_available;
+        const coreHealth = data.versions.core_health || 'unknown';
+        document.getElementById('core-version-value').textContent = coreVersion;
+        document.getElementById('core-version-detail').textContent = coreAvailable ? `Health: ${coreHealth}` : 'unreachable';
+        document.getElementById('core-version-card').style.opacity = coreAvailable ? '1' : '0.5';
         
         // Timestamp
         const now = new Date(data.timestamp);
@@ -212,6 +247,10 @@
     border-top: 1px solid var(--border-color, #e9ecef);
     text-align: center;
     color: var(--text-secondary, #666);
+}
+
+.version-value {
+    font-size: 1.4rem !important;
 }
 
 .status-dot {

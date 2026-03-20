@@ -11,6 +11,10 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import area_registry, device_registry, entity_registry, selector
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+from .connection_config import build_core_headers, resolve_core_connection
+from .core_endpoint import build_base_url
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +77,26 @@ def _zone_id_from_name(name: str) -> str:
     return slug if slug.startswith("zone:") else f"zone:{slug}"
 
 
+def _resolve_flow_entry(flow: Any):
+    """Resolve the active config entry for both legacy and reconfigure flows.
+
+    HA 2024.4+ exposes ``_get_reconfigure_entry()`` for reconfigure flow
+    contexts. Older versions only provide ``config_entry`` / ``_entry``.
+    """
+    get_reconfigure_entry = getattr(flow, "_get_reconfigure_entry", None)
+    if callable(get_reconfigure_entry):
+        try:
+            entry = get_reconfigure_entry()
+        except Exception:  # noqa: BLE001
+            _LOGGER.debug("Failed resolving reconfigure entry", exc_info=True)
+            entry = None
+        else:
+            if entry is not None:
+                return entry
+
+    return getattr(flow, "config_entry", None) or getattr(flow, "_entry", None)
+
+
 def _ensure_unique_zone_id(candidate: str, existing_ids: set[str]) -> str:
     if candidate not in existing_ids:
         return candidate
@@ -82,6 +106,96 @@ def _ensure_unique_zone_id(candidate: str, existing_ids: set[str]) -> str:
         if probe not in existing_ids:
             return probe
         suffix += 1
+
+
+def _build_zone_editor_payload(zone) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "zone_id": zone.zone_id,
+        "name": zone.name,
+    }
+    return payload
+
+
+async def _call_zone_editor_api(flow: Any, *, method: str, path: str, data: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    entry = _resolve_flow_entry(flow)
+    if entry is None:
+        return None
+
+    try:
+        host, port, token = resolve_core_connection(entry)
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Unable to resolve Core connection for zone editor sync: %s", err)
+        return None
+
+    headers = build_core_headers(token, content_type="application/json")
+    session = async_get_clientsession(flow.hass)
+    url = f"{build_base_url(host, port)}{path}"
+
+    try:
+        request_kwargs: dict[str, Any] = {"headers": headers, "timeout": 10}
+        if data is not None:
+            request_kwargs["json"] = data
+
+        async with session.request(method, url, **request_kwargs) as resp:
+            if resp.status not in (200, 201, 204):
+                response_text = await resp.text()
+                _LOGGER.debug("Zone-editor call failed: %s %s (status=%s): %s", method, path, resp.status, response_text)
+                return None
+
+            if resp.status == 204:
+                return {"ok": True}
+
+            try:
+                payload = await resp.json()
+                if isinstance(payload, dict):
+                    return payload
+                return {"ok": True}
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.debug("Non-json zone-editor response for %s %s: %s", method, path, err)
+                return {"ok": True}
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.debug("Zone-editor request failed: %s %s: %s", method, path, err)
+        return None
+
+
+async def async_sync_zone_editor_zone(flow: Any, *, mode: str, zone, previous_zone_id: str | None = None) -> bool:
+    """Sync one zone operation with Core /api/v1/zone-editor.
+
+    Best-effort sync: returns False on any transport/error, True only on successful Core OK reply.
+    """
+    if mode == "delete":
+        if not previous_zone_id:
+            return False
+        response = await _call_zone_editor_api(
+            flow,
+            method="DELETE",
+            path=f"/api/v1/zone-editor/zones/{previous_zone_id}",
+        )
+        return isinstance(response, dict) and bool(response.get("ok"))
+
+    if zone is None:
+        return False
+
+    payload = _build_zone_editor_payload(zone)
+    if mode == "create":
+        response = await _call_zone_editor_api(
+            flow,
+            method="POST",
+            path="/api/v1/zone-editor/zones",
+            data=payload,
+        )
+        return isinstance(response, dict) and bool(response.get("ok"))
+
+    if mode == "edit":
+        response = await _call_zone_editor_api(
+            flow,
+            method="PUT",
+            path=f"/api/v1/zone-editor/zones/{zone.zone_id}",
+            data={"name": zone.name},
+        )
+        return isinstance(response, dict) and bool(response.get("ok"))
+
+    return False
 
 
 def _is_motion_candidate(hass: HomeAssistant, entity_id: str, reg_entry) -> bool:
@@ -306,6 +420,30 @@ async def get_zone_entity_suggestions(hass: HomeAssistant, zone_name: str) -> di
     return suggestions
 
 
+async def async_step_reconfigure(flow, user_input: dict | None = None) -> FlowResult:
+    """Compatibility entrypoint for HA >= 2024.4 reconfigure flow.
+
+    Reconfigure flows populate the target entry through ``_get_reconfigure_entry``
+    in recent Home Assistant versions. We resolve it here and route into the
+    normal options menu/entry point.
+    """
+    entry = _resolve_flow_entry(flow)
+    if entry is None:
+        return flow.async_abort(reason="no_entry")
+
+    if getattr(flow, "_entry", None) != entry:
+        try:
+            setattr(flow, "_entry", entry)
+        except Exception:  # noqa: BLE001
+            pass
+
+    if hasattr(flow, "async_step_init"):
+        return await flow.async_step_init(user_input)
+    if hasattr(flow, "async_step_habitus_zones"):
+        return await flow.async_step_habitus_zones()
+    return flow.async_abort(reason="cannot_reconfigure")
+
+
 async def async_step_zone_form(
     flow,
     *,
@@ -316,7 +454,10 @@ async def async_step_zone_form(
     """Handle zone create/edit form (extracted from OptionsFlowHandler)."""
     from .habitus_zones_store_v2 import HabitusZoneV2, async_get_zones_v2, async_set_zones_v2
 
-    entry = flow._entry
+    entry = _resolve_flow_entry(flow)
+    if entry is None:
+        return flow.async_abort(reason="no_entry")
+
     zones = await async_get_zones_v2(flow.hass, entry.entry_id)
     existing = {z.zone_id: z for z in zones}
 
@@ -480,6 +621,11 @@ async def async_step_zone_form(
             errors={"base": "invalid"},
             description_placeholders=placeholders,
         )
+
+    sync_mode = "create" if mode == "create" else "edit"
+    synced = await async_sync_zone_editor_zone(flow, mode=sync_mode, zone=new_zone)
+    if not synced:
+        _LOGGER.debug("Zone-editor sync not confirmed for %s (%s)", zid, sync_mode)
 
     await create_zone_tag(flow.hass, zid, zone_name)
     await tag_zone_entities(flow.hass, zid, uniq)

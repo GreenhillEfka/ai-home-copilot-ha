@@ -6,14 +6,6 @@ Auto-creates Habitus Zones from HA areas with intelligent aggregation:
 - Feeds zone config into Core's modular logic
 
 Called during async_setup_entry if no zones are configured yet.
-
-Entity Routing
-──────────────
-``sort_entity_to_zone()`` (from habitus_zones_entities_v2) is used to route
-individual HA entities into Habitus Zones using keyword matching on entity_id
-and friendly_name, with a confidence score.  Entities with confidence ≥ 0.60
-are assigned to their matched zone; uncertain entities are routed to
-``zone:ungeordnet``.
 """
 from __future__ import annotations
 
@@ -23,6 +15,9 @@ from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry, device_registry, entity_registry
+
+from .unmatched_logger import log_unmatched_entities
+from .area_zone_registry import load_area_zone_map, get_zone_for_area, get_unmatched_fallback
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -91,10 +86,19 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "icon": "mdi:bed",
     },
     {
+        "zone_id": "kellerbereich",
+        "name_de": "Kellerbereich",
+        "keywords": [
+            "keller", "speicher", "basement", "cellar",
+        ],
+        "zone_type": "room",
+        "icon": "mdi:home-floor-negative-1",
+    },
+    {
         "zone_id": "zimmer_mira",
         "name_de": "Zimmer Mira",
         "keywords": [
-            "mira", "zimmer mira", "miras zimmer", "kinderzimmer mira",
+            "mira", "zimmer mira", "miras zimmer",
         ],
         "zone_type": "room",
         "icon": "mdi:bed-single-outline",
@@ -104,7 +108,6 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "name_de": "Zimmer Paul",
         "keywords": [
             "paul", "zimmer paul", "zimmer pauli", "pauls zimmer",
-            "kinderzimmer paul",
         ],
         "zone_type": "room",
         "icon": "mdi:bed-single-outline",
@@ -457,16 +460,11 @@ async def async_create_neuron_tags_from_zones(
 
 def aggregate_areas_to_habitus_zones(
     areas: list[dict[str, Any]],
-    *,
-    unmatched_fallback: bool = True,
 ) -> list[dict[str, Any]]:
     """Group HA areas into logical Habitus Zones using template matching.
 
     Args:
         areas: List of dicts with "area_id", "name", optional "icon"
-        unmatched_fallback: If True (default), unmapped areas are collected
-            into the canonical ``zone:ungeordnet`` bucket. If False, unmatched
-            areas are silently discarded (legacy behaviour).
 
     Returns:
         List of aggregated zone dicts with:
@@ -474,7 +472,6 @@ def aggregate_areas_to_habitus_zones(
         - area_ids: list of HA area IDs in this zone
         - area_names: list of HA area names
         - confidence: match confidence (0.0-1.0)
-        - is_unmatched_fallback: True only for the zone:ungeordnet bucket
     """
     # Track which template maps to which areas
     template_areas: dict[str, list[dict]] = {}  # template zone_id → [area_dicts]
@@ -488,7 +485,14 @@ def aggregate_areas_to_habitus_zones(
         if _is_virtual_area(area_name):
             continue
 
-        template, confidence = _match_area_to_template(area_name)
+        # PS-178: Check explicit map first — explicit mappings override keyword matching
+        explicit_zone = get_zone_for_area(area["area_id"], area_zone_config)
+        if explicit_zone:
+            tid = explicit_zone
+            template = _get_template_by_zone_id(tid)
+            confidence = 1.0  # explicit = 100% confidence
+        else:
+            template, confidence = _match_area_to_template(area_name)
 
         if template and confidence >= 0.6:
             tid = template["zone_id"]
@@ -517,13 +521,10 @@ def aggregate_areas_to_habitus_zones(
             "area_names": area_names,
             "confidence": round(avg_confidence, 2),
             "aggregated": len(area_ids) > 1,
-            "is_unmatched_fallback": False,
         })
 
-    # Unmatched areas: canonical fallback bucket zone:ungeordnet.
-    # With unmatched_fallback=True (default) areas with no template match
-    # are collected here.  With False they are discarded.
-    if unmatched_fallback and unmatched:
+    # Unmatched areas are collected explicitly in the canonical fallback bucket.
+    if unmatched:
         result.append({
             "zone_id": "zone:ungeordnet",
             "name_de": "Ungeordnet",
@@ -533,16 +534,10 @@ def aggregate_areas_to_habitus_zones(
             "area_names": [area.get("name", "Unbekannt") for area in unmatched],
             "confidence": 0.0,
             "aggregated": len(unmatched) > 1,
-            "is_unmatched_fallback": True,
         })
 
-    # Sort: aggregated zones first (more important), then by name.
-    # zone:ungeordnet is always pushed to the end regardless of area count.
-    result.sort(key=lambda z: (
-        z["is_unmatched_fallback"],          # unmatched last
-        -len(z["area_ids"]),
-        z["name_de"],
-    ))
+    # Sort: aggregated zones first (more important), then by name
+    result.sort(key=lambda z: (-len(z["area_ids"]), z["name_de"]))
     return result
 
 
@@ -579,19 +574,26 @@ async def async_auto_create_habitus_zones(
         _LOGGER.info("No HA areas found, skipping zone auto-setup")
         return 0
 
-    # Smart aggregation: group areas into logical zones.
-    # unmatched_fallback=True ensures unmappable areas end up in zone:ungeordnet
-    # instead of being silently dropped.
-    aggregated = aggregate_areas_to_habitus_zones(areas, unmatched_fallback=True)
+    # PS-178: Load explicit area→zone mapping registry
+    area_zone_config = load_area_zone_map()
+    valid, errors = validate_mapping(area_zone_config)
+    if not valid:
+        _LOGGER.warning("[PS-178] Invalid area zone map: %s", ", ".join(errors))
+    
+    _LOGGER.info(
+        "[PS-178] Area zone map loaded: %d mappings, fallback=%s",
+        len(area_zone_config.get("mappings", [])),
+        get_unmatched_fallback(area_zone_config),
+    )
+
+    # Smart aggregation: group areas into logical zones
+    aggregated = aggregate_areas_to_habitus_zones(areas)
     _LOGGER.info(
         "Zone auto-setup: %d HA areas → %d Habitus Zones (aggregated)",
         len(areas), len(aggregated),
     )
 
-    # ── 1. Build zone stubs from area aggregation ─────────────────────────
-    # First pass: group HA areas into logical Habitus Zones.  This establishes
-    # the zone metadata (zone_id, name, type, icon, area_ids) and collects
-    # all entities that belong to a mapped area.
+    # For each aggregated zone, collect and classify entities
     zones: list[HabitusZoneV2] = []
 
     for zone_info in aggregated:
@@ -599,6 +601,7 @@ async def async_auto_create_habitus_zones(
         zone_name = zone_info["name_de"]
         area_ids = zone_info["area_ids"]
 
+        # Collect all entities from all areas in this zone
         role_entities: dict[str, list[str]] = {}
         all_entity_ids: list[str] = []
         seen: set[str] = set()
@@ -608,6 +611,7 @@ async def async_auto_create_habitus_zones(
                 if reg_entry.disabled_by is not None:
                     continue
 
+                # Check if entity belongs to this area
                 ent_area = reg_entry.area_id
                 if not ent_area and reg_entry.device_id:
                     device = dev_reg.async_get(reg_entry.device_id)
@@ -620,6 +624,7 @@ async def async_auto_create_habitus_zones(
                     continue
                 seen.add(entity_id)
 
+                # Detect role
                 state = hass.states.get(entity_id)
                 device_class = None
                 friendly_name = None
@@ -630,13 +635,17 @@ async def async_auto_create_habitus_zones(
                     device_class = getattr(reg_entry, "device_class", None)
 
                 role = detect_entity_role(entity_id, device_class, friendly_name)
-                role_entities.setdefault(role, []).append(entity_id)
+
+                if role not in role_entities:
+                    role_entities[role] = []
+                role_entities[role].append(entity_id)
                 all_entity_ids.append(entity_id)
 
         if not all_entity_ids:
             _LOGGER.debug("Zone %s has no entities, skipping", zone_name)
             continue
 
+        # Sort entities within each role
         for role_list in role_entities.values():
             role_list.sort()
 
@@ -653,7 +662,6 @@ async def async_auto_create_habitus_zones(
                 "auto_created": True,
                 "aggregated": zone_info["aggregated"],
                 "confidence": zone_info["confidence"],
-                "is_unmatched_fallback": zone_info.get("is_unmatched_fallback", False),
             },
         )
         zones.append(zone)
@@ -666,172 +674,27 @@ async def async_auto_create_habitus_zones(
             len(role_entities),
         )
 
-    # ── 2. Entity-level routing via sort_entity_to_zone() ────────────────
-    # For every entity NOT already assigned via area matching above,
-    # determine its zone using the keyword+confidence-based sorter.
-    # This catches entities without a proper area assignment.
-    from .habitus_zones_entities_v2 import sort_entity_to_zone
-
-    sort_stats: dict[str, int] = {}
-    fallback_role_entities: dict[str, list[str]] = {}
-    fallback_all_ids: list[str] = []
-    fallback_seen: set[str] = set()
-
-    # Track which entity_ids were already assigned to named zones above
-    assigned_entity_ids: set[str] = set()
-    for z in zones:
-        assigned_entity_ids.update(z.entity_ids)
-
-    for entity_id, reg_entry in ent_reg.entities.items():
-        if reg_entry.disabled_by is not None:
-            continue
-        if entity_id in assigned_entity_ids:
-            continue  # already routed via area match
-
-        # Resolve area for this entity
-        ent_area = reg_entry.area_id
-        if not ent_area and reg_entry.device_id:
-            device = dev_reg.async_get(reg_entry.device_id)
-            if device:
-                ent_area = device.area_id
-
-        area_name: str | None = None
-        if ent_area:
-            area_obj = ar.areas.get(ent_area)
-            if area_obj:
-                area_name = area_obj.name
-
-        state = hass.states.get(entity_id)
-
-        zone_id, conf, extra = sort_entity_to_zone(
-            entity_id=entity_id,
-            state=state,
-            area_id=ent_area,
-            area_name=area_name,
-        )
-
-        # Count for stats
-        sort_stats[zone_id] = sort_stats.get(zone_id, 0) + 1
-
-        if conf < 0.60:
-            # Below threshold → explicit ungeordnet
-            zone_id = "zone:ungeordnet"
-            extra["sort_confidence"] = conf
-            extra["sort_routed_as"] = "low_confidence"
-        elif zone_id == "zone:ungeordnet" and conf == 0.0:
-            extra["sort_routed_as"] = "virtual_area_or_no_match"
-
-        if zone_id != "zone:ungeordnet":
-            # Good match to a named zone → merge into that zone's entity list
-            target_zone = next((z for z in zones if z.zone_id == zone_id), None)
-            if target_zone is not None:
-                # Recompute role for this entity
-                device_class = None
-                friendly_name_val = None
-                if state:
-                    device_class = state.attributes.get("device_class")
-                    friendly_name_val = state.attributes.get("friendly_name")
-                if not device_class:
-                    device_class = getattr(reg_entry, "device_class", None)
-                role = detect_entity_role(entity_id, device_class, friendly_name_val)
-
-                new_entities = dict(target_zone.entities) if target_zone.entities else {}
-                new_entities.setdefault(role, list(target_zone.entities.get(role, [])))
-                if entity_id not in new_entities[role]:
-                    new_entities[role].append(entity_id)
-                    new_entities[role].sort()
-                new_all_ids = list(target_zone.entity_ids) + [entity_id]
-                new_all_ids.sort()
-
-                idx = zones.index(target_zone)
-                zones[idx] = HabitusZoneV2(
-                    zone_id=target_zone.zone_id,
-                    name=target_zone.name,
-                    zone_type=target_zone.zone_type,
-                    entity_ids=tuple(new_all_ids),
-                    entities=new_entities,
-                    current_state="active",
-                    metadata=target_zone.metadata,
-                )
-            else:
-                # Zone doesn't exist yet — add to ungeordnet
-                zone_id = "zone:ungeordnet"
-
-        if zone_id == "zone:ungeordnet":
-            if entity_id in fallback_seen:
-                continue
-            fallback_seen.add(entity_id)
-            device_class = None
-            friendly_name_val = None
-            if state:
-                device_class = state.attributes.get("device_class")
-                friendly_name_val = state.attributes.get("friendly_name")
-            if not device_class:
-                device_class = getattr(reg_entry, "device_class", None)
-            role = detect_entity_role(entity_id, device_class, friendly_name_val)
-            fallback_role_entities.setdefault(role, []).append(entity_id)
-            fallback_all_ids.append(entity_id)
-
-    _LOGGER.debug(
-        "sort_entity_to_zone stats: %s",
-        {k: v for k, v in sorted(sort_stats.items())},
-    )
-
-    # Ensure zone:ungeordnet exists
-    existing_fallback = next(
-        (z for z in zones if z.zone_id == "zone:ungeordnet"), None
-    )
-    if existing_fallback is not None:
-        if fallback_all_ids:
-            for role_list in fallback_role_entities.values():
-                role_list.sort()
-            merged = dict(existing_fallback.entities) if existing_fallback.entities else {}
-            for role, eids in fallback_role_entities.items():
-                merged.setdefault(role, []).extend(eids)
-                merged[role].sort()
-            merged_all = list(existing_fallback.entity_ids) + fallback_all_ids
-            merged_all.sort()
-            idx = zones.index(existing_fallback)
-            zones[idx] = HabitusZoneV2(
-                zone_id=existing_fallback.zone_id,
-                name=existing_fallback.name,
-                zone_type=existing_fallback.zone_type,
-                entity_ids=tuple(merged_all),
-                entities=merged or None,
-                current_state="active",
-                metadata={
-                    **(existing_fallback.metadata or {}),
-                    "has_entity_fallback": True,
-                },
-            )
-            _LOGGER.info(
-                "Zone auto-setup: zone:ungeordnet now has %d entities (via sort_entity_to_zone)",
-                len(merged_all),
-            )
-    elif fallback_all_ids:
-        for role_list in fallback_role_entities.values():
-            role_list.sort()
-        zones.append(HabitusZoneV2(
-            zone_id="zone:ungeordnet",
-            name="Ungeordnet",
-            zone_type="room",
-            entity_ids=tuple(sorted(fallback_all_ids)),
-            entities=fallback_role_entities or None,
-            current_state="active",
-            metadata={
-                "auto_created": True,
-                "is_unmatched_fallback": True,
-                "has_entity_fallback": True,
-            },
-        ))
-        _LOGGER.info(
-            "Zone auto-setup: zone:ungeordnet created with %d entities (via sort_entity_to_zone)",
-            len(fallback_all_ids),
-        )
-
     if not zones:
         _LOGGER.info("No zones with entities found, skipping auto-setup")
         return 0
+
+    # PS-179: Log unmatched entities before persisting
+    all_entities = []
+    for zone in zones:
+        for entity_id in zone.entity_ids:
+            ent_entry = ent_reg.entities.get(entity_id)
+            area_id = ent_entry.area_id if ent_entry else None
+            all_entities.append({"entity_id": entity_id, "area_id": area_id})
+    
+    # Build area→zone map for unmatched logging
+    area_zone_map = {}
+    for zone in zones:
+        for area_id in zone.area_ids:
+            area_zone_map[area_id] = zone.zone_id
+    
+    unmatched = log_unmatched_entities(all_entities, area_zone_map)
+    if unmatched:
+        _LOGGER.info("[PS-179] Logged %d unmatched entities", len(unmatched))
 
     # Persist zones
     await async_set_zones_v2(hass, entry_id, zones, validate=False)

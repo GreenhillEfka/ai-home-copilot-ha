@@ -2,14 +2,75 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.7.6] - 2026-03-20
+
+### HA Validation & Quality
+
+#### Added
+- **Schema-Validation-Gate**: `validateEditorSchema()` in `dashboard/templates/index.html` — Browser-Gate fuer Zone-Editor-Saves, ConfigValidationError bei Schema-Drift
+- **Dashboard Save-Handler**: `#ez-save` und `#cz-submit` Gate-Checks vor API-Call, 7/7 Testcases passen
+
+#### Fixed
+- **HA 2024.4+ Stub**: `_ConfigFlow._get_reconfigure_entry()` in `conftest.py` — ConfigFlow-Tests scheitern nicht mehr am fehlenden Stub
+- **G1-Fix**: `zone_auto_setup.py` — explizite `area_zone_map.json` als Primary-Source VOR Keyword-Match
+
+### HA UI Cards
+
+#### Added
+- **card-form-helper.ts**: `buildHaFormSchema()`, `validateCardConfig()`, `assertConfig()`, `CardFormHelper` Window-Adapter
+- **editor-schema-validation.ts**: `ConfigValidationError`, `validateEditorSchema()`, `buildConfigValidator<T>()`, `apiSaveWithValidation()`
+- **styx-zone-creator-card.ts**: `static async getConfigForm()`, 7 Module (LIGHT/AUDIO/CLIMATE/COVER/ENERGY/SCENE/SECURITY), grid-layout, context-filter, window.customCards Registration
+
+### Zone Management
+
+#### Added
+- **Zone-Taxonomy-Doc**: `pilotsuite_ops/docs/ZONE_TAXONOMY.md` — 10 Habitus-Zielen, Keyword-Mapping, N:1-Aggregationen, Modul-Per-Zone-Tabelle
+
 ## [14.7.5] - 2026-03-20
 
-### Release-Gate: OpenAPI Path-Count Verification
+### HA ConfigFlow Modernisierung
 
-#### OpenAPI Sync Status
-- **572/572 paths, 100%** — HA and Core OpenAPI specs fully in sync
-- Verified via `pilotsuite_ops/scripts/check_openapi_count.py`
-- Core: v14.7.4 (db2e3d45) | HA: v14.7.4
+#### Added
+- **Delta-Write-Pattern**: ConfigEntry State wird nur noch als Delta geschrieben, kein Full-Overwrite mehr
+- **Reconfigure-Step**: `async_step_reconfigure()` mit `_get_reconfigure_entry()` nach HA 2024.4+ Muster
+- **OptionsFlow Parameter-Sync**: Gemeinsame Parameter (host/port/token) werden beim Reconfigure akkumuliert, nicht verworfen
+- **ConfigFlow Helper-Migration**: Alle Flows auf `self.config_entry` + `self._config_entry_id` migriert
+
+### HA UI Cards
+
+#### Added
+- **Zone-Creator-Card getConfigForm()**: `static async getConfigForm()` mit HaFormSchema nach HA-PR #16142
+- **habitus-brain-card.ts**: Number-Felder (stale_threshold_seconds, mood_history_hours), Mehrfachfelder (zones, monitored_modules)
+- **zone-module-editor-card.ts**: Modulabhängige Pflichtfeld-Validierung, Secondary-Zone-States (dark/sleep/extended)
+- **card-form-helper.ts**: number/array/attribute-Support, zentrale Validierung
+- **editor-schema-validation.ts**: Typsichere Schema-Validierung
+- **zone-editor-api-client.ts**: CRUD-Client für /api/v1/zone-editor Endpunkte
+
+### HA Dashboard
+
+#### Fixed
+- **Dashboard-Init-Binding**: `window.dashboard` wird jetzt per IIFE vor `init()` gesetzt — inline onclick-Handler funktionieren korrekt
+- **Snapshot-Import Path-Resolve**: Robust gegen `/local/...`, `~`, `$ENV` und Path-Traversal
+
+### HA Tests & Schema
+
+#### Added
+- **conftest.py**: Standardisierte Test-Fixtures (MockHass, ConfigEntry, Flow-Handler-Factories)
+- **Module-per-Zone Schemas**: Pydantic-v2-Schema-Dateien für alle 8 Modultypen (Light/Audio/Climate/Cover/Energy/Scene/Security/Zone)
+- **Integration-Tests Zone-Flows**: 46 neue Tests für ConfigFlow/OptionsFlow/SnapshotFlow
+- **Dynamic-Entity-Generation-Tests**: 57 Tests für schema-getriebene Entity-Generierung
+
+### HA Add-on
+
+#### Added
+- **hacs.json**: HACS-Listing-Konfiguration
+
+#### Changed
+- **homeassistant-Constraint**: Manifest auf HA 2024.4.0+ begrenzt
+
+### Compatibility
+- HA v14.7.5 <-> Core v14.7.5 (Paired Release)
+- HA 2024.4.0+ required
 
 ---
 
@@ -377,7 +438,7 @@ Dies ist das konsolidierte offizielle Release, das alle Entwicklungen seit dem l
 
 ### Fixed
 - **Drift-A Closed**: 5 OpenAPI-Pfade dokumentiert (`/api/v1/zone*`, `/api/v1/mood/aggregated`)
-- OpenAPI sync: HA + Core aligned (551/551 paths, 100%)
+- OpenAPI sync: HA + Core aligned (572/572 paths, 100%)
 
 ## [13.5.7] - 2026-03-09
 

@@ -23,7 +23,7 @@ from .const import (
     HEADER_AUTH_LEGACY,
     ENV_LEGACY_HEADER_SUNSET_AT,
 )
-from .habitat_adapter import normalize_received_webhook_payload
+from .core.contracts_bridge import ProposalIntent, ActionIntent, HabitatModuleCommand
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -595,8 +595,31 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             )
 
         signing = _signing_config()
+        # Payload size guard (before full read)
+        content_length = request.content_length
+        if content_length is not None and content_length > _WEBHOOK_MAX_PAYLOAD_BYTES:
+            _LOGGER.warning(
+                "Rejected webhook: payload_too_large (%d > %d bytes)",
+                content_length, _WEBHOOK_MAX_PAYLOAD_BYTES,
+            )
+            return _error_response(
+                code="payload_too_large",
+                details={"max_bytes": _WEBHOOK_MAX_PAYLOAD_BYTES, "received": content_length},
+            )
+
         if signing:
             body_bytes = await request.read()
+            # Second check after actual read (in case content_length was missing)
+            if len(body_bytes) > _WEBHOOK_MAX_PAYLOAD_BYTES:
+                _LOGGER.warning(
+                    "Rejected webhook: payload_too_large (%d > %d bytes)",
+                    len(body_bytes), _WEBHOOK_MAX_PAYLOAD_BYTES,
+                )
+                return _error_response(
+                    code="payload_too_large",
+                    details={"max_bytes": _WEBHOOK_MAX_PAYLOAD_BYTES, "received": len(body_bytes)},
+                )
+
             now_epoch = int(_utcnow().timestamp())
             auth_scope_token = (
                 token_expected
@@ -623,16 +646,40 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             try:
                 payload = json.loads(body_bytes.decode("utf-8"))
             except Exception:  # noqa: BLE001
-                return _error_response(
-                    code="invalid_json",
-                )
+                return _error_response(code="invalid_json")
         else:
             try:
                 payload = await request.json()
             except Exception:  # noqa: BLE001
-                return _error_response(
-                    code="invalid_json",
-                )
+                return _error_response(code="invalid_json")
+
+        # Rate limit guard (per webhook ID)
+        now_epoch = int(_utcnow().timestamp())
+        window_start = now_epoch - _WEBHOOK_RATELIMIT_WINDOW_SEC
+        if webhook_id not in _WEBHOOK_RATELIMIT_CACHE:
+            _WEBHOOK_RATELIMIT_CACHE[webhook_id] = []
+        # Clean old entries
+        _WEBHOOK_RATELIMIT_CACHE[webhook_id] = [
+            ts for ts in _WEBHOOK_RATELIMIT_CACHE[webhook_id] if ts > window_start
+        ]
+        if len(_WEBHOOK_RATELIMIT_CACHE[webhook_id]) >= _WEBHOOK_RATELIMIT_MAX_REQS:
+            oldest = min(_WEBHOOK_RATELIMIT_CACHE[webhook_id])
+            retry_after = oldest + _WEBHOOK_RATELIMIT_WINDOW_SEC - now_epoch
+            _LOGGER.warning(
+                "Rejected webhook: rate_limited (%d reqs in %ds window, retry_after=%ds)",
+                len(_WEBHOOK_RATELIMIT_CACHE[webhook_id]), _WEBHOOK_RATELIMIT_WINDOW_SEC, retry_after,
+            )
+            response = _error_response(
+                code="rate_limited",
+                details={"retry_after_seconds": retry_after},
+            )
+            response.headers[HEADER_RATELIMIT_RETRY_AFTER] = str(retry_after)
+            return response
+        # Record this request
+        _WEBHOOK_RATELIMIT_CACHE[webhook_id].append(now_epoch)
+        # Trim cache size
+        if len(_WEBHOOK_RATELIMIT_CACHE[webhook_id]) > _WEBHOOK_RATELIMIT_MAX_REQS * 2:
+            _WEBHOOK_RATELIMIT_CACHE[webhook_id] = _WEBHOOK_RATELIMIT_CACHE[webhook_id][-_WEBHOOK_RATELIMIT_MAX_REQS:]
 
         if not isinstance(payload, dict):
             return _error_response(
@@ -659,6 +706,17 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 details={"field": "data", "expected": "object"},
             )
 
+        # Contract drift guard: validate required fields for suggestion events
+        if raw_event_type in (EVENT_TYPE_SUGGESTION, "suggestion_new"):
+            required_fields = ("module_id", "action_type", "title")
+            missing = [f for f in required_fields if f not in data]
+            if missing:
+                _LOGGER.warning("Webhook: suggestion contract drift detected - missing: %s", missing)
+                return _error_response(
+                    code="invalid_payload",
+                    details={"missing_fields": missing, "expected": "ProposalIntent contract"},
+                )
+
         # Typed envelope: {"type": "mood|neuron|suggestion|status", "data": {...}}
         allow_legacy_aliases = _legacy_aliases_enabled()
         raw_event_type = payload.get("type")
@@ -682,8 +740,6 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                     "allowed": sorted(_ALLOWED_EVENT_TYPES),
                 },
             )
-
-        data = normalize_received_webhook_payload(event_type, data)
 
         if event_type == EVENT_TYPE_MOOD:
             # Add-on pushes mood change: merge into coordinator data
@@ -731,12 +787,55 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             _LOGGER.debug("Webhook: neuron update received")
 
         elif event_type == EVENT_TYPE_SUGGESTION:
-            # Add-on pushes new suggestion – fire HA event for suggestion panel
-            hass.bus.async_fire(
-                f"{DOMAIN}_suggestion_received",
-                {"suggestion": data},
-            )
-            _LOGGER.debug("Webhook: suggestion push received")
+            # Add-on pushes new suggestion – parse as ProposalIntent for type safety
+            try:
+                proposal = ProposalIntent.from_dict(data)
+                _LOGGER.debug(
+                    "Webhook: suggestion push received (proposal=%s, zone=%s, confidence=%.2f)",
+                    proposal.proposal_id, proposal.zone_id, proposal.confidence,
+                )
+                # Fire HA event with typed proposal
+                hass.bus.async_fire(
+                    f"{DOMAIN}_suggestion_received",
+                    {"proposal": proposal.to_dict(), "raw": data},
+                )
+                # Auto-apply if autonomous + approved
+                if proposal.can_auto_execute():
+                    _LOGGER.info(
+                        "Webhook: auto-executing autonomous proposal %s (%s)",
+                        proposal.proposal_id, proposal.action_type,
+                    )
+                    action = proposal.to_action_intent(approved=True)
+                    cmd = action.to_module_command()
+                    # Execute via HA service call
+                    if cmd.command_mode == "execute":
+                        async def _execute_proposal() -> None:
+                            try:
+                                domain = cmd.payload.get("domain")
+                                service = cmd.payload.get("service")
+                                service_data = cmd.payload.get("service_data", {})
+                                target = cmd.payload.get("target", {})
+                                if domain and service:
+                                    await hass.services.async_call(
+                                        domain, service, service_data, target,
+                                    )
+                                    _LOGGER.info(
+                                        "Webhook: autonomous proposal executed %s.%s",
+                                        domain, service,
+                                    )
+                            except Exception as exc:
+                                _LOGGER.warning(
+                                    "Webhook: autonomous proposal %s failed: %s",
+                                    proposal.proposal_id, exc,
+                                )
+                        hass.async_create_task(_execute_proposal())
+            except Exception as exc:
+                _LOGGER.warning("Webhook: suggestion parse failed: %s", exc)
+                # Fallback: fire raw event
+                hass.bus.async_fire(
+                    f"{DOMAIN}_suggestion_received",
+                    {"suggestion": data},
+                )
 
         elif event_type == EVENT_TYPE_MODULE_DATA:
             # Core pushes smart home module data (licht, helligkeit, heiz, bewegung, praesenz)

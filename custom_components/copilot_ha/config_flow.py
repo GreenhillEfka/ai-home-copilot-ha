@@ -15,8 +15,6 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import selector
-
 from .config_helpers import (
     STEP_DISCOVERY,
     STEP_ZONES,
@@ -30,6 +28,7 @@ from .config_helpers import (
     fetch_setup_token,
 )
 from .config_options_flow import OptionsFlowHandler  # noqa: F401 - used by HA via async_get_options_flow
+from .config_schema_builders import build_config_flow_connection_schema
 from .config_wizard_steps import (
     build_discovery_form,
     build_zones_form,
@@ -206,16 +205,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Optional("assistant_name", default="Styx"): str,
-                vol.Required(CONF_HOST, default=default_host): str,
-                vol.Required(CONF_PORT, default=default_port): int,
-                vol.Optional(CONF_TOKEN): str,
-                vol.Optional(CONF_ENTITY_PROFILE, default=DEFAULT_ENTITY_PROFILE): vol.In(ENTITY_PROFILES),
-                vol.Optional(CONF_TEST_LIGHT, default=None): vol.Any(
-                    None,
-                    selector.EntitySelector(
-                        selector.EntitySelectorConfig(domain="light", multiple=False),
-                    ),
+                **build_config_flow_connection_schema(
+                    {
+                        CONF_HOST: default_host,
+                        CONF_PORT: default_port,
+                    }
                 ),
+                vol.Optional(CONF_ENTITY_PROFILE, default=DEFAULT_ENTITY_PROFILE): vol.In(ENTITY_PROFILES),
             }
         )
 
