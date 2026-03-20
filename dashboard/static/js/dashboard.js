@@ -140,7 +140,7 @@ class HabitusDashboard {
           <button class="quick-action-btn primary" onclick="dashboard.showCreateZoneModal('${zone.id}')">
             <i class="mdi mdi-plus"></i> Zone erstellen
           </button>
-          <button class="quick-action-btn danger" onclick="dashboard.deleteZone('${zone.id}')">
+          <button class="quick-action-btn danger" onclick="dashboard.showDeleteZoneModal('${zone.id}')">
             <i class="mdi mdi-delete"></i> Zone löschen
           </button>
         </div>
@@ -598,42 +598,71 @@ class HabitusDashboard {
       });
   }
 
-  deleteZone(zoneId) {
-    if (!confirm(`Zone "${zoneId}" wirklich löschen?`)) return;
+  showDeleteZoneModal(zoneId) {
+    const existing = document.getElementById('delete-zone-modal');
+    if (existing) existing.remove();
 
-    const actionBtns = document.querySelectorAll(`#actions-${zoneId} .quick-action-btn`);
-    actionBtns.forEach(b => b.setAttribute('disabled', 'true'));
+    const btns = document.querySelectorAll('#actions-' + zoneId + ' .quick-action-btn');
+    btns.forEach(b => b.setAttribute('disabled', 'true'));
 
-    this._setZoneMeta(zoneId, { stale: false, lastError: null });
-    this.renderZoneLoading(zoneId, 'Zone wird gelöscht…');
+    const html = `
+      <div id="delete-zone-modal" style="
+        position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;
+        background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;
+        font-family:system-ui,sans-serif;
+      ">
+        <div style="
+          background:#fff;padding:24px;border-radius:12px;width:340px;max-width:90vw;
+          box-shadow:0 8px 32px rgba(0,0,0,0.2);
+        ">
+          <h3 style="margin:0 0 8px;font-size:18px;">Zone löschen</h3>
+          <p style="margin:0 0 16px;color:#444;font-size:14px;">
+            Zone <strong id="dz-zone-name"></strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+          </p>
+          <input id="dz-zone-id" type="hidden" value="${zoneId}">
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button id="dz-cancel" style="padding:8px 16px;border:1px solid #ddd;background:#f5f5f5;border-radius:6px;cursor:pointer;">Abbrechen</button>
+            <button id="dz-confirm" style="padding:8px 16px;border:none;background:#d32f2f;color:#fff;border-radius:6px;cursor:pointer;">Löschen</button>
+          </div>
+          <p id="dz-error" style="color:#d32f2f;font-size:12px;margin:8px 0 0;display:none;"></p>
+        </div>
+      </div>`;
 
-    fetch(`/api/v1/dashboard/zone-editor/zones/${encodeURIComponent(zoneId)}`, {
-      method: 'DELETE',
-    })
-      .then((resp) => {
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return resp.json();
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = document.getElementById('delete-zone-modal');
+    document.getElementById('dz-zone-name').textContent = zoneId;
+
+    const cleanup = () => { modal.remove(); btns.forEach(b => b.removeAttribute('disabled')); };
+
+    document.getElementById('dz-cancel').onclick = cleanup;
+    modal.onclick = (e) => { if (e.target === modal) cleanup(); };
+
+    document.getElementById('dz-confirm').onclick = () => {
+      this._setZoneMeta(zoneId, { stale: false, lastError: null });
+      this.renderZoneLoading(zoneId, 'Zone wird gelöscht…');
+      document.getElementById('dz-confirm').disabled = true;
+      document.getElementById('dz-confirm').textContent = '…';
+
+      fetch(`/api/v1/dashboard/zone-editor/zones/${encodeURIComponent(zoneId)}`, {
+        method: 'DELETE',
       })
-      .then(() => {
-        // Invalidate cache so next refresh gets fresh data
-        if (this.socket && this.connected) {
-          this.socket.emit('request_zone_data', { zones: [zoneId] });
-        }
-        // Remove zone data and show empty state
-        delete this.zoneData[zoneId];
-        this.renderZoneEmpty(zoneId, 'Zone wurde gelöscht.');
-      })
-      .catch((err) => {
-        console.error('[Dashboard] deleteZone error:', err);
-        this._setZoneMeta(zoneId, { stale: true, lastError: String(err) });
-        this.renderZoneError(zoneId, {
-          message: 'Zone konnte nicht gelöscht werden.',
-          detail: String(err),
+        .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
+        .then(() => {
+          if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [zoneId] });
+          delete this.zoneData[zoneId];
+          this.renderZoneEmpty(zoneId, 'Zone wurde gelöscht.');
+          cleanup();
+        })
+        .catch(err => {
+          console.error('[Dashboard] deleteZone error:', err);
+          this._setZoneMeta(zoneId, { stale: true, lastError: String(err) });
+          this.renderZoneError(zoneId, { message: 'Zone konnte nicht gelöscht werden.', detail: String(err) });
+          document.getElementById('dz-error').textContent = 'Fehler: ' + err.message;
+          document.getElementById('dz-error').style.display = 'block';
+          document.getElementById('dz-confirm').disabled = false;
+          document.getElementById('dz-confirm').textContent = 'Löschen';
         });
-      })
-      .finally(() => {
-        actionBtns.forEach(b => b.removeAttribute('disabled'));
-      });
+    };
   }
 
   showZoneSettings(zoneId) {
