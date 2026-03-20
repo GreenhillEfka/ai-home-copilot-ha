@@ -119,7 +119,23 @@ class CopilotApiClient:
 
     async def async_clear_zone_presence_hold(self, person_id: str) -> dict:
         """Clear manual presence hold for a person via Core DELETE /api/v1/presence/hold."""
-        return await self._post_json("/api/v1/presence/hold", {"person_id": person_id})
+        url = f"{self._base_url}/api/v1/presence/hold?person_id={person_id}"
+        try:
+            async with self._session.delete(
+                url,
+                headers=self._headers(),
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status >= 400:
+                    body = await resp.text()
+                    raise CopilotApiError(f"HTTP {resp.status} for {url}: {body[:200]}")
+                if resp.status == 204:
+                    return {}
+                return await resp.json()
+        except asyncio.TimeoutError as e:
+            raise CopilotApiError(f"Timeout calling {url}") from e
+        except aiohttp.ClientError as e:
+            raise CopilotApiError(f"Client error calling {url}: {e}") from e
 
     async def async_get_status(self) -> CopilotStatus:
         health: dict | None = None
