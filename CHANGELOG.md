@@ -1,23 +1,36 @@
 ## [15.0.0] - 2026-03-21
 
-### Phase 7: Production Readiness + Neural Pipeline Foundation
+### Phase 7 Production Readiness + UX Transparency
 
-**Scope:** PilotSuite v15.0 marks the transition from feature accumulation to production-grade reliability,
-aligned with the Vision document (lebenslanger, selbstschärfender Begleiter).
+**Paired mit:** Core v15.0.0
+**Vision-Niveau:** Human-in-the-loop, erklärbare Zustände, keine UI-Illusionen
 
-#### Release Gate Status
-- [ ] py_compile: all core files ✅ (verified `coordinator.py`, `area_zone_registry.py`, `dashboard/app.py`, `dashboard/api/v1/dashboard.py`)
-- [ ] Syntax gate: HA + Core dashboard.py clean ✅
-- [ ] Paired release: HA v15.0.0 ↔ Core v15.0.0 ⏳
-- [ ] Live smoke test ⏳
-- [ ] Drift detection: 0 drift on live system ⏳
+#### UX / Explainability
 
-#### Goals for v15.0
-- [ ] **Production Readiness**: Connection pooling, startup lazy-loading, health endpoints
-- [ ] **Neural Pipeline**: Brain Graph + Habitus Miner integration into HA entity lifecycle
-- [ ] **Presence v2**: Area-level aggregation with Core Neurons sync (PS-081 unblocked)
-- [ ] **Dashboard stability**: All card getConfigForm() returning valid schemas
-- [ ] **Smoke test**: Live HA entity count stable, no new drift after 24h
+- **CoreConnection-Sensor:** `sensor.copilot_ha_core_connection` — connected/degraded/disconnected in HA Diagnostics
+- **PollInterval-Sensor:** `sensor.copilot_ha_poll_interval` — adaptive poll interval live sichtbar
+- **ApiFailures-Sensor:** `sensor.copilot_ha_api_failures` — consecutive API failures Richtung Core
+- **ModulesReady-Sensor:** `sensor.pilotsuite_modules_ready` — wie viele CopilotRuntime Module geladen
+- **Suggestions Pattern+Badge:** Confidence % Badge in styx-suggestions-card.js (Pattern/Lift Details in Details-Expander)
+- **Presence-Hold Pill UI:** 3-State Hold-Pill in styx-zone-card.js Lovelace Card (Auto/An/Aus)
+
+#### Architecture Cleanup
+
+- **Konfigurationsbereinigung:** release-prep/v14.7.3 Feature-Branches konsolidiert
+- **Coordination-Instrumentierung:** `_consecutive_failures`, `_last_fetch_duration_s` für Production-Grade Monitoring
+- **pytest-asyncio Mode:** pytest.ini mit asyncio_mode=auto
+
+#### CI / QA
+
+- pytest-homeassistant fake package aus CI entfernt
+- pydantic/pyyaml in CI-Install Steps
+- 500+ Tests green
+
+#### Paired Release
+
+- HA v15.0.0 mit Core v15.0.0 — beide Repos synchronisiert auf Phase 7
+
+---
 
 ## [14.9.0] - 2026-03-21
 
