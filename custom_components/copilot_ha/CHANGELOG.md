@@ -2,6 +2,35 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.0.2] - 2026-03-21
+
+### Added
+- `CoreVersionDiagnosticSensor`: surfaces HA addon vs live Core version mismatch in HA UI
+  - native_value: `aligned` | `gap_HAvsCore` | `unreachable`
+  - attributes: `ha_version`, `core_version`, `gap_description`, `recommendation`
+- `HabitusZonesV2ModulesSensor`: surfaces per-zone module configs (light, music, climate, cover, security) as HA sensor attributes — feeds `styx-zone-card.js show_module_states=true`
+- `ModuleDashboardSensor`: surfaces Core's `/api/v1/modules/dashboard` as HA sensor (`N/M` active modules)
+- `smoke_test_v15.sh`: CI-ready smoke test script for v15 E2E verification
+- Lovelace: `show_module_states=true` activated for zone overview card
+
+### Fixed
+- Coordinator O(n) state iteration: replaced O(n*m) nested loop with `async_all()` single-pass (~25x faster on 5100+ entities)
+- `_sync_zone_definitions`: explicit warning when Core returns 404 — version mismatch now visible in logs
+- Zone card: `zone_modules` wiring corrected to read from `sensor.copilot_ha_autonomie_status` attributes
+- `zone_card_yaml.md`: corrected v15 entity names
+
+### Removed
+- `agents/`, `docs/`, `pilotsuite_ops/`, `tests/e2e/` from HA repository (reconciliation Phase 1-3)
+- Orphan Lovelace cards: `pilotstack-zone-cards.mjs`, `frontend/` directory (5 files)
+- `habitus_module_schema.py` (deprecated)
+
+### Deprecated
+- `entity_zone_sorter.py` — use `habitus_entity_sorter.py`
+- `habitat_adapter.py` — use `habitus_adapter.py`
+
+### Performance
+- O(n) entity state iteration: `async_all()` instead of nested loop — ~25x faster
+
 ## [15.0.1] - 2026-03-21
 
 ### Fixed
