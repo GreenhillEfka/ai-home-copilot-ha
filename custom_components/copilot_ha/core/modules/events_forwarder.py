@@ -45,7 +45,7 @@ from ...const import (
 )
 # DEPRECATED: v1 - prefer v2
 # from ...habitus_zones_store import SIGNAL_HABITUS_ZONES_V2_UPDATED, async_get_zones
-from ...habitat_adapter import (
+from ...habitus_adapter import (
     build_call_service_forward_item,
     build_state_changed_forward_item,
 )
