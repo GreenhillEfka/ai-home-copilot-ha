@@ -25,6 +25,26 @@ class StyxChatCard extends _ChatBase {
     this._messages = [];
     this._loading = false;
     this._historyLoaded = false;
+    // Bound refs for event listener cleanup
+    this._sendHandler = null;
+    this._keydownHandler = null;
+    // Track abort controller for pending fetch requests
+    this._historyCtrl = null;
+    this._chatCtrl = null;
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    // Remove dynamically attached shadow DOM listeners
+    if (this.shadowRoot) {
+      const btn = this.shadowRoot.querySelector('.send-btn');
+      const input = this.shadowRoot.querySelector('.input-area input');
+      if (btn && this._sendHandler) btn.removeEventListener('click', this._sendHandler);
+      if (input && this._keydownHandler) input.removeEventListener('keydown', this._keydownHandler);
+    }
+    // Abort any in-flight fetch requests
+    this._historyCtrl?.abort();
+    this._chatCtrl?.abort();
   }
 
   static getConfigElement() {
