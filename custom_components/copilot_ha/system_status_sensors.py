@@ -126,7 +126,7 @@ class ApiFailuresSensor(CopilotBaseEntity, SensorEntity):
     _attr_icon = "mdi:alert-circle-outline"
     _attr_has_entity_name = False
     _attr_name = "PilotSuite API Failures"
-    _attr_unique_id = "copilot_ha_api_failures"
+    _attr_unique_id = "pilotsuite_api_failures"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hass, entry, coordinator) -> None:
