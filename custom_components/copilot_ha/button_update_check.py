@@ -46,6 +46,11 @@ def _read_local_version() -> str:
     return _CACHED_LOCAL_VERSION
 
 
+async def _async_read_local_version(hass) -> str:
+    """Read the local VERSION file without blocking the HA event loop."""
+    return await hass.async_add_executor_job(_read_local_version)
+
+
 def _compare_versions(local: str, remote: str) -> int:
     """Compare two semver-style version strings.
 
@@ -109,9 +114,15 @@ class PilotSuiteHAVersionSensor(CopilotBaseEntity, SensorEntity):
 
     def __init__(self, coordinator: CopilotDataUpdateCoordinator) -> None:
         super().__init__(coordinator)
-        self._local_version = _read_local_version()
+        self._local_version = "unknown"
         self._latest_version: str | None = None
         self._last_check: str | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Load local version asynchronously to avoid blocking the event loop."""
+        await super().async_added_to_hass()
+        self._local_version = await _async_read_local_version(self.hass)
+        self.async_write_ha_state()
 
     @property
     def native_value(self) -> str:
@@ -206,7 +217,7 @@ class CheckHAUpdateButton(CopilotBaseEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         """Check GitHub for latest HA integration release."""
-        local = _read_local_version()
+        local = await _async_read_local_version(self.hass)
         latest = await _fetch_latest_release(self.hass, GITHUB_HA_RELEASES_URL)
 
         if latest is None:
