@@ -1,2 +1,5 @@
 pytest>=8,<9
-pytest-homeassistant>=2024.4.0
+pytest-asyncio
+aiohttp
+voluptuous
+pyyaml
