@@ -77,11 +77,19 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "icon": "mdi:door-open",
     },
     {
+        "zone_id": "kinderzimmer",
+        "name_de": "Kinderzimmer",
+        "keywords": [
+            "kinderzimmer", "kinder", "kidi", "kids",
+        ],
+        "zone_type": "room",
+        "icon": "mdi:human-child",
+    },
+    {
         "zone_id": "schlafbereich",
         "name_de": "Schlafbereich",
         "keywords": [
             "schlaf", "schlafzimmer", "bedroom",
-            "kinderzimmer", "kinder", "kidi",
         ],
         "zone_type": "room",
         "icon": "mdi:bed",
