@@ -213,6 +213,16 @@ def _lovelace_yaml_for_zone(hass: HomeAssistant, z: HabitusZoneV2) -> str:
 
     cards: list[str] = []
 
+    # ── Module Config ──────────────────────────────────────────────────────
+    # Zone automation mode + per-module auto switches (from zone_automation_entities)
+    auto_entities = [f"select.copilot_ha_zone_{zone_id}_automation_mode"]
+    for mod in ("light", "music", "climate", "cover", "security"):
+        auto_entities.append(f"switch.copilot_ha_zone_{zone_id}_{mod}_auto")
+    # Filter to only entities that exist in HA
+    available_auto = [e for e in auto_entities if hass.states.get(e) is not None]
+    if available_auto:
+        cards.append(_entities_card_yaml("Automatisierung", available_auto))
+
     # Licht
     lights = roles.get("lights") or []
     if lights:
