@@ -285,11 +285,20 @@ class CopilotApiClient(SharedCopilotApiClient):
         Goes beyond ensure-zones by syncing entity assignments and zone metadata
         so Core's Brain/Neuron system knows the full zone topology.
         """
-        return await self._safe_post(
+        result = await self._safe_post(
             "/api/v1/zone-automation/sync-definitions",
             {"source": "ha", "zones": zones},
             label="Zone definitions sync",
         )
+        if not result.get("ok"):
+            _LOGGER.warning(
+                "Zone definitions sync failed — Core returned 404 or error. "
+                "This likely means Core is running an older version (< 15.0) "
+                "and does not have /sync-definitions yet. "
+                "Zone IDs are synced via /ensure-zones but entity metadata is NOT. "
+                "Restart Core addon to update to v15.0+."
+            )
+        return result
 
     async def async_get_sonos_summary(self) -> dict[str, Any]:
         """Get Sonos speaker summary from jishi API."""
