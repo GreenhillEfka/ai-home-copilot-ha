@@ -12,6 +12,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 _CARD_FILENAMES = {
+    # Active Lovelace cards (registered and referenced in dashboards)
     "styx-chat-card.js": "www/styx-chat-card.js",
     "styx-suggestions-card.js": "www/styx-suggestions-card.js",
     "styx-error-card.js": "www/styx-error-card.js",
@@ -20,11 +21,12 @@ _CARD_FILENAMES = {
     "styx-brain-card.js": "www/styx-brain-card.js",
     "styx-habitus-card.js": "www/styx-habitus-card.js",
     "styx-zone-card.js": "www/styx-zone-card.js",
-    "pilotstack-zone-cards.mjs": "www/pilotstack-zone-cards.mjs",
-    "styx-dashboard-card.js": "frontend/styx-dashboard-card.js",
-    "module-control-card.js": "frontend/module-control-card.js",
-    "neuron-layer-card.js": "frontend/neuron-layer-card.js",
-    "habitus-zone-card.js": "frontend/habitus-zone-card.js",
+    # Legacy/unused cards removed in v14.9.x cleanup:
+    #   pilotstack-zone-cards.mjs — PS-198/199/200 zone creator (0 refs, never imported)
+    #   frontend/styx-dashboard-card.js — orphan (0 refs)
+    #   frontend/module-control-card.js — orphan (0 refs)
+    #   frontend/neuron-layer-card.js — orphan (0 refs)
+    #   frontend/habitus-zone-card.js — orphan (0 refs)
 }
 
 _CARD_ROOT = Path(__file__).resolve().parent
