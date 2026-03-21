@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pilotsuite.local/schemas/agent_error_envelope.schema.json",
+  "title": "AgentErrorEnvelope",
+  "description": "Structured error envelope for PilotSuite agent tool calls. Enables automated recovery without human intervention.",
+  "type": "object",
+  "required": ["error_type", "code", "retryable", "timestamp", "user_message"],
+  "properties": {
+    "error_type": {
+      "type": "string",
+      "description": "High-level classification of the error",
+      "enum": [
+        "TRANSIENT",
+        "RATE_LIMIT",
+        "SERVER_ERROR",
+        "CLIENT_ERROR",
+        "AUTH_ERROR",
+        "TIMEOUT",
+        "NETWORK_ERROR",
+        "NOT_FOUND",
+        "CIRCUIT_OPEN",
+        "UNKNOWN"
+      ]
+    },
+    "code": {
+      "type": "string",
+      "description": "Specific error code for programmatic handling",
+      "examples": ["RATE_LIMIT", "TIMEOUT", "CIRCUIT_OPEN", "AUTH_FAILED"]
+    },
+    "retryable": {
+      "type": "boolean",
+      "description": "Whether this error can be automatically retried"
+    },
+    "retry_after_sec": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Seconds to wait before retrying (for rate limits)"
+    },
+    "suggested_action": {
+      "type": "string",
+      "description": "Machine-readable action hint",
+      "enum": [
+        "wait_and_retry",
+        "fallback_model",
+        "fallback_tool",
+        "degrade_gracefully",
+        "alert_and_abort",
+        "circuit_open_skip",
+        "no_retry_abort"
+      ]
+    },
+    "user_message": {
+      "type": "string",
+      "description": "Human-readable message safe to show to end user"
+    },
+    "recovery_hint": {
+      "type": "string",
+      "description": "Actionable hint for the agent to recover"
+    },
+    "tool_name": {
+      "type": "string",
+      "description": "Which tool was being called when the error occurred"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Which attempt number this was (1-indexed)"
+    },
+    "max_attempts": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum attempts configured for this call"
+    },
+    "latency_ms": {
+      "type": "number",
+      "description": "Observed latency before failure"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "iso-date-time",
+      "description": "When the error occurred (UTC)"
+    },
+    "details": {
+      "type": "object",
+      "description": "Additional error-specific context"
+    }
+  }
+}
