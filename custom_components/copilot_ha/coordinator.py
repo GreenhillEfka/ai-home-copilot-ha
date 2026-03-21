@@ -1377,7 +1377,7 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     meta = z.metadata or {}
                     zone_defs.append({
                         "zone_id": zid,
-                        "name": z.name,
+                        "name_de": z.name,
                         "zone_type": z.zone_type,
                         "entity_ids": list(z.entity_ids),
                         "entities": {
