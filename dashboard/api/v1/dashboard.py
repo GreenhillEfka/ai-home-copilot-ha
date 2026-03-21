@@ -752,6 +752,23 @@ def _count_entities(entities):
 # Endpoints
 # ═══════════════════════════════════════════════════════════════════════════
 
+DASHBOARD_VERSION = '14.7.6'
+
+@dashboard_bp.route('/version', methods=['GET'])
+def get_dashboard_version():
+    """Return dashboard version + HA/Core version sync status."""
+    ha_info = _fetch_ha_version()
+    core_info = _fetch_core_version()
+    ha_ver = ha_info.get('version', '?')
+    core_ver = core_info.get('version', '?')
+    sync_status = 'ok' if ha_ver != '?' and core_ver != '?' else 'warn'
+    return jsonify({
+        'dashboard': DASHBOARD_VERSION,
+        'ha': ha_ver,
+        'core': core_ver,
+        'sync_status': sync_status,
+    })
+
 @dashboard_bp.route('/config', methods=['GET'])
 def get_dashboard_config():
     """Dashboard-Konfiguration mit Habituszonen-Metadaten."""
@@ -759,7 +776,7 @@ def get_dashboard_config():
     household = _fetch_household()
 
     config = {
-        'version': '13.0.4',
+        'version': DASHBOARD_VERSION,
         'zones': zones_config,
         'theme_support': ['light', 'dark'],
         'features': {

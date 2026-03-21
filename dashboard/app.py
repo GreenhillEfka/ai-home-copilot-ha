@@ -102,7 +102,7 @@ def get_status():
     """Get dashboard status"""
     return jsonify({
         'status': 'running',
-        'version': '13.0.4',
+        'version': '14.7.6',
         'port': app.config['PORT'],
         'rag_api': app.config['RAG_API_URL'],
         'widgets': ['system_status', 'brain_graph', 'chat', 'sensor_overview'],

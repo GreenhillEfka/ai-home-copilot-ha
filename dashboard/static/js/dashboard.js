@@ -105,7 +105,7 @@ class HabitusDashboard {
         if (coreEl) coreEl.textContent = 'Core ' + (data.core || '?');
         if (syncEl) {
           syncEl.textContent = data.sync_status === 'ok' ? '●' : '⚠';
-          syncEl.className = data.sync_status === 'ok' ? 'sync-ok' : 'sync-warn';
+          syncEl.className = data.sync_status === 'ok' ? 'version-pill sync-ok' : 'version-pill sync-warn';
         }
       })
       .catch(() => {});
