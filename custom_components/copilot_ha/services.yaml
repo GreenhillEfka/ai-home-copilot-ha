@@ -1099,3 +1099,30 @@ untag_entity:
       example: "licht"
       selector:
         text:
+
+zone_presence_hold:
+  name: Zone Presence Hold
+  description: Setzt den Presence-Hold-Status einer Zone (auto, force_on, force_off).
+  target:
+    entity:
+      domain: sensor
+      integration: custom
+  fields:
+    zone_id:
+      name: Zone ID
+      description: Zone-ID (z.B. wohnbereich, schlafbereich)
+      required: true
+      example: wohnbereich
+      selector:
+        text:
+    hold:
+      name: Hold State
+      description: "auto = System entscheidet, force_on = immer anwesend, force_off = nie anwesend"
+      required: true
+      example: auto
+      selector:
+        select:
+          options:
+            - auto
+            - force_on
+            - force_off

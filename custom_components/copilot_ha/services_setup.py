@@ -1782,3 +1782,37 @@ def async_register_all_services(hass: HomeAssistant) -> None:
     _register_memory_services(hass)
     _register_zone_crud_services(hass)
     _register_entity_centric_services(hass)
+    _register_zone_presence_hold_service(hass)
+
+# ---------------------------------------------------------------------------
+# Zone Presence Hold Service
+# ---------------------------------------------------------------------------
+def _register_zone_presence_hold_service(hass: HomeAssistant) -> None:
+    if not hass.services.has_service(DOMAIN, "set_zone_presence_hold"):
+        from .coordinator import CopilotHaCoordinator
+
+        async def _handle_set_presence_hold(call: ServiceCall) -> None:
+            zone_id = str(call.data.get("zone_id", "")).strip()
+            hold = str(call.data.get("hold", "auto")).strip()
+            if not zone_id:
+                return
+            # Find the coordinator and call its API method
+            for entry_id, coord in hass.data.get(DOMAIN, {}).items():
+                if isinstance(coord, CopilotHaCoordinator):
+                    try:
+                        await coord.async_set_zone_presence_hold(zone_id, hold)
+                    except Exception as err:
+                        _LOGGER.warning(
+                            "set_zone_presence_hold failed for zone %s: %s", zone_id, err
+                        )
+                    return
+
+        hass.services.async_register(
+            DOMAIN,
+            "set_zone_presence_hold",
+            _handle_set_presence_hold,
+            schema=vol.Schema({
+                vol.Required("zone_id"): str,
+                vol.Optional("hold", default="auto"): str,
+            }),
+        )
