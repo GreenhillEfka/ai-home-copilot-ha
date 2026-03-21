@@ -1398,7 +1398,11 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 )
             self._zone_auto_synced = True
         except Exception:
-            _LOGGER.debug("Zone automation sync skipped")
+            _LOGGER.warning(
+                "Zone automation sync failed — will retry on next poll. "
+                "If this persists: check Core auth token and /ensure-zones endpoint. "
+                "sync_definitions errors are non-fatal (endpoint may not exist in older Core)."
+            )
     
     async def _update_smart_home_modules(self, module_data: dict[str, Any]) -> None:
         """Feed Core module dashboard data into HA module stubs.
