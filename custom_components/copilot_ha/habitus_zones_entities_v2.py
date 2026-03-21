@@ -549,6 +549,10 @@ class HabitusZonesSensor(CopilotBaseEntity, SensorEntity):
                 zone_entry["priority"] = z.priority
             if z.tags:
                 zone_entry["tags"] = list(z.tags)
+            if z.entities:
+                zone_entry["entities"] = {
+                    role: list(ids) for role, ids in z.entities.items()
+                }
             zone_entry["settings"] = {
                 "ambience": (z.metadata or {}).get("ambience", "Normal"),
                 "activity": (

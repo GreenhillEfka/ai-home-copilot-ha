@@ -1260,13 +1260,24 @@ class StyxZoneCard extends _ZoneBase {
   _toggleLight(zoneId) {
     if (!this._hass || !zoneId) return;
 
-    const lightEntity = `light.${zoneId}_main`;
-    const state = this._hass.states[lightEntity];
-    const newState = state?.state === 'on' ? 'off' : 'on';
+    const zonesData = this._getZonesData();
+    const zoneEntry = zonesData.zones.find(
+      z => z.zone_id === zoneId || z.zone_id === `zone:${zoneId}`
+    );
+    const lightEntities = zoneEntry?.entities?.lights || [];
 
-    this._hass.callService('light', 'toggle', {
-      entity_id: lightEntity
-    });
+    if (lightEntities.length === 0) {
+      // Fallback: try the old static pattern
+      const fallback = `light.${zoneId}_main`;
+      if (this._hass.states[fallback]) {
+        this._hass.callService('light', 'toggle', { entity_id: fallback });
+      } else {
+        _LOGGER.warning('[styx-zone-card] No light entities found for zone %s', zoneId);
+      }
+      return;
+    }
+
+    this._hass.callService('light', 'toggle', { entity_id: lightEntities[0] });
   }
 
   _showSceneSelector(zoneId) {
