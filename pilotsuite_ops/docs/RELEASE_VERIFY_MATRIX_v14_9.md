@@ -78,7 +78,7 @@
 |-------|---------|------|
 | 9 JS Cards syntaktisch valid | ✅ PASS | `www/styx-*.js` |
 | `pilotstack-zone-cards.mjs` | ⚠️ 411+ UNCOMMITTED | `www/pilotstack-zone-cards.mjs` |
-| `.bak` | ❌ 36KB Backup-Artefakt | `www/styx-zone-card.js.bak` |
+| `.bak` | ✅ BEREITS GELÖSCHT | Commit `1f94fd45` durch Stxy |
 
 ---
 
@@ -110,7 +110,7 @@
 🔴 dashboard/ FLASK PARALLEL-SERVER    → MUSS ENTSCHIEDEN WERDEN
 🔴 habitus_zones_matcher.py FEHLT      → MUSS GEFIXT WERDEN
 ⚠️ PILOTSTACK-ZONE-CARDS.MJS           → UNCOMMITTED (Blocker)
-❌ styx-zone-card.js.bak                → MUSS GELÖSCHT WERDEN
+✅ styx-zone-card.js.bak                → BEREITS GELÖSCHT (Commit 1f94fd45)
 ```
 
 ---
@@ -139,7 +139,7 @@
 | PilotClaw | `habitus_zones_matcher.py` fix in Core |
 | PilotClaw | `dashboard/` Architektur-Entscheidung + Umsetzung |
 | Stxy | `pilotstack-zone-cards.mjs` commit/verwerfen |
-| HomeClaw | `.bak` löschen + Verify-Matrix pflegen |
+| HomeClaw | Verify-Matrix pflegen |
 
 ---
 
