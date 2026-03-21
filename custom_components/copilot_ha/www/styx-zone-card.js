@@ -2,8 +2,8 @@
  * PilotSuite Zone Dashboard Card v2.1.0
  *
  * Lovelace custom card showing zone status, mood, neuron activity,
- * and quick actions. Reads from sensor.pilotsuite_habitus_zones and
- * sensor.pilotsuite_zone_modes entities.
+ * and quick actions. Reads from sensor.copilot_ha_habitus_zones and
+ * sensor.copilot_ha_zone_modes entities.
  *
  * v14.2.0 additions:
  * - Health Score Badge (from sensor.pilotsuite_zonen_gesundheit)
@@ -77,7 +77,7 @@ class StyxZoneCard extends _ZoneBase {
 
   static getStubConfig() {
     return {
-      entity: 'sensor.pilotsuite_habitus_zones',
+      entity: 'sensor.copilot_ha_habitus_zones',
       show_mood: true,
       show_neuron_activity: true,
       show_quick_actions: true,
