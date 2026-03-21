@@ -1,7 +1,14 @@
-"""Habitus Module Schema — ZONE_MODULE_SCHEMA and helpers.
+"""Habitus Module Schema -- ZONE_MODULE_SCHEMA and helpers.
+
+DEPRECATED: Use schemas/zone.py (ZoneConfig, ZoneModuleEntry) instead.
+habitus_module_schema.py is kept for backward compatibility only.
+No production imports exist -- tests removed in PR #150.
+Migration: use ZoneConfig from schemas.zone
+Will be removed in future release.
 
 Defines the mandatory and optional modules for each habitus zone.
 """
+
 from __future__ import annotations
 
 from typing import Final
