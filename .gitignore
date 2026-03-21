@@ -31,3 +31,9 @@ Thumbs.db
 
 # Test infrastructure (separate repo)
 tests/
+-e 
+# Agent working files (separate repo)
+agents/
+agents/
+pilotsuite_ops/
+docs/
