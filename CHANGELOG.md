@@ -1,3 +1,18 @@
+## [15.0.1] - 2026-03-21
+
+### Frontend Visibility Fix
+
+**Paired mit:** Core v15.0.0
+**Ziel:** Habitus-Zonen und PilotSuite-YAML-Dashboards nach Setup/Neustart ohne manuelle Generate/Download-Klicks sichtbar machen.
+
+#### Fixed
+
+- **Auto-Publish beim Setup:** `async_setup_entry()` generiert jetzt nicht nur PilotSuite- und Habitus-Zonen-Dashboards, sondern publiziert sie direkt nach `/local/...`.
+- **Habitus-Zonen-Sichtbarkeit:** Das Frontend haengt nicht mehr an manuellen Button-Schritten, wenn die Integration frisch startet oder neu geladen wird.
+- **Release-Wahrheit:** HACS/HA-Integration auf `15.0.1` gebumpt, damit der Fix nicht hinter `v15.0.0` in `main` haengen bleibt.
+
+---
+
 ## [15.0.0] - 2026-03-21
 
 ### Phase 7 Production Readiness + UX Transparency

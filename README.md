@@ -3,7 +3,7 @@
 [![Release](https://img.shields.io/github/v/release/GreenhillEfka/pilotsuite-styx-ha)](https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-**PilotSuite** — Privacy-first, lokaler KI-Assistent für Home Assistant mit Brain Graph, Habitus Pattern Learning, Mood Engine und Predictive Automation. Aktuelle Release-Linie: **v15.0.0**.
+**PilotSuite** — Privacy-first, lokaler KI-Assistent für Home Assistant mit Brain Graph, Habitus Pattern Learning, Mood Engine und Predictive Automation. Aktuelle Release-Linie: **v15.0.1**.
 
 ---
 

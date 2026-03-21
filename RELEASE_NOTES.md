@@ -1,15 +1,17 @@
-# PilotSuite HA Add-on — Release Notes v15.0.0
+# PilotSuite HA Add-on — Release Notes v15.0.1
 
 **Datum:** 2026-03-21
-**Version:** 15.0.0
+**Version:** 15.0.1
 **Minimale Home Assistant Version:** 2024.4.0
 **Gepaart mit:** Core v15.0.0
+
+> Hotfix-Release fuer Frontend-Sichtbarkeit: PilotSuite- und Habitus-Zonen-Dashboards werden beim Setup jetzt automatisch publiziert, statt erst nach manuellem Generate/Download.
 
 ---
 
 ## In Kuerze
 
-v15.0.0 bringt PilotSuite auf Phase-7-Niveau: Production-Ready. Core-Connection jetzt transparent in HA Diagnostics. Confidence-Scores fuer Suggestions. Presence-Hold funktioniert in Lovelace. Keine UI-Illusionen — jede Aktion ist erklaerbar.
+v15.0.1 ist der Frontend-Hotfix auf dem v15.0.0-Stand: Production-Ready bleibt erhalten, dazu werden PilotSuite- und Habitus-Zonen-Dashboards beim Setup jetzt automatisch publiziert. Dadurch werden die Habitus-Zonen nach Start/Reload nicht mehr von manuellen Generate/Download-Schritten abhaengig.
 
 **Andreas kann jetzt auf einen Blick sehen:**
 - Ist Core erreichbar? → `sensor.pilotsuite_core_connection`
@@ -76,7 +78,7 @@ v15.0.0 bringt PilotSuite auf Phase-7-Niveau: Production-Ready. Core-Connection 
 
 | Komponente | Version |
 |---|---|
-| PilotSuite HA Add-on | **15.0.0** |
+| PilotSuite HA Add-on | **15.0.1** |
 | PilotSuite Core | **15.0.0** (Paired) |
 | Home Assistant | **2024.4.0+** |
 | Python | **3.11+** |
@@ -89,7 +91,7 @@ PilotSuite Vision (v14.6.5):
 
 > "Das Haus soll sich Ihnen anpassen — nicht Sie sich Ihrem Zuhause."
 
-v15.0.0 Operationalisiert:
+v15.0.1 operationalisiert zusaetzlich:
 
 - **Lebenslanger Begleiter:** Zone-Matching versteht deutsche Raeume (kinderzimmer, kueche, balkon)
 - **Governance-first:** Presence-Hold = Nutzer entscheidet. Suggestions mit Confidence.
@@ -108,4 +110,4 @@ v15.0.0 Operationalisiert:
 
 ---
 
-*PilotSuite HA v15.0.0 — Lokal. Lernend. Lebenslang.*
+*PilotSuite HA v15.0.1 — Lokal. Lernend. Lebenslang.*
