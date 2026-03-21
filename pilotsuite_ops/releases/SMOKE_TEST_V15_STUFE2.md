@@ -66,11 +66,28 @@ Die folgenden Punkte können nur im Browser/UI verifiziert werden:
 | Stufe | Status |
 |-------|--------|
 | Stufe 1: CODE | ✅ DONE (Stxy) |
-| **Stufe 2: SMOKE** | **✅ PASS (mit 2 UI-Notierungen)** |
+| **Stufe 2: SMOKE** | **❌ FAIL — Blocker: Addon-Restart nötig** |
 
-**Befund:** Code-Layer + Runtime-Sensoren sind alle healthy. Die 2 Lovelace-UI-Checks (S4, S5) können nicht via API verifiziert werden und erfordern manuelle Sichtung.
+### KRITISCHER BEFUND
 
-**Empfehlung:** Stufe 3 (LIVE) kann freigegeben werden wenn Andreas oder ein Browser-User S4+S5 manuell bestätigt.
+**Das v15.0.0 Addon ist installiert aber der Container läuft noch auf v14.7.3.**
+
+```
+Smoke test (PilotClaw): erwartet sensor.copilot_ha_* → NOT FOUND
+Live-System:               sensor.pilotsuite_* → läuft auf v14.7.3
+Version-Drift:             addon = v15.0.0, container = v14.7.3
+```
+
+**Beweis:**
+```
+sensor.pilotsuite_styx_version: 14.7.3  ← NICHT v15.0.0
+sensor.popotsuite_core_api_v1: supported ← aber von v14.7.3
+```
+
+**Maßnahme:**Addon-Restart erforderlich. Ohne Restart ist v15.0.0 nicht live.
+
+### Lovelace UI Checks (S4, S5)
+- **NICHT TESTBAR** — addon läuft noch auf v14.7.3, UI-Elemente von v15.0.0 noch nicht aktiv
 
 ---
 
