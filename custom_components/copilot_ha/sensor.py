@@ -286,6 +286,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         MoodSensor(coordinator),
         MoodConfidenceSensor(coordinator),
         NeuronActivitySensor(coordinator),
+        # Module Dashboard Sensor (Core smart home modules)
+        ModuleDashboardSensor(hass, entry, coordinator),
         # Neuron Dashboard Sensors
         NeuronDashboardSensor(coordinator),
         MoodHistorySensor(coordinator),
@@ -1248,3 +1250,66 @@ class CalendarSensor(SensorEntity):
             }
         except Exception:
             return {}
+
+
+# ---------------------------------------------------------------------------
+# Module Dashboard Sensor (v14.9.x)
+# Polls /api/v1/modules/dashboard from Core and surfaces module status in HA.
+# Part of Andreas' E2E module configuration directive.
+# ---------------------------------------------------------------------------
+
+class ModuleDashboardSensor(CopilotBaseEntity, SensorEntity):
+    """Surface Core module dashboard as HA sensor.
+
+    Shows aggregated status of all 5 smart home modules (light, music,
+    climate, cover, security) from Core's /api/v1/modules/dashboard.
+    Attributes expose per-module state for HA automation.
+    """
+
+    _attr_icon = "mdi:view-dashboard-outline"
+    _attr_has_entity_name = True
+    _attr_native_unit_of_measurement = "modules"
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, coordinator) -> None:
+        self._hass = hass
+        self._entry = entry
+        self._coordinator = coordinator
+        self._attr_unique_id = f"{entry.entry_id}_module_dashboard"
+        self._attr_name = "PilotSuite Module Dashboard"
+
+    @property
+    def native_value(self) -> str | None:
+        try:
+            modules = self._coordinator.data.get("modules", {})
+            if not modules:
+                return "unknown"
+            active = [m for m, d in modules.items() if d.get("ok", False)]
+            return f"{len(active)}/{len(modules)}"
+        except Exception:
+            return "unavailable"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        try:
+            modules = self._coordinator.data.get("modules", {})
+            if not modules:
+                return {}
+            attrs = {}
+            for module_id, data in modules.items():
+                attrs[module_id] = {
+                    "ok": data.get("ok", False),
+                    "zones_active": data.get("zones_active", 0),
+                    "errors": data.get("errors", 0),
+                }
+            return attrs
+        except Exception:
+            return {}
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_unsub(
+            self._coordinator.async_add_listener(self._async_update)
+        )
+
+    @callback
+    def _async_update(self) -> None:
+        self.async_write_ha_state()
