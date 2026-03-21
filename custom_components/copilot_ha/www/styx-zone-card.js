@@ -77,7 +77,7 @@ class StyxZoneCard extends _ZoneBase {
 
   static getStubConfig() {
     return {
-      entity: 'sensor.copilot_ha_habitus_zones',
+      entity: 'sensor.pilotsuite_habitus_zones',
       show_mood: true,
       show_neuron_activity: true,
       show_quick_actions: true,
