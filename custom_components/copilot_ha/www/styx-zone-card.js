@@ -305,12 +305,18 @@ class StyxZoneCard extends _ZoneBase {
 
   _callPresenceHoldService(zoneId, hold) {
     if (!this._hass) return;
+    
+    // Set syncing state on the pill
+    this._setHoldSyncState(zoneId, 'syncing');
+    
     // Use copilot_ha REST command if available, otherwise dispatch event for companion handler
     try {
       this._hass.callService('rest_command', 'zone_presence_hold', {
         entity_id: `zone.${zoneId}`,
         hold,
       });
+      // Poll for confirmation after 500ms and timeout after 5s
+      this._pollHoldSyncStatus(zoneId, hold, Date.now());
     } catch (_) {
       // Fallback: dispatch DOM event for external handler (companion app / automation)
       this.dispatchEvent(new CustomEvent('presence-hold', {
@@ -318,7 +324,63 @@ class StyxZoneCard extends _ZoneBase {
         bubbles: true,
         composed: true,
       }));
+      this._setHoldSyncState(zoneId, 'pending');
     }
+  }
+  
+  _setHoldSyncState(zoneId, state) {
+    // state: 'syncing' | 'synced' | 'failed' | 'pending'
+    const card = this.shadowRoot?.querySelector(`.zone-card[data-zone="${zoneId}"]`);
+    if (!card) return;
+    
+    const holdContainer = card.querySelector('.zone-card-hold');
+    if (!holdContainer) return;
+    
+    // Remove previous sync states
+    holdContainer.classList.remove('syncing', 'synced', 'failed');
+    
+    if (state === 'syncing') {
+      holdContainer.classList.add('syncing');
+      holdContainer.setAttribute('data-sync-status', 'syncing');
+    } else if (state === 'failed') {
+      holdContainer.classList.add('failed');
+      holdContainer.setAttribute('data-sync-status', 'failed');
+    } else {
+      holdContainer.removeAttribute('data-sync-status');
+    }
+  }
+  
+  _pollHoldSyncStatus(zoneId, expectedHold, startTime) {
+    const TIMEOUT_MS = 5000;
+    const POLL_INTERVAL_MS = 500;
+    
+    const check = () => {
+      const elapsed = Date.now() - startTime;
+      
+      if (elapsed > TIMEOUT_MS) {
+        // Timeout → mark failed
+        this._setHoldSyncState(zoneId, 'failed');
+        return;
+      }
+      
+      // Check if zone data reflects the expected hold state
+      const { zones } = this._getZonesData();
+      const zone = zones.find(z => (z.zone_id || z.name?.toLowerCase().replace(/\s+/g, '_')) === zoneId);
+      
+      if (zone && zone.presence_hold === expectedHold) {
+        // Sync confirmed
+        this._setHoldSyncState(zoneId, 'synced');
+        // Clear synced indicator after 2s
+        setTimeout(() => this._setHoldSyncState(zoneId, 'idle'), 2000);
+        return;
+      }
+      
+      // Continue polling
+      setTimeout(check, POLL_INTERVAL_MS);
+    };
+    
+    // Start first check after a short delay
+    setTimeout(check, POLL_INTERVAL_MS);
   }
 
   _getModuleStates(zoneId) {
@@ -1089,6 +1151,43 @@ class StyxZoneCard extends _ZoneBase {
         }
         .hold-pill .mdi {
           font-size: 0.85rem;
+        }
+        
+        /* Sync status indicators for hold pills */
+        .zone-card-hold.syncing .hold-pills::after {
+          content: "";
+          display: inline-block;
+          width: 12px;
+          height: 12px;
+          margin-left: 6px;
+          border: 2px solid var(--ps-primary, #6366f1);
+          border-top-color: transparent;
+          border-radius: 50%;
+          animation: hold-spin 1s linear infinite;
+        }
+        @keyframes hold-spin {
+          to { transform: rotate(360deg); }
+        }
+        .zone-card-hold.failed {
+          background: rgba(239, 68, 68, 0.08);
+          border-radius: 6px;
+        }
+        .zone-card-hold.failed .hold-label::after {
+          content: " ⚠";
+          color: #ef4444;
+        }
+        .zone-card-hold.synced .hold-pills::after {
+          content: "✓";
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 14px;
+          height: 14px;
+          margin-left: 6px;
+          background: #22c55e;
+          color: white;
+          border-radius: 50%;
+          font-size: 8px;
         }
       </style>
       <ha-card>
