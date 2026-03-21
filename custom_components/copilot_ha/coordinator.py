@@ -878,6 +878,8 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         # ── Multi-tier adaptive polling state ───────────────────────────
         self._poll_generation: int = 0       # Monotonic counter, decides priority tiers
         self._consecutive_no_changes: int = 0  # Unchanged polls → stretch interval
+        self._consecutive_failures: int = 0    # API failures toward Core
+        self._last_fetch_duration_s: float = 0.0  # Last successful fetch duration
         self._previous_mood: str | None = None   # For change detection
         self._previous_zone_modes: dict[str, str] = {}  # zone_id → mode
         self._last_webhook_ts: float = 0.0   # time.monotonic() of last webhook push
@@ -1111,6 +1113,7 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         )
 
         last_err: Exception | None = None
+        start = time.monotonic()
         for attempt in range(3):
             try:
                 # ── Parallel batch 1: HIGH + conditional MEDIUM/LOW ──
@@ -1256,6 +1259,8 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
 
                 # Circuit breaker: successful cycle → reset
                 self._circuit_breaker.record_success()
+                self._consecutive_failures = 0
+                self._last_fetch_duration_s = time.monotonic() - start
                 return result
             except CopilotApiError as err:
                 last_err = err
@@ -1277,6 +1282,7 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
 
         # All retries exhausted → record failure for circuit breaker
         self._circuit_breaker.record_failure()
+        self._consecutive_failures += 1
         if last_err is None:
             last_err = RuntimeError("unknown API error")
         _LOGGER.warning("PilotSuite API unreachable after 3 attempts: %s", last_err)

@@ -37,6 +37,7 @@ from .habitus_zones_store_v2 import async_get_zones_v2
 from .habitus_zone_aggregates import build_zone_average_sensors
 from .core_v1_entities import CoreApiV1StatusSensor
 from .systemhealth_entities import SystemHealthEntityCountSensor, SystemHealthSqliteDbSizeSensor
+from .system_status_sensors import CoreConnectionSensor, PollIntervalSensor, ApiFailuresSensor, ModulesReadySensor
 from .mesh_monitoring import (
     ZWaveNetworkHealthSensor,
     ZWaveDevicesOnlineSensor,
