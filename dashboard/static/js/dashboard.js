@@ -480,6 +480,9 @@ class HabitusDashboard {
     const meta = this._getZoneMeta(zoneId);
     const requiredKeys = ['temperature', 'targetTemp', 'humidity', 'lights', 'brightness'];
     const missingKeys = requiredKeys.filter(k => data[k] === undefined || data[k] === null);
+    // Optional: presence + media_playing from Core modules
+    const hasPresence = data.presence !== undefined && data.presence !== null;
+    const hasMedia = data.media_playing !== undefined && data.media_playing !== null;
 
     const isStale = Boolean(meta.stale || this._globalStale || !this.connected);
     const isPartial = missingKeys.length > 0;
@@ -553,6 +556,41 @@ class HabitusDashboard {
           </div>
         </div>
       </div>
+
+      ${hasPresence ? `
+      <div class="zone-card widget widget-container card" data-widget-id="presence-${zoneId}" data-x="0" data-y="0">
+        <div class="zone-card-header">
+          <div class="zone-card-icon"><i class="mdi mdi-account-multiple"></i></div>
+          <div class="zone-card-status"><span class="status-dot ${statusDotClass}"></span><span>${statusText}</span></div>
+        </div>
+        <div class="zone-card-title">Anwesenheit</div>
+        <div class="zone-card-metrics">
+          <div class="zone-metric">
+            <span class="zone-metric-label">Erkannt</span>
+            <span class="zone-metric-value">${data.presence ? 'Ja' : 'Nein'}</span>
+          </div>
+          ${data.person_count !== undefined ? `
+          <div class="zone-metric">
+            <span class="zone-metric-label">Personen</span>
+            <span class="zone-metric-value">${data.person_count}</span>
+          </div>` : ''}
+        </div>
+      </div>` : ''}
+
+      ${hasMedia ? `
+      <div class="zone-card widget widget-container card" data-widget-id="media-${zoneId}" data-x="0" data-y="0">
+        <div class="zone-card-header">
+          <div class="zone-card-icon"><i class="mdi ${data.media_playing ? 'mdi-play-circle' : 'mdi-pause-circle'}"></i></div>
+          <div class="zone-card-status"><span class="status-dot ${statusDotClass}"></span><span>${statusText}</span></div>
+        </div>
+        <div class="zone-card-title">Medien</div>
+        <div class="zone-card-metrics">
+          <div class="zone-metric">
+            <span class="zone-metric-label">Status</span>
+            <span class="zone-metric-value">${data.media_playing ? 'Abspielen' : 'Pausiert'}</span>
+          </div>
+        </div>
+      </div>` : ''}
     `;
 
     // Drag & Drop optional
