@@ -583,6 +583,28 @@ class StyxSuggestionsCard extends _SugBase {
                 ${stepsValue}
               </div>
 
+              ${(selected.pattern || selected.lift || selected.confidence) ? `
+              <details class="reasoning-expander">
+                <summary>Begründung</summary>
+                <div class="reasoning-grid">
+                  ${selected.confidence != null ? `
+                  <div class="reasoning-item">
+                    <span class="reasoning-label">Confidence</span>
+                    <span class="reasoning-value">${this._confidenceBadge(selected.confidence)}</span>
+                  </div>` : ''}
+                  ${selected.pattern ? `
+                  <div class="reasoning-item">
+                    <span class="reasoning-label">Pattern</span>
+                    <code class="reasoning-code">${this._esc(String(selected.pattern))}</code>
+                  </div>` : ''}
+                  ${selected.lift != null ? `
+                  <div class="reasoning-item">
+                    <span class="reasoning-label">Lift</span>
+                    <span class="reasoning-value">${Number(selected.lift).toFixed(2)}×</span>
+                  </div>` : ''}
+                </div>
+              </details>` : ''}
+
               ${details ? `
                 <div class="detail-section">
                   <div class="detail-label">Details</div>
@@ -917,6 +939,48 @@ class StyxSuggestionsCard extends _SugBase {
           overflow: auto;
           font-size: 0.75rem;
           border: 1px solid var(--ps-border, rgba(255,255,255,0.08));
+        }
+        .reasoning-expander {
+          margin-top: 8px;
+          border: 1px solid var(--ps-border, rgba(255,255,255,0.12));
+          border-radius: var(--ps-radius-sm, 10px);
+          overflow: hidden;
+        }
+        .reasoning-expander summary {
+          padding: 8px 12px;
+          cursor: pointer;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: var(--ps-accent, #4fc3f7);
+          user-select: none;
+          background: rgba(79,195,247,0.08);
+        }
+        .reasoning-expander summary:hover {
+          background: rgba(79,195,247,0.14);
+        }
+        .reasoning-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 10px 12px;
+        }
+        .reasoning-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .reasoning-label {
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
+        }
+        .reasoning-code {
+          font-size: 0.7rem;
+          background: rgba(0,0,0,0.25);
+          padding: 2px 6px;
+          border-radius: 4px;
+          color: var(--ps-accent, #4fc3f7);
+          word-break: break-all;
         }
       </style>
       <div class="card">
