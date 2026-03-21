@@ -3,7 +3,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-// static/utils/card-form-helper.ts
+// dashboard/static/utils/card-form-helper.ts
 function buildHaFormSchema(fields, options = {}) {
   const schema = [];
   schema.push({
@@ -22,6 +22,73 @@ function buildHaFormSchema(fields, options = {}) {
     schema.push(buildHaFormFieldSchema(field));
   }
   return schema;
+}
+function validateCardConfig(config, schema) {
+  if (!config || typeof config !== "object") {
+    return false;
+  }
+  const schemaByName = new Map(
+    schema.filter((entry) => entry.type !== "grid").map((entry) => [entry.name, entry])
+  );
+  for (const field of schemaByName.values()) {
+    try {
+      assertFieldSchemaConsistency(field);
+    } catch (error) {
+      console.warn(
+        `[PS-198] Invalid field schema '${field.name}':`,
+        error instanceof Error ? error.message : error
+      );
+      return false;
+    }
+    const value = config[field.name];
+    if (field.required && isMissingFieldValue(field, value)) {
+      console.warn(`[PS-198] Missing required field: ${field.name}`);
+      return false;
+    }
+    if (value === void 0 || value === null) {
+      continue;
+    }
+    if (!isValidFieldValue(field, value)) {
+      console.warn(
+        `[PS-198] Invalid ${describeFieldValueType(field)} field '${field.name}':`,
+        value
+      );
+      return false;
+    }
+  }
+  for (const field of schemaByName.values()) {
+    if (!field.context) {
+      continue;
+    }
+    const { filter_entity: filterEntity, icon_entity: iconEntity } = field.context;
+    if (filterEntity && !schemaByName.has(filterEntity)) {
+      console.warn(
+        `[PS-198] filter_entity '${filterEntity}' referenced by '${field.name}' does not exist`
+      );
+      return false;
+    }
+    if (filterEntity && field.type === "attribute") {
+      const referencedField = schemaByName.get(filterEntity);
+      if (referencedField && referencedField.type !== "entity") {
+        console.warn(
+          `[PS-198] Attribute field '${field.name}' requires an entity field for filter_entity, got '${referencedField.type}'`
+        );
+        return false;
+      }
+    }
+    if (iconEntity && !schemaByName.has(iconEntity)) {
+      console.warn(
+        `[PS-198] icon_entity '${iconEntity}' referenced by '${field.name}' does not exist`
+      );
+      return false;
+    }
+  }
+  return true;
+}
+function assertConfig(config, schema) {
+  if (!validateCardConfig(config, schema)) {
+    throw new Error("[PS-198] Invalid card config");
+  }
 }
 function isMissingFieldValue(field, value) {
   if (value === void 0 || value === null) {
@@ -46,6 +113,7 @@ function isValidFieldValue(field, value) {
     case "entity":
     case "icon":
     case "attribute":
+    case "array":
       return isMultipleField(field) ? isStringArray(value) : typeof value === "string";
     case "text":
       if (isMultipleField(field)) {
@@ -67,11 +135,10 @@ function describeFieldValueType(field) {
     case "entity":
     case "icon":
     case "attribute":
+    case "array":
       return multiple ? "string[]" : "string";
     case "text":
-      if (multiple) {
-        return "string[]";
-      }
+      if (multiple) return "string[]";
       return allowsStringArray(field) ? "string | string[]" : "string";
   }
 }
@@ -112,15 +179,9 @@ function selectorForField(field) {
         }
       };
     case "boolean":
-      return {
-        boolean: {}
-      };
+      return { boolean: {} };
     case "text":
-      return {
-        text: {
-          ...field.multiline ? { multiline: true } : {}
-        }
-      };
+      return { text: { ...field.multiline ? { multiline: true } : {} } };
     case "number":
       return {
         number: {
@@ -130,23 +191,14 @@ function selectorForField(field) {
         }
       };
     case "icon":
-      return {
-        icon: {
-          ...field.iconPlaceholder ? { placeholder: field.iconPlaceholder } : {}
-        }
-      };
+      return { icon: { ...field.iconPlaceholder ? { placeholder: field.iconPlaceholder } : {} } };
     case "attribute": {
-      const entityId = resolveAttributeEntityId(field.attributeEntityId);
-      return {
-        attribute: {
-          ...entityId ? { entity_id: entityId } : {}
-        }
-      };
+      const entityId = normalizeNonEmptyString(field.attributeEntityId);
+      return { attribute: { ...entityId ? { entity_id: entityId } : {} } };
     }
+    case "array":
+      return { array: { ...field.arrayMax !== void 0 ? { max: field.arrayMax } : {} } };
   }
-}
-function resolveAttributeEntityId(attributeEntityId) {
-  return normalizeNonEmptyString(attributeEntityId);
 }
 function isMultipleField(field) {
   if (field.multiple !== void 0) {
@@ -175,155 +227,369 @@ function normalizeNonEmptyString(value) {
 function isFieldSchema(field) {
   return field.type !== void 0 && field.selector !== void 0;
 }
+var CardFormHelper = {
+  buildHaFormSchema,
+  validateCardConfig,
+  assertConfig
+};
+if (typeof window !== "undefined") {
+  window.CardFormHelper = CardFormHelper;
+}
 
-// static/utils/editor-schema-validation.ts
-var ConfigValidationError = class extends Error {
-  constructor(message, field, expectedType, actualType) {
+// dashboard/static/utils/editor-schema-validation.ts
+var ConfigValidationError = class _ConfigValidationError extends Error {
+  constructor(message, field, expected, received, code = "SCHEMA_DRIFT", causes = []) {
     super(message);
+    this.message = message;
     this.field = field;
-    this.expectedType = expectedType;
-    this.actualType = actualType;
+    this.expected = expected;
+    this.received = received;
+    this.code = code;
+    this.causes = causes;
     this.name = "ConfigValidationError";
+    Object.setPrototypeOf(this, _ConfigValidationError.prototype);
+  }
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      field: this.field,
+      expected: this.expected,
+      received: this.received,
+      code: this.code,
+      causes: this.causes.map((c) => c.toJSON())
+    };
+  }
+  /** Short one-line summary for toast/UI. */
+  toShortString() {
+    if (this.field) {
+      return `${this.field}: ${this.message}`;
+    }
+    return this.message;
   }
 };
-function validateEditorSchema(config, schema, options = {}) {
-  if (!config || typeof config !== "object") {
-    throw new ConfigValidationError(
-      "Config must be a non-null object",
-      void 0,
-      "object",
-      typeof config
-    );
+function validateFieldAgainstSchema(fieldName, fieldSchema, rawValue) {
+  const causes = [];
+  if (fieldSchema.type === "grid") {
+    return { ok: true, failedFields: [], causes: [] };
   }
-  const { strict = false, allowedExtraFields = [] } = options;
-  const formFields = schema.filter(
-    (entry) => entry.type !== "grid"
-  );
-  const fieldMap = new Map(
-    formFields.map((f) => [f.name, f])
-  );
-  validateFieldDefinitions(formFields);
-  for (const field of formFields) {
-    if (field.required) {
-      const value = config[field.name];
-      if (isMissingFieldValue(field, value)) {
-        throw new ConfigValidationError(
-          `Required field '${field.name}' is missing or empty`,
-          field.name,
-          "present",
-          String(value)
-        );
-      }
-    }
-  }
-  for (const [fieldName, fieldValue] of Object.entries(config)) {
-    const fieldSchema = fieldMap.get(fieldName);
-    if (!fieldSchema) {
-      if (strict && !allowedExtraFields.includes(fieldName)) {
-        throw new ConfigValidationError(
-          `Unexpected field '${fieldName}' in strict mode`,
+  const received = receivedType(rawValue);
+  if (fieldSchema.required) {
+    if (rawValue === void 0 || rawValue === null || typeof rawValue === "string" && rawValue.trim() === "") {
+      return {
+        ok: false,
+        error: new ConfigValidationError(
+          `Erforderliches Feld '${fieldName}' ist leer`,
           fieldName,
-          "not present",
-          "present"
-        );
-      }
-      continue;
+          describeExpectedType(fieldSchema),
+          received,
+          "REQUIRED_FIELD_MISSING"
+        ),
+        failedFields: [fieldName],
+        causes: []
+      };
     }
-    validateFieldType(fieldName, fieldValue, fieldSchema);
   }
-  validateContextReferences(formFields, fieldMap);
+  if (rawValue !== void 0 && rawValue !== null) {
+    if (!fieldValueMatchesType(fieldSchema, rawValue)) {
+      return {
+        ok: false,
+        error: new ConfigValidationError(
+          `Feld '${fieldName}' hat ung\xFCltigen Typ`,
+          fieldName,
+          describeExpectedType(fieldSchema),
+          received,
+          "SCHEMA_DRIFT"
+        ),
+        failedFields: [fieldName],
+        causes: []
+      };
+    }
+  }
+  return { ok: true, failedFields: [], causes: [] };
 }
-function validateFieldType(fieldName, value, schema) {
-  if (!schema.required && (value === void 0 || value === null)) {
-    return;
-  }
-  if (!isValidFieldValue(schema, value)) {
-    throw new ConfigValidationError(
-      `Field '${fieldName}' must be ${describeFieldValueType(schema)}`,
-      fieldName,
-      describeFieldValueType(schema),
-      describeActualValueType(value)
-    );
-  }
-}
-function validateFieldDefinitions(formFields) {
-  for (const field of formFields) {
-    try {
-      assertFieldSchemaConsistency(field);
-    } catch (error) {
-      throw new ConfigValidationError(
-        error instanceof Error ? error.message : String(error),
-        field.name,
-        describeFieldValueType(field),
-        describeActualValueType(field.default)
-      );
+function validateConfigFields(config, schema) {
+  const allFailedFields = [];
+  const allCauses = [];
+  for (const entry of schema) {
+    if (entry.type === "grid") continue;
+    const fieldSchema = entry;
+    const rawValue = config[fieldSchema.name];
+    const result = validateFieldAgainstSchema(fieldSchema.name, fieldSchema, rawValue);
+    if (!result.ok && result.error) {
+      allFailedFields.push(fieldSchema.name);
+      allCauses.push(result.error);
     }
   }
-}
-function validateContextReferences(formFields, fieldMap) {
-  for (const field of formFields) {
-    if (!field.context) {
-      continue;
-    }
-    const { filter_entity: filterEntity, icon_entity: iconEntity } = field.context;
-    if (filterEntity && !fieldMap.has(filterEntity)) {
-      throw new ConfigValidationError(
-        `Field '${field.name}' references non-existent context field '${filterEntity}'`,
-        field.name,
-        "valid context reference",
-        `missing '${filterEntity}'`
-      );
-    }
-    if (filterEntity && field.type === "attribute") {
-      const referencedField = fieldMap.get(filterEntity);
-      if (referencedField && referencedField.type !== "entity") {
-        throw new ConfigValidationError(
-          `Field '${field.name}' requires filter_entity '${filterEntity}' to reference an entity field`,
-          field.name,
-          "entity context reference",
-          referencedField.type
-        );
-      }
-    }
-    if (iconEntity && !fieldMap.has(iconEntity)) {
-      throw new ConfigValidationError(
-        `Field '${field.name}' references non-existent context field '${iconEntity}'`,
-        field.name,
-        "valid context reference",
-        `missing '${iconEntity}'`
-      );
-    }
-  }
-}
-function describeActualValueType(value) {
-  if (Array.isArray(value)) {
-    if (value.every((item) => typeof item === "string")) {
-      return "string[]";
-    }
-    if (value.every((item) => typeof item === "number" && Number.isFinite(item))) {
-      return "number[]";
-    }
-    return "array";
-  }
-  if (value === null) {
-    return "null";
-  }
-  return typeof value;
-}
-function buildConfigValidator(schema, options) {
-  return (config) => {
-    validateEditorSchema(config, schema, options);
+  return {
+    ok: allFailedFields.length === 0,
+    failedFields: allFailedFields,
+    causes: allCauses
   };
 }
+function detectUnexpectedFields(config, schema) {
+  const schemaFieldNames = new Set(
+    schema.filter((entry) => entry.type !== "grid" && "name" in entry).map((entry) => entry.name)
+  );
+  const unexpected = [];
+  for (const key of Object.keys(config)) {
+    if (!schemaFieldNames.has(key)) {
+      unexpected.push(key);
+    }
+  }
+  return unexpected;
+}
+function receivedType(value) {
+  if (value === null) return "null";
+  if (value === void 0) return "undefined";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+function describeExpectedType(field) {
+  if (field.type === "grid") return "grid";
+  if (field.type === "boolean") return "boolean";
+  if (field.type === "number") return field.multiple ? "number[]" : "number";
+  if (field.type === "text") {
+    if (field.multiple) return "string[]";
+    if (field.selector?.text?.multiline) {
+      return "string | string[]";
+    }
+    return "string";
+  }
+  return field.multiple ? "string[]" : "string";
+}
+function fieldValueMatchesType(field, value) {
+  switch (field.type) {
+    case "boolean":
+      return typeof value === "boolean";
+    case "number":
+      if (field.multiple) return Array.isArray(value) && value.every((v) => typeof v === "number" && Number.isFinite(v));
+      return typeof value === "number" && Number.isFinite(value);
+    case "entity":
+    case "icon":
+    case "attribute":
+    case "array":
+      if (field.multiple) return Array.isArray(value) && value.every((v) => typeof v === "string");
+      return typeof value === "string";
+    case "text":
+      if (field.multiple) return Array.isArray(value) && value.every((v) => typeof v === "string");
+      if (field.selector?.text?.multiline) {
+        return typeof value === "string" || Array.isArray(value) && value.every((v) => typeof v === "string");
+      }
+      return typeof value === "string";
+    default:
+      return false;
+  }
+}
+function buildConfigValidator(schema) {
+  return function(config) {
+    if (config === null || config === void 0 || typeof config !== "object") {
+      throw new ConfigValidationError(
+        "Konfiguration muss ein Objekt sein",
+        void 0,
+        "object",
+        receivedType(config),
+        "SCHEMA_DRIFT"
+      );
+    }
+    const record = config;
+    const unexpected = detectUnexpectedFields(record, schema);
+    if (unexpected.length > 0) {
+      throw new ConfigValidationError(
+        `Unbekannte Felder: ${unexpected.join(", ")}`,
+        void 0,
+        schemaFieldsSummary(schema),
+        `unknown: ${unexpected.join(", ")}`,
+        "SCHEMA_DRIFT",
+        []
+      );
+    }
+    const ps198Valid = validateCardConfig(record, schema);
+    if (!ps198Valid) {
+      const fieldResult = validateConfigFields(record, schema);
+      const topError = new ConfigValidationError(
+        fieldResult.failedFields.length > 0 ? `Validierungsfehler in: ${fieldResult.failedFields.join(", ")}` : "Konfiguration entspricht nicht dem Schema",
+        void 0,
+        schemaFieldsSummary(schema),
+        "object",
+        "SCHEMA_DRIFT",
+        fieldResult.causes
+      );
+      throw topError;
+    }
+    const cardResult = validateConfigFields(record, schema);
+    if (!cardResult.ok) {
+      throw new ConfigValidationError(
+        `Validierungsfehler in: ${cardResult.failedFields.join(", ")}`,
+        void 0,
+        schemaFieldsSummary(schema),
+        "object",
+        "SCHEMA_DRIFT",
+        cardResult.causes
+      );
+    }
+  };
+}
+function schemaFieldsSummary(schema) {
+  const names = schema.filter((entry) => entry.type !== "grid" && "name" in entry).map((entry) => entry.name);
+  return names.length > 0 ? names.join(" | ") : "unknown";
+}
+function validateEditorSchema(config, schema, cardName = "Card") {
+  if (!schema || schema.length === 0) {
+    throw new ConfigValidationError(
+      `${cardName}: Kein Schema definiert \u2014 Validierung nicht m\xF6glich`,
+      void 0,
+      "HaFormSchema[]",
+      receivedType(schema),
+      "SCHEMA_INTERNAL_ERROR"
+    );
+  }
+  if (config === null || config === void 0 || typeof config !== "object") {
+    throw new ConfigValidationError(
+      `${cardName}: Konfiguration muss ein Objekt sein`,
+      void 0,
+      "object",
+      receivedType(config),
+      "SCHEMA_DRIFT"
+    );
+  }
+  const record = config;
+  const unexpected = detectUnexpectedFields(record, schema);
+  if (unexpected.length > 0) {
+    throw new ConfigValidationError(
+      `${cardName}: Unbekannte Felder \u2014 m\xF6gliche Schema-Drift: ${unexpected.join(", ")}`,
+      void 0,
+      schemaFieldsSummary(schema),
+      `extra: ${unexpected.join(", ")}`,
+      "SCHEMA_DRIFT"
+    );
+  }
+  if (!validateCardConfig(record, schema)) {
+    const fieldResult = validateConfigFields(record, schema);
+    const detail = fieldResult.failedFields.length > 0 ? `Fehlgeschlagen: ${fieldResult.failedFields.join(", ")}` : "Typ-/Pflichtfeld-Fehler";
+    throw new ConfigValidationError(
+      `${cardName}: ${detail}`,
+      void 0,
+      schemaFieldsSummary(schema),
+      "object",
+      "SCHEMA_DRIFT",
+      fieldResult.causes
+    );
+  }
+}
+async function apiSaveWithValidation(apiCall, rawConfig, schema, payload, cardName = "ZoneEditor") {
+  validateEditorSchema(rawConfig, schema, cardName);
+  return apiCall(payload);
+}
+if (typeof window !== "undefined") {
+  window.ConfigValidationError = ConfigValidationError;
+  window.validateEditorSchema = validateEditorSchema;
+  window.buildConfigValidator = buildConfigValidator;
+  window.apiSaveWithValidation = apiSaveWithValidation;
+}
 
-// static/utils/card-registration.ts
-function registerCustomCard(card) {
+// dashboard/static/utils/card-registration.ts
+var CardRegistrationError = class _CardRegistrationError extends Error {
+  constructor(code, message, cardType, detail) {
+    super(message);
+    this.code = code;
+    this.cardType = cardType;
+    this.detail = detail;
+    this.name = "CardRegistrationError";
+    Object.setPrototypeOf(this, _CardRegistrationError.prototype);
+  }
+};
+function ensureDocumentationURL(card) {
   if (!card.documentationURL) {
     card.documentationURL = `/docs/cards/${card.type.replace(/-card$/, "")}`;
   }
   if (!card.documentationURL.startsWith("http") && !card.documentationURL.startsWith("/")) {
-    console.warn(`[PS-174] Invalid documentationURL for ${card.type}: ${card.documentationURL}`);
-    card.documentationURL = `/docs/cards/${card.type}`;
+    throw new CardRegistrationError(
+      "INVALID_DOCUMENTATION_URL",
+      `Invalid documentationURL for ${card.type}: must start with / or http`,
+      card.type,
+      card.documentationURL
+    );
+  }
+}
+function validateGetConfigForm(cardClass, cardType) {
+  if (typeof cardClass !== "function") {
+    throw new CardRegistrationError(
+      "MISSING_GET_CONFIG_FORM",
+      `Card class for '${cardType}' is not a constructor function`,
+      cardType
+    );
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(cardClass, "getConfigForm");
+  if (!descriptor) {
+    throw new CardRegistrationError(
+      "MISSING_GET_CONFIG_FORM",
+      `Card '${cardType}' must implement 'static async getConfigForm(): Promise<HaFormSchema[]>'`,
+      cardType
+    );
+  }
+  if (typeof descriptor.value !== "function") {
+    throw new CardRegistrationError(
+      "MISSING_GET_CONFIG_FORM",
+      `getConfigForm on '${cardType}' exists but is not a function`,
+      cardType
+    );
+  }
+}
+function validateHaFormSchema(schema, cardType) {
+  if (!Array.isArray(schema)) {
+    throw new CardRegistrationError(
+      "INVALID_GET_CONFIG_FORM",
+      `getConfigForm() of '${cardType}' must return an array, got ${typeof schema}`,
+      cardType,
+      typeof schema
+    );
+  }
+  for (const [index, entry] of schema.entries()) {
+    if (!entry || typeof entry !== "object") {
+      throw new CardRegistrationError(
+        "INVALID_SCHEMA_FIELD",
+        `Schema[${index}] in '${cardType}' is not an object`,
+        cardType
+      );
+    }
+    const e = entry;
+    if (typeof e.type !== "string") {
+      throw new CardRegistrationError(
+        "INVALID_SCHEMA_FIELD",
+        `Schema[${index}] in '${cardType}' missing 'type' (must be string)`,
+        cardType,
+        `entry.type=${e.type}`
+      );
+    }
+    if (e.selector !== void 0 && (e.selector === null || typeof e.selector !== "object")) {
+      throw new CardRegistrationError(
+        "INVALID_SCHEMA_FIELD",
+        `Schema[${index}] in '${cardType}' has invalid selector (must be object or undefined)`,
+        cardType,
+        `entry.selector=${String(e.selector)}`
+      );
+    }
+  }
+}
+function registerCustomCard(card, cardClass) {
+  ensureDocumentationURL(card);
+  if (cardClass) {
+    validateGetConfigForm(cardClass, card.type);
+    try {
+      const result = cardClass.getConfigForm();
+      const schema = result instanceof Promise ? void 0 : result;
+      if (schema !== void 0) {
+        validateHaFormSchema(schema, card.type);
+      }
+    } catch (err) {
+      if (err instanceof CardRegistrationError) throw err;
+      throw new CardRegistrationError(
+        "SCHEMA_VALIDATION_FAILED",
+        `getConfigForm() of '${card.type}' threw: ${err instanceof Error ? err.message : String(err)}`,
+        card.type
+      );
+    }
   }
   if (!window.customCards) {
     window.customCards = [];
@@ -332,10 +598,10 @@ function registerCustomCard(card) {
   const existing = customCards.find((registeredCard) => registeredCard.type === card.type);
   if (existing) {
     Object.assign(existing, card);
-    console.log(`[PS-174] Updated card registration: ${card.type}`);
+    console.log(`[PS-174/PS-219] Updated card registration: ${card.type}`);
   } else {
     customCards.push(card);
-    console.log(`[PS-174] Registered card: ${card.type} \u2192 ${card.documentationURL}`);
+    console.log(`[PS-174/PS-219] Registered card: ${card.type} \u2192 ${card.documentationURL}`);
   }
 }
 function validateCardDocumentation() {
@@ -354,7 +620,7 @@ if (typeof window !== "undefined" && window.customCards) {
   validateCardDocumentation();
 }
 
-// static/utils/zone-editor-api-client.ts
+// dashboard/static/utils/zone-editor-api-client.ts
 function resolveZoneEditorUrl(path, baseUrl) {
   if (baseUrl) return `${baseUrl}${path}`;
   const dashboardBase = window.PILOTSUITE_DASHBOARD_BASE;
@@ -485,7 +751,7 @@ var ZoneEditorApiClient = class {
 };
 var zoneEditorApi = new ZoneEditorApiClient();
 
-// static/cards/styx-zone-creator-card.ts
+// dashboard/static/cards/styx-zone-creator-card.ts
 var ZONE_CREATOR_MODULE_TYPES = [
   "LIGHT",
   "AUDIO",
@@ -893,7 +1159,7 @@ registerCustomCard({
   default: StyxZoneCreatorCard.getStubConfig()
 });
 
-// static/cards/habitus-brain-card.ts
+// dashboard/static/cards/habitus-brain-card.ts
 var BRAIN_CARD_FIELDS = [
   // --- Header ---
   {
@@ -1201,7 +1467,7 @@ registerCustomCard({
   default: HabitusBrainCard.getStubConfig()
 });
 
-// static/cards/zone-module-editor-card.ts
+// dashboard/static/cards/zone-module-editor-card.ts
 var ZONE_MODULE_TYPES = [
   "LIGHT",
   "AUDIO",
