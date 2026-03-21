@@ -12,9 +12,9 @@
 v15.0.0 bringt PilotSuite auf Phase-7-Niveau: Production-Ready. Core-Connection jetzt transparent in HA Diagnostics. Confidence-Scores fuer Suggestions. Presence-Hold funktioniert in Lovelace. Keine UI-Illusionen — jede Aktion ist erklaerbar.
 
 **Andreas kann jetzt auf einen Blick sehen:**
-- Ist Core erreichbar? → `sensor.copilot_ha_core_connection`
-- Wie oft hat API gefehlt? → `sensor.copilot_ha_api_failures`
-- Wie aktuell sind die Daten? → `sensor.copilot_ha_poll_interval`
+- Ist Core erreichbar? → `sensor.pilotsuite_core_connection`
+- Wie oft hat API gefehlt? → `sensor.pilotsuite_api_failures`
+- Wie aktuell sind die Daten? → `sensor.pilotsuite_poll_interval`
 
 **Das Haus passt sich an — nicht umgekehrt.**
 
@@ -28,10 +28,17 @@ v15.0.0 bringt PilotSuite auf Phase-7-Niveau: Production-Ready. Core-Connection 
 
 | Sensor | Zeigt |
 |--------|-------|
-| `sensor.copilot_ha_core_connection` | connected / degraded / disconnected |
-| `sensor.copilot_ha_poll_interval` | Sekunden seit letztem Poll |
-| `sensor.copilot_ha_api_failures` | Consecutive failures Richtung Core |
+| `sensor.pilotsuite_core_connection` | connected / degraded / disconnected |
+| `sensor.pilotsuite_poll_interval` | Sekunden seit letztem Poll |
+| `sensor.pilotsuite_api_failures` | Consecutive failures Richtung Core |
 | `sensor.pilotsuite_modules_ready` | N/M Module geladen |
+
+### Phase 7 — Tiered Module Lazy-Loading
+
+- **TIER_EAGER** (3): legacy, brain_graph_sync, habitus_miner — immediate load
+- **TIER_DEFERRED** (4): background load nach 5s HA Startup
+- **TIER_ON_DEMAND** (26): load only on first access
+- **Schema TTL Cache**: 1h refresh statt Single-Fetch
 
 ### UX — Human-in-the-loop
 
@@ -51,8 +58,8 @@ v15.0.0 bringt PilotSuite auf Phase-7-Niveau: Production-Ready. Core-Connection 
 
 | Rolle | Nutzen |
 |-------|--------|
-| **Andreas (Betreiber)** | Core-Connection transparent. API-Fehler zählbar. Poll-Intervall sichtbar. |
-| **Tester** | Smoke + Live Test können starten. Alle Blocker aus v14.x behoben. |
+| **Andreas (Betreiber)** | Core-Connection transparent. API-Fehler zaehlbar. Poll-Intervall sichtbar. |
+| **Tester** | Smoke + Live Test koennen starten. Alle Blocker aus v14.x behoben. |
 | **Entwickler** | Saubere CI. Production-Grade Monitoring. |
 
 ---
@@ -61,7 +68,7 @@ v15.0.0 bringt PilotSuite auf Phase-7-Niveau: Production-Ready. Core-Connection 
 
 - **Home Assistant 2024.4.0+ erforderlich.**
 - Presence-Hold: Toggle `show_presence_hold: true` in styx-zone-card.js Card-Config.
-- Nach Update: Developer Tools → Sensoren → `copilot_ha*` filtern.
+- Nach Update: Developer Tools → Sensoren → `pilotsuite_*` filtern.
 
 ---
 
@@ -101,22 +108,4 @@ v15.0.0 Operationalisiert:
 
 ---
 
-## v15.0 — Freigabe-Stufen
-
-| Stufe | Inhalt | Status |
-|-------|--------|--------|
-| **code** | Alle Features implementiert, CI green | ✅ |
-| **smoke** | Andreas startet Smoke Test auf Live HA | ⏳ Pending |
-| **live** | Production Deployment | ⏳ Pending |
-
----
-
-## Offene UX-Luecken (v15.1)
-
-- Pattern+Reasoning Text in Suggestions Details-Expander (Backend-Daten vorhanden, UI zeigt nur Badge)
-- Governance-Modus (BEOBACHTEN/LERNEN/AUTONOM) noch nicht in HA sichtbar
-- Multi-User Awareness
-
----
-
-*PilotSuite Styx v15.0.0 — Lokal. Production. Vertrauenswuerdig.*
+*PilotSuite HA v15.0.0 — Lokal. Lernend. Lebenslang.*
