@@ -67,6 +67,9 @@ _LOGGER = logging.getLogger(__name__)
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    # Shared pending reconfigure data (accumulates across steps before final commit)
+    _reconfigure_data: dict = {}
+
     async def get_zone_entity_suggestions(self, zone_name: str) -> dict:
         """Get entity suggestions for a zone."""
         return await get_zone_entity_suggestions(self.hass, zone_name)
@@ -223,6 +226,139 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth(self, user_input: dict | None = None) -> FlowResult:
         return await self.async_step_manual_setup(user_input)
+
+    async def async_step_reconfigure(self, user_input: dict | None = None) -> FlowResult:
+        """Reconfigure an existing entry (HA 2024.4+ pattern).
+
+        Called when user clicks "Configure" on an existing integration entry.
+        Uses self._get_reconfigure_entry() which auto-sets context["config_entry_id"]
+        so subsequent options-flow steps are automatically linked to the entry.
+        Accumulates shared parameters (host/port/token/zones) in ConfigFlow._reconfigure_data
+        until the user explicitly returns to reconfigure_menu and finishes.
+        """
+        entry = self._get_reconfigure_entry()
+        self._entry = entry
+
+        # Seed shared reconfigure data from current entry — cleared on re-init
+        ConfigFlow._reconfigure_data = {}
+        base = merge_config_data(entry.data, entry.options)
+        for key in (CONF_HOST, CONF_PORT, CONF_TOKEN, CONF_TEST_LIGHT):
+            if key in base:
+                ConfigFlow._reconfigure_data[key] = base[key]
+
+        return self.async_show_menu(
+            step_id="reconfigure_menu",
+            menu_options=["reconfigure_connection", "reconfigure_zones", "back"],
+            description_placeholders={
+                "description": (
+                    f"PilotSuite reconfigure — {entry.title}\n\n"
+                    "Choose what you want to change:"
+                )
+            },
+        )
+
+    async def async_step_reconfigure_connection(self, user_input: dict | None = None) -> FlowResult:
+        """Reconfigure connection settings.
+
+        Validates and normalizes host/port/token and stores them in the shared
+        ConfigFlow._reconfigure_data dict. Nothing is written to the entry yet —
+        that happens only when the user finishes (back → abort with updated data).
+        """
+        return await self._async_step_reconfigure_connection(user_input, from_options_flow=False)
+
+    async def async_step_reconfigure_zones(self, user_input: dict | None = None) -> FlowResult:
+        """Reconfigure zones — delegates to OptionsFlowHandler."""
+        options_flow = OptionsFlowHandler(self._entry)
+        return await options_flow.async_step_habitus_zones(user_input)
+
+    async def async_step_back(self, user_input: dict | None = None) -> FlowResult:
+        """Return to reconfigure menu — apply accumulated shared params on exit."""
+        pending = ConfigFlow._reconfigure_data
+        if pending:
+            # Commit accumulated shared params to entry.data exactly once
+            updated_data = {**self._entry.data, **pending}
+            self.hass.config_entries.async_update_entry(self._entry, data=updated_data)
+            ConfigFlow._reconfigure_data = {}
+        return self.async_show_menu(
+            step_id="reconfigure_menu",
+            menu_options=["reconfigure_connection", "reconfigure_zones", "back"],
+            description_placeholders={
+                "description": (
+                    "PilotSuite reconfigure\n\n"
+                    "Choose what you want to change:"
+                )
+            },
+        )
+
+    # ── Shared reconfigure helpers ───────────────────────────────────
+
+    async def _async_step_reconfigure_connection(
+        self, user_input: dict | None, from_options_flow: bool
+    ) -> FlowResult:
+        """Shared connection step logic for both ConfigFlow and OptionsFlow reconfigure.
+
+        Args:
+            user_input: Form input dict (None = show form).
+            from_options_flow: If True, called from OptionsFlowHandler so it owns
+                the write-back via _create_merged_entry; ConfigFlow version
+                accumulates into _reconfigure_data instead.
+        """
+        if user_input is not None:
+            # Normalize host/port
+            base = merge_config_data(self._entry.data, self._entry.options)
+            host, port = normalize_host_port(
+                user_input.get(CONF_HOST, base.get(CONF_HOST)),
+                user_input.get(CONF_PORT, base.get(CONF_PORT)),
+            )
+            user_input[CONF_HOST] = host
+            user_input[CONF_PORT] = port
+
+            # Token handling: support clear / new value / keep existing
+            clear_token = user_input.pop("_clear_token", False)
+            new_token = user_input.get(CONF_TOKEN, "")
+            if clear_token:
+                user_input[CONF_TOKEN] = ""
+            elif not new_token:
+                user_input[CONF_TOKEN] = str(base.get(CONF_TOKEN, "") or "")
+            if CONF_TOKEN in user_input:
+                user_input[CONF_TOKEN] = user_input[CONF_TOKEN].strip()
+
+            if from_options_flow:
+                # OptionsFlow writes immediately via _create_merged_entry
+                return None  # caller handles write-back
+            else:
+                # ConfigFlow: accumulate into shared dict
+                for key in (CONF_HOST, CONF_PORT, CONF_TOKEN, CONF_TEST_LIGHT):
+                    if key in user_input:
+                        ConfigFlow._reconfigure_data[key] = user_input[key]
+                return self.async_show_menu(
+                    step_id="reconfigure_menu",
+                    menu_options=["reconfigure_connection", "reconfigure_zones", "back"],
+                    description_placeholders={
+                        "description": (
+                            "Connection saved. Choose next action or go back to apply."
+                        )
+                    },
+                )
+
+        # Show form with current values (from entry or pending shared data)
+        base = merge_config_data(self._entry.data, self._entry.options)
+        for key, val in ConfigFlow._reconfigure_data.items():
+            base[key] = val
+
+        webhook_id = base.get("webhook_id")
+        ha_base = self.hass.config.internal_url or self.hass.config.external_url or ""
+        webhook_url = (
+            f"{ha_base}/api/webhook/{webhook_id}"
+            if webhook_id and ha_base
+            else (f"/api/webhook/{webhook_id}" if webhook_id else "(generated after first setup)")
+        )
+        token_hint = "** SET **" if base.get(CONF_TOKEN) else ""
+
+        from .config_schema_builders import build_connection_schema
+
+        schema = vol.Schema(build_connection_schema(base, webhook_url, token_hint))
+        return self.async_show_form(step_id="reconfigure_connection", data_schema=schema)
 
     # ── Wizard dispatcher ────────────────────────────────────────────
 

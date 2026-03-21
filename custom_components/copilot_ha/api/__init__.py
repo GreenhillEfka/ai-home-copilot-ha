@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from typing import Any, Optional
 
 import aiohttp
+from aiohttp import web
 
 from ..const import HEADER_AUTH
+from .models import CommonErrorResponse
 
 
 @dataclass
@@ -16,6 +19,48 @@ class CopilotStatus:
 
 class CopilotApiError(Exception):
     pass
+
+
+# ==================== Standardized Error Response Helper ====================
+
+
+def _error_response(
+    code: str,
+    message: str,
+    field: str | None = None,
+    context: dict[str, Any] | None = None,
+    status: int = 400,
+) -> web.Response:
+    """Create a standardized error response.
+    
+    All HA API endpoints should use this helper to ensure consistent
+    error response shapes across the integration.
+    
+    Args:
+        code: Error code (e.g., "VALIDATION_ERROR", "NOT_FOUND")
+        message: Human-readable error message
+        field: Optional field name that caused the error
+        context: Optional additional debug information
+        status: HTTP status code (default 400)
+    
+    Returns:
+        aiohttp.web.Response with JSON body and appropriate status code
+    
+    Example:
+        return _error_response(
+            code="VALIDATION_ERROR",
+            message="user_id is required",
+            field="user_id",
+            status=400,
+        )
+    """
+    error_data = CommonErrorResponse(
+        code=code,
+        message=message,
+        field=field,
+        context=context or {},
+    )
+    return web.json_response(error_data.model_dump(exclude_none=True), status=status)
 
 
 class CopilotApiClient:
@@ -170,6 +215,7 @@ class CopilotApiClient:
 import asyncio  # keep at end to avoid circulars in some HA loaders
 
 __all__ = [
+    "_error_response",
     "CopilotStatus",
     "CopilotApiError",
     "CopilotApiClient",

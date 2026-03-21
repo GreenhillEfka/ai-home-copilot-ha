@@ -429,10 +429,11 @@ async def _get_runtime(hass: HomeAssistant) -> CopilotRuntime:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up PilotSuite from a config entry with enhanced error handling."""
     try:
         await _async_migrate_connection_config(hass, entry)
-    except Exception:
-        _LOGGER.exception("Failed to normalize connection config")
+    except Exception as e:
+        _LOGGER.warning("Failed to normalize connection config: %s", e)
 
     # Auto-discover Core endpoint + fetch token if missing (1-Key-Flow)
     async def _discover_and_persist() -> bool:

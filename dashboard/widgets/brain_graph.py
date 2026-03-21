@@ -139,3 +139,15 @@ def broadcast_updates(socketio, event_type='layout_update'):
         'type': event_type,
         'data': get_graph_data()
     }, namespace='/brain_graph')
+
+
+# ── Plugin Registration ────────────────────────────────────────────────────────
+from plugin_registry import WIDGET_REGISTRY, WidgetPlugin
+WIDGET_REGISTRY.register(WidgetPlugin(
+    name='brain_graph',
+    blueprint_bp=brain_graph_bp,
+    version='1.0.0',
+    author='PilotSuite',
+    description='D3.js Wissensgraph-Visualisierung mit interaktiven Knoten',
+    socketio_register=register_socketio_events,
+))

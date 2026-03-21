@@ -45,6 +45,10 @@ from ...const import (
 )
 # DEPRECATED: v1 - prefer v2
 # from ...habitus_zones_store import SIGNAL_HABITUS_ZONES_V2_UPDATED, async_get_zones
+from ...habitat_adapter import (
+    build_call_service_forward_item,
+    build_state_changed_forward_item,
+)
 from ...habitus_zones_store_v2 import SIGNAL_HABITUS_ZONES_V2_UPDATED, async_get_zones_v2
 from ...core_v1 import async_fetch_core_capabilities
 from ...media_context import _parse_csv
@@ -647,14 +651,16 @@ class EventsForwarderModule:
                         if ntags:
                             attrs["neuron_tags"] = ntags
 
-                    item: dict[str, Any] = {
-                        "id": id_key,
-                        "ts": _now_iso(),
-                        "type": "state_changed",
-                        "source": "home_assistant",
-                        "entity_id": eid,
-                        "attributes": attrs,
-                    }
+                    item = build_state_changed_forward_item(
+                        item_id=id_key,
+                        ts=_now_iso(),
+                        entity_id=eid,
+                        old_state=old_state,
+                        new_state=new_state,
+                        zone_ids=zone_ids,
+                        state_attributes=attrs.get("state_attributes"),
+                        neuron_tags=attrs.get("neuron_tags") if isinstance(attrs.get("neuron_tags"), list) else None,
+                    )
 
                     _enqueue(item)
 
@@ -717,20 +723,14 @@ class EventsForwarderModule:
                 if not _seen_allow(id_key):
                     return
 
-                item: dict[str, Any] = {
-                    "id": id_key,
-                    "ts": _now_iso(),
-                    "type": "call_service",
-                    "source": "home_assistant",
-                    # keep entity_id for envelope compatibility (first matched)
-                    "entity_id": matched[0],
-                    "attributes": {
-                        "domain": dom,
-                        "service": svc,
-                        "entity_ids": matched,
-                        "zone_ids": zone_ids,
-                    },
-                }
+                item = build_call_service_forward_item(
+                    item_id=id_key,
+                    ts=_now_iso(),
+                    domain=dom,
+                    service=svc,
+                    entity_ids=matched,
+                    zone_ids=zone_ids,
+                )
 
                 _enqueue(item)
 

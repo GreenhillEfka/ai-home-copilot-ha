@@ -382,6 +382,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         # Best-effort: never break setup because of aggregates.
         pass
 
+    # Area Presence Sensors — Multi-Source Aggregation (PS-135)
+    # Creates binary_sensor.area_presence_{zone} with any-on rule,
+    # timeout-reset per source, and hold-switch override.
+    try:
+        from .sensors.area_presence_sensor_factory import (
+            async_build_area_presence_sensors,
+        )
+        area_presence_entities = await async_build_area_presence_sensors(
+            hass=hass,
+            entry_id=entry.entry_id,
+            coordinator=coordinator,
+            entry=entry,
+        )
+        entities.extend(area_presence_entities)
+        _LOGGER.info(
+            "Area presence sensors registered: %d zones",
+            len(area_presence_entities),
+        )
+    except Exception:  # noqa: BLE001
+        _LOGGER.warning(
+            "Area presence sensor setup failed, continuing without",
+            exc_info=True,
+        )
+
     # User Preference sensors
     user_pref_module = data.get("user_preference_module")
     user_pref_data = {}

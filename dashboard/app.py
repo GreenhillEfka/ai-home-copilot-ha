@@ -15,6 +15,10 @@ import gzip
 from collections import defaultdict
 from datetime import datetime
 
+# Dynamic dashboard version from VERSION file
+_VERSION_FILE = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), 'VERSION')
+DASHBOARD_VERSION = open(_VERSION_FILE).read().strip() if _os.path.exists(_VERSION_FILE) else 'unknown'
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(config['default'])
@@ -100,13 +104,31 @@ def dashboard_home():
 @app.route('/api/status')
 def get_status():
     """Get dashboard status"""
+    from widgets.plugin_registry import WIDGET_REGISTRY
     return jsonify({
         'status': 'running',
-        'version': '14.7.6',
-        'port': app.config['PORT'],
+        'version': DASHBOARD_VERSION,
         'rag_api': app.config['RAG_API_URL'],
-        'widgets': ['system_status', 'brain_graph', 'chat', 'sensor_overview'],
+        'widgets': WIDGET_REGISTRY.names(),
         'optimizations': ['batch_updates', 'client_debouncing', 'gzip_compression']
+    })
+
+@app.route('/api/v1/widgets')
+def get_widgets():
+    """List all registered widgets via WidgetRegistry."""
+    from widgets.plugin_registry import WIDGET_REGISTRY
+    return jsonify({
+        'widgets': [
+            {
+                'name': w.name,
+                'version': w.version,
+                'author': w.author,
+                'description': w.description,
+                'url_prefix': w.blueprint_bp.url_prefix if w.blueprint_bp else None,
+                'depends_on': w.depends_on,
+            }
+            for w in WIDGET_REGISTRY.all()
+        ]
     })
 
 @app.route('/api/overview')

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PilotSuite Styx Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui_state_components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=DASHBOARD_VERSION) }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ui_state_components.css', v=DASHBOARD_VERSION) }}">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/ui_state_components.js') }}"></script>
 </head>

@@ -478,7 +478,7 @@ class HabitusDashboard {
     }
 
     const meta = this._getZoneMeta(zoneId);
-    const requiredKeys = ['temperature', 'targetTemp', 'humidity', 'lights', 'brightness'];
+    const requiredKeys = ['temperature', 'humidity', 'lights_on', 'lights_total', 'presence', 'media_playing'];
     const missingKeys = requiredKeys.filter(k => data[k] === undefined || data[k] === null);
     // Optional: presence + media_playing from Core modules
     const hasPresence = data.presence !== undefined && data.presence !== null;
@@ -514,10 +514,6 @@ class HabitusDashboard {
             <span class="zone-metric-label">Aktuell</span>
             <span class="zone-metric-value">${data.temperature ?? '--'}°C</span>
           </div>
-          <div class="zone-metric">
-            <span class="zone-metric-label">Ziel</span>
-            <span class="zone-metric-value">${data.targetTemp ?? '--'}°C</span>
-          </div>
         </div>
       </div>
 
@@ -547,12 +543,40 @@ class HabitusDashboard {
         <div class="zone-card-title">Beleuchtung</div>
         <div class="zone-card-metrics">
           <div class="zone-metric">
-            <span class="zone-metric-label">Anzahl</span>
-            <span class="zone-metric-value">${data.lights ?? '--'}</span>
+            <span class="zone-metric-label">An</span>
+            <span class="zone-metric-value">${data.lights_on ?? '--'}</span>
           </div>
           <div class="zone-metric">
-            <span class="zone-metric-label">Helligkeit</span>
-            <span class="zone-metric-value">${data.brightness ?? '--'}%</span>
+            <span class="zone-metric-label">Gesamt</span>
+            <span class="zone-metric-value">${data.lights_total ?? '--'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="zone-card widget widget-container card" data-widget-id="presence-${zoneId}" data-x="0" data-y="0">
+        <div class="zone-card-header">
+          <div class="zone-card-icon"><i class="mdi mdi-account-multiple"></i></div>
+          <div class="zone-card-status"><span class="status-dot ${data.presence ? 'ok' : ''}"></span><span>${data.presence ? 'Anwesend' : 'Abwesend'}</span></div>
+        </div>
+        <div class="zone-card-title">Anwesenheit</div>
+        <div class="zone-card-metrics">
+          <div class="zone-metric">
+            <span class="zone-metric-label">Personen</span>
+            <span class="zone-metric-value">${data.person_count ?? 0}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="zone-card widget widget-container card" data-widget-id="media-${zoneId}" data-x="0" data-y="0">
+        <div class="zone-card-header">
+          <div class="zone-card-icon"><i class="mdi ${data.media_playing ? 'mdi-music-note' : 'mdi-music-note-outline'}"></i></div>
+          <div class="zone-card-status"><span class="status-dot ${data.media_playing ? 'ok' : ''}"></span><span>${data.media_playing ? 'Spielt' : 'Still'}</span></div>
+        </div>
+        <div class="zone-card-title">Musik</div>
+        <div class="zone-card-metrics">
+          <div class="zone-metric">
+            <span class="zone-metric-label">Status</span>
+            <span class="zone-metric-value">${data.media_playing ? 'Aktiv' : 'Aus'}</span>
           </div>
         </div>
       </div>
@@ -600,15 +624,17 @@ class HabitusDashboard {
   }
 
   loadZoneDataDemo() {
-    // Simulierter Payload (E2E + UX)
+    // Simulierter Payload (E2E + UX) — spiegelt Core module data Struktur
     this._globalStale = false;
     this.zones.forEach(zone => {
       this.zoneData[zone.id] = {
         temperature: Number((20 + Math.random() * 3).toFixed(1)),
-        targetTemp: Number((21 + Math.random() * 2).toFixed(1)),
         humidity: Math.floor(40 + Math.random() * 20),
-        lights: Math.floor(Math.random() * 5),
-        brightness: Math.floor(40 + Math.random() * 40)
+        lights_on: Math.floor(Math.random() * 4),
+        lights_total: Math.floor(4 + Math.random() * 4),
+        presence: Math.random() > 0.5,
+        person_count: Math.floor(Math.random() * 3),
+        media_playing: Math.random() > 0.6,
       };
       this._setZoneMeta(zone.id, {
         stale: false,
@@ -674,6 +700,8 @@ class HabitusDashboard {
         if (this.socket && this.connected) {
           this.socket.emit('request_zone_data', { zones: [zoneId] });
         }
+        // Refresh zone list so new zone appears in tabs
+        this.loadZones();
       })
       .catch((err) => {
         console.error('[Dashboard] createZone error:', err);
@@ -931,7 +959,8 @@ class HabitusDashboard {
         .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.json(); })
         .then(() => {
           modal.remove();
-          if (this.socket && this.connected) this.socket.emit('request_zone_data', { zones: [idVal] });
+          // Refresh zone list from Core so new zone appears in tabs
+          this.loadZones();
         })
         .catch(err => { err.textContent = 'Fehler: ' + err.message; err.style.display = 'block'; document.getElementById('cz-submit').disabled = false; document.getElementById('cz-submit').textContent = 'Erstellen'; })
         .finally(() => { btns.forEach(b => b.removeAttribute('disabled')); });

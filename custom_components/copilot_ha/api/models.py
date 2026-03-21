@@ -345,6 +345,61 @@ class DevLogsResponse(BaseModel):
     data: Optional[dict[str, Any]] = Field(default=None, description="Raw data wrapper")
 
 
+# ==================== Error Response Models ====================
+
+
+class CommonErrorResponse(BaseModel):
+    """Standardized error response for all HA API endpoints.
+    
+    All API endpoints MUST use this format for error responses to ensure
+    consistent error handling across the integration.
+    
+    Attributes:
+        code: Error code for programmatic handling (e.g., "VALIDATION_ERROR")
+        message: Human-readable error message
+        field: Optional field name that caused the error (for validation errors)
+        context: Optional additional debug information
+    
+    Example (400 Bad Request - missing required field):
+        {
+            "code": "VALIDATION_ERROR",
+            "message": "user_id is required",
+            "field": "user_id",
+            "context": {"received": null}
+        }
+    
+    Example (404 Not Found):
+        {
+            "code": "NOT_FOUND",
+            "message": "User preference not found",
+            "field": null,
+            "context": {"user_id": "abc123", "zone_id": "living_room"}
+        }
+    """
+    model_config = ConfigDict(populate_by_name=True)
+    
+    code: str = Field(
+        ...,
+        description="Error code for programmatic handling",
+        examples=["VALIDATION_ERROR", "NOT_FOUND", "INTERNAL_ERROR", "UNAUTHORIZED"],
+    )
+    message: str = Field(
+        ...,
+        description="Human-readable error message",
+        examples=["user_id is required", "Resource not found", "Internal server error"],
+    )
+    field: Optional[str] = Field(
+        default=None,
+        description="Field name that caused the error (for validation errors)",
+        examples=["user_id", "comfort_bias", "zone_id"],
+    )
+    context: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Additional debug information",
+        examples=[{"received": None}, {"user_id": "abc123"}],
+    )
+
+
 # ==================== Generic API Response Wrapper ====================
 
 
@@ -358,6 +413,8 @@ class ApiResponse(BaseModel):
 
 
 __all__ = [
+    # Error Models
+    "CommonErrorResponse",
     # Enums
     "NeuronType",
     "MoodType", 

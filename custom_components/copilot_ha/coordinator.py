@@ -505,6 +505,17 @@ class CopilotApiClient(SharedCopilotApiClient):
             label=f"Zone override {zone_id}/{target}",
         )
 
+    async def async_set_zone_presence_hold(self, zone_id: str, hold: str) -> dict[str, Any]:
+        """Set zone presence hold state (auto, force_on, force_off).
+
+        Used by AreaPresenceSensor to persist hold-switch changes to Core.
+        """
+        return await self._safe_post(
+            f"/api/v1/zone/presence/{zone_id}/hold",
+            {"hold": hold},
+            label=f"Zone presence hold {zone_id}/{hold}",
+        )
+
     async def async_get_musikwolke_zone_map(self) -> dict[str, Any]:
         """Get zone-to-speaker mapping."""
         return await self._safe_get(
@@ -605,19 +616,7 @@ class CopilotApiClient(SharedCopilotApiClient):
 
     # ── Presence / Light / Chat ────────────────────────────────────────
 
-    async def async_set_zone_presence_hold(
-        self,
-        person_id: str,
-        state: str,
-        reason: str = "manual",
-        duration: int | None = None,
-    ) -> dict[str, Any]:
-        """Set manual presence hold for a person."""
-        return await self.api.async_set_zone_presence_hold(person_id, state, reason, duration)
 
-    async def async_clear_zone_presence_hold(self, person_id: str) -> dict[str, Any]:
-        """Clear manual presence hold for a person."""
-        return await self.api.async_clear_zone_presence_hold(person_id)
 
     async def async_get_presence(self) -> dict[str, Any]:
         """Get presence intelligence data."""
