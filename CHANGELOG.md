@@ -2,6 +2,40 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.8.0] - 2026-03-21
+
+### Zone Management
+
+#### Added
+- **PS-083 HA-Entity → Zone Sortierung**: `sort_entity_to_zone()` — Keyword-Matching + Confidence-Score für alle 9 Zonen; Confidence ≥ 0.5 → Zone, < 0.5 → ungeordnet; Domain-Fallback (cover→living, vacuum→utility, etc.)
+- **Zone-Creator-Card**: `styx-zone-creator-card.ts` mit `getConfigForm()`, 7 Module (LIGHT/AUDIO/CLIMATE/COVER/ENERGY/SCENE/SECURITY), grid-layout, context-filter, window.customCards Registration
+- **Zone-Editor-Card**: `styx-zone-editor-card.ts` mit inline edit + delete action buttons
+- **Zone-Auto-Setup**: Primary-Source `area_zone_map.json` VOR Keyword-Match
+
+### Dashboard Widgets
+
+#### Added
+- **PS-066 Widget Plugin Registry**: `WidgetRegistry`, `WidgetPlugin` model, `/api/v1/widgets` endpoint, 5 widgets registered
+- **PS-219/220 Card-Registration Gate**: `getConfigForm()` guard + module-editor getConfigForm integration
+- **Presence + Media Widgets**: Real Core module data in zone cards
+- **Chat-Widget Metadata**: PS-066 final widget
+
+#### Fixed
+- **Zone-List Refresh**: Cache invalidation after create so new zone appears in tabs
+- **Button Disabling**: No double-submit during zone create/delete
+- **System-Status Description**: Added API_ERROR_SHAPES.md
+
+### HA Coordinator
+
+#### Fixed
+- **Zone-Presence-Hold**: Duplicate `async_set_zone_presence_hold` removed (was overwriting zone-based hold)
+
+### Compatibility
+- HA v14.8.0 <-> Core v14.8.0 (Paired Release)
+- HA 2024.4.0+ required
+
+---
+
 ## [14.7.6] - 2026-03-20
 
 ### HA Validation & Quality
