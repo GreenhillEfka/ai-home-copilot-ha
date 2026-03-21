@@ -17,8 +17,8 @@ Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Date
 - **PS-136**: Fallback zu zone:ungeordnet fuer unmatchbare Entities
 
 ### Compatibility
-- HA v14.7.5 test release on current Core baseline v14.7.3
-- Paired Core v14.7.5 release is still pending
+- HA v14.7.5 test release paired with Core v14.7.5
+- Core v14.7.5 released: PS-135 multi-source presence + PS-137 secondary states
 
 ---
 
