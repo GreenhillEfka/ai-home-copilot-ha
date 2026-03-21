@@ -511,7 +511,7 @@ class CopilotApiClient(SharedCopilotApiClient):
         Used by AreaPresenceSensor to persist hold-switch changes to Core.
         """
         return await self._safe_post(
-            f"/api/v1/zone/presence/{zone_id}/hold",
+            f"/api/v1/presence/zone/presence/{zone_id}/hold",
             {"hold": hold},
             label=f"Zone presence hold {zone_id}/{hold}",
         )
@@ -530,7 +530,7 @@ class CopilotApiClient(SharedCopilotApiClient):
         Throttled by the sensor to ≤1 call / 30 s per zone.
         """
         return await self._safe_post(
-            f"/api/v1/zone/presence/{zone_id}/state",
+            f"/api/v1/presence/zone/presence/{zone_id}/state",
             {
                 "occupied": occupied,
                 "primary_source": primary_source,

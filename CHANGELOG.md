@@ -2,6 +2,14 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.8.1] - 2026-03-21
+
+### Release Candidate fuer Live-HA-Test
+
+#### Fixed
+- **Core-Contract-Sync**: Zone-Presence-Hold und Zone-Presence-State senden jetzt an den Core-API-Pfad `/api/v1/presence/zone/presence/<zone_id>/*`.
+- **Paired Release Gate**: Versionsdateien (`VERSION`, `custom_components/copilot_ha/VERSION`, `manifest.json`) auf `14.8.1` harmonisiert fuer den gemeinsamen Test-Release mit Core.
+
 ## [14.8.0] - 2026-03-21
 
 ### Zone Management
