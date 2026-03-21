@@ -22,6 +22,7 @@ from .config_helpers import (
     STEP_ENTITIES,
     STEP_FEATURES,
     STEP_NETWORK,
+    STEP_MODULES,
     STEP_REVIEW,
     validate_input,
     discover_reachable_core_endpoint,
@@ -489,6 +490,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             STEP_ZONE_ENTITIES: lambda: self._build_zone_entities(wizard),
             STEP_ENTITIES: lambda: build_entities_form(wizard),
             STEP_FEATURES: lambda: build_features_form(),
+            STEP_MODULES: lambda: build_modules_form(),
             STEP_NETWORK: lambda: build_network_form(),
             STEP_REVIEW: lambda: build_review_form(self._data),
         }
@@ -517,6 +519,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             STEP_ENTITIES: lambda ui: process_entities_input(ui, self._data),
             STEP_FEATURES: lambda ui: process_features_input(ui, self._data),
             STEP_NETWORK: lambda ui: process_network_input(ui, self._data),
+            STEP_MODULES: lambda ui: process_modules_input(ui, self._data),
             STEP_REVIEW: lambda ui: None,  # Final step
         }
         return processors[step](user_input)

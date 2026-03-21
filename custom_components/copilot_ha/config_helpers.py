@@ -30,6 +30,7 @@ STEP_ZONE_ENTITIES = "zone_entities"
 STEP_ENTITIES = "entities"
 STEP_FEATURES = "features"
 STEP_NETWORK = "network"
+STEP_MODULES = "modules"
 STEP_REVIEW = "review"
 
 
