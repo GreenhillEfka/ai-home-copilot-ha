@@ -398,22 +398,47 @@ def register_socketio_events(socketio):
         zone_id = data.get('zone_id')
         hold = data.get('hold')  # 'auto' | 'force_on' | 'force_off'
 
-        if zone_id and hold in ('auto', 'force_on', 'force_off'):
-            # In production, this calls HA -> Core API
-            # coordinator.async_set_zone_presence_hold(zone_id, hold)
-            zone_data_store[zone_id]['presence_hold'] = hold
-            zone_data_store[zone_id]['last_updated'] = datetime.now().isoformat()
-
-            emit('zone_update', {
-                'zoneId': zone_id,
-                'data': zone_data_store[zone_id]
-            }, broadcast=True)
-
+        if not zone_id or hold not in ('auto', 'force_on', 'force_off'):
             emit('presence_hold_result', {
-                'success': True,
+                'success': False,
                 'zone_id': zone_id,
-                'hold': hold
+                'error': 'invalid_params',
             })
+            return
+
+        # Persist to Core via HA → Core API (reverse-proxy through HA REST API)
+        core_success = False
+        try:
+            from flask import current_app
+            import requests
+            base_url = current_app.config.get('CORE_API_URL', 'http://localhost:8909')
+            token = current_app.config.get('CORE_AUTH_TOKEN', '')
+            headers = {'Content-Type': 'application/json'}
+            if token:
+                headers['Authorization'] = f'Bearer {token}'
+                headers['X-Auth-Token'] = token
+            # HA acts as proxy: HA REST → Core /api/v1/presence/zone/presence/{zone_id}/hold
+            ha_url = f"{base_url}/api/v1/presence/zone/presence/{zone_id}/hold"
+            resp = requests.post(ha_url, json={'hold': hold}, headers=headers, timeout=5)
+            core_success = resp.status_code < 400
+        except Exception as err:
+            print(f"[zone_summary] Core hold API call failed for zone={zone_id}: {err}")
+
+        # Always update local store (offline-first for local UX)
+        zone_data_store[zone_id]['presence_hold'] = hold
+        zone_data_store[zone_id]['last_updated'] = datetime.now().isoformat()
+
+        emit('zone_update', {
+            'zoneId': zone_id,
+            'data': zone_data_store[zone_id]
+        }, broadcast=True)
+
+        emit('presence_hold_result', {
+            'success': True,
+            'zone_id': zone_id,
+            'hold': hold,
+            'core_synced': core_success,
+        })
 
 def broadcast_updates(socketio):
     """Broadcast zone updates (call periodically, e.g., every 5s)"""
