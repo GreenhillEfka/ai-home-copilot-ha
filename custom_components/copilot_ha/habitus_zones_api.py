@@ -12,9 +12,11 @@ from homeassistant.helpers import entity_registry as er
 from .habitus_zones_store_v2 import async_get_zones_v2
 from .pilotsuite_dashboard_store import async_get_state, async_set_state
 
-# Import the enhanced zone matcher
+# Import the enhanced zone matcher from Core HA module
+# NOTE: This module lives in Core (copilot_core.homeassistant.zone_matcher),
+# not in HA. At runtime, Core's HA-Modul exposes this via the Python path.
 try:
-    from copilot_core.homeassistant.habitus_zones_matcher import (
+    from copilot_core.homeassistant.zone_matcher import (
         create_zone_matcher, get_zone_suggestions
     )
     from copilot_core.homeassistant.habitus_zones import ZoneType
