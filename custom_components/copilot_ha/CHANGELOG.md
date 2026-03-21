@@ -2,8 +2,18 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
-> Hinweis (2026-02-22): Die aktive Release-Historie wird im Repository-Root gepflegt: `CHANGELOG.md` (7.7.x Linie).
-> Diese Datei enthaelt vor allem aeltere 0.x Historie und bleibt als Archiv erhalten.
+## [15.0.1] - 2026-03-21
+
+### Fixed
+- Core import path corrected in `habitus_zones_api.py`: `zone_matcher` (was `habitus_zones_matcher` — never existed)
+- `HAS_ZONE_MATCHER` now switches to True when Core HA-Modul is deployed
+
+### Changed
+- Schema packages (`schemas/`) added for module-per-zone validation
+- `habitus_entity_sorting.py` added: enhanced entity→zone sorting with confidence scoring
+
+### Removed
+- Reconciliation cleanup: removed non-HACS content from HA repository (see PR #150)
 
 ## [14.6.1] - 2026-03-16
 
