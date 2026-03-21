@@ -29,6 +29,7 @@ from .media_context_v2_entities import (
 )
 from .habitus_zones_entities_v2 import (
     HabitusZonesSensor,
+    HabitusZonesV2ModulesSensor,
     HabitusZonesV2CountSensor,
     HabitusZonesV2StatesSensor,
     HabitusZonesV2HealthSensor,
@@ -203,6 +204,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             CopilotVersionSensor(coordinator),
             CoreApiV1StatusSensor(coordinator, entry),
             HabitusZonesSensor(coordinator, entry),
+            HabitusZonesV2ModulesSensor(coordinator, entry),
             HabitusZonesV2CountSensor(coordinator, entry),
             HabitusZonesV2StatesSensor(coordinator, entry),
             HabitusZonesV2HealthSensor(coordinator, entry),
@@ -260,6 +262,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         CoreApiV1StatusSensor(coordinator, entry),
         # Habitus Zones
         HabitusZonesSensor(coordinator, entry),
+        HabitusZonesV2ModulesSensor(coordinator, entry),
         HabitusZonesV2CountSensor(coordinator, entry),
         HabitusZonesV2StatesSensor(coordinator, entry),
         HabitusZonesV2HealthSensor(coordinator, entry),
