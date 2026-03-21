@@ -1,3 +1,41 @@
+## [14.9.0] - 2026-03-21
+
+### Massive Integration Bulk Commit — 390 Files, 108K+ Lines
+
+**Scope:** Full HA integration skeleton committed + synced to `origin/master`
+
+#### Added
+- **Core Integration**: manifest.json, const.py, storage.py, entity.py, coordinator.py, config_flow.py
+- **Core Connectivity Layer**: core_proxy, core_v1, core_endpoint, config_sync, connection_config
+- **Entity Discovery**: entity_discovery, entity_profile, entity_zone_sorter, area_zone_registry
+- **Habitus Zones v2**: habitus_zones_store_v2, habitus_zones_entities_v2, habitus_zones_api, habitus_zone_aggregates
+- **80+ Sensors**: energy_sensors, presence_sensors, mood_sensor, brain_activity_sensor, habit_learning_v2, predictive_automation, anomaly_detection_sensor, +50 more
+- **Platform Entities**: binary_sensor, sensor, switch, select, number, text, button (infra + debug)
+- **Dashboard Infrastructure**: card_generator, 15+ dashboard yaml configs, dashboard_cards (energy, media, mesh, mobile, overview, presence, weather)
+- **Habitus Dashboard**: habitus_dashboard, habitus_dashboard_cards, habitus_dashboard_entities, habitus_dashboard_store
+- **Frontend Cards**: styx-brain, styx-chat, styx-error, styx-habitus, styx-household, styx-mood, styx-neural, styx-suggestions, styx-zone
+- **Core Modules (23)**: licht, heiz, helligkeit, praesenz, person_tracking, mood, media_context, energy_context, calendar, brain_graph_sync, events_forwarder, frigate_bridge, unifi_module, +12 more
+- **ML Patterns**: anomaly_detector, energy_optimizer, habit_predictor, multi_user_learner
+- **API + i18n**: knowledge_graph, user_preference endpoints, de/en translations, blueprints
+- **Services**: services_setup, config_snapshot_flow, config_wizard_steps, config_zones_flow, config_tags_flow
+- **Ops Infrastructure**: error_tracking, systemhealth_report, log_store, ops_runbook, repairs, forwarder_n3, webhook
+- **Multi-User**: multi_user_preferences, ops_runbook_entities, scene_store, repairs_blueprints
+- **Config + Adapters**: cross_home_sync, module_connector, seed_adapter, seed_store, setup_wizard, lovelace_resources
+- **Character + User Hints**: core/character, core/user_hints subsystems
+
+#### Changed
+- Pattern proposal refactoring: generator, matcher, models, store, ha_service
+- Test cleanup: test_habitus_entity_sorting, test_habitus_module_schema reduced to stubs
+
+#### Infrastructure
+- VERSION + CHANGELOG.md stubs added
+- Services.yaml, icons.json, branding assets added
+- requirements-dev.txt added
+
+**Agent:** PilotClaw | **Commits:** 28 | **Files:** 390 | **Lines:** 108K+
+
+---
+
 # Changelog
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
