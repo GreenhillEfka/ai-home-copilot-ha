@@ -20,6 +20,7 @@ TIER_EAGER = frozenset({
     "legacy",
     "brain_graph_sync",
     "habitus_miner",
+    "frontend_module",
 })
 # TIER_DEFERRED: load in background after HA startup — side systems, analytics
 TIER_DEFERRED_BACKGROUND = frozenset({
