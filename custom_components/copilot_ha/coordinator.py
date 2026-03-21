@@ -1570,23 +1570,19 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
             "presence": {},
         }
         
-        # Get relevant states
-        entity_patterns = [
-            "person.", "binary_sensor.", "sensor.temperature", 
-            "sensor.humidity", "sensor.light", "sensor.illuminance",
-            "weather.", "light.", "media_player."
-        ]
-        
-        for entity_id in self.hass.states.async_entity_ids():
-            for pattern in entity_patterns:
-                if entity_id.startswith(pattern):
-                    state = self.hass.states.get(entity_id)
-                    if state:
-                        context["states"][entity_id] = {
-                            "state": state.state,
-                            "attributes": dict(state.attributes)
-                        }
-                    break
+        # Get relevant states — single-pass over async_all() instead of
+        # O(n*m) nested loop over 5100+ entity_ids with m pattern checks each.
+        # async_all() returns Mapping[str, State] directly (no extra get() call).
+        all_states = self.hass.states.async_all()
+        _prefixes = ("person.", "binary_sensor.", "sensor.temperature",
+                     "sensor.humidity", "sensor.light", "sensor.illuminance",
+                     "weather.", "light.", "media_player.")
+        for entity_id, state in all_states.items():
+            if entity_id.startswith(_prefixes):
+                context["states"][entity_id] = {
+                    "state": state.state,
+                    "attributes": dict(state.attributes),
+                }
         
         # Evaluate
         return await self.api.async_evaluate_neurons(context)
