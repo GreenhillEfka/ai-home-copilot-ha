@@ -1,9 +1,10 @@
 # Release Gate — HA v14.7.5
 
-**Status:** ❌ GATE NOT PASSED  
-**Datum:** 2026-03-20  
-**Branch:** `pilotsuite-styx-ha-release-prep-v14.7.3`  
+**Status:** ✅ G1 + G2 GEFIXT — G4 noch manuell
+**Datum:** 2026-03-21
+**Branch:** `release-prep/v14.7.3-ha-test`
 **Worktree-Zuordnung:** HA-Release-Prep
+**Core-Prep:** `release-prep/v14.7.3-ha-test` (97b74a40)
 
 ---
 
@@ -22,29 +23,27 @@ Ein Gekoppeltes Release erfordert **alle** nachfolgenden Checks. Kein Check darf
 
 ## 2. Check-Ergebnisse für HA v14.7.5
 
-### G1 — Version-Sync ❌ FAIL
+### G1 — Version-Sync ✅ PASS (2026-03-21)
 
 | Artefakt | Pfad | Erwartet | Gefunden | Status |
 |----------|------|----------|----------|--------|
 | HA `manifest.json` | `custom_components/copilot_ha/manifest.json` | `14.7.5` | `14.7.5` | ✅ PASS |
-| Core `VERSION` | `copilot_core/VERSION` (prep) | `14.7.5` | `14.7.3` | ❌ FAIL |
-| Core CHANGELOG | `CHANGELOG.md` prep | `[v14.7.5]` | existiert nicht | ❌ FAIL |
-| Core `VERSION` | `copilot_core/VERSION` (current) | `14.7.5` | `14.7.4` | ❌ FAIL |
+| Core `VERSION` | `copilot_core/VERSION` (prep) | `14.7.5` | `14.7.5` | ✅ PASS |
+| Core CHANGELOG | `CHANGELOG.md` prep | `[v14.7.5]` | existiert | ✅ PASS |
+| Core prep commit | `97b74a40` | PS-135/137 merged | ✅ | ✅ PASS |
 
-**Befund:** HA ist auf 14.7.5, Core (prep und current) noch auf 14.7.3 / 14.7.4. Kein Sync.
-
-> ⚠️ HA-Changelog vermerkt explizit: *"Paired Core v14.7.5 release is still pending"*
+**Befund:** Core v14.7.5 committed und gepusht. HA + Core sync.
 
 ---
 
-### G2 — Changelog-Kreuzreferenz ⚠️ PARTIAL (HA-Seite OK, Core-Seite FEHLT)
+### G2 — Changelog-Kreuzreferenz ✅ PASS (2026-03-21)
 
 | Referenz | Erwartet | Gefunden | Status |
 |----------|----------|----------|--------|
-| HA-CHANGELOG → Core-Version | `HA v14.7.5 <-> Core v14.7.5` | ✅ `HA v14.7.5 test release on current Core baseline v14.7.3` (aber Referenz ist 14.7.3, nicht 14.7.5) | ⚠️ NOTE |
-| Core-CHANGELOG → HA-Version | `[v14.7.5]` mit HA-Referenz | ❌ Kein Eintrag für v14.7.5 im Core-CHANGELOG | ❌ FAIL |
+| HA-CHANGELOG → Core-Version | `HA v14.7.5 <-> Core v14.7.5` | ✅ `paired with Core v14.7.5` (a6733527) | ✅ PASS |
+| Core-CHANGELOG → HA-Version | `[v14.7.5]` mit HA-Referenz | ✅ v14.7.5 entry (97b74a40) | ✅ PASS |
 
-**Befund:** HA-Dokumentation weiß, dass Core noch fehlt. Core-Dokumentation enthält keinen v14.7.5-Eintrag.
+**Befund:** Bidirektionale Referenz hergestellt.
 
 ---
 
