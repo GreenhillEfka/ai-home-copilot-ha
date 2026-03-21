@@ -1,12 +1,8 @@
 {
   "domain": "copilot_ha",
   "name": "PilotSuite",
-  "after_dependencies": [
-    "assist_pipeline"
-  ],
-  "codeowners": [
-    "@GreenhillEfka"
-  ],
+  "after_dependencies": ["assist_pipeline"],
+  "codeowners": ["@GreenhillEfka"],
   "config_flow": true,
   "dependencies": [
     "conversation",
