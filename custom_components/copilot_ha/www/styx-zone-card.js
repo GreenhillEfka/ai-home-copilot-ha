@@ -114,7 +114,8 @@ class StyxZoneCard extends _ZoneBase {
   }
 
   _getZoneIcon(zoneId) {
-    const key = zoneId.toLowerCase().replace(/[^a-z_]/g, '_');
+    // Strip "zone:" prefix, then normalize
+    const key = zoneId.replace(/^zone:/, '').toLowerCase().replace(/[^a-z_]/g, '_');
     return ZONE_ICON_MAP[key] || ZONE_ICON_MAP.default;
   }
 
@@ -378,9 +379,9 @@ class StyxZoneCard extends _ZoneBase {
     const actions = historyEntity.attributes?.recent_actions;
     if (!Array.isArray(actions)) return [];
 
-    // Filter for this zone and take last 3
+    // Filter for this zone only — exclude global actions (they belong in the dashboard header, not per-zone cards)
     const zoneActions = actions
-      .filter(a => a.zone === zoneId || a.zone_id === zoneId || !a.zone)
+      .filter(a => a.zone === zoneId || a.zone_id === zoneId)
       .slice(0, 3);
 
     return zoneActions;
@@ -937,8 +938,6 @@ class StyxZoneCard extends _ZoneBase {
           background: #6b7280;
           color: #d1d5db;
           cursor: help;
-        }
-          box-shadow: 0 0 6px color-mix(in srgb, var(--health-color, #6b7280) 50%, transparent);
         }
 
         /* v14.2.0: Module State Chips */
