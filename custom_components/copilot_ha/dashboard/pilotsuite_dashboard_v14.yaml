@@ -124,6 +124,7 @@ views:
         show_mood: true
         show_neuron_activity: true
         show_quick_actions: true
+        show_module_states: true
 
       # Zone Controls
       - type: entities
