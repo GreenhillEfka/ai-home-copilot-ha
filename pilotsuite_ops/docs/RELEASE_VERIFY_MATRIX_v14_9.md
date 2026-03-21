@@ -1,9 +1,34 @@
-# RELEASE VERIFY MATRIX — pilotsuite-styx-ha v14.9.x
+# RELEASE VERIFY MATRIX — pilotsuite-styx-ha v14.9.x (UPDATED)
 
 > **Context:** Reconciliation/Aufräum-Release. Keine Features. Saubere Bestandsaufnahme.
 > **Erstellt:** 2026-03-21 14:30 GMT+1
+> **Updated:** 2026-03-21 14:45 GMT+1
 > **Branch:** `origin/main` @ `2a50914b`
 > **Repo:** `pilotsuite-styx-ha`
+
+---
+
+## CRITICAL NEW FINDING (14:45)
+
+### Dashboard/ Flask-Server — Architektur-Verletzung
+
+**Befund:** `dashboard/` (Flask + SocketIO, Port 8766) im HA-Repo ist ein **parallel laufender Flask-Server** neben dem Core Flask-Server (Port 8909). Das ist eine klare Architektur-Verletzung der Andreas-Regel.
+
+| Property | Core (Port 8909) | HA dashboard/ (Port 8766) |
+|----------|------------------|----------------------------|
+| Stack | Flask + SocketIO + Ollama | Flask + SocketIO |
+| Entities/Sensoren | HA-Integration | Direkte HA-API-Aufrufe |
+| Brain/Mood/Zone | Komplett | Dupliziert via `zone_data_store` |
+| Auth | `apiKeyAuth` / `bearerAuth` | Unknown |
+| **Status** | **OFFIZIELL** | **PARALLEL/UNFRIEDRIG** |
+
+**8 duplicate Widget-Dateien** (exakte Kopien):
+- `brain_graph.py`, `chat_widget.py`, `optimization.py`, `sensor_overview.py`, `system_status.py`, `zone_summary.py`
+- **nur** in `dashboard/widgets/` im HA-Repo, identisch zu Core `dashboard/widgets/`
+
+**Entscheidung nötig:**
+- Entweder `dashboard/` in HA als offizielle Visualisierungs-Schicht BEHALTEN (dann Core `dashboard/` als Legacy markieren)
+- Oder HA `dashboard/` ENTFERNEN und komplett auf Core (Port 8909) + Lovelace Cards (www/) umstellen
 
 ---
 
@@ -12,118 +37,68 @@
 | Check | Ergebnis | Pfad |
 |-------|---------|------|
 | Alle 145+ Python-Dateien kompilierbar | ✅ PASS | `custom_components/copilot_ha/**/*.py` |
-| JS/TS Lovelace Cards syntaktisch valid | ✅ PASS | `www/styx-zone-card.js`, `www/styx-mood-card.js`, etc. |
+| JS/TS Lovelace Cards syntaktisch valid | ✅ PASS | `www/styx-*.js` |
 | `pilotstack-zone-cards.mjs` syntaktisch valid | ✅ PASS | `www/pilotstack-zone-cards.mjs` |
 | 37 Unit Tests (habitus_module + entity_sorting) | ✅ PASS | `tests/test_habitus_module_schema.py`, `tests/test_habitus_entity_sorting.py` |
-| contracts_bridge.py | ✅ PASS | `core/contracts_bridge.py` — keine externen Imports |
-| E2E Contract Pipeline | ✅ PASS (Artefakt, Commit-Referenz fehlt) | `pilotsuite_ops/reports/PS-E2E-001_CONTRACT_PIPELINE_E2E.md` |
-
-**Release-Fähig:** JA — Syntax-Layer ist sauber.
+| contracts_bridge.py | ✅ PASS | `core/contracts_bridge.py` |
 
 ---
 
-## PFAD 2: Area→Zone Mapping — ✅ RELEASEFÄHIG (KLEINER VORBEHALT)
+## PFAD 2: Area→Zone Mapping — ✅ RELEASEFÄHIG (VORBEHALT)
 
 | Check | Ergebnis | Pfad |
 |-------|---------|------|
-| `area_zone_map.json` existiert und syntaktisch valid | ✅ PASS | `config/area_zone_map.json` |
-| `area_zone_map.json` hat 10 Mappings, 3 Aggregation Rules | ✅ PASS | `config/area_zone_map.json` |
-| `aggregation_rules` für wohnzimmer/badbereich/kochbereich | ✅ PASS | `config/area_zone_map.json` |
-| `load_area_zone_map()` in `area_zone_registry.py` | ✅ PASS | `area_zone_registry.py` |
-| `sort_entity_to_zone()` verwendet korrekte zone_ids | ✅ PASS | `habitus_zones_entities_v2.py` |
+| `area_zone_map.json` existiert und valid | ✅ PASS | `config/area_zone_map.json` |
+| 10 Mappings, 3 Aggregation Rules | ✅ PASS | `config/area_zone_map.json` |
+| `load_area_zone_map()` | ✅ PASS | `area_zone_registry.py` |
+| `sort_entity_to_zone()` Zone-IDs konsistent | ✅ PASS | `habitus_zones_entities_v2.py` |
 
-**Kritischer Vorbehalt — Zone-ID-Mismatch (Architecture Violation):**
-
-| Schema | Zone-IDs |
-|--------|---------|
-| HA `area_zone_map.json` | `wohnbereich`, `badbereich`, `kochbereich`, `gangbereich`, `schlafbereich`, `kellerbereich`, `zimmer_mira`, `zimmer_paul` |
-| Core `ZoneType` Enum | `LIVING`, `BATH`, `KITCHEN`, `OFFICE`, `HALLWAY`, `BEDROOM`, `ROOM_MIRA`, `ROOM_PAUL`, `TERRACE`, `OUTSIDE` |
-| **Overlap** | **NULL — keine! Kein einziger gemeinsamer Identifier** |
-
-**Bewertung:** Nicht kritisch-solange die HA-seitige Keyword-Logik (`_ENTITY_ZONE_KEYWORDS`) konsistent mit `area_zone_map.json` arbeitet (prüft German keywords, matched auf `zone:wohnbereich`, etc.) und NICHT mit Core `ZoneType` vermischt wird. Der mismatch existiert, aber die HA-Only-Layer sind konsistent. **Release-fähig mit Notierung.**
+**Zone-ID-Mismatch (bekannt, notiert):**
+- HA `zone_ids`: `wohnbereich`, `badbereich`, `kochbereich`, `gangbereich`, `schlafbereich`, `kellerbereich`, `zimmer_mira`, `zimmer_paul`
+- Core `ZoneType`: `LIVING`, `BATH`, `KITCHEN`, `OFFICE`, `HALLWAY`, `BEDROOM`, `ROOM_MIRA`, `ROOM_PAUL`, `TERRACE`, `OUTSIDE`
+- Kein Overlap. HA-Keyword-Logik funktioniert HA-intern konsistent.
 
 ---
 
-## PFAD 3: Core↔HA API-Verdrahtung — ⚠️ BROKEN / NICHT TESTBAR
-
-### 3a) Contract-Bridge
+## PFAD 3: Core↔HA API-Verdrahtung — ⚠️ BROKEN
 
 | Check | Ergebnis | Pfad |
 |-------|---------|------|
-| `contracts_bridge.py` definiert ProposalIntent, ActionIntent, etc. | ✅ Syntax OK | `core/contracts_bridge.py` |
-| HA-Webhook importiert Contract-Klassen | ✅ PASS | `webhook.py` |
-| Core-Zone-Taxonomie (ZoneType Enum) | ⚠️ MISSING | `habitus_zones_matcher.py` **EXISTIERT NICHT** |
+| `habitus_zones_matcher.py` in Core | ❌ **FEHLT** | muss in Core existieren |
+| HA importiert `habitus_zones_matcher` | ✅ existiert nicht | `habitus_zones_api.py:17` |
+| Runtime: Fallback aktiv → Match-Commands nicht spezifikationsgemäß | ⚠️ UNBEKANNT | nur syntaktisch |
 
-**BROKEN — `habitus_zones_matcher.py` existiert nicht im Core:**
-
-```
-HA code:  from copilot_core.homeassistant.habitus_zones_matcher import ...
-Core:     /copilot_core/homeassistant/habitus_zones_matcher.py  NOT FOUND
-Core:     /copilot_core/homeassistant/zone_matcher.py            EXISTS (falscher Name!)
-```
-
-```
-custom_components/copilot_ha/habitus_zones_api.py:17:
-    from copilot_core.homeassistant.habitus_zones_matcher import ...
-```
-
-**Folge:** Bei Runtime wird `HAS_ZONE_MATCHER = False` (Fallback aktiv). Folgende WebSocket-Commands funktionieren NICHT wie spezifiziert:
-- `pilotsuite/habitus/match_zone` — verwendet den Matcher, schlägt fehl
-- `pilotsuite/habitus/zones` — verwendet Store-Daten, funktioniert vermutlich
-
-**Bewertung:** NICHT release-fähig — importiert nicht-existentes Core-Modul. Muss entweder:
-1. `habitus_zones_matcher.py` in Core erstellen, ODER
-2. HA-Import auf existierende `zone_matcher.py` umstellen (Architecture Change)
-
-### 3b) Webhook Contract Pipeline
-
-| Check | Ergebnis |
-|-------|---------|
-| E2E Contract Pipeline Report | ✅ PASS |
-| Webhook parse/validate/execute | ✅ PASS (syntaktisch) |
-| Runtime HA→Core Webhook Delivery | ❓ UNBEKANNT — kein HA API Token für Live-Verifikation |
-
-**Bewertung:** Syntaktisch OK, Runtime-Status UNBEKANNT. Nicht als "getestet" verkaufbar ohne Live-HA-Zugriff.
+**Critical Blocker:** `habitus_zones_matcher.py` existiert nicht in Core. HA importiert es, schlägt zur Laufzeit fehl → `HAS_ZONE_MATCHER = False`.
 
 ---
 
-## PFAD 4: Lovelace Cards / Frontend — ✅ RELEASEFÄHIG (COMMIT-PENDING)
+## PFAD 4: Lovelace Cards / Frontend — ✅ SYNTAX OK, COMMIT-PENDING
 
 | Check | Ergebnis | Pfad |
 |-------|---------|------|
-| Alle 9 JS Cards syntaktisch valid | ✅ PASS | `www/styx-*.js` |
-| `styx-zone-card.js` — 3 UX-Fixes (UX GATE PASS) | ✅ COMMITS OK | `2a50914b`, `391a5efa` |
-| `pilotstack-zone-cards.mjs` | ⚠️ 411+/145- UNCOMMITTED | `www/pilotstack-zone-cards.mjs` |
-| `.bak`-Datei | ❌ 36KB Backup-Artefakt | `www/styx-zone-card.js.bak` |
-
-**Bewertung:** Cards selbst syntaktisch OK. ABER:
-- `pilotstack-zone-cards.mjs` hat 411+ Zeilen Änderungen die NICHT committed sind — das ist ein 14.9.x-Blocker
-- `.bak` muss vor Release gelöscht werden
+| 9 JS Cards syntaktisch valid | ✅ PASS | `www/styx-*.js` |
+| `pilotstack-zone-cards.mjs` | ⚠️ 411+ UNCOMMITTED | `www/pilotstack-zone-cards.mjs` |
+| `.bak` | ❌ 36KB Backup-Artefakt | `www/styx-zone-card.js.bak` |
 
 ---
 
-## PFAD 5: Configuration / Config Flow — ✅ SYNTAX OK, UNGETESTET
+## PFAD 5: Dashboard/ Flask-Server — ❌ ARCHITEKTUR-VERLETZUNG
+
+| Check | Ergebnis | Pfad |
+|-------|---------|------|
+| Flask-Server auf Port 8766 | ❌ PARALLEL ZU CORE | `dashboard/app.py` |
+| 8 duplicate Widget-Dateien | ❌ DUPLIZIERT Core | `dashboard/widgets/*.py` |
+| Zone-Visualisierung in Core `dashboard/` | ⚠️ Legacy? | `core/dashboard/widgets/` |
+| Lovelace Cards (www/) | ✅ OFFIZIELL | `www/styx-*.js` |
+
+---
+
+## PFAD 6: Configuration / Config Flow — ✅ SYNTAX OK
 
 | Check | Ergebnis | Pfad |
 |-------|---------|------|
 | Config Flow 7-Step Wizard | ✅ Syntax OK | `config_flow.py`, `config_wizard_steps.py` |
 | Config Schema Builder | ✅ Syntax OK | `config_schema_builders.py` |
-| Options Flow Handler | ✅ Syntax OK | `config_options_flow.py` |
-| Zone Wizard Steps | ✅ Syntax OK | `config_zones_flow.py` |
-
-**Bewertung:** Syntax-Layer OK. Runtime Config-Flow ohne Live-HA nicht verifizierbar.
-
----
-
-## PFAD 6: Dashboard / YAML — ✅ SYNTAX OK, UNBEKANNT RUNTIME
-
-| Check | Ergebnis | Pfad |
-|-------|---------|------|
-| Dashboard YAML Dateien | ✅ Existieren, Syntax unbekannt | `dashboard/*.yaml` |
-| Dashboard Card Definitions | ✅ Existieren | `dashboard_cards/` |
-| Lovelace Resources Config | ✅ Existiert | `lovelace_resources.py` |
-
-**Bewertung:** Keine YAML-Syntaxprüfung durchgeführt. Unknown Runtime Risk.
 
 ---
 
@@ -131,47 +106,40 @@ custom_components/copilot_ha/habitus_zones_api.py:17:
 
 ```
 ✅ SYNTAX OK + UNIT TESTS PASS          → release-fähig
-✅ AREA→ZONE MAPPING                     → release-fähig (mit Notierung)
-⚠️ CORE↔HA VERDRAHTUNG                   → BROKEN (habitus_zones_matcher.py fehlt)
-⚠️ WEBHOOK PIPELINE                      → syntaktisch OK, Runtime unbewiesen
-⚠️ PILOTSTACK-ZONE-CARDS.MJS             → UNCOMMITTED (Blocker für 14.9.x)
-❌ .BAK DATEI                            → muss gelöscht werden
-❌ LIVE RUNTIME                          → nicht verifizierbar ohne HA API Token
+✅ AREA→ZONE MAPPING                     → release-fähig (Notierung)
+🔴 dashboard/ FLASK PARALLEL-SERVER    → MUSS ENTSCHIEDEN WERDEN
+🔴 habitus_zones_matcher.py FEHLT      → MUSS GEFIXT WERDEN
+⚠️ PILOTSTACK-ZONE-CARDS.MJS           → UNCOMMITTED (Blocker)
+❌ styx-zone-card.js.bak                → MUSS GELÖSCHT WERDEN
 ```
 
-### Must-Fix vor Release:
-1. **`habitus_zones_matcher.py`** — entweder in Core erstellen oder HA-Import auf `zone_matcher.py` umstellen
-2. **`pilotstack-zone-cards.mjs`** — committen oder verwerfen (PilotClaw + Stxy Klärung)
-3. **`styx-zone-card.js.bak`** — löschen
+---
 
-### Nicht testbar ohne Live-HA:
-- Webhook Runtime Delivery
-- Config Flow End-to-End
-- Dashboard Rendering
-- Entity Registration
-- WebSocket Commands
-- Presence Hold Sync
+## MUST-FIX vor v14.9.1
+
+1. **`dashboard/` Flask-Server** — Architektur-Entscheidung treffen: behalten (dann Core als Legacy) oder entfernen (komplett auf Core + Lovelace)
+2. **`habitus_zones_matcher.py`** — in Core erstellen oder HA-Import auf `zone_matcher.py` umstellen
+3. **`pilotstack-zone-cards.mjs`** — committen oder verwerfen (Owner: Stxy)
+4. **`styx-zone-card.js.bak`** — löschen
 
 ---
 
-## RISIKO-MATRIX
+## OFFENE ENTSCHEIDUNGEN (AN ANDREAS)
 
-| Risiko | Wahrscheinlichkeit | Impact | Status |
-|--------|-------------------|--------|--------|
-| `habitus_zones_matcher.py` fehlt → Runtime-Fallback aktiv | HOCH | MITTEL | MUSS GEFIXT WERDEN |
-| `pilotstack-zone-cards.mjs` nie committed → Lovelace UI Inkonsistenz | HOCH | HOCH | BLOKER |
-| `.bak` im Release-Artefakt → Backup-Code in Produktion | MITTEL | NIEDRIG | MUST DELETE |
-| Zone-ID Mismatch HA/Core → langfristig Maintenance-Schuld | MITTEL | MITTEL | NOTIERUNG |
-| Webhook Runtime Delivery funktioniert nicht | UNBEKANNT | HOCH | NICHT TESTBAR |
+1. **Dashboard/ Flask-Server (Port 8766):** Offizielle HA-Visualisierung oder Legacy/Delete?
+2. **`habitus_zones_matcher.py`:** In Core erstellen ODER HA-Import auf existierende `zone_matcher.py` umstellen?
+3. **Core Version:** Manifest zeigt `14.8.1`, sollte `14.9.0` sein?
 
 ---
 
-## OFFENE FRAGEN (AN PILOTCLAW / ANDREAS)
+## CLEANUP-TASK-VERTEILUNG (VORSCHLAG)
 
-1. **Was ist `habitus_zones_matcher.py` — existierte es mal und wurde gelöscht, oder war der Import immer ein Fehler?**
-2. **Soll `pilotstack-zone-cards.mjs` committed werden? Welcher Agent ist dafür verantwortlich?**
-3. **Gibt es einen HA API Token für Runtime-Verifikation, oder muss das auf einem anderen Weg getestet werden?**
-4. **Zone-ID-Schema — bewusste Entscheidung (German in HA, English in Core) oder Versehen?**
+| Agent | Cleanup Task |
+|-------|-------------|
+| PilotClaw | `habitus_zones_matcher.py` fix in Core |
+| PilotClaw | `dashboard/` Architektur-Entscheidung + Umsetzung |
+| Stxy | `pilotstack-zone-cards.mjs` commit/verwerfen |
+| HomeClaw | `.bak` löschen + Verify-Matrix pflegen |
 
 ---
 
