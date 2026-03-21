@@ -34,3 +34,6 @@ tests/
 -e 
 # Agent working files (separate repo)
 agents/
+agents/
+pilotsuite_ops/
+docs/
