@@ -60,11 +60,23 @@
 | PR #151 (deprecations) | ✅ MERGED | |
 | PR #157 (HabitusZonesV2ModulesSensor) | ✅ MERGED | |
 
-### 🔴 BLOCKER
-**Live Core: `/sync-definitions` = 404**
-- Repo hat `316f7b4b` — Endpoint implementiert
-- Live-Core antwortet 404 — nicht auf neuestem Commit
-- **Workaround:** `/ensure-zones` funktioniert → Zone-Definitionen kommen an
+### 🔴 BLOCKER — Inkonsistenter Laufzeitstand (NICHT stale rollout)
+**Situation:** Live-Core meldet `version: 14.7.3` über `/health`, aber `POST /sync-definitions` liefert 404 obwohl Repo v15.0.2 hat.
+
+**Analyse:**
+- `/health` liest `__version__` aus `get_runtime_version()` → 14.7.3
+- `zone_automation_bp` wird in `core_setup.py:1500` direkt auf Flask app registriert (NICHT unter api_v1)
+- Endpoint-Route: `/api/v1/zone-automation/sync-definitions`
+- 404 = Route existiert nicht → Blueprint-Registrierung fehlgeschlagen oder älterer Build
+
+**Mögliche Ursachen:**
+1. Core-Build verwendet ältere `core_setup.py` ohne `zone_automation_bp` Registrierung
+2. `init_zone_automation_api()` wird nie aufgerufen → `_controller = None` → 503 (aber 404 ist anders)
+3. Endpoint-Pfad stimmt nicht (evtl. `/zone-automation/` statt `/zone-automation`)
+
+**KEIN einfacher "stale rollout"** — das System läuft, aber Versionsangaben und Routing sind inkonsistent.
+
+**Workaround:** `/ensure-zones` funktioniert → Zone-IDs kommen in Core an, aber ohne volle Entity-Definitionen.
 
 ---
 
