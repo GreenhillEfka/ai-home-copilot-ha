@@ -21,13 +21,25 @@
  */
 
 const ZONE_ICON_MAP = {
+  // English keys (frontend cards)
   living_room: 'mdi:sofa',
   bedroom: 'mdi:bed',
   kitchen: 'mdi:chef-hat',
   bathroom: 'mdi:shower',
   office: 'mdi:desk',
   outdoor: 'mdi:tree',
-  default: 'mdi:floor-plan'
+  default: 'mdi:floor-plan',
+  // German zone IDs from zone_auto_setup.py (habitus zones)
+  wohnbereich:    'mdi:sofa',
+  badbereich:     'mdi:shower',
+  kochbereich:    'mdi:stove',
+  buerobereich:   'mdi:desk',
+  gangbereich:    'mdi:door-open',
+  schlafbereich:  'mdi:bed',
+  kellerbereich:  'mdi:home-floor-negative-1',
+  zimmer_mira:    'mdi:bed-single-outline',
+  zimmer_paul:    'mdi:bed-single-outline',
+  aussenbereich:  'mdi:tree',
 };
 
 const MOOD_GAUGE_DEFS = [
@@ -180,6 +192,13 @@ class StyxZoneCard extends _ZoneBase {
         : null,
       scoreMissing: scoreValues.length === 0,
     };
+  }
+
+  _hasNeuronActivity(zoneId) {
+    const nodeEntity = this._hass?.states['sensor.pilotsuite_brain_graph_nodes'];
+    if (!nodeEntity) return false;
+    const nodes = Array.isArray(nodeEntity.attributes?.nodes) ? nodeEntity.attributes.nodes : [];
+    return nodes.some(n => n.zone === zoneId || (Array.isArray(n.rooms) && n.rooms.includes(zoneId)));
   }
 
   _getHealthScore(zoneId) {
@@ -509,24 +528,30 @@ class StyxZoneCard extends _ZoneBase {
       ? this._buildNeuronBar(neuronActivity)
       : '';
 
-    const healthBadge = this._config.show_health_score ? this._buildHealthBadge(zoneId) : '';
+    const healthScore = this._getHealthScore(zoneId);
+    const healthBadge = this._config.show_health_score
+      ? (healthScore !== null
+          ? this._buildHealthBadge(zoneId)
+          : '<span class="health-badge unavailable" title="Keine Gesundheitsdaten für diese Zone" aria-label="Zone Gesundheit: nicht verfügbar">—</span>')
+      : '';
     const moduleChips = this._config.show_module_states ? this._buildModuleChips(zoneId) : '';
     const autonomyLog = this._config.show_autonomy_log ? this._buildAutonomyLog(zoneId) : '';
 
     const modeIcon = hasMode ? this._getModeIcon(zone.mode) : 'mdi:home';
     const modeLabel = zone.mode || 'inaktiv';
+    const hasNeuronData = this._hasNeuronActivity(zoneId);
 
     return `
-      <div class="zone-card ${isActive ? 'active' : 'inactive'} ${hasPartialData ? 'partial' : ''}" data-zone="${esc(zoneId)}" role="region" aria-label="Zone ${esc(zoneName)}">
+      <div class="zone-card ${isActive ? 'active' : 'inactive'} ${hasPartialData ? 'partial' : ''} ${!hasNeuronData ? 'data-unavailable' : ''}" data-zone="${esc(zoneId)}" role="region" aria-label="Zone ${esc(zoneName)}">
         <div class="zone-header">
           <div class="zone-info">
             <span class="zone-icon mdi-icon">${this._getZoneIcon(zoneId)}</span>
             <span class="zone-name">${esc(zoneName)}</span>
             ${healthBadge}
           </div>
-          <div class="zone-status ${isActive ? 'active' : ''} ${hasPartialData ? 'partial' : ''}">
+          <div class="zone-status ${isActive ? 'active' : ''} ${hasPartialData ? 'partial' : ''} ${!hasNeuronData ? 'unavailable' : ''}">
             <span class="status-dot"></span>
-            <span class="status-text">${hasPartialData ? 'Teildaten' : (isActive ? 'Aktiv' : 'Inaktiv')}</span>
+            <span class="status-text">${!hasNeuronData ? 'Daten fehlen' : (hasPartialData ? 'Teildaten' : (isActive ? 'Aktiv' : 'Inaktiv'))}</span>
           </div>
         </div>
 
@@ -666,6 +691,9 @@ class StyxZoneCard extends _ZoneBase {
         .zone-status.partial {
           color: var(--ps-orange, #f59e0b);
         }
+        .zone-status.unavailable {
+          color: #d97706;
+        }
         .status-dot {
           width: 8px;
           height: 8px;
@@ -679,6 +707,13 @@ class StyxZoneCard extends _ZoneBase {
         .zone-status.partial .status-dot {
           background: var(--ps-orange, #f59e0b);
           box-shadow: 0 0 6px var(--ps-orange, #f59e0b);
+        }
+        .zone-status.unavailable .status-dot {
+          background: #6b7280;
+          box-shadow: none;
+        }
+        .zone-card.data-unavailable {
+          opacity: 0.8;
         }
         .partial-badges {
           display: flex;
@@ -843,6 +878,12 @@ class StyxZoneCard extends _ZoneBase {
           background: var(--health-color, #6b7280);
           line-height: 1;
           margin-left: 4px;
+        }
+        .health-badge.unavailable {
+          background: #6b7280;
+          color: #d1d5db;
+          cursor: help;
+        }
           box-shadow: 0 0 6px color-mix(in srgb, var(--health-color, #6b7280) 50%, transparent);
         }
 
