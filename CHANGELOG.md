@@ -1,3 +1,24 @@
+## [15.0.0] - 2026-03-21
+
+### Phase 7: Production Readiness + Neural Pipeline Foundation
+
+**Scope:** PilotSuite v15.0 marks the transition from feature accumulation to production-grade reliability,
+aligned with the Vision document (lebenslanger, selbstschärfender Begleiter).
+
+#### Release Gate Status
+- [ ] py_compile: all core files ✅ (verified `coordinator.py`, `area_zone_registry.py`, `dashboard/app.py`, `dashboard/api/v1/dashboard.py`)
+- [ ] Syntax gate: HA + Core dashboard.py clean ✅
+- [ ] Paired release: HA v15.0.0 ↔ Core v15.0.0 ⏳
+- [ ] Live smoke test ⏳
+- [ ] Drift detection: 0 drift on live system ⏳
+
+#### Goals for v15.0
+- [ ] **Production Readiness**: Connection pooling, startup lazy-loading, health endpoints
+- [ ] **Neural Pipeline**: Brain Graph + Habitus Miner integration into HA entity lifecycle
+- [ ] **Presence v2**: Area-level aggregation with Core Neurons sync (PS-081 unblocked)
+- [ ] **Dashboard stability**: All card getConfigForm() returning valid schemas
+- [ ] **Smoke test**: Live HA entity count stable, no new drift after 24h
+
 ## [14.9.0] - 2026-03-21
 
 ### Massive Integration Bulk Commit — 390 Files, 108K+ Lines

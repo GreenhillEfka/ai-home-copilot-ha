@@ -1,8 +1,12 @@
 {
   "domain": "copilot_ha",
   "name": "PilotSuite",
-  "after_dependencies": ["assist_pipeline"],
-  "codeowners": ["@GreenhillEfka"],
+  "after_dependencies": [
+    "assist_pipeline"
+  ],
+  "codeowners": [
+    "@GreenhillEfka"
+  ],
   "config_flow": true,
   "dependencies": [
     "conversation",
@@ -21,5 +25,5 @@
   "homeassistant": "2024.4.0",
   "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",
   "requirements": [],
-  "version": "14.9.0"
+  "version": "15.0.0"
 }
