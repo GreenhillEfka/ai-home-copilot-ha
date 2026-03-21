@@ -285,9 +285,10 @@ class CopilotApiClient(SharedCopilotApiClient):
         Goes beyond ensure-zones by syncing entity assignments and zone metadata
         so Core's Brain/Neuron system knows the full zone topology.
         """
+        zone_ids = [z.get("zone_id", z.get("id", "")) for z in zones if z.get("zone_id") or z.get("id")]
         return await self._safe_post(
-            "/api/v1/zone-automation/sync-definitions",
-            {"source": "ha", "zones": zones},
+            "/api/v1/zone-automation/ensure-zones",
+            {"zone_ids": zone_ids},
             label="Zone definitions sync",
         )
 
