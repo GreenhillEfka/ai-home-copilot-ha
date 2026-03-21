@@ -881,6 +881,9 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         # Set by __init__.py after CopilotRuntime.async_setup_entry() completes
         self.modules_ready: bool = False
 
+        # Core version tracking (set on each poll from /health response)
+        self._core_version_reported: str = "unknown"
+
         # Zone module schemas (fetched once from Core, cached with TTL)
         self.module_schemas: dict[str, Any] = {}
         self._module_schemas_fetched_at: float = 0.0  # time.monotonic() of last successful fetch
@@ -1163,6 +1166,7 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 # HIGH: always update
                 result["ok"] = bool(status.ok) if status.ok is not None else True
                 result["version"] = status.version or "unknown"
+                self._core_version_reported = status.version or "unknown"
                 result["mood"] = mood_data
                 result["dominant_mood"] = mood_data.get("mood", "unknown")
                 result["mood_confidence"] = mood_data.get("confidence", 0.0)
