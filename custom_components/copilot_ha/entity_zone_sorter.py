@@ -1,9 +1,14 @@
-"""Standalone entity→zone sorting — no HA dependencies."""
+"""Standalone entity→zone sorting — no HA dependencies.
 
+DEPRECATED: Use habitus_entity_sorting.py instead.
+entity_zone_sorter.py is kept for backward compatibility only.
+Migration: replace entity_zone_sorter → habitus_entity_sorting in imports.
+habitus_entity_sorting.py has enhanced confidence scoring and is the canonical implementation.
+Will be removed in a future release.
+"""
 from __future__ import annotations
 
 import unicodedata
-
 
 _ZONE_KEYWORDS: dict[str, list[str]] = {
     "zone:wohnbereich": [
@@ -65,7 +70,6 @@ _ZONE_NAMES: dict[str, str] = {
     "zone:kellerbereich": "Kellerbereich",
 }
 
-
 def _normalize(text: str) -> str:
     """Normalize text: lowercase + strip accents."""
     text = text.lower().strip()
@@ -73,7 +77,6 @@ def _normalize(text: str) -> str:
         c for c in unicodedata.normalize("NFD", text)
         if unicodedata.category(c) != "Mn"
     )
-
 
 def _levenshtein(a: str, b: str) -> int:
     """Pure Python Levenshtein distance."""
@@ -88,7 +91,6 @@ def _levenshtein(a: str, b: str) -> int:
             cost = 0 if a[i - 1] == b[j - 1] else 1
             dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
     return dp[m][n]
-
 
 def sort_entity_to_zone(
     entity_id: str,

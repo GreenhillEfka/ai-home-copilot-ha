@@ -1,11 +1,4 @@
-"""Home Assistant habitat adapter helpers.
-
-DEPRECATED: habitat_adapter.py is renamed to habitus_adapter.py.
-All new code must import from habitus_adapter.
-habitat_adapter.py is kept as alias for backward compatibility only.
-Will be removed in future release.
-
----
+"""Home Assistant habitus adapter helpers.
 
 Keeps the HA↔Core boundary explicit by attaching normalized inbound contracts
 when forwarding HA events and by normalizing outbound Core suggestion payloads
