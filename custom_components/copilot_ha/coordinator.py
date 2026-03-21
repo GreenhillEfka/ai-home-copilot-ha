@@ -616,19 +616,7 @@ class CopilotApiClient(SharedCopilotApiClient):
 
     # ── Presence / Light / Chat ────────────────────────────────────────
 
-    async def async_set_zone_presence_hold(
-        self,
-        person_id: str,
-        state: str,
-        reason: str = "manual",
-        duration: int | None = None,
-    ) -> dict[str, Any]:
-        """Set manual presence hold for a person."""
-        return await self.api.async_set_zone_presence_hold(person_id, state, reason, duration)
 
-    async def async_clear_zone_presence_hold(self, person_id: str) -> dict[str, Any]:
-        """Clear manual presence hold for a person."""
-        return await self.api.async_clear_zone_presence_hold(person_id)
 
     async def async_get_presence(self) -> dict[str, Any]:
         """Get presence intelligence data."""
