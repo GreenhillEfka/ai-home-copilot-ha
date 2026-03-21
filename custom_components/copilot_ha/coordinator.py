@@ -872,8 +872,10 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         # Set by __init__.py after CopilotRuntime.async_setup_entry() completes
         self.modules_ready: bool = False
 
-        # Zone module schemas (fetched once from Core, cached)
+        # Zone module schemas (fetched once from Core, cached with TTL)
         self.module_schemas: dict[str, Any] = {}
+        self._module_schemas_fetched_at: float = 0.0  # time.monotonic() of last successful fetch
+        self._module_schemas_ttl_s: float = 3600.0  # refresh every 1h (schema changes are rare)
 
         # ── Multi-tier adaptive polling state ───────────────────────────
         self._poll_generation: int = 0       # Monotonic counter, decides priority tiers
@@ -1214,12 +1216,22 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                     result["zone_automation"] = zone_auto
                     await self._sync_zone_states(result, zone_auto)
 
-                # Fetch module schemas once (cached after first success)
-                if not self.module_schemas:
+                # Fetch module schemas once (cached with TTL: 1h)
+                stale = (
+                    not self.module_schemas
+                    or (time.monotonic() - self._module_schemas_fetched_at) > self._module_schemas_ttl_s
+                )
+                if stale:
                     try:
                         self.module_schemas = await self.api.async_get_module_schemas()
+                        self._module_schemas_fetched_at = time.monotonic()
+                        _LOGGER.debug(
+                            "Module schemas refreshed (TTL=%.0fs)",
+                            self._module_schemas_ttl_s,
+                        )
                     except Exception:
-                        _LOGGER.debug("Module schemas fetch deferred")
+                        if not self.module_schemas:
+                            _LOGGER.debug("Module schemas fetch deferred")
 
                 # Zone automation sync: ensure HA zones exist in Core on first refresh
                 if not getattr(self, "_zone_auto_synced", False):
