@@ -63,7 +63,7 @@ PilotSuite ist eine **vollständige Home Assistant Integration** mit:
 
 ### **Core Backend (ERFORDERLICH)**
 
-PilotSuite benötigt das **PilotSuite Core Backend** (separates Add-on, aktuelle Test-Release-Linie **v15.0.0**):
+PilotSuite benötigt das **PilotSuite Core Backend** (separates Add-on, aktuelle Release-Linie **v15.0.0**):
 
 - **Repository:** https://github.com/GreenhillEfka/pilotsuite-styx-core
 - **Installation:**
@@ -176,3 +176,4 @@ Siehe [CHANGELOG.md](CHANGELOG.md) für alle Änderungen.
 ---
 
 **PilotSuite — Smart Home Intelligence with ML, Anomaly Detection & Predictive Automation** 🧠✨
+�✨
