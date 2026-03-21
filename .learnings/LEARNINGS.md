@@ -42,3 +42,25 @@ Use the 4-line reporting format by default for PilotSuite status replies and bro
 - Tags: reporting, versioning, pilot-suite, correction
 
 ---
+## [LRN-20260321-003] correction
+
+**Logged**: 2026-03-21T23:14:00+01:00
+**Priority**: critical
+**Status**: pending
+**Area**: reporting
+
+### Summary
+Never mention Core intermediate versions like 15.0.2 in a HACS/integration context.
+
+### Details
+The user pointed out the exact failure mode: when the assistant mentions `v15.0.2` while discussing the integration/HACS surface, it immediately creates version confusion because HACS can only use HA integration releases. Core intermediate releases must stay in the Core/Add-on lane only.
+
+### Suggested Action
+In PilotSuite reporting, forbid cross-surface version mentions: HA/HACS numbers may only refer to the integration repo; Core numbers may only refer to the add-on repo.
+
+### Metadata
+- Source: user_feedback
+- Related Files: /config/clawd/.learnings/LEARNINGS.md, /config/clawd/memory/2026-03-21.md
+- Tags: reporting, versioning, haxs, core, correction
+
+---
