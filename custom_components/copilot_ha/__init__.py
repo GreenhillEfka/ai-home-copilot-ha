@@ -668,16 +668,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Hide legacy YAML dashboards from sidebar at runtime
         await async_hide_yaml_dashboards_from_sidebar(hass)
 
+        from .habitus_dashboard import (
+            async_generate_habitus_zones_dashboard,
+            async_publish_last_habitus_dashboard,
+        )
+        from .pilotsuite_dashboard import (
+            async_generate_pilotsuite_dashboard,
+            async_publish_last_pilotsuite_dashboard,
+        )
+
+        # Always refresh YAML dashboard artifacts on setup so Habitus-Zonen
+        # and PilotSuite views are visible after restarts without manual
+        # Generate/Download button presses.
+        await async_generate_pilotsuite_dashboard(hass, entry, notify=False)
+        await async_generate_habitus_zones_dashboard(hass, entry.entry_id, notify=False)
+        await async_publish_last_pilotsuite_dashboard(hass)
+        await async_publish_last_habitus_dashboard(hass)
+
         entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-        if isinstance(entry_store, dict) and not entry_store.get("_dashboards_generated"):
-            from .habitus_dashboard import async_generate_habitus_zones_dashboard
-            from .pilotsuite_dashboard import async_generate_pilotsuite_dashboard
-            await async_generate_pilotsuite_dashboard(hass, entry, notify=False)
-            await async_generate_habitus_zones_dashboard(hass, entry.entry_id, notify=False)
+        if isinstance(entry_store, dict):
             entry_store["_dashboards_generated"] = True
+            entry_store["_dashboards_published"] = True
 
         _LOGGER.info(
-            "PilotSuite dashboards setup (wiring=%s, storage=%s)",
+            "PilotSuite dashboards setup (wiring=%s, storage=%s, yaml=generated+published)",
             wiring_state,
             storage_state,
         )
