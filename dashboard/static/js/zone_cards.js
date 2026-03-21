@@ -67,6 +67,10 @@ class ZoneCardsManager {
                 this.handleZoneData(data);
             });
             
+            this.socket.on('presence_hold_result', (data) => {
+                this._updateHoldPills(data.zone_id, data.hold);
+            });
+
             this.socket.on('zone_update', (data) => {
                 this.handleZoneUpdate(data);
             });
@@ -277,6 +281,25 @@ class ZoneCardsManager {
                     <span class="mdi mdi-chevron-right"></span>
                     <span>Details</span>
                 </button>
+            </div>
+
+            <!-- Presence Hold Control -->
+            <div class="zone-card-hold">
+                <span class="hold-label">Anwesenheit:</span>
+                <div class="hold-pills">
+                    <button class="hold-pill ${(data.presence_hold === 'auto' || !data.presence_hold) ? 'active' : ''}" data-zone-id="${zoneId}" data-hold="auto" title="Automatik">
+                        <span class="mdi mdi-auto-mode"></span>
+                        <span>Auto</span>
+                    </button>
+                    <button class="hold-pill force-on ${data.presence_hold === 'force_on' ? 'active' : ''}" data-zone-id="${zoneId}" data-hold="force_on" title="Immer An">
+                        <span class="mdi mdi-account-check"></span>
+                        <span>An</span>
+                    </button>
+                    <button class="hold-pill force-off ${data.presence_hold === 'force_off' ? 'active' : ''}" data-zone-id="${zoneId}" data-hold="force_off" title="Immer Aus">
+                        <span class="mdi mdi-account-cancel"></span>
+                        <span>Aus</span>
+                    </button>
+                </div>
             </div>
             
             <!-- Alert Details (hidden by default, shown on hover) -->
@@ -582,6 +605,14 @@ class ZoneCardsManager {
                 const zoneId = btn.dataset.zoneId;
                 this.showZoneDetails(zoneId);
             }
+
+            // Presence hold pill
+            if (e.target.closest('.hold-pill')) {
+                const pill = e.target.closest('.hold-pill');
+                const zoneId = pill.dataset.zoneId;
+                const hold = pill.dataset.hold;
+                this.setPresenceHold(zoneId, hold);
+            }
         });
     }
     
@@ -669,6 +700,29 @@ class ZoneCardsManager {
         return 'ok';
     }
 }
+
+    setPresenceHold(zoneId, hold) {
+        // Optimistic UI update
+        if (this.zonesData[zoneId]) {
+            this.zonesData[zoneId].presence_hold = hold;
+            this._updateHoldPills(zoneId, hold);
+        }
+
+        if (this.socket) {
+            this.socket.emit('presence_hold', {
+                zone_id: zoneId,
+                hold: hold
+            });
+        }
+    }
+
+    _updateHoldPills(zoneId, hold) {
+        const card = document.querySelector(`.zone-card[data-zone-id="${zoneId}"]`);
+        if (!card) return;
+        card.querySelectorAll('.hold-pill').forEach(p => {
+            p.classList.toggle('active', p.dataset.hold === hold);
+        });
+    }
 
 // Auto-initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

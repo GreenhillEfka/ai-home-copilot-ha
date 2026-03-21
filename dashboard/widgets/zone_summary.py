@@ -134,6 +134,7 @@ def initialize_zone_stores():
             'light_brightness': 0,
             'motion': False,
             'window_open': False,
+            'presence_hold': 'auto',
             'alerts': [],
             'last_updated': datetime.now().isoformat()
         }
@@ -237,6 +238,7 @@ def simulate_zone_data():
         window_open = random.random() > 0.9
         
         # Update store
+        existing_hold = current.get('presence_hold', 'auto')
         zone_data_store[zone_id] = {
             'name': config['name'],
             'icon': config['icon'],
@@ -246,6 +248,7 @@ def simulate_zone_data():
             'light_brightness': brightness,
             'motion': motion,
             'window_open': window_open,
+            'presence_hold': existing_hold,
             'alerts': [],
             'last_updated': datetime.now().isoformat()
         }
@@ -388,6 +391,29 @@ def register_socketio_events(socketio):
                 'scene': scene,
                 'message': f'Scene {scene} activated in {zone_id}'
             }, broadcast=True)
+
+    @socketio.on('presence_hold', namespace='/zone_summary')
+    def handle_presence_hold(data):
+        """Handle presence hold mode changes (auto, force_on, force_off)"""
+        zone_id = data.get('zone_id')
+        hold = data.get('hold')  # 'auto' | 'force_on' | 'force_off'
+
+        if zone_id and hold in ('auto', 'force_on', 'force_off'):
+            # In production, this calls HA -> Core API
+            # coordinator.async_set_zone_presence_hold(zone_id, hold)
+            zone_data_store[zone_id]['presence_hold'] = hold
+            zone_data_store[zone_id]['last_updated'] = datetime.now().isoformat()
+
+            emit('zone_update', {
+                'zoneId': zone_id,
+                'data': zone_data_store[zone_id]
+            }, broadcast=True)
+
+            emit('presence_hold_result', {
+                'success': True,
+                'zone_id': zone_id,
+                'hold': hold
+            })
 
 def broadcast_updates(socketio):
     """Broadcast zone updates (call periodically, e.g., every 5s)"""

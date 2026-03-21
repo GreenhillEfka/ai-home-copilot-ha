@@ -721,3 +721,64 @@ body {
 .quick-action-btn i {
     font-size: 1rem;
 }
+
+/* ── Presence Hold Control ─────────────────────────────────────────────────── */
+.zone-card-hold {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+    margin-top: 4px;
+}
+
+.hold-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.hold-pills {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.hold-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 20px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+}
+
+.hold-pill:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.hold-pill.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+.hold-pill.force-on.active {
+    background-color: #22c55e;
+    border-color: #22c55e;
+}
+
+.hold-pill.force-off.active {
+    background-color: #ef4444;
+    border-color: #ef4444;
+}
+
+.hold-pill .mdi {
+    font-size: 0.9rem;
+}
