@@ -219,7 +219,7 @@ def process_discovery_input(user_input: dict, wizard, wizard_data: dict) -> str:
             CONF_PORT: DEFAULT_PORT,
             CONF_TOKEN: "",
         }
-        return STEP_REVIEW
+        return STEP_MODULES
     return STEP_ZONES
 
 
@@ -254,7 +254,7 @@ def process_features_input(user_input: dict, wizard_data: dict) -> str:
 def process_network_input(user_input: dict, wizard_data: dict) -> str:
     """Process network step input. Returns next step name."""
     wizard_data["network"] = user_input
-    return STEP_REVIEW
+    return STEP_MODULES
 
 
 def build_final_config(wizard_data: dict) -> tuple[dict, str]:
@@ -269,3 +269,36 @@ def build_final_config(wizard_data: dict) -> tuple[dict, str]:
     }
     title = "PilotSuite (Quick Start)" if wizard_data.get("quick_start") else "PilotSuite"
     return final_config, title
+
+
+# ---------------------------------------------------------------------------
+# Module Override Step (NEW)
+# ---------------------------------------------------------------------------
+
+def build_modules_form():
+    """Return (step_id, data_schema, description_placeholders) for module config."""
+    schema = vol.Schema({
+        vol.Optional(
+            "automation_mode",
+            default="learning",
+        ): vol.In({
+            "learning": "Lernend — lernt aus Verhalten",
+            "active": "Aktiv — folgt Regeln",
+            "off": "Aus — keine Automation",
+        }),
+        vol.Optional(
+            "presence_hold_default",
+            default="auto",
+        ): vol.In({
+            "auto": "Auto — System entscheidet",
+            "force_on": "Immer Anwesend",
+            "force_off": "Nie Anwesend",
+        }),
+    })
+    return ("wizard_modules", schema, None)
+
+
+def process_modules_input(user_input: dict, wizard_data: dict) -> str:
+    """Process modules step input. Returns next step name."""
+    wizard_data["modules"] = user_input
+    return STEP_REVIEW
