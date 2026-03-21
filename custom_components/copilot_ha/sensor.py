@@ -203,6 +203,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         core_entities = [
             CopilotVersionSensor(coordinator),
             CoreApiV1StatusSensor(coordinator, entry),
+            CoreVersionDiagnosticSensor(coordinator, entry),
             HabitusZonesSensor(coordinator, entry),
             HabitusZonesV2ModulesSensor(coordinator, entry),
             HabitusZonesV2CountSensor(coordinator, entry),
@@ -260,6 +261,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     entities = [
         CopilotVersionSensor(coordinator),
         CoreApiV1StatusSensor(coordinator, entry),
+        CoreVersionDiagnosticSensor(coordinator, entry),
         # Habitus Zones
         HabitusZonesSensor(coordinator, entry),
         HabitusZonesV2ModulesSensor(coordinator, entry),
@@ -1307,6 +1309,91 @@ class ModuleDashboardSensor(CopilotBaseEntity, SensorEntity):
             return attrs
         except Exception:
             return {}
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_unsub(
+            self._coordinator.async_add_listener(self._async_update)
+        )
+
+    @callback
+    def _async_update(self) -> None:
+        self.async_write_ha_state()
+
+
+# ---------------------------------------------------------------------------
+# Core Version Diagnostic Sensor (v14.9.x)
+# Compares HA addon version with live Core version and surfaces mismatch.
+# Part of Andreas' "probleme eigenstaendig loesen" directive.
+# ---------------------------------------------------------------------------
+
+class CoreVersionDiagnosticSensor(CopilotBaseEntity, SensorEntity):
+    """PilotSuite Core version vs HA addon version mismatch detection.
+
+    native_value: mismatch_gap if versions differ, "aligned" if match
+    attributes:
+        - ha_version: installed HA addon version
+        - core_version: reported Core version
+        - gap: description of what is missing
+        - zone_automation_status: OK / MISSING (endpoint availability)
+    """
+
+    _attr_icon = "mdi:alert-circle-outline"
+    _attr_has_entity_name = False
+    _attr_name = "PilotSuite Version Diagnostic"
+    _attr_unique_id = "copilot_ha_version_diagnostic"
+
+    def __init__(self, coordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+        self._coordinator = coordinator
+
+    @property
+    def native_value(self) -> str:
+        try:
+            result = self._coordinator.data or {}
+            ha_ver = result.get("version", "unknown")
+            core_ver = getattr(self._coordinator, "_core_version_reported", None) or "unknown"
+            if core_ver == "unknown":
+                return "unreachable"
+            if ha_ver != core_ver:
+                return f"gap_{ha_ver}_vs_{core_ver}"
+            return "aligned"
+        except Exception:
+            return "error"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        try:
+            result = self._coordinator.data or {}
+            ha_ver = result.get("version", "unknown")
+            core_ver = getattr(self._coordinator, "_core_version_reported", None) or "unknown"
+            zone_auto = result.get("zone_automation", {})
+            zones = zone_auto.get("zones", []) if isinstance(zone_auto, dict) else []
+
+            gap_description = ""
+            if core_ver == "unknown":
+                gap_description = "Core not reachable — all zone-automation endpoints unavailable"
+            elif ha_ver != core_ver:
+                gap_description = (
+                    f"HA addon v{ha_ver} is ahead of Core v{core_ver}. "
+                    "zone-automation endpoints (/ensure-zones, /sync-definitions, "
+                    "/dashboard) will return 404. Restart Core addon to align."
+                )
+
+            return {
+                "ha_version": ha_ver,
+                "core_version": core_ver,
+                "gap_description": gap_description,
+                "zone_automation_zones": len(zones),
+                "zone_automation_available": len(zones) > 0 or core_ver == "unknown",
+                "recommendation": (
+                    "restart_core_addon"
+                    if ha_ver != core_ver and core_ver != "unknown"
+                    else ("core_unreachable" if core_ver == "unknown" else "ok")
+                ),
+            }
+        except Exception:
+            return {"error": "sensor evaluation failed"}
 
     async def async_added_to_hass(self) -> None:
         self.async_on_unsub(
