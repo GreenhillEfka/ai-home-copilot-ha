@@ -10,8 +10,8 @@
 # 3. Add to your dashboard via YAML or UI
 #
 # REQUIREMENTS:
-# - sensor.pilotsuite_habitus_zones (required) - Zone overview
-# - sensor.pilotsuite_zone_modes (optional) - Zone modes
+# - sensor.copilot_ha_habitus_zones (required) - Zone overview
+# - sensor.pilotsuite_autonomie_status (optional) - Zone modes
 # - sensor.pilotsuite_mood_{zone}_* (optional) - Mood sensors
 # - sensor.pilotsuite_brain_graph_nodes (optional) - Neuron activity
 # - light.{zone}_main (optional) - Light entities per zone
@@ -23,7 +23,7 @@
 
 # --- Main Zone Card ---
 - type: custom:styx-zone-card
-  entity: sensor.pilotsuite_habitus_zones
+  entity: sensor.copilot_ha_habitus_zones
   title: Zonen
   show_mood: true
   show_neuron_activity: true
@@ -113,7 +113,7 @@
   title: Aktive Zonen-Modi
   show_header_toggle: false
   entities:
-    - entity: sensor.pilotsuite_zone_modes
+    - entity: sensor.pilotsuite_autonomie_status
       name: Aktive Modi
       icon: mdi:toggle-switch-variant
     - entity: input_select.zone_mode
@@ -218,18 +218,18 @@
 
 # --- Minimal Configuration (only required entity) ---
 # - type: custom:styx-zone-card
-#   entity: sensor.pilotsuite_habitus_zones
+#   entity: sensor.copilot_ha_habitus_zones
 
 # --- Configuration without mood gauges ---
 # - type: custom:styx-zone-card
-#   entity: sensor.pilotsuite_habitus_zones
+#   entity: sensor.copilot_ha_habitus_zones
 #   show_mood: false
 #   show_neuron_activity: true
 #   show_quick_actions: true
 
 # --- Configuration for single zone ---
 # - type: custom:styx-zone-card
-#   entity: sensor.pilotsuite_habitus_zones
+#   entity: sensor.copilot_ha_habitus_zones
 #   title: Wohnzimmer
 #   zones:
 #     - living_room
