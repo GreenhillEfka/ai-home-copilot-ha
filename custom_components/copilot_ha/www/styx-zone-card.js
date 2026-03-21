@@ -84,6 +84,7 @@ class StyxZoneCard extends _ZoneBase {
       show_health_score: true,
       show_module_states: true,
       show_autonomy_log: true,
+      show_presence_hold: true,
     };
   }
 
@@ -99,6 +100,7 @@ class StyxZoneCard extends _ZoneBase {
       show_health_score: config.show_health_score !== false,
       show_module_states: config.show_module_states !== false,
       show_autonomy_log: config.show_autonomy_log !== false,
+      show_presence_hold: config.show_presence_hold !== false,
     };
   }
 
@@ -268,6 +270,54 @@ class StyxZoneCard extends _ZoneBase {
     if (score >= 80) return 'healthy';
     if (score >= 50) return 'degraded';
     return 'critical';
+  }
+
+  // ── Presence Hold ─────────────────────────────────────────────────────────
+
+  _getPresenceHoldState(zone) {
+    return zone?.presence_hold || 'auto';
+  }
+
+  _buildHoldPills(zoneId, holdState) {
+    const pills = [
+      { value: 'auto',      label: 'Auto', icon: 'mdi:auto-mode' },
+      { value: 'force_on',  label: 'An',   icon: 'mdi:account-check' },
+      { value: 'force_off', label: 'Aus',  icon: 'mdi:account-cancel' },
+    ];
+    return `
+      <div class="zone-card-hold" data-zone="${zoneId}">
+        <span class="hold-label">Anwesenheit:</span>
+        <div class="hold-pills">
+          ${pills.map(p => `
+            <button class="hold-pill ${p.value === 'force_on' ? 'force-on' : ''} ${p.value === 'force_off' ? 'force-off' : ''} ${holdState === p.value ? 'active' : ''}"
+              data-hold="${p.value}"
+              title="${p.label}"
+              aria-label="Anwesenheit: ${p.label}"
+              aria-pressed="${holdState === p.value}">
+              <span class="mdi-icon">${p.icon}</span>
+              <span>${p.label}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>`;
+  }
+
+  _callPresenceHoldService(zoneId, hold) {
+    if (!this._hass) return;
+    // Use copilot_ha REST command if available, otherwise dispatch event for companion handler
+    try {
+      this._hass.callService('rest_command', 'zone_presence_hold', {
+        entity_id: `zone.${zoneId}`,
+        hold,
+      });
+    } catch (_) {
+      // Fallback: dispatch DOM event for external handler (companion app / automation)
+      this.dispatchEvent(new CustomEvent('presence-hold', {
+        detail: { zoneId, hold },
+        bubbles: true,
+        composed: true,
+      }));
+    }
   }
 
   _getModuleStates(zoneId) {
@@ -536,6 +586,8 @@ class StyxZoneCard extends _ZoneBase {
       : '';
     const moduleChips = this._config.show_module_states ? this._buildModuleChips(zoneId) : '';
     const autonomyLog = this._config.show_autonomy_log ? this._buildAutonomyLog(zoneId) : '';
+    const holdState = this._config.show_presence_hold ? this._getPresenceHoldState(zone) : null;
+    const holdPills = holdState !== null ? this._buildHoldPills(zoneId, holdState) : '';
 
     const modeIcon = hasMode ? this._getModeIcon(zone.mode) : 'mdi:home';
     const modeLabel = zone.mode || 'inaktiv';
@@ -575,6 +627,8 @@ class StyxZoneCard extends _ZoneBase {
         ${neuronBar}
 
         ${autonomyLog}
+
+        ${holdPills}
 
         ${this._config.show_quick_actions ? `
           <div class="quick-actions">
@@ -984,6 +1038,59 @@ class StyxZoneCard extends _ZoneBase {
           font-family: 'Material Design Icons', sans-serif;
           font-style: normal;
         }
+
+        /* v14.8: Presence Hold Control */
+        .zone-card-hold {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 0 4px;
+          border-top: 1px solid var(--border-color, rgba(255,255,255,0.06));
+        }
+        .hold-label {
+          font-size: 0.75rem;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          white-space: nowrap;
+        }
+        .hold-pills {
+          display: flex;
+          gap: 4px;
+          flex-wrap: wrap;
+        }
+        .hold-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 3px 8px;
+          border-radius: 999px;
+          font-size: 11px;
+          cursor: pointer;
+          border: 1px solid var(--border-color, rgba(255,255,255,0.12));
+          background: transparent;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9e9eb8));
+          transition: border-color 0.15s, color 0.15s, background 0.15s;
+          font-family: inherit;
+        }
+        .hold-pill:hover {
+          border-color: var(--ps-primary, #6366f1);
+          color: var(--ps-primary, #6366f1);
+        }
+        .hold-pill.active {
+          background-color: var(--ps-primary, #6366f1);
+          border-color: var(--ps-primary, #6366f1);
+          color: #fff;
+        }
+        .hold-pill.force-on.active {
+          background-color: #22c55e;
+          border-color: #22c55e;
+        }
+        .hold-pill.force-off.active {
+          background-color: #ef4444;
+          border-color: #ef4444;
+        }
+        .hold-pill .mdi {
+          font-size: 0.85rem;
+        }
       </style>
       <ha-card>
         <div class="card">
@@ -1028,6 +1135,23 @@ class StyxZoneCard extends _ZoneBase {
       d.addEventListener('toggle', () => {
         if (d.open) {
           details.forEach(other => { if (other !== d) other.open = false; });
+        }
+      });
+    });
+
+    // Presence hold pills
+    const holdPills = this.shadowRoot.querySelectorAll('.hold-pill');
+    holdPills.forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        const hold = e.currentTarget.dataset.hold;
+        const zoneCard = e.currentTarget.closest('.zone-card');
+        const zoneId = zoneCard?.dataset.zone;
+        if (hold && zoneId) {
+          // Optimistic UI — update active state immediately
+          e.currentTarget.closest('.hold-pills')
+            .querySelectorAll('.hold-pill')
+            .forEach(p => p.classList.toggle('active', p.dataset.hold === hold));
+          this._callPresenceHoldService(zoneId, hold);
         }
       });
     });
