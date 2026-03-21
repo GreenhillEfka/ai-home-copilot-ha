@@ -1,46 +1,30 @@
-# Python artifacts
+# Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 *.so
-
-# Build outputs
-build/
-dist/
+.Python
 *.egg-info/
-.coverage
-.pytest_cache/
-.mypy_cache/
-htmlcov/
+.eggs/
+dist/
+build/
+*.egg
 
-# Editor/OS noise
-.DS_Store
-.idea/
+# Home Assistant
+.python_version*
+*.db
+*.sqlite
+*.sqlite-journal
+
+# IDE
 .vscode/
+.idea/
+*.swp
+*.swo
 
-.venv/
+# OS
+.DS_Store
+Thumbs.db
 
-# Secrets & credentials (defensive)
-.env
-.env.*
-*.pem
-*.key
-*.cert
-*.p12
-secrets.yaml
-credentials.json
-
-# Large backups
-backups/
-*.bundle
-
-# Node / test artifacts
-node_modules/
-test-results/
+# Temp
+*.tmp
 *.log
-coverage.json
-coverage.xml
-.last-dev-check
-qg_venv/
-.tmp_ha_live/

@@ -1,5 +1,0 @@
-pytest>=8,<9
-pytest-asyncio
-aiohttp
-voluptuous
-pyyaml
