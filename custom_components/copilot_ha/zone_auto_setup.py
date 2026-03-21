@@ -477,6 +477,7 @@ def aggregate_areas_to_habitus_zones(
     template_areas: dict[str, list[dict]] = {}  # template zone_id → [area_dicts]
     template_map: dict[str, dict] = {}  # template zone_id → template
     unmatched: list[dict] = []
+    area_zone_config = load_area_zone_map()
 
     for area in areas:
         area_name = area.get("name", "")
