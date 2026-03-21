@@ -154,7 +154,11 @@ class AreaPresenceSensor(CopilotBaseEntity, BinarySensorEntity):
         self._hold_state: str = "auto"
         self._held_value: Optional[bool] = None
         self._last_core_update: Optional[datetime] = None
+        self._last_presence_persist: Optional[datetime] = None
         self._unsub: Optional[Any] = None
+
+        # Throttle: persist presence to Core at most every 30 s
+        self._PRESENCE_PERSIST_INTERVAL_S = 30
 
     # ── Properties ──────────────────────────────────────────────────
 
@@ -219,9 +223,11 @@ class AreaPresenceSensor(CopilotBaseEntity, BinarySensorEntity):
         # Try Core API sync first
         core_ok = await self._sync_from_core()
 
-        # HA-native fallback
+        # HA-native fallback — Core unreachable, HA's aggregated state is
+        # authoritative. Persist it to Core Neurons so Core stays in sync.
         if not core_ok:
             await self._evaluate_ha_native()
+            await self._persist_presence_to_core()
 
         self.async_write_ha_state()
 
@@ -537,6 +543,32 @@ class AreaPresenceSensor(CopilotBaseEntity, BinarySensorEntity):
         except Exception as err:
             _LOGGER.debug(
                 "Could not persist hold state to Core for zone %s: %s",
+                self._zone_id, err,
+            )
+
+    async def _persist_presence_to_core(self) -> None:
+        """Send aggregated presence state to Core Neurons API (throttled, ≤30 s)."""
+        if not self.coordinator or not hasattr(self.coordinator, "api"):
+            return
+
+        now = datetime.now(timezone.utc)
+        if self._last_presence_persist:
+            elapsed = (now - self._last_presence_persist).total_seconds()
+            if elapsed < self._PRESENCE_PERSIST_INTERVAL_S:
+                return
+
+        try:
+            await self.coordinator.api.async_set_zone_presence_state(
+                zone_id=self._zone_id,
+                occupied=self._agg.occupied,
+                primary_source=self._agg.primary_source,
+                confidence=self._agg.confidence,
+                hold_state=self._hold_state,
+            )
+            self._last_presence_persist = now
+        except Exception as err:
+            _LOGGER.debug(
+                "Could not persist presence to Core for zone %s: %s",
                 self._zone_id, err,
             )
 

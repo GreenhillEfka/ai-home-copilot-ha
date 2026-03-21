@@ -516,6 +516,30 @@ class CopilotApiClient(SharedCopilotApiClient):
             label=f"Zone presence hold {zone_id}/{hold}",
         )
 
+    async def async_set_zone_presence_state(
+        self,
+        zone_id: str,
+        occupied: bool,
+        primary_source: str | None,
+        confidence: float,
+        hold_state: str,
+    ) -> dict[str, Any]:
+        """Send aggregated presence state from HA AreaPresenceSensor to Core Neurons.
+
+        Called when Core is unreachable and HA's any-on aggregation is authoritative.
+        Throttled by the sensor to ≤1 call / 30 s per zone.
+        """
+        return await self._safe_post(
+            f"/api/v1/zone/presence/{zone_id}/state",
+            {
+                "occupied": occupied,
+                "primary_source": primary_source,
+                "confidence": confidence,
+                "hold_state": hold_state,
+            },
+            label=f"Zone presence state {zone_id}",
+        )
+
     async def async_get_musikwolke_zone_map(self) -> dict[str, Any]:
         """Get zone-to-speaker mapping."""
         return await self._safe_get(
