@@ -907,6 +907,91 @@ ENTITIES_V2 = [
     HabitusZonesV2GlobalStateSelect,
     HabitusZonesV2SyncGraphButton,
     HabitusZonesV2ReloadButton,
+    HabitusZonesV2ModulesSensor,  # Per-zone module configs (light, music, climate, cover, security)
 ]
 
 
+
+
+# ---------------------------------------------------------------------------
+# Habitus Zones v2 Modules Sensor
+# Surfaces per-zone module configs (light, music, climate, cover, security)
+# from Core's zone_automation data as HA attributes.
+# Feeds styx-zone-card.js show_module_states=true
+# ---------------------------------------------------------------------------
+
+class HabitusZonesV2ModulesSensor(CopilotBaseEntity, SensorEntity):
+    """Per-zone module configuration from Core zone_automation.
+
+    Reads module configs per zone from coordinator.data["zone_automation"]
+    and surfaces as attributes. Feeds styx-zone-card.js module state display.
+
+    native_value: number of zones with active modules
+    attributes.zone_modules: {zone_id: {light: {auto, brightness}, music: {auto, volume}, ...}}
+    """
+
+    _attr_has_entity_name = False
+    _attr_name = "PilotSuite habitus zones v2 modules"
+    _attr_unique_id = "copilot_ha_habitus_zones_v2_modules"
+    _attr_icon = "mdi:playlist-settings"
+
+    def __init__(self, coordinator, entry: ConfigEntry):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._unsub: Any = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self._unsub = async_dispatcher_connect(
+            self.hass, SIGNAL_HABITUS_ZONES_V2_UPDATED, self._on_update
+        )
+        await self._refresh()
+
+    async def async_will_remove_from_hass(self) -> None:
+        if callable(self._unsub):
+            self._unsub()
+        self._unsub = None
+        await super().async_will_remove_from_hass()
+
+    async def _refresh(self) -> None:
+        zone_auto = self.coordinator.data.get("zone_automation", {})
+        zones_list = zone_auto.get("zones", [])
+
+        zone_modules: dict[str, dict[str, Any]] = {}
+        active_count = 0
+
+        for zone_data in zones_list:
+            zid = zone_data.get("zone_id", "")
+            config = zone_data.get("config", {})
+            mode = config.get("automation_mode", "off")
+
+            module_configs: dict[str, Any] = {}
+            for module_key in ("light", "music", "climate", "cover", "security"):
+                if module_key in config:
+                    cfg = config[module_key]
+                    if isinstance(cfg, dict):
+                        module_configs[module_key] = cfg
+                        # Count as active if auto mode or has non-default values
+                        if mode != "off":
+                            active_count += 1
+
+            if module_configs or mode != "off":
+                zone_modules[zid] = {
+                    "automation_mode": mode,
+                    "modules": module_configs,
+                }
+
+        self._attr_native_value = str(active_count)
+        self._attr_extra_state_attributes = {
+            "zone_modules": zone_modules,
+            "zones_with_modules": len(zone_modules),
+        }
+        self.async_write_ha_state()
+
+    @callback
+    def _on_update(self, entry_id: str) -> None:
+        if entry_id != self._entry.entry_id:
+            return
+        self.hass.loop.call_soon_threadsafe(
+            lambda: self.hass.async_create_task(self._refresh())
+        )

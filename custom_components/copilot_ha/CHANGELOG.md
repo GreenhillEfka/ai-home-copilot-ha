@@ -15,6 +15,29 @@ All notable changes to PilotSuite will be documented in this file.
 ### Removed
 - Reconciliation cleanup: removed non-HACS content from HA repository (see PR #150)
 
+## [14.9.1] - 2026-03-21
+
+### Added
+- `ModuleDashboardSensor`: surfaces Core's `/api/v1/modules/dashboard` as HA sensor (`N/M` active modules)
+- Frontend module registry cleaned (orphan cards removed)
+- Minimal CI workflow added
+
+### Changed
+- Schema packages (`schemas/`) added for module-per-zone validation
+- `habitus_adapter.py` renamed to `habitus_adapter.py` (canonical name)
+- `habitus_entity_sorting.py` added: enhanced entity→zone sorting with confidence scoring
+- OpenAPI contract synced from Core
+
+### Deprecated
+- `entity_zone_sorter.py` — use `habitus_entity_sorting.py`
+- `habitat_adapter.py` — use `habitus_adapter.py`
+- `habitus_module_schema.py` — use `schemas/zone.py`
+
+### Removed
+- Orphan Lovelace cards (pilotstack-zone-cards.mjs, frontend/ directory)
+- Non-HACS content from HA repository: dashboard/, docs/, agents/, tests/, pilotsuite_ops/
+- Reconciliation cleanup: removed non-HACS content from HA repository (see PR #150)
+
 ## [14.6.1] - 2026-03-16
 
 ### Changed
