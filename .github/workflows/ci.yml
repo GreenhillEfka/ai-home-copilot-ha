@@ -18,7 +18,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install "pytest-homeassistant>=2024.4.0" pytest pytest-asyncio voluptuous aiohttp
+          pip install pytest pytest-asyncio voluptuous aiohttp pyyaml
 
       - name: Run tests
         run: |
