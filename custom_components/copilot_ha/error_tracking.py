@@ -10,6 +10,8 @@ from homeassistant.core import HomeAssistant
 from .core.error_helpers import log_error_with_context, capture_error_for_diagnostics
 from .core.modules.dev_surface import _get_kernel
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def track_error(
     hass: HomeAssistant,
@@ -44,8 +46,11 @@ def track_error(
         if error_digest and hasattr(error_digest, "record_exception"):
             error_digest.record_exception(error, operation, context)
     except Exception:  # noqa: BLE001
-        # Don't let error tracking break the main flow
-        pass
+        _LOGGER.warning(
+            "Failed to record error in digest, operation=%s: %s",
+            operation,
+            str(error)[:100],
+        )
 
 
 def get_error_summary(hass: HomeAssistant, entry_id: str) -> Optional[dict[str, Any]]:
@@ -63,9 +68,9 @@ def get_error_summary(hass: HomeAssistant, entry_id: str) -> Optional[dict[str, 
         error_digest = kernel.get("errors")
         if error_digest and hasattr(error_digest, "as_dict"):
             return error_digest.as_dict()
-    except Exception:  # noqa: BLE001
-        pass
-    
+    except Exception as e:  # noqa: BLE001
+        _LOGGER.debug("Error summary unavailable for entry_id=%s: %s", entry_id, str(e)[:100])
+
     return None
 
 
@@ -85,7 +90,7 @@ def clear_errors(hass: HomeAssistant, entry_id: str) -> bool:
         if error_digest and hasattr(error_digest, "clear"):
             error_digest.clear()
             return True
-    except Exception:  # noqa: BLE001
-        pass
-    
+    except Exception as e:  # noqa: BLE001
+        _LOGGER.debug("Failed to clear errors for entry_id=%s: %s", entry_id, str(e)[:100])
+
     return False
