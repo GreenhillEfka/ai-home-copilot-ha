@@ -565,6 +565,21 @@ class HabitusZonesSensor(CopilotBaseEntity, SensorEntity):
         core_port = entry_data.get(CONF_PORT, DEFAULT_PORT)
         core_base = f"http://{core_host}:{core_port}"
 
+        # Extract zone_modules from zone_automation for styx-zone-card module display
+        zone_auto = self.coordinator.data.get("zone_automation", {}) if self.coordinator else {}
+        zones_auto_list = zone_auto.get("zones", [])
+        zone_modules: dict[str, dict[str, Any]] = {}
+        for zdata in zones_auto_list:
+            zid = zdata.get("zone_id", "")
+            config = zdata.get("config", {})
+            mode = config.get("automation_mode", "off")
+            mod_configs: dict[str, Any] = {}
+            for mk in ("light", "music", "climate", "cover", "security"):
+                if mk in config and isinstance(config[mk], dict):
+                    mod_configs[mk] = config[mk]
+            if mod_configs or mode != "off":
+                zone_modules[zid] = {"automation_mode": mode, "modules": mod_configs}
+
         self._attr_native_value = f"{len(active_zones)}/{len(zones)} active"
         self._attr_extra_state_attributes = {
             "zones": zone_list,
@@ -572,6 +587,7 @@ class HabitusZonesSensor(CopilotBaseEntity, SensorEntity):
             "zones_total": len(zones),
             "zones_active": len(active_zones),
             "core_base": core_base,
+            "zone_modules": zone_modules,
         }
         self.async_write_ha_state()
 

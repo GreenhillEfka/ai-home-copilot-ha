@@ -384,10 +384,12 @@ class StyxZoneCard extends _ZoneBase {
   }
 
   _getModuleStates(zoneId) {
-    const autonomyEntity = this._hass?.states['sensor.pilotsuite_autonomie_status'];
-    if (!autonomyEntity) return [];
+    // Read zone_modules from the sensor entity configured in Lovelace YAML
+    // (sensor.copilot_ha_habitus_zones — set as `entity` in YAML config)
+    const configEntity = this._hass?.states[this._config.entity];
+    if (!configEntity) return [];
 
-    const attrs = autonomyEntity.attributes || {};
+    const attrs = configEntity.attributes || {};
     // Try zone-specific module states with various key formats
     const zm = attrs.zone_modules;
     if (zm && typeof zm === 'object') {
