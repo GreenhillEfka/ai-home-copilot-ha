@@ -40,6 +40,14 @@
 
 Alle wesentlichen Aenderungen am PilotSuite Styx HA Add-on werden in dieser Datei dokumentiert.
 
+## [14.8.2] - 2026-03-21
+
+### Hotfix: SyntaxError in Dashboard-API
+
+#### Fixed
+- **dashboard.py SyntaxError**: Doppelte `_core_delete`/`_core_put`/`_core_post` Definitionen aus Feature-Branch `f0bffbaf` entfernt. Datei auf sauberen Pre-Merge-Stand (`c329fdf5`) zurückgesetzt. Kompilierung wieder fehlerfrei.
+- **py_compile**: Verifiziert OK.
+
 ## [14.8.1] - 2026-03-21
 
 ### Release Candidate fuer Live-HA-Test
