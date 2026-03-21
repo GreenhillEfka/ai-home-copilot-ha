@@ -81,6 +81,7 @@ HABITUS_ZONE_TEMPLATES: list[dict[str, Any]] = [
         "name_de": "Schlafbereich",
         "keywords": [
             "schlaf", "schlafzimmer", "bedroom",
+            "kinderzimmer", "kinder", "kidi",
         ],
         "zone_type": "room",
         "icon": "mdi:bed",
@@ -229,6 +230,14 @@ def _normalize_text(text: str) -> str:
     """Normalize text for keyword matching (lowercase, strip accents)."""
     nfkd = unicodedata.normalize("NFKD", text.lower())
     return nfkd.encode("ascii", "ignore").decode("ascii").strip()
+
+
+def _get_template_by_zone_id(zone_id: str) -> dict | None:
+    """Return the Habitus Zone template for a given zone_id."""
+    for t in HABITUS_ZONE_TEMPLATES:
+        if t["zone_id"] == zone_id:
+            return t
+    return None
 
 
 def _levenshtein_distance(s1: str, s2: str) -> int:
