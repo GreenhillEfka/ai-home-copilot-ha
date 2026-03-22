@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-v15.0.0 Smoke Test — PilotSuite HA Add-on
+v15.0.2 Smoke Test — PilotSuite HA Add-on
 Run on Home Assistant host or with HA API access.
 
 Usage:
