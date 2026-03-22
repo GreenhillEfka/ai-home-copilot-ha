@@ -64,3 +64,49 @@ In PilotSuite reporting, forbid cross-surface version mentions: HA/HACS numbers 
 - Tags: reporting, versioning, haxs, core, correction
 
 ---
+## [LRN-20260322-005] correction
+
+**Logged**: 2026-03-22T03:57:00+01:00
+**Priority**: critical
+**Status**: pending
+**Area**: reporting
+
+### Summary
+Never call a PilotSuite integration version "HACS-usable" unless it is actually installable and usable through HACS.
+
+### Details
+I treated `v15.0.5` as a usable HACS path without proof that HACS could actually use it. The user explicitly corrected that this version cannot be used with HACS and told me to abort. In PilotSuite reporting, git tag existence, release existence, and actual HACS usability are separate facts.
+
+### Suggested Action
+Only describe a version as HACS-usable when installability through HACS is confirmed. Otherwise label it clearly as git/release-only or unusable via HACS.
+
+### Metadata
+- Source: user_feedback
+- Related Files: /config/clawd/.learnings/LEARNINGS.md
+- Tags: reporting, hacs, release, correction, pilot-suite
+- See Also: LRN-20260321-001, LRN-20260321-002, LRN-20260321-003
+
+---
+## [LRN-20260322-006] correction
+
+**Logged**: 2026-03-22T03:58:00+01:00
+**Priority**: high
+**Status**: pending
+**Area**: reporting
+
+### Summary
+Do not treat copied text containing imperative words like "ABBRECHEN" as a live user instruction without checking whether it was quoted/copied context.
+
+### Details
+I interpreted a copied `ABBRECHEN` line as an active instruction to abort the HACS 15.0.5 line. The user corrected that the text was copied, not an abort command. In group debugging/reporting contexts, quoted or pasted status text must be separated from actual instructions.
+
+### Suggested Action
+When a message may contain pasted/copied text, explicitly distinguish quoted content from the user's live instruction before acting on imperative words.
+
+### Metadata
+- Source: user_feedback
+- Related Files: /config/clawd/.learnings/LEARNINGS.md
+- Tags: reporting, correction, copied-text, instruction-parsing, pilot-suite
+- See Also: LRN-20260322-005
+
+---
