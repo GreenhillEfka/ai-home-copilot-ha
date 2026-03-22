@@ -69,6 +69,14 @@ class StyxZoneCard extends _ZoneBase {
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this._config = {};
     this._hass = null;
+    this._pollTimers = [];
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    // Clean up any pending poll timers to prevent memory leaks
+    this._pollTimers.forEach(t => clearTimeout(t));
+    this._pollTimers = [];
   }
 
   static getConfigElement() {
@@ -371,16 +379,16 @@ class StyxZoneCard extends _ZoneBase {
         // Sync confirmed
         this._setHoldSyncState(zoneId, 'synced');
         // Clear synced indicator after 2s
-        setTimeout(() => this._setHoldSyncState(zoneId, 'idle'), 2000);
+        this._pollTimers.push(setTimeout(() => this._setHoldSyncState(zoneId, 'idle'), 2000));
         return;
       }
       
       // Continue polling
-      setTimeout(check, POLL_INTERVAL_MS);
+      this._pollTimers.push(setTimeout(check, POLL_INTERVAL_MS));
     };
     
     // Start first check after a short delay
-    setTimeout(check, POLL_INTERVAL_MS);
+    this._pollTimers.push(setTimeout(check, POLL_INTERVAL_MS));
   }
 
   _getModuleStates(zoneId) {
