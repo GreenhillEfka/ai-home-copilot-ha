@@ -2,6 +2,12 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.0.12] - 2026-03-22
+
+### Fixed
+- Import crash on Home Assistant startup: `HabitusZonesV2ModulesSensor` is now registered only after its class definition, fixing `NameError: name "HabitusZonesV2ModulesSensor" is not defined` during `custom_components.copilot_ha.sensor` import
+- Published HA version files realigned for this release: `VERSION`, `custom_components/copilot_ha/VERSION`, and `manifest.json` now all report `15.0.12`
+
 ## [15.0.10] - 2026-03-22
 
 ### Fixed

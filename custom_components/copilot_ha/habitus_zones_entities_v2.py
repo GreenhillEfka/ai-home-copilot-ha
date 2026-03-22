@@ -917,29 +917,6 @@ class HabitusZonesV2ReloadButton(CopilotBaseEntity, ButtonEntity):
         )
 
 
-# Registry for entity creation
-ENTITIES_V2 = [
-    HabitusZonesV2JsonText,
-    HabitusZonesV2CountSensor,
-    HabitusZonesV2ValidateButton,
-    HabitusZonesV2StatesSensor,
-    HabitusZonesV2HealthSensor,
-    HabitusZonesV2GlobalStateSelect,
-    HabitusZonesV2SyncGraphButton,
-    HabitusZonesV2ReloadButton,
-    HabitusZonesV2ModulesSensor,  # Per-zone module configs (light, music, climate, cover, security)
-]
-
-
-
-
-# ---------------------------------------------------------------------------
-# Habitus Zones v2 Modules Sensor
-# Surfaces per-zone module configs (light, music, climate, cover, security)
-# from Core's zone_automation data as HA attributes.
-# Feeds styx-zone-card.js show_module_states=true
-# ---------------------------------------------------------------------------
-
 class HabitusZonesV2ModulesSensor(CopilotBaseEntity, SensorEntity):
     """Per-zone module configuration from Core zone_automation.
 
@@ -1015,3 +992,26 @@ class HabitusZonesV2ModulesSensor(CopilotBaseEntity, SensorEntity):
         self.hass.loop.call_soon_threadsafe(
             lambda: self.hass.async_create_task(self._refresh())
         )
+
+# Registry for entity creation
+ENTITIES_V2 = [
+    HabitusZonesV2JsonText,
+    HabitusZonesV2CountSensor,
+    HabitusZonesV2ValidateButton,
+    HabitusZonesV2StatesSensor,
+    HabitusZonesV2HealthSensor,
+    HabitusZonesV2GlobalStateSelect,
+    HabitusZonesV2SyncGraphButton,
+    HabitusZonesV2ReloadButton,
+    HabitusZonesV2ModulesSensor,  # Per-zone module configs (light, music, climate, cover, security)
+]
+
+
+
+
+# ---------------------------------------------------------------------------
+# Habitus Zones v2 Modules Sensor
+# Surfaces per-zone module configs (light, music, climate, cover, security)
+# from Core's zone_automation data as HA attributes.
+# Feeds styx-zone-card.js show_module_states=true
+# ---------------------------------------------------------------------------
