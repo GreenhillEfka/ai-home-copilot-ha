@@ -2,6 +2,12 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.0.10] - 2026-03-22
+
+### Fixed
+- Follow-up HACS release after the parallel `v15.0.9` tag collision so the cleaned package ships under a fresh, unambiguous release number
+- Published HA version files now all report `15.0.10`
+
 ## [15.0.9] - 2026-03-22
 
 ### Fixed
