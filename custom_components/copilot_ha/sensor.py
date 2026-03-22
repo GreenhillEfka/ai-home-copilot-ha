@@ -204,6 +204,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             CopilotVersionSensor(coordinator),
             CoreApiV1StatusSensor(coordinator, entry),
             CoreVersionDiagnosticSensor(coordinator, entry),
+            # System Status Sensors (v15.0 Core Connection Monitor)
+            CoreConnectionSensor(hass, entry, coordinator),
+            PollIntervalSensor(hass, entry, coordinator),
+            ApiFailuresSensor(hass, entry, coordinator),
+            ModulesReadySensor(hass, entry, coordinator),
             HabitusZonesSensor(coordinator, entry),
             HabitusZonesV2ModulesSensor(coordinator, entry),
             HabitusZonesV2CountSensor(coordinator, entry),
@@ -277,6 +282,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         ZigbeeNetworkHealthSensor(hass, entry),
         ZigbeeDevicesOnlineSensor(hass, entry),
         ZigbeeBatteryOverviewSensor(hass, entry),
+        # System Status Sensors (v15.0 Core Connection Monitor)
+        CoreConnectionSensor(hass, entry, coordinator),
+        PollIntervalSensor(hass, entry, coordinator),
+        ApiFailuresSensor(hass, entry, coordinator),
+        ModulesReadySensor(hass, entry, coordinator),
         # Mesh Dashboard (Overview & Topology)
         MeshNetworkOverviewSensor(hass, entry),
         ZWaveMeshTopologySensor(hass, entry),
