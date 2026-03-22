@@ -52,8 +52,14 @@ class StyxErrorCard extends _ErrBase {
     this._expanded = {};
     this._loadError = null;
     this._stale = false;
-
+    this._timers = [];
     this._lastRetryTs = 0;
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    this._timers.forEach(t => clearTimeout(t));
+    this._timers = [];
   }
 
   static getConfigElement() {
@@ -132,6 +138,7 @@ class StyxErrorCard extends _ErrBase {
     const url = this._getCoreUrl();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
+    this._timers.push(timer);
 
     this._loadError = null;
     this._stale = false;

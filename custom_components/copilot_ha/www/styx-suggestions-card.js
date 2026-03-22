@@ -70,11 +70,18 @@ class StyxSuggestionsCard extends _SugBase {
     this._uiState = null;           // loading|empty|error|loaded
     this._degraded = false;         // global degraded banner state
     this._lastRetryTs = 0;
+    this._timers = [];
 
     // Esc key handler to close detail modal
     this._onKeyDown = (e) => {
       if (e.key === 'Escape') this._closeDetail();
     };
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    this._timers.forEach(t => clearTimeout(t));
+    this._timers = [];
   }
 
   static getConfigElement() {
@@ -209,6 +216,7 @@ class StyxSuggestionsCard extends _SugBase {
     const url = this._getCoreUrl();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
+    this._timers.push(timer);
 
     try {
       const resp = await fetch(`${url}/api/v1/suggestions`, {

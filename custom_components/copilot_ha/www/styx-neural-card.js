@@ -42,6 +42,13 @@ class StyxNeuralCard extends _NeuralBase {
     this._neuronSnapshot = null;
     this._pipelineStatus = null;
     this._neuralLoaded = false;
+    this._timers = [];
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    this._timers.forEach(t => clearTimeout(t));
+    this._timers = [];
   }
 
   static getConfigElement() {
@@ -117,6 +124,7 @@ class StyxNeuralCard extends _NeuralBase {
     const url = this._getCoreUrl();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 12000);
+    this._timers.push(timer);
     try {
       const resp = await fetch(`${url}/api/v1/neurons/layers/visualization`, {
         headers: { 'X-Auth-Token': this._getToken() },
@@ -313,6 +321,7 @@ class StyxNeuralCard extends _NeuralBase {
     const url = this._getCoreUrl();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
+    this._timers.push(timer);
     try {
       const resp = await fetch(`${url}/api/v1/conversation/history?limit=${this._config.max_messages}`, {
         headers: { 'X-Auth-Token': this._getToken() },
@@ -358,6 +367,7 @@ class StyxNeuralCard extends _NeuralBase {
     const url = this._getCoreUrl();
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 30000);
+    this._timers.push(timer);
     let changedNeurons = [];
 
     try {
