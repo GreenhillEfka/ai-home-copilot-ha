@@ -69,6 +69,14 @@ class StyxZoneCard extends _ZoneBase {
     if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
     this._config = {};
     this._hass = null;
+    this._pollTimers = [];
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback?.();
+    // Clean up any pending poll timers to prevent memory leaks
+    this._pollTimers.forEach(t => clearTimeout(t));
+    this._pollTimers = [];
   }
 
   static getConfigElement() {
@@ -371,54 +379,67 @@ class StyxZoneCard extends _ZoneBase {
         // Sync confirmed
         this._setHoldSyncState(zoneId, 'synced');
         // Clear synced indicator after 2s
-        setTimeout(() => this._setHoldSyncState(zoneId, 'idle'), 2000);
+        this._pollTimers.push(setTimeout(() => this._setHoldSyncState(zoneId, 'idle'), 2000));
         return;
       }
       
       // Continue polling
-      setTimeout(check, POLL_INTERVAL_MS);
+      this._pollTimers.push(setTimeout(check, POLL_INTERVAL_MS));
     };
     
     // Start first check after a short delay
-    setTimeout(check, POLL_INTERVAL_MS);
+    this._pollTimers.push(setTimeout(check, POLL_INTERVAL_MS));
   }
 
   _getModuleStates(zoneId) {
-    // Read zone_modules from the sensor entity configured in Lovelace YAML
-    // (sensor.copilot_ha_habitus_zones — set as `entity` in YAML config)
+    // Primary: read from the dedicated v2_modules sensor
+    // (sensor.copilot_ha_habitus_zones_v2_modules — correct source per MEMORY.md bug note)
+    const v2Entity = this._hass?.states['sensor.copilot_ha_habitus_zones_v2_modules'];
+    if (v2Entity) {
+      const zm = v2Entity.attributes?.zone_modules;
+      if (zm && typeof zm === 'object') {
+        const candidates = [zoneId, `zone:${zoneId}`];
+        if (zoneId.startsWith('zone:')) candidates.push(zoneId.slice(5));
+        for (const key of candidates) {
+          const zoneModules = zm[key];
+          if (zoneModules && typeof zoneModules === 'object') {
+            // v2 format: { light: {auto, brightness}, music: {auto, volume}, ... }
+            // State = 'active' if automation_mode != 'off' and module has config
+            const mode = zoneModules.automation_mode || 'off';
+            return Object.entries(zoneModules.modules || {}).map(([name, cfg]) => ({
+              name,
+              state: (mode !== 'off' && cfg && typeof cfg === 'object') ? 'active' : 'inactive',
+            }));
+          }
+        }
+      }
+    }
+
+    // Fallback: read from the configured entity (habitus_zones) which also
+    // exposes zone_modules with { automation_mode, modules } structure
     const configEntity = this._hass?.states[this._config.entity];
     if (!configEntity) return [];
 
     const attrs = configEntity.attributes || {};
-    // Try zone-specific module states with various key formats
     const zm = attrs.zone_modules;
     if (zm && typeof zm === 'object') {
-      const zoneModules = zm[zoneId] || zm[`zone:${zoneId}`]
-        || (zoneId.startsWith('zone:') ? zm[zoneId.slice(5)] : null);
-      if (zoneModules && typeof zoneModules === 'object') {
-        return Object.entries(zoneModules).map(([name, state]) => ({
-          name,
-          state: typeof state === 'string' ? state : (state?.state || 'off'),
-        }));
+      const candidates = [zoneId, `zone:${zoneId}`];
+      if (zoneId.startsWith('zone:')) candidates.push(zoneId.slice(5));
+      for (const key of candidates) {
+        const zoneModules = zm[key];
+        if (zoneModules && typeof zoneModules === 'object') {
+          const mode = zoneModules.automation_mode || 'off';
+          return Object.entries(zoneModules.modules || {}).map(([name, cfg]) => ({
+            name,
+            state: (mode !== 'off' && cfg && typeof cfg === 'object') ? 'active' : 'inactive',
+          }));
+        }
       }
     }
 
-    // Try modules attribute with zone keys
+    // Legacy fallback: flat { module_name: state_string } format
     const modules = attrs.modules;
-    if (modules && typeof modules === 'object') {
-      const zoneModules = modules[zoneId] || modules[`zone:${zoneId}`]
-        || (zoneId.startsWith('zone:') ? modules[zoneId.slice(5)] : null);
-      if (zoneModules && typeof zoneModules === 'object') {
-        return Object.entries(zoneModules).map(([name, state]) => ({
-          name,
-          state: typeof state === 'string' ? state : (state?.state || 'off'),
-        }));
-      }
-    }
-
-    // Fallback: global modules (same for all zones)
     if (modules && typeof modules === 'object' && !Array.isArray(modules)) {
-      // Only use if it's a flat module->state map (not zone-keyed)
       const firstValue = Object.values(modules)[0];
       if (typeof firstValue === 'string') {
         return Object.entries(modules).map(([name, state]) => ({ name, state }));
