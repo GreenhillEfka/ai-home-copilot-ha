@@ -1789,7 +1789,7 @@ def async_register_all_services(hass: HomeAssistant) -> None:
 # ---------------------------------------------------------------------------
 def _register_zone_presence_hold_service(hass: HomeAssistant) -> None:
     if not hass.services.has_service(DOMAIN, "set_zone_presence_hold"):
-        from .coordinator import CopilotHaCoordinator
+        from .coordinator import CopilotDataUpdateCoordinator
 
         async def _handle_set_presence_hold(call: ServiceCall) -> None:
             zone_id = str(call.data.get("zone_id", "")).strip()
@@ -1798,7 +1798,7 @@ def _register_zone_presence_hold_service(hass: HomeAssistant) -> None:
                 return
             # Find the coordinator and call its API method
             for entry_id, coord in hass.data.get(DOMAIN, {}).items():
-                if isinstance(coord, CopilotHaCoordinator):
+                if isinstance(coord, CopilotDataUpdateCoordinator):
                     try:
                         await coord.async_set_zone_presence_hold(zone_id, hold)
                     except Exception as err:
