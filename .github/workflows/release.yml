@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g. 15.0.12)'
+        description: 'Version to release (e.g. 15.0.17)'
         required: true
         type: string
 
@@ -57,14 +57,40 @@ PY
           git tag "$TAG"
           git push origin main --tags
 
-      - name: Build ZIP
+      - name: Build minimal HACS ZIP
         run: |
-          git archive --format=zip --prefix=pilotsuite-styx-ha/ -o "v${VERSION}.zip" HEAD
-          echo "ZIP size: $(wc -c < v${VERSION}.zip) bytes"
+          python3 - <<'PY'
+from pathlib import Path
+import shutil
+import zipfile
+
+root = Path('dist-hacs')
+if root.exists():
+    shutil.rmtree(root)
+(root / 'custom_components').mkdir(parents=True)
+
+ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
+shutil.copytree('custom_components/copilot_ha', root / 'custom_components' / 'copilot_ha', ignore=ignore)
+shutil.copy2('hacs.json', root / 'hacs.json')
+if Path('README.md').exists():
+    shutil.copy2('README.md', root / 'README.md')
+if Path('VERSION').exists():
+    shutil.copy2('VERSION', root / 'VERSION')
+
+with zipfile.ZipFile('pilotsuite-styx-ha.zip', 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+    for path in sorted(root.rglob('*')):
+        if path.is_file():
+            zf.write(path, path.relative_to(root))
+
+shutil.copy2('pilotsuite-styx-ha.zip', f"v{Path('VERSION').read_text().strip()}.zip")
+print(f"ZIP size: {Path('pilotsuite-styx-ha.zip').stat().st_size} bytes")
+PY
 
       - name: Verify ZIP before upload
         run: |
-          V=$(unzip -p "v${VERSION}.zip" pilotsuite-styx-ha/custom_components/copilot_ha/manifest.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
+          unzip -l pilotsuite-styx-ha.zip | grep 'custom_components/copilot_ha/manifest.json'
+          unzip -l pilotsuite-styx-ha.zip | grep 'hacs.json'
+          V=$(unzip -p pilotsuite-styx-ha.zip custom_components/copilot_ha/manifest.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
           if [ "$V" != "$VERSION" ]; then
             echo "FATAL: ZIP contains version $V, expected $VERSION"
             exit 1
@@ -80,18 +106,18 @@ PY
             --notes "Release $TAG" \
             --clobber
 
-      - name: Upload ZIP asset
+      - name: Upload ZIP assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          gh release upload "$TAG" pilotsuite-styx-ha.zip --clobber
           gh release upload "$TAG" "v${VERSION}.zip" --clobber
 
       - name: Final verification
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           sleep 3
-          ASSET_URL=$(gh api repos/${{ github.repository }}/releases/tags/$TAG --jq '.assets[] | select(.name=="v'"${VERSION}"'.zip") | .browser_download_url')
-          if [ -z "$ASSET_URL" ]; then
-            echo "FATAL: ZIP not found on release"
-            exit 1
-          fi
-          echo "SUCCESS: $ASSET_URL"
+          gh api repos/${{ github.repository }}/releases/tags/$TAG --jq '.assets[].name' | grep '^pilotsuite-styx-ha.zip$'
+          gh api repos/${{ github.repository }}/releases/tags/$TAG --jq '.assets[].name' | grep "^v${VERSION}.zip$"
+          echo "SUCCESS: release assets verified"

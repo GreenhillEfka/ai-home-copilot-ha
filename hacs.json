@@ -1,7 +1,9 @@
 {
   "name": "PilotSuite",
-  "filename": "v15.0.16.zip",
+  "content_in_root": false,
+  "zip_release": true,
+  "filename": "pilotsuite-styx-ha.zip",
   "hide_default_branch": true,
   "homeassistant": "2024.4.0",
-  "zip_release": true
+  "render_readme": false
 }
