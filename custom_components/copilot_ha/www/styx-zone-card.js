@@ -77,7 +77,7 @@ class StyxZoneCard extends _ZoneBase {
 
   static getStubConfig() {
     return {
-      entity: 'sensor.pilotsuite_habitus_zones',
+      entity: 'sensor.copilot_ha_habitus_zones',
       show_mood: true,
       show_neuron_activity: true,
       show_quick_actions: true,
@@ -384,41 +384,54 @@ class StyxZoneCard extends _ZoneBase {
   }
 
   _getModuleStates(zoneId) {
-    // Read zone_modules from the sensor entity configured in Lovelace YAML
-    // (sensor.copilot_ha_habitus_zones — set as `entity` in YAML config)
+    // Primary: read from the dedicated v2_modules sensor
+    // (sensor.copilot_ha_habitus_zones_v2_modules — correct source per MEMORY.md bug note)
+    const v2Entity = this._hass?.states['sensor.copilot_ha_habitus_zones_v2_modules'];
+    if (v2Entity) {
+      const zm = v2Entity.attributes?.zone_modules;
+      if (zm && typeof zm === 'object') {
+        const candidates = [zoneId, `zone:${zoneId}`];
+        if (zoneId.startsWith('zone:')) candidates.push(zoneId.slice(5));
+        for (const key of candidates) {
+          const zoneModules = zm[key];
+          if (zoneModules && typeof zoneModules === 'object') {
+            // v2 format: { light: {auto, brightness}, music: {auto, volume}, ... }
+            // State = 'active' if automation_mode != 'off' and module has config
+            const mode = zoneModules.automation_mode || 'off';
+            return Object.entries(zoneModules.modules || {}).map(([name, cfg]) => ({
+              name,
+              state: (mode !== 'off' && cfg && typeof cfg === 'object') ? 'active' : 'inactive',
+            }));
+          }
+        }
+      }
+    }
+
+    // Fallback: read from the configured entity (habitus_zones) which also
+    // exposes zone_modules with { automation_mode, modules } structure
     const configEntity = this._hass?.states[this._config.entity];
     if (!configEntity) return [];
 
     const attrs = configEntity.attributes || {};
-    // Try zone-specific module states with various key formats
     const zm = attrs.zone_modules;
     if (zm && typeof zm === 'object') {
-      const zoneModules = zm[zoneId] || zm[`zone:${zoneId}`]
-        || (zoneId.startsWith('zone:') ? zm[zoneId.slice(5)] : null);
-      if (zoneModules && typeof zoneModules === 'object') {
-        return Object.entries(zoneModules).map(([name, state]) => ({
-          name,
-          state: typeof state === 'string' ? state : (state?.state || 'off'),
-        }));
+      const candidates = [zoneId, `zone:${zoneId}`];
+      if (zoneId.startsWith('zone:')) candidates.push(zoneId.slice(5));
+      for (const key of candidates) {
+        const zoneModules = zm[key];
+        if (zoneModules && typeof zoneModules === 'object') {
+          const mode = zoneModules.automation_mode || 'off';
+          return Object.entries(zoneModules.modules || {}).map(([name, cfg]) => ({
+            name,
+            state: (mode !== 'off' && cfg && typeof cfg === 'object') ? 'active' : 'inactive',
+          }));
+        }
       }
     }
 
-    // Try modules attribute with zone keys
+    // Legacy fallback: flat { module_name: state_string } format
     const modules = attrs.modules;
-    if (modules && typeof modules === 'object') {
-      const zoneModules = modules[zoneId] || modules[`zone:${zoneId}`]
-        || (zoneId.startsWith('zone:') ? modules[zoneId.slice(5)] : null);
-      if (zoneModules && typeof zoneModules === 'object') {
-        return Object.entries(zoneModules).map(([name, state]) => ({
-          name,
-          state: typeof state === 'string' ? state : (state?.state || 'off'),
-        }));
-      }
-    }
-
-    // Fallback: global modules (same for all zones)
     if (modules && typeof modules === 'object' && !Array.isArray(modules)) {
-      // Only use if it's a flat module->state map (not zone-keyed)
       const firstValue = Object.values(modules)[0];
       if (typeof firstValue === 'string') {
         return Object.entries(modules).map(([name, state]) => ({ name, state }));
@@ -1260,24 +1273,13 @@ class StyxZoneCard extends _ZoneBase {
   _toggleLight(zoneId) {
     if (!this._hass || !zoneId) return;
 
-    const zonesData = this._getZonesData();
-    const zoneEntry = zonesData.zones.find(
-      z => z.zone_id === zoneId || z.zone_id === `zone:${zoneId}`
-    );
-    const lightEntities = zoneEntry?.entities?.lights || [];
+    const lightEntity = `light.${zoneId}_main`;
+    const state = this._hass.states[lightEntity];
+    const newState = state?.state === 'on' ? 'off' : 'on';
 
-    if (lightEntities.length === 0) {
-      // Fallback: try the old static pattern
-      const fallback = `light.${zoneId}_main`;
-      if (this._hass.states[fallback]) {
-        this._hass.callService('light', 'toggle', { entity_id: fallback });
-      } else {
-        _LOGGER.warning('[styx-zone-card] No light entities found for zone %s', zoneId);
-      }
-      return;
-    }
-
-    this._hass.callService('light', 'toggle', { entity_id: lightEntities[0] });
+    this._hass.callService('light', 'toggle', {
+      entity_id: lightEntity
+    });
   }
 
   _showSceneSelector(zoneId) {
