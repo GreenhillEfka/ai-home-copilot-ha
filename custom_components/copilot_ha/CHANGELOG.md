@@ -2,6 +2,29 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.0.5] - 2026-03-22
+
+### Fixed
+- `CopilotHaCoordinator` → `CopilotDataUpdateCoordinator` (import typo fix — blocked startup)
+- styx-zone-card: read zone_modules from `sensor.copilot_ha_habitus_zones_v2_modules` (correct sensor)
+- Zone entities exposed in `HabitusZonesSensor` extra_state_attributes
+- styx-zone-card: memory leaks from orphan setTimeout poll timers
+- Zone sync: send `name_de` instead of `name` in zone sync body
+
+### Changed
+- Config flow: add STEP_MODULES between NETWORK and REVIEW
+
+## [15.0.4] - 2026-03-22
+
+### Added
+- Module Config section in per-zone dashboard views (Lovelace)
+
+## [15.0.3] - 2026-03-21
+
+### Fixed
+- HACS metadata: remove legacy `hacs.json` — manifest.json with `hacs: default` sufficient
+- styx-zone-card: correct entity name to `sensor.copilot_ha_habitus_zones`
+
 ## [15.0.2] - 2026-03-21
 
 ### Added
