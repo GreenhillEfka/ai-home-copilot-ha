@@ -2,6 +2,13 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.0.14] - 2026-03-22
+
+### Fixed
+- HACS compatibility restored for versioned installs: root `hacs.json` added back and `zip_release` declared explicitly so HACS can validate and download tagged releases again
+- Keeps the startup/import fix from `v15.0.13` (`HabitusZonesV2ModulesSensor` registration order)
+- Published HA version files now all report `15.0.14`
+
 ## [15.0.13] - 2026-03-22
 
 ### Fixed

@@ -1,0 +1,8 @@
+{
+  "name": "PilotSuite",
+  "content_in_root": false,
+  "domains": ["copilot_ha"],
+  "homeassistant": "2024.4.0",
+  "render_readme": false,
+  "zip_release": true
+}
