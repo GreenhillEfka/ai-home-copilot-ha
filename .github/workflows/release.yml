@@ -23,44 +23,50 @@ jobs:
             exit 1
           fi
 
-      - name: Bump manifest versions
+      - name: Verify HACS repository shape
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          for manifest in custom_components/*/manifest.json; do
-            component=$(basename "$(dirname "$manifest")")
-            python3 -c "
-import json
-with open('$manifest', 'r+') as f:
-    data = json.load(f)
-    old = data.get('version', '?')
-    data['version'] = '$VERSION'
-    f.seek(0)
-    json.dump(data, f, indent=2)
-    f.truncate()
-print(f'{old} → $VERSION: {component}')
-"
-          done
+          count=$(find custom_components -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          if [ "$count" != "1" ]; then
+            echo "ERROR: HACS repo must expose exactly one integration under custom_components/, found $count"
+            find custom_components -mindepth 1 -maxdepth 1 -type d
+            exit 1
+          fi
+          test -d custom_components/copilot_ha
 
-      - name: Verify manifest consistency
+      - name: Bump published versions
         run: |
           VERSION="${{ github.event.inputs.version }}"
-          MISMATCH=0
-          for manifest in custom_components/*/manifest.json; do
-            V=$(python3 -c "import json; print(json.load(open('$manifest'))['version'])")
-            if [ "$V" != "$VERSION" ]; then
-              echo "ERROR: $manifest version is $V, expected $VERSION"
-              MISMATCH=1
-            fi
-          done
-          if [ $MISMATCH -eq 1 ]; then exit 1; fi
-          echo "All manifests verified: $VERSION"
+          printf '%s\n' "$VERSION" > VERSION
+          printf '%s\n' "$VERSION" > custom_components/copilot_ha/VERSION
+          python3 - <<PY
+import json
+from pathlib import Path
+manifest = Path('custom_components/copilot_ha/manifest.json')
+data = json.loads(manifest.read_text())
+data['version'] = '$VERSION'
+manifest.write_text(json.dumps(data, indent=2) + '\n')
+print(f"copilot_ha manifest -> $VERSION")
+PY
+
+      - name: Verify published version consistency
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          test "$(cat VERSION)" = "$VERSION"
+          test "$(cat custom_components/copilot_ha/VERSION)" = "$VERSION"
+          python3 - <<PY
+import json
+from pathlib import Path
+version = json.loads(Path('custom_components/copilot_ha/manifest.json').read_text())['version']
+assert version == '$VERSION', f"manifest version is {version}, expected $VERSION"
+print(f"All published versions verified: $VERSION")
+PY
 
       - name: Commit version bump
         run: |
           git config --global user.email "pilotclaw@pilotsuite.dev"
           git config --global user.name "PilotClaw"
           git add -A
-          git commit -m "chore: bump manifests to v${{ github.event.inputs.version }}"
+          git commit -m "chore: release v${{ github.event.inputs.version }}"
           git tag "v${{ github.event.inputs.version }}"
           git push origin main --tags
 
@@ -70,13 +76,3 @@ print(f'{old} → $VERSION: {component}')
             --title "PilotSuite HA v${{ github.event.inputs.version }}" \
             --notes "Release v${{ github.event.inputs.version }}" \
             --clobber
-
-      - name: Build and upload ZIP asset
-        run: |
-          git archive --format=zip --prefix=pilotsuite-styx-ha/ -o "v${{ github.event.inputs.version }}.zip" HEAD
-          gh release upload "${{ github.event.inputs.version }}" "v${{ github.event.inputs.version }}.zip" --clobber
-
-      - name: Verify ZIP contents
-        run: |
-          unzip -p "v${{ github.event.inputs.version }}.zip" pilotsuite-styx-ha/custom_components/copilot_ha/manifest.json | python3 -c "import json,sys; v=json.load(sys.stdin)['version']; print(f'copilot_ha: {v}')"
-          unzip -p "v${{ github.event.inputs.version }}.zip" pilotsuite-styx-ha/custom_components/pilotsuite_core/manifest.json | python3 -c "import json,sys; v=json.load(sys.stdin)['version']; print(f'pilotsuite_core: {v}')"

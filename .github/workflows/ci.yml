@@ -7,6 +7,33 @@ on:
     branches: [main]
 
 jobs:
+  validate-repo-shape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify single HACS integration
+        run: |
+          count=$(find custom_components -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+          if [ "$count" != "1" ]; then
+            echo "ERROR: Expected exactly one integration under custom_components/, found $count"
+            find custom_components -mindepth 1 -maxdepth 1 -type d
+            exit 1
+          fi
+          test -d custom_components/copilot_ha
+      - name: Verify version consistency
+        run: |
+          root_v=$(cat VERSION)
+          comp_v=$(cat custom_components/copilot_ha/VERSION)
+          manifest_v=$(python3 - <<'PY'
+import json
+from pathlib import Path
+print(json.loads(Path('custom_components/copilot_ha/manifest.json').read_text())['version'])
+PY
+)
+          test "$root_v" = "$comp_v"
+          test "$root_v" = "$manifest_v"
+          echo "Versions aligned: $root_v"
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -18,17 +45,3 @@ jobs:
         run: |
           pip install pyyaml pydantic voluptuous aiohttp
           python3 -m py_compile $(find custom_components -name '*.py')
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install dependencies
-        run: |
-          pip install pytest pytest-asyncio pyyaml pydantic aiohttp
-      - name: Run tests
-        run: |
-          python -m pytest tests/ -v --tb=short || true

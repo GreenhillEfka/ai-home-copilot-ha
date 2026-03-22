@@ -2,6 +2,17 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.0.9] - 2026-03-22
+
+### Fixed
+- HACS package cleanup: removed stray `custom_components/pilotsuite_core` stub from the HA repository so HACS installs only the supported `copilot_ha` integration
+- Version truth re-aligned: `VERSION`, `custom_components/copilot_ha/VERSION`, and `custom_components/copilot_ha/manifest.json` now all publish `15.0.9`
+- Manifest docs URL normalized to the repository root (no `#readme` anchor dependency)
+
+### Changed
+- Release workflow now bumps the root and component VERSION files together with the manifest
+- CI now verifies that the HA repository exposes exactly one HACS integration (`copilot_ha`)
+
 ## [15.0.5] - 2026-03-22
 
 ### Fixed
