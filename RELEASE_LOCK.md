@@ -4,16 +4,16 @@
 
 ## Aktiver Release
 ```
-agent: designclaw
-version: v15.0.16
-timestamp: 2026-03-22T13:35:00+01:00
+agent: none
+version: none
+timestamp: none
 ```
 
 ## Letzter Release
 ```
-version: v15.0.14
-agent: pilotclaw
-timestamp: 2026-03-22T12:23:00+01:00
+version: v15.0.16
+agent: designclaw
+timestamp: 2026-03-22T13:35:00+01:00
 ```
 
 ## Regeln
