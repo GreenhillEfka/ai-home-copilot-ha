@@ -108,13 +108,14 @@ class StyxChatCard extends _ChatBase {
   }
 
   async _loadHistory() {
+    if (this._historyCtrl) this._historyCtrl.abort();
     const url = this._getCoreUrl();
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
+    this._historyCtrl = new AbortController();
+    const timer = setTimeout(() => this._historyCtrl.abort(), 10000);
     try {
       const resp = await fetch(`${url}/api/v1/conversation/history?limit=${this._config.max_messages}`, {
         headers: { 'X-Auth-Token': this._getToken() },
-        signal: ctrl.signal,
+        signal: this._historyCtrl.signal,
       });
       clearTimeout(timer);
       if (resp.ok) {
@@ -145,9 +146,10 @@ class StyxChatCard extends _ChatBase {
     this._loading = true;
     this._renderTypingIndicator(true);
 
+    if (this._chatCtrl) this._chatCtrl.abort();
     const url = this._getCoreUrl();
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 30000);
+    this._chatCtrl = new AbortController();
+    const timer = setTimeout(() => this._chatCtrl.abort(), 30000);
     try {
       const resp = await fetch(`${url}/api/styx/chat`, {
         method: 'POST',
@@ -156,7 +158,7 @@ class StyxChatCard extends _ChatBase {
           'X-Auth-Token': this._getToken(),
         },
         body: JSON.stringify({ query: text }),
-        signal: ctrl.signal,
+        signal: this._chatCtrl.signal,
       });
 
       if (resp.ok) {
