@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g. 15.0.9)'
+        description: 'Version to release (e.g. 15.0.12)'
         required: true
         type: string
 
@@ -16,63 +16,82 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate version input
-        run: |
-          if ! echo "${{ github.event.inputs.version }}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Error: Version must match X.Y.Z format"
-            exit 1
-          fi
-
-      - name: Verify HACS repository shape
-        run: |
-          count=$(find custom_components -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          if [ "$count" != "1" ]; then
-            echo "ERROR: HACS repo must expose exactly one integration under custom_components/, found $count"
-            find custom_components -mindepth 1 -maxdepth 1 -type d
-            exit 1
-          fi
-          test -d custom_components/copilot_ha
-
-      - name: Bump published versions
+      - name: Extract version
         run: |
           VERSION="${{ github.event.inputs.version }}"
-          printf '%s\n' "$VERSION" > VERSION
-          printf '%s\n' "$VERSION" > custom_components/copilot_ha/VERSION
+          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "ERROR: version must be X.Y.Z"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG=v$VERSION" >> $GITHUB_ENV
+
+      - name: Bump version files
+        run: |
+          echo "$VERSION" > VERSION
+          echo "$VERSION" > custom_components/copilot_ha/VERSION
           python3 - <<PY
 import json
 from pathlib import Path
-manifest = Path('custom_components/copilot_ha/manifest.json')
-data = json.loads(manifest.read_text())
-data['version'] = '$VERSION'
-manifest.write_text(json.dumps(data, indent=2) + '\n')
-print(f"copilot_ha manifest -> $VERSION")
+m = Path('custom_components/copilot_ha/manifest.json')
+d = json.loads(m.read_text())
+d['version'] = '$VERSION'
+m.write_text(json.dumps(d, indent=2) + '\n')
+print(f"copilot_ha: {d['version']}")
 PY
 
-      - name: Verify published version consistency
+      - name: Verify consistency
         run: |
-          VERSION="${{ github.event.inputs.version }}"
-          test "$(cat VERSION)" = "$VERSION"
-          test "$(cat custom_components/copilot_ha/VERSION)" = "$VERSION"
-          python3 - <<PY
-import json
-from pathlib import Path
-version = json.loads(Path('custom_components/copilot_ha/manifest.json').read_text())['version']
-assert version == '$VERSION', f"manifest version is {version}, expected $VERSION"
-print(f"All published versions verified: $VERSION")
-PY
+          if [ "$(cat VERSION)" != "$VERSION" ]; then echo "VERSION file mismatch"; exit 1; fi
+          if [ "$(cat custom_components/copilot_ha/VERSION)" != "$VERSION" ]; then echo "HA VERSION mismatch"; exit 1; fi
+          V=$(python3 -c "import json; print(json.loads(open('custom_components/copilot_ha/manifest.json').read())['version'])")
+          if [ "$V" != "$VERSION" ]; then echo "manifest mismatch: $V"; exit 1; fi
+          echo "All versions consistent: $VERSION"
 
-      - name: Commit version bump
+      - name: Commit + Tag + Push
         run: |
-          git config --global user.email "pilotclaw@pilotsuite.dev"
-          git config --global user.name "PilotClaw"
+          git config user.email "pilotclaw@pilotsuite.dev"
+          git config user.name "PilotClaw"
           git add -A
-          git commit -m "chore: release v${{ github.event.inputs.version }}"
-          git tag "v${{ github.event.inputs.version }}"
+          git commit -m "chore: release v$VERSION"
+          git tag "$TAG"
           git push origin main --tags
 
-      - name: Create GitHub Release
+      - name: Build ZIP
         run: |
-          gh release create "v${{ github.event.inputs.version }}" \
-            --title "PilotSuite HA v${{ github.event.inputs.version }}" \
-            --notes "Release v${{ github.event.inputs.version }}" \
+          git archive --format=zip --prefix=pilotsuite-styx-ha/ -o "v${VERSION}.zip" HEAD
+          echo "ZIP size: $(wc -c < v${VERSION}.zip) bytes"
+
+      - name: Verify ZIP before upload
+        run: |
+          V=$(unzip -p "v${VERSION}.zip" pilotsuite-styx-ha/custom_components/copilot_ha/manifest.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
+          if [ "$V" != "$VERSION" ]; then
+            echo "FATAL: ZIP contains version $V, expected $VERSION"
+            exit 1
+          fi
+          echo "ZIP verified: $V"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$TAG" \
+            --title "PilotSuite HA $TAG" \
+            --notes "Release $TAG" \
             --clobber
+
+      - name: Upload ZIP asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "$TAG" "v${VERSION}.zip" --clobber
+
+      - name: Final verification
+        run: |
+          sleep 3
+          ASSET_URL=$(gh api repos/${{ github.repository }}/releases/tags/$TAG --jq '.assets[] | select(.name=="v'"${VERSION}"'.zip") | .browser_download_url')
+          if [ -z "$ASSET_URL" ]; then
+            echo "FATAL: ZIP not found on release"
+            exit 1
+          fi
+          echo "SUCCESS: $ASSET_URL"
