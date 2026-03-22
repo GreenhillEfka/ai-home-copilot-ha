@@ -2,6 +2,13 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.0.13] - 2026-03-22
+
+### Fixed
+- Follow-up release on the actually fixed commit after `v15.0.12` was tagged remotely before the import-fix landed
+- Home Assistant startup/import crash remains fixed: `HabitusZonesV2ModulesSensor` is registered after its class definition
+- Published HA version files now all report `15.0.13`
+
 ## [15.0.12] - 2026-03-22
 
 ### Fixed
