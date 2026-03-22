@@ -4,9 +4,9 @@
 
 ## Aktiver Release
 ```
-agent: none
-version: none
-timestamp: none
+agent: designclaw
+version: v15.0.16
+timestamp: 2026-03-22T13:35:00+01:00
 ```
 
 ## Letzter Release

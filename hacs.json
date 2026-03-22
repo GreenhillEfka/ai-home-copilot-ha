@@ -1,8 +1,7 @@
 {
   "name": "PilotSuite",
-  "content_in_root": false,
-  "domains": ["copilot_ha"],
+  "filename": "v15.0.16.zip",
+  "hide_default_branch": true,
   "homeassistant": "2024.4.0",
-  "render_readme": false,
   "zip_release": true
 }
