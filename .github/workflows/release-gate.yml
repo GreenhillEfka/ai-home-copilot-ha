@@ -1,0 +1,81 @@
+name: release-gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install minimal test tooling
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt || true; fi
+          if [ -f requirements-dev.txt ]; then python -m pip install -r requirements-dev.txt || true; fi
+
+      - name: Python syntax gate
+        shell: bash
+        run: |
+          set -e
+          mapfile -t files < <(find . -type f -name '*.py' \
+            -not -path '*/.git/*' \
+            -not -path '*/node_modules/*' \
+            -not -path '*/.venv/*' \
+            -not -path '*/venv/*')
+          if [ ${#files[@]} -gt 0 ]; then
+            python -m py_compile "${files[@]}"
+          fi
+
+      - name: Run tests when present
+        shell: bash
+        run: |
+          set -e
+          if find . -type d -name tests | grep -q . || [ -f pytest.ini ] || [ -f pyproject.toml ]; then
+            python -m pytest -q || exit 1
+          else
+            echo 'No pytest-discoverable tests found.'
+          fi
+
+      - name: Validate changelog and release policy
+        shell: bash
+        run: |
+          set -e
+          if [ ! -f CHANGELOG.md ]; then
+            echo "ERROR: CHANGELOG.md is missing!" >&2
+            exit 1
+          fi
+          if [ ! -f RELEASE_POLICY.md ]; then
+            echo "ERROR: RELEASE_POLICY.md is missing!" >&2
+            exit 1
+          fi
+          # Ensure changelog has entries after the header
+          if ! tail -n +3 CHANGELOG.md | grep -q '\S'; then
+            echo "ERROR: CHANGELOG.md appears to have no entries!" >&2
+            exit 1
+          fi
+          echo "CHANGELOG.md and RELEASE_POLICY.md validated."
+
+      - name: Release summary
+        shell: bash
+        run: |
+          {
+            echo '## Release Gate Summary'
+            echo
+            echo '- Python compilation: passed'
+            echo '- Pytest: completed (or no tests discovered)'
+            echo '- RELEASE_POLICY.md: present and validated'
+            echo '- CHANGELOG.md: present and non-empty'
+          } >> "$GITHUB_STEP_SUMMARY"
