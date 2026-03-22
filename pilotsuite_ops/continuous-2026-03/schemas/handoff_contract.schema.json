@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pilotsuite.net/schemas/handoff_contract.v1.json",
+  "title": "Agent Handoff Contract",
+  "description": "Defines preconditions, postconditions, and artifact schemas for agent-to-agent handoffs in PilotSuite multi-agent orchestration.",
+  "type": "object",
+  "required": ["handoff_id", "from_agent", "to_agent", "timestamp", "preconditions", "postconditions", "context_fields"],
+  "properties": {
+    "handoff_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]{8,64}$",
+      "description": "Unique identifier for this handoff. Format: {agent-from}-{agent-to}-{unix_ts_ms}"
+    },
+    "from_agent": {
+      "type": "string",
+      "description": "Agent ID or role name handing off (e.g. 'hephaistos', 'pilotclaw', 'designclaw')"
+    },
+    "to_agent": {
+      "type": "string",
+      "description": "Agent ID or role name receiving the task"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp of handoff initiation"
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 300,
+      "default": 30,
+      "description": "Max seconds the receiver has to acknowledge before escalation"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["critical", "high", "normal", "low"],
+      "default": "normal"
+    },
+    "preconditions": {
+      "type": "object",
+      "description": "What must be true/available before the receiving agent should proceed",
+      "properties": {
+        "required_entities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "HA entity IDs that must be available (e.g. ['sensor.pilotsuite_styx_version'])"
+        },
+        "required_state": {
+          "type": "object",
+          "description": "Key-value pairs of entity_id → expected state for proceed",
+          "additionalProperties": { "type": "string" }
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Capability flags the receiver must advertise (e.g. ['github_write', 'ha_api'])"
+        },
+        "required_context": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Context fields that must be non-null (e.g. ['user_id', 'ha_token'])"
+        }
+      }
+    },
+    "postconditions": {
+      "type": "object",
+      "description": "What the receiving agent guarantees to produce or achieve",
+      "properties": {
+        "output_schema": {
+          "type": "object",
+          "description": "JSON Schema for the artifact/output the receiver must deliver"
+        },
+        "output_location": {
+          "type": "string",
+          "description": "Path or URL where output artifact will be written (e.g. 'team/repos/pilotsuite-styx-ha/PR.md')"
+        },
+        "side_effects": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Description of any state changes the receiver will make (e.g. ['git commit', 'HA entity update'])"
+        }
+      }
+    },
+    "context_fields": {
+      "type": "object",
+      "required": ["conversation_id", "user_intent"],
+      "properties": {
+        "conversation_id": {
+          "type": "string",
+          "description": "Telegram group + topic ID (e.g. '-1003815316785:6')"
+        },
+        "user_intent": {
+          "type": "string",
+          "description": "Plain-language description of what the user asked for"
+        },
+        "constraints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Explicit constraints (e.g. ['smallest_safe_cut', 'no_redesign'])"
+        },
+        "prior_attempts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "agent": { "type": "string" },
+              "commit": { "type": "string" },
+              "outcome": { "type": "string" }
+            }
+          },
+          "description": "What previous agents already tried (to avoid redundant work)"
+        },
+        "memory_refs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "MEMORY.md paths or snippets relevant to this task"
+        },
+        "user_id": {
+          "type": "string",
+          "description": "Telegram user ID of requesting user"
+        }
+      }
+    },
+    "escalation_path": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Ordered list of agents/roles to escalate to if receiver declines or times out",
+      "default": ["designclaw", "hephaistos", "human"]
+    },
+    "artifact_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "path": { "type": "string" },
+          "type": { "type": "string", "enum": ["file", "schema", "commit", "entity"] }
+        }
+      },
+      "description": "Existing artifacts/files the receiver should build upon or reference"
+    }
+  }
+}
