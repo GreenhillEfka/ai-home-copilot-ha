@@ -24,6 +24,7 @@ from .config_helpers import (
     STEP_NETWORK,
     STEP_MODULES,
     STEP_REVIEW,
+    merge_config_data,
     validate_input,
     discover_reachable_core_endpoint,
     fetch_setup_token,

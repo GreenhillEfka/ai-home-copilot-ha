@@ -46,6 +46,26 @@ def http_get(url: str, headers: dict = None) -> Optional[dict]:
     except Exception as e:
         return None
 
+
+def extract_zone_ids(raw) -> list[str]:
+    """Normalize HA/Core zone payloads into plain zone_id strings."""
+    if isinstance(raw, dict):
+        return [str(k) for k in raw.keys() if k]
+    if not isinstance(raw, list):
+        return []
+
+    result: list[str] = []
+    for item in raw:
+        if isinstance(item, str) and item:
+            result.append(item)
+            continue
+        if isinstance(item, dict):
+            zone_id = item.get("zone_id") or item.get("id")
+            if zone_id:
+                result.append(str(zone_id))
+    return result
+
+
 def check_core_health() -> HealthResult:
     """Check Core addon health."""
     data = http_get(f"{CORE_URL}/health")
@@ -78,23 +98,23 @@ def check_ha_integration() -> HealthResult:
 def check_zone_sync() -> HealthResult:
     """Check if zones are synced between HA and Core."""
     headers = {"Authorization": f"Bearer {HA_TOKEN}"}
-    
+
     # HA zones
     ha_data = http_get(f"{HA_URL}/states/sensor.copilot_ha_habitus_zones", headers)
-    ha_zones = ha_data.get("attributes", {}).get("zones", []) if ha_data else []
-    
+    ha_zones = extract_zone_ids(ha_data.get("attributes", {}).get("zones", [])) if ha_data else []
+
     # Core zones
     core_data = http_get(f"{CORE_URL}/api/v1/zone-automation/dashboard")
-    core_zones = list(core_data.get("zones", {}).keys()) if core_data else []
-    
-    synced = set(ha_zones) & set(core_zones)
-    missing = set(ha_zones) - set(core_zones)
-    
+    core_zones = extract_zone_ids(core_data.get("zones", [])) if core_data else []
+
+    synced = sorted(set(ha_zones) & set(core_zones))
+    missing = sorted(set(ha_zones) - set(core_zones))
+
     status = "ok" if not missing else "warn"
     return HealthResult(
         "zone_sync", status,
-        {"ha_zones": ha_zones, "core_zones": core_zones, 
-         "synced": list(synced), "missing": list(missing)},
+        {"ha_zones": ha_zones, "core_zones": core_zones,
+         "synced": synced, "missing": missing},
         timestamp()
     )
 

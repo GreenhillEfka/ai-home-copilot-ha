@@ -17,7 +17,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import area_registry, device_registry, entity_registry
 
 from .unmatched_logger import log_unmatched_entities
-from .area_zone_registry import load_area_zone_map, get_zone_for_area, get_unmatched_fallback
+from .area_zone_registry import (
+    async_load_area_zone_map,
+    get_zone_for_area,
+    get_unmatched_fallback,
+    validate_mapping,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -477,6 +482,7 @@ async def async_create_neuron_tags_from_zones(
 
 def aggregate_areas_to_habitus_zones(
     areas: list[dict[str, Any]],
+    area_zone_config: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Group HA areas into logical Habitus Zones using template matching.
 
@@ -494,7 +500,8 @@ def aggregate_areas_to_habitus_zones(
     template_areas: dict[str, list[dict]] = {}  # template zone_id → [area_dicts]
     template_map: dict[str, dict] = {}  # template zone_id → template
     unmatched: list[dict] = []
-    area_zone_config = load_area_zone_map()
+    if area_zone_config is None:
+        area_zone_config = {}
 
     for area in areas:
         area_name = area.get("name", "")
@@ -592,8 +599,8 @@ async def async_auto_create_habitus_zones(
         _LOGGER.info("No HA areas found, skipping zone auto-setup")
         return 0
 
-    # PS-178: Load explicit area→zone mapping registry
-    area_zone_config = load_area_zone_map()
+    # PS-178: Load explicit area→zone mapping registry without blocking the HA event loop
+    area_zone_config = await async_load_area_zone_map(hass)
     valid, errors = validate_mapping(area_zone_config)
     if not valid:
         _LOGGER.warning("[PS-178] Invalid area zone map: %s", ", ".join(errors))
@@ -605,7 +612,7 @@ async def async_auto_create_habitus_zones(
     )
 
     # Smart aggregation: group areas into logical zones
-    aggregated = aggregate_areas_to_habitus_zones(areas)
+    aggregated = aggregate_areas_to_habitus_zones(areas, area_zone_config)
     _LOGGER.info(
         "Zone auto-setup: %d HA areas → %d Habitus Zones (aggregated)",
         len(areas), len(aggregated),
@@ -757,3 +764,4 @@ async def async_auto_create_habitus_zones(
         len(zones), len(areas),
     )
     return len(zones)
+

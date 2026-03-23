@@ -2,6 +2,16 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Config/Reconfigure hotfix: `config_flow.py` now imports `merge_config_data(...)`, fixing a direct NameError/500 path in Configure/Reconfigure flows.
+- Zone auto-setup hotfix: `zone_auto_setup.py` now imports `validate_mapping(...)` correctly, fixing a direct failure path behind `Failed to auto-create Habitus Zones`.
+- Area→zone registry loading used during auto-setup now has an async helper (`async_load_area_zone_map`) so the file read can be moved off the HA event loop in async setup paths.
+
+### Notes
+- The earlier `button_update_check.py` blocking VERSION-read fix remains an important preserved runtime safeguard (`d5e46f42`).
+
 ## [15.0.14] - 2026-03-22
 
 ### Fixed

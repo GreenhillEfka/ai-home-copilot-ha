@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from importlib import import_module
 from typing import Any, Dict, List
 
 from homeassistant.core import HomeAssistant
@@ -12,14 +13,17 @@ from homeassistant.helpers import entity_registry as er
 from .habitus_zones_store_v2 import async_get_zones_v2
 from .pilotsuite_dashboard_store import async_get_state, async_set_state
 
-# Import the enhanced zone matcher from Core HA module
+# Import the enhanced zone matcher from Core HA module.
 # NOTE: This module lives in Core (copilot_core.homeassistant.zone_matcher),
-# not in HA. At runtime, Core's HA-Modul exposes this via the Python path.
+# not in HA. At runtime, Core's HA module exposes this via the Python path.
+# We resolve it dynamically so optional Core-side helpers do not look like
+# unconditional HA package requirements during static validation.
 try:
-    from copilot_core.homeassistant.zone_matcher import (
-        create_zone_matcher, get_zone_suggestions
-    )
-    from copilot_core.homeassistant.habitus_zones import ZoneType
+    _zone_matcher_module = import_module("copilot_core.homeassistant.zone_matcher")
+    _habitus_zones_module = import_module("copilot_core.homeassistant.habitus_zones")
+    create_zone_matcher = _zone_matcher_module.create_zone_matcher
+    get_zone_suggestions = _zone_matcher_module.get_zone_suggestions
+    ZoneType = _habitus_zones_module.ZoneType
     HAS_ZONE_MATCHER = True
 except ImportError:
     HAS_ZONE_MATCHER = False

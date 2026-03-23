@@ -153,6 +153,7 @@ class CopilotRuntime:
                 except Exception:
                     _LOGGER.exception("Rollback of module %s also failed", rollback_name)
             entry_modules.clear()
+            raise RuntimeError(f"PilotSuite eager module load failed: {', '.join(failed)}")
 
         self._live_modules[entry.entry_id] = entry_modules
 

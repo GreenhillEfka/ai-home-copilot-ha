@@ -533,13 +533,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await runtime.async_setup_entry(entry, modules=_MODULES)
     except Exception:
         _LOGGER.exception("Runtime setup failed")
+        return False
+
+    entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+    coord = entry_store.get("coordinator") if isinstance(entry_store, dict) else None
+    if coord is None:
+        _LOGGER.error(
+            "PilotSuite baseline coordinator missing after runtime setup; aborting entry load"
+        )
+        return False
 
     # Signal coordinator that modules have been loaded (suppresses spurious warnings)
     try:
-        entry_store = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
-        coord = entry_store.get("coordinator") if isinstance(entry_store, dict) else None
-        if coord is not None:
-            coord.modules_ready = True
+        coord.modules_ready = True
     except Exception:
         pass
 

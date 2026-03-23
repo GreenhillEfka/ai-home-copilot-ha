@@ -19,12 +19,9 @@
     "webhook"
   ],
   "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha",
-  "icon": "mdi:brain",
   "integration_type": "hub",
   "iot_class": "local_push",
-  "homeassistant": "2024.4.0",
   "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",
   "requirements": [],
-  "version": "15.0.17",
-  "hacs": "integration"
+  "version": "15.0.17"
 }

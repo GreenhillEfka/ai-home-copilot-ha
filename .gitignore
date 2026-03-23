@@ -37,4 +37,9 @@ agents/
 agents/
 pilotsuite_ops/
 docs/
+!docs/
+docs/*
+!docs/HA_CONCEPT_DIRECTIVE.md
+!docs/RECOVERY_RESTORE_STATUS.md
+!docs/HA_RESTORE_HANDOFF.md
 *.zip

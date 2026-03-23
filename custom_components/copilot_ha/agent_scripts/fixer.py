@@ -32,7 +32,7 @@ def http_req(method: str, url: str, data: dict = None, headers: dict = None) -> 
         _headers["Authorization"] = f"Bearer {HA_TOKEN}"
     if headers:
         _headers.update(headers)
-    
+
     body = json.dumps(data).encode() if data else None
     req = urllib.request.Request(url, data=body, headers=_headers, method=method)
     try:
@@ -40,6 +40,26 @@ def http_req(method: str, url: str, data: dict = None, headers: dict = None) -> 
             return json.loads(r.read()) if r.status != 204 else {}
     except Exception as e:
         return {"error": str(e)}
+
+
+def extract_zone_ids(raw) -> list[str]:
+    """Normalize HA/Core zone payloads into plain zone_id strings."""
+    if isinstance(raw, dict):
+        return [str(k) for k in raw.keys() if k]
+    if not isinstance(raw, list):
+        return []
+
+    result: list[str] = []
+    for item in raw:
+        if isinstance(item, str) and item:
+            result.append(item)
+            continue
+        if isinstance(item, dict):
+            zone_id = item.get("zone_id") or item.get("id")
+            if zone_id:
+                result.append(str(zone_id))
+    return result
+
 
 def fix_zone_sync_dry() -> dict:
     """Zone sync - needs HA addon restart in reality."""
@@ -92,20 +112,20 @@ def fix_core_version_mismatch() -> dict:
 def get_zone_sync_status() -> dict:
     """Get current zone sync status."""
     ha_data = http_req("GET", f"{HA_URL}/states/sensor.copilot_ha_habitus_zones")
-    ha_zones = ha_data.get("attributes", {}).get("zones", []) if ha_data else []
-    
+    ha_zones = extract_zone_ids(ha_data.get("attributes", {}).get("zones", [])) if ha_data else []
+
     core_data = http_req("GET", f"{CORE_URL}/api/v1/zone-automation/dashboard")
-    core_zones = list(core_data.get("zones", {}).keys()) if core_data else []
-    
-    synced = set(ha_zones) & set(core_zones)
-    missing = set(ha_zones) - set(core_zones)
-    
+    core_zones = extract_zone_ids(core_data.get("zones", [])) if core_data else []
+
+    synced = sorted(set(ha_zones) & set(core_zones))
+    missing = sorted(set(ha_zones) - set(core_zones))
+
     return {
         "ha_zones": ha_zones,
         "core_zones": core_zones,
         "synced_count": len(synced),
         "missing_count": len(missing),
-        "missing_zones": list(missing),
+        "missing_zones": missing,
         "full_sync": len(missing) == 0
     }
 
