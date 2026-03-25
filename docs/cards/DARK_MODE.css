@@ -1,0 +1,426 @@
+/**
+ * PilotSuite Dark Mode — P2-021
+ * Vollständige Dark-Theme-Unterstützung
+ * 
+ * Stand: 2026-03-25
+ * Owner: DesignClaw / PilotDesign
+ * 
+ * Based on: docs/DESIGN.md Section 3.1
+ */
+
+/* ============================================
+   DARK THEME (Default)
+   ============================================ */
+
+:root {
+  /* Backgrounds */
+  --bg:        #0a0e14;   /* Haupt-Hintergrund */
+  --surface:   #12171f;   /* Sekundär-Flächen */
+  --card:      #171d27;   /* Karten-Hintergrund */
+  --border:    #1e2a3a;   /* Rahmen-Linien */
+
+  /* Text */
+  --text:      #e0e6ed;   /* Haupt-Text */
+  --dim:       #6b7a8d;   /* gedimmter Text */
+  --text-inv:  #0a0e14;   /* inverser Text (für helle Hintergründe) */
+
+  /* Accents */
+  --accent:    #7c6aef;   /* Primär-Akzent (Lila) */
+  --accent2:   #9b8afb;   /* Sekundär-Akzent (Hell-Lila) */
+  --accent-rgb: 124, 106, 239;
+
+  /* States */
+  --green:     #34d399;   /* Success / Active */
+  --yellow:    #fbbf24;   /* Warning / Learning */
+  --red:       #f87171;   /* Error / Off */
+  --blue:      #60a5fa;   /* Info / Blue */
+  --cyan:      #22d3ee;   /* Accent / Cyan */
+
+  /* Shadows */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md:  0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg:  0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-xl:  0 16px 32px rgba(0, 0, 0, 0.6);
+
+  /* Gradients */
+  --gradient-card: linear-gradient(135deg, #171d27 0%, #12171f 100%);
+  --gradient-accent: linear-gradient(135deg, #7c6aef 0%, #9b8afb 100%);
+}
+
+/* ============================================
+   LIGHT THEME (Optional Extension)
+   ============================================ */
+
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg:        #ffffff;
+  --surface:   #f5f7fa;
+  --card:      #ffffff;
+  --border:    #e0e6ed;
+
+  /* Text */
+  --text:      #1a202c;
+  --dim:       #718096;
+  --text-inv:  #ffffff;
+
+  /* Accents */
+  --accent:    #5b4dd4;
+  --accent2:   #7c6aef;
+  --accent-rgb: 91, 77, 212;
+
+  /* States */
+  --green:     #059669;
+  --yellow:    #d97706;
+  --red:       #dc2626;
+  --blue:      #2563eb;
+  --cyan:      #0891b2;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md:  0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg:  0 8px 16px rgba(0, 0, 0, 0.15);
+  --shadow-xl:  0 16px 32px rgba(0, 0, 0, 0.2);
+
+  /* Gradients */
+  --gradient-card: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+  --gradient-accent: linear-gradient(135deg, #5b4dd4 0%, #7c6aef 100%);
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Cards */
+.card,
+.zone-card,
+.module-card,
+.suggestion-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Surfaces */
+.surface,
+.sidebar,
+.nav-panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+/* Headers */
+.header,
+.card__header {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Text Hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text);
+}
+
+.text-dim,
+.caption,
+.meta {
+  color: var(--dim);
+}
+
+/* Links */
+a {
+  color: var(--accent);
+}
+
+a:hover {
+  color: var(--accent2);
+}
+
+/* ============================================
+   COMPONENT STYLES
+   ============================================ */
+
+/* Zone Cards */
+.zone-card {
+  background: var(--gradient-card);
+}
+
+.zone-card__icon {
+  color: var(--accent);
+}
+
+.zone-card__title {
+  color: var(--text);
+}
+
+.zone-card__state {
+  color: var(--dim);
+}
+
+/* Module Cards */
+.module-card__icon {
+  color: var(--accent);
+}
+
+.module-card__status--active {
+  color: var(--green);
+}
+
+.module-card__status--learning {
+  color: var(--yellow);
+}
+
+.module-card__status--off {
+  color: var(--red);
+}
+
+/* Suggestion Cards */
+.suggestion-card {
+  border-left: 3px solid var(--accent);
+}
+
+.suggestion-card__confidence {
+  color: var(--green);
+}
+
+.suggestion-card__pattern {
+  color: var(--cyan);
+}
+
+.suggestion-card__lift {
+  color: var(--yellow);
+}
+
+/* Buttons */
+.btn {
+  background: var(--accent);
+  color: var(--text-inv);
+  border: none;
+}
+
+.btn:hover {
+  background: var(--accent2);
+}
+
+.btn--secondary {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn--secondary:hover {
+  background: var(--card);
+}
+
+/* Toggle Pills */
+.toggle-pill {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.toggle-pill[data-state="active"] {
+  background: var(--green);
+  color: var(--text-inv);
+}
+
+.toggle-pill[data-state="learning"] {
+  background: var(--yellow);
+  color: var(--text-inv);
+}
+
+.toggle-pill[data-state="off"] {
+  background: var(--red);
+  color: var(--text-inv);
+}
+
+/* Navigation */
+.nav-item {
+  color: var(--dim);
+}
+
+.nav-item:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.nav-item[data-active="true"] {
+  color: var(--text);
+  background: rgba(var(--accent-rgb), 0.1);
+  border-left: 3px solid var(--accent);
+}
+
+/* Status Badges */
+.badge {
+  background: var(--surface);
+  color: var(--dim);
+}
+
+.badge--success {
+  background: rgba(52, 201, 153, 0.2);
+  color: var(--green);
+}
+
+.badge--warning {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--yellow);
+}
+
+.badge--error {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--red);
+}
+
+.badge--info {
+  background: rgba(96, 165, 250, 0.2);
+  color: var(--blue);
+}
+
+/* Inputs */
+input,
+textarea,
+select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--accent);
+  outline: 2px solid rgba(var(--accent-rgb), 0.2);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--dim);
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+}
+
+th {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  color: var(--text);
+}
+
+td {
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+tr:hover td {
+  background: var(--surface);
+}
+
+/* Code Blocks */
+code,
+pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--cyan);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dim);
+}
+
+/* ============================================
+   ANIMATIONS & TRANSITIONS
+   ============================================ */
+
+.fade-in {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: #4a5568;
+    --dim: #9aa3b0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus Visible */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* High Contrast Mode */
+.high-contrast {
+  --bg: #000000;
+  --surface: #1a1a1a;
+  --card: #1a1a1a;
+  --border: #ffffff;
+  --text: #ffffff;
+  --dim: #cccccc;
+}

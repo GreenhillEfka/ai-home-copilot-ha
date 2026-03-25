@@ -1,0 +1,194 @@
+/**
+ * PilotSuite Micro-Interactions — P2-020
+ * Hover, Active, Focus States für alle UI-Buttons
+ * 
+ * Stand: 2026-03-25
+ * Owner: DesignClaw / PilotDesign
+ */
+
+/* Base Button Styles */
+.btn,
+.button,
+.sg-btn,
+.zone-card__toggle,
+.module-card__action {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Hover State — Lift Effect */
+.btn:hover,
+.button:hover,
+.sg-btn:hover,
+.zone-card__toggle:hover,
+.module-card__action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 106, 239, 0.3);
+}
+
+/* Active State — Press Down */
+.btn:active,
+.button:active,
+.sg-btn:active,
+.zone-card__toggle:active,
+.module-card__action:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(124, 106, 239, 0.2);
+}
+
+/* Focus State — Accessibility */
+.btn:focus-visible,
+.button:focus-visible,
+.sg-btn:focus-visible,
+.zone-card__toggle:focus-visible,
+.module-card__action:focus-visible {
+  outline: 2px solid var(--accent, #7c6aef);
+  outline-offset: 2px;
+}
+
+/* Toggle Buttons — State Indicators */
+.toggle-btn[data-state="active"] {
+  background: var(--green, #34d399);
+  color: #0a0e14;
+}
+
+.toggle-btn[data-state="learning"] {
+  background: var(--yellow, #fbbf24);
+  color: #0a0e14;
+}
+
+.toggle-btn[data-state="off"] {
+  background: var(--red, #f87171);
+  color: #fff;
+}
+
+/* Suggestion Card Actions — Accept/Snooze/Reject */
+.suggestion-action--accept:hover {
+  background: rgba(52, 201, 153, 0.2);
+  border-color: var(--green, #34d399);
+}
+
+.suggestion-action--snooze:hover {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: var(--yellow, #fbbf24);
+}
+
+.suggestion-action--reject:hover {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: var(--red, #f87171);
+}
+
+/* Presence Hold Pill Buttons */
+.hold-pill__btn:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
+}
+
+.hold-pill__btn[data-selected="true"] {
+  font-weight: 600;
+  box-shadow: inset 0 0 0 2px var(--accent, #7c6aef);
+}
+
+/* Module Card Expand/Collapse */
+.module-card__expand:hover {
+  background: var(--surface, #12171f);
+}
+
+.module-card__expand[aria-expanded="true"] {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Reasoning Details (Pattern + Lift) */
+.sg-reasoning summary:hover {
+  background: rgba(124, 106, 239, 0.05);
+}
+
+.sg-reasoning summary::marker {
+  color: var(--accent, #7c6aef);
+  transition: transform 0.2s ease;
+}
+
+.sg-reasoning[open] summary::marker {
+  transform: rotate(90deg);
+}
+
+/* Icon Buttons */
+.icon-btn:hover {
+  background: var(--surface, #12171f);
+}
+
+.icon-btn:active {
+  background: var(--card, #171d27);
+}
+
+/* Zone Navigation — Active State */
+.zone-nav__item:hover {
+  background: var(--surface, #12171f);
+  border-left: 3px solid var(--accent, #7c6aef);
+}
+
+.zone-nav__item[data-active="true"] {
+  background: rgba(124, 106, 239, 0.1);
+  border-left: 3px solid var(--accent, #7c6aef);
+  font-weight: 500;
+}
+
+/* Loading State — Pulse Animation */
+.btn--loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.btn--loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Disabled State */
+.btn:disabled,
+.button:disabled,
+.toggle-btn[data-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Ripple Effect (Optional Enhancement) */
+.btn--ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn--ripple::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+.btn--ripple:active::before {
+  width: 200px;
+  height: 200px;
+}
