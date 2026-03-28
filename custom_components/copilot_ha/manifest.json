@@ -23,5 +23,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",
   "requirements": [],
-  "version": "15.2.5"
+  "version": "15.2.6"
 }

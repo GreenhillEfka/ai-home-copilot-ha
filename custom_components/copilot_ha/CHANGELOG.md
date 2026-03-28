@@ -2,6 +2,16 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.2.6] - 2026-03-28
+
+### Added
+- Konsolidierung der aktuellen HA/CORE-Entwicklungen mit PR-Stand für State-of-the-Art Testzweig.
+- Repo-/Release-Info aktualisiert (README, aktive Release-Linie, PR-Konsolidierungsstatus).
+
+### Fixed
+- release-readiness für HA-Test aufgeteilt: konsolidierter Stand jetzt konsistent mit PR166 und lokaler Architektur-Dokumentation für Core/HA-Kopplung.
+
+
 ## [15.2.5] - 2026-03-28
 
 ### Added
