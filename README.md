@@ -6,14 +6,14 @@ PilotSuite HACS-Integration für Home Assistant.
 
 ## State of the Art (Stand: 2026-03-28)
 
-- Aktive Release-Linie: **v15.2.6** (lokal vorbereitet, offizieller GitHub-Tag aktuell: **v15.2.6**)
-- Kontrakt-Ziel: **paired with Core v15.2.2+**
+- Aktive Release-Linie: **v15.2.7** (lokal vorbereitet, offizieller GitHub-Tag aktuell: **v15.2.7**)
+- Kontrakt-Ziel: **paired with Core v15.2.7+**
 - Integrationseinbindung: auf dem Repo-Stand, PR-Konsolidierung siehe unten
 
 ## Aktuelle PR-Konsolidierung
 
 - **#166** (`feat(config_flow): STEP_MODULES`) — Merge vorbereitet / bereits im Integrationspfad
-- **#167** (`feat: restore and harden habitus zone WS API`) — aktuell DIRTY/konfliktbehaftet, benötigt Rebase/neu aufsetzen
+- **#167** (`feat: restore and harden habitus zone WS API`) — umgesetzt im 15.2.7 Konsolidierungsstand
 - **#146** (`release: v14.7.5`) — älterer Release-Lane-Fork, nicht mehr für aktuelles `main` geeignet
 
 ## Installation (HACS)

@@ -2,6 +2,17 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.2.7] - 2026-03-28
+
+### Added
+- Alle offenen HA-Weiterentwicklungen im State-of-Art-Zustand konsolidiert: WebSocket-Zone-API-Contract (List/Sync/Match/Autocomplete/Entities), Registry-Verbesserungen und Core-Kopplungs-Hooks.
+- Release-Dokumentation auf `v15.2.7` korrigiert und manifest/Versionen konsistent auf 15.2.7 gehoben.
+
+### Fixed
+- Runtime-Manifest-Alignment für `VERSION`/`custom_components/copilot_ha/VERSION`/`manifest.version` weiterhin konsistent gehalten.
+- HACS-Installierbarkeit stabilisiert durch klare Paket-/Versionstreue unter `zip_release`-Artefakten.
+
+
 ## [15.2.6] - 2026-03-28
 
 ### Added

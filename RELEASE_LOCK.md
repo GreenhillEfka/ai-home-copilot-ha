@@ -5,13 +5,13 @@
 ## Aktiver Release
 ```
 agent: main
-version: v15.2.6
-timestamp: 2026-03-28T19:24:00+01:00
+version: v15.2.7
+timestamp: 2026-03-28T19:46:00+01:00
 ```
 
 ## Letzter Release
 ```
-version: v15.2.5
+version: v15.2.6
 agent: main
 timestamp: 2026-03-28T17:20:14+01:00
 ```
