@@ -4,9 +4,9 @@
 
 ## Aktiver Release
 ```
-agent: none
-version: none
-timestamp: none
+agent: main
+version: v15.2.4
+timestamp: 2026-03-28T19:08:00+01:00
 ```
 
 ## Letzter Release
