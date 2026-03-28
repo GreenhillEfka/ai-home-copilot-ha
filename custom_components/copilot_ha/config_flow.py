@@ -66,8 +66,18 @@ from .setup_wizard import SetupWizard
 _LOGGER = logging.getLogger(__name__)
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+try:
+    class _PilotSuiteConfigFlowBase(config_entries.ConfigFlow, domain=DOMAIN):
+        pass
+except TypeError:
+    class _PilotSuiteConfigFlowBase(config_entries.ConfigFlow):
+        pass
+
+
+class ConfigFlow(_PilotSuiteConfigFlowBase):
     VERSION = 1
+    if not hasattr(_PilotSuiteConfigFlowBase, "domain"):
+        domain = DOMAIN
 
     # Shared pending reconfigure data (accumulates across steps before final commit)
     _reconfigure_data: dict = {}

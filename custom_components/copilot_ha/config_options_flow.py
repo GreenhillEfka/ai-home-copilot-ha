@@ -101,12 +101,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         self.config_entry = config_entry
+        self._entry = config_entry
         self._config_entry_id = config_entry.entry_id
         ConfigSnapshotOptionsFlow.__init__(self, config_entry)
 
+    def _get_config_entry(self):
+        entry = getattr(self, "config_entry", None) or getattr(self, "_entry", None)
+        if entry is None:
+            msg = "OptionsFlowHandler has no config entry bound"
+            raise AttributeError(msg)
+        return entry
+
     def _effective_config(self) -> dict:
         """Return merged live config (entry.data + entry.options)."""
-        return merge_config_data(self.config_entry.data, self.config_entry.options)
+        entry = self._get_config_entry()
+        return merge_config_data(entry.data, entry.options)
 
     def _create_merged_entry(self, updates: dict) -> FlowResult:
         """Write only the delta between the current config entry state and the submitted form data.
@@ -119,7 +128,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
         # entry.data is the stable baseline; entry.options may carry in-flight state.
         # We always diff from entry.data so that options-flow re-navigation does not
         # corrupt keys that belong to other steps.
-        current = dict(self.config_entry.data)
+        entry = self._get_config_entry()
+        current = dict(entry.data)
         delta = _compute_delta(current, updates)
         if delta:
             _LOGGER.debug("Delta-write: writing %d changed key(s): %s", len(delta), list(delta.keys()))
@@ -137,8 +147,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
             return
         # Write to entry.data so the values survive across OptionsFlowHandler
         # re-instantiation when the user re-enters the connection step
-        updated_data = {**self._entry.data, **pending}
-        self.hass.config_entries.async_update_entry(self._entry, data=updated_data)
+        entry = self._get_config_entry()
+        updated_data = {**entry.data, **pending}
+        self.hass.config_entries.async_update_entry(entry, data=updated_data)
         # Clear staging — write happened exactly once
         OptionsFlowHandler._pending_shared_params = {}
 

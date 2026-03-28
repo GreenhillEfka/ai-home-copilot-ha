@@ -42,6 +42,24 @@ _SIGNING_NONCE_CACHE: dict[tuple[str, str], int] = {}
 _SIGNING_NONCE_CACHE_LOCK = asyncio.Lock()
 _SIGNING_NONCE_CACHE_MAX_ENTRIES = 10_000
 
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None or not raw.strip():
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        _LOGGER.warning("Invalid %s=%r; falling back to %d", name, raw, default)
+        return default
+
+
+HEADER_RATELIMIT_RETRY_AFTER = "Retry-After"
+_WEBHOOK_MAX_PAYLOAD_BYTES = _env_int("PILOTSUITE_WEBHOOK_MAX_PAYLOAD_BYTES", 262144)
+_WEBHOOK_RATELIMIT_WINDOW_SEC = _env_int("PILOTSUITE_WEBHOOK_RATE_LIMIT_WINDOW_SECONDS", 60)
+_WEBHOOK_RATELIMIT_MAX_REQS = _env_int("PILOTSUITE_WEBHOOK_RATE_LIMIT_MAX_REQUESTS", 120)
+_WEBHOOK_RATELIMIT_CACHE: dict[str, list[int]] = {}
+
 # Canonical webhook event types (Core ↔ HA contract)
 EVENT_TYPE_STATUS = "status"
 EVENT_TYPE_MOOD = "mood"
@@ -596,7 +614,7 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
 
         signing = _signing_config()
         # Payload size guard (before full read)
-        content_length = request.content_length
+        content_length = getattr(request, "content_length", None)
         if content_length is not None and content_length > _WEBHOOK_MAX_PAYLOAD_BYTES:
             _LOGGER.warning(
                 "Rejected webhook: payload_too_large (%d > %d bytes)",
