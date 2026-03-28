@@ -11,9 +11,9 @@ timestamp: none
 
 ## Letzter Release
 ```
-version: v15.0.17
-agent: designclaw
-timestamp: 2026-03-22T15:56:00+01:00
+version: v15.2.3
+agent: main
+timestamp: 2026-03-28T17:20:14+01:00
 ```
 
 ## Regeln
