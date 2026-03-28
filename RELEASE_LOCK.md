@@ -4,16 +4,16 @@
 
 ## Aktiver Release
 ```
-agent: main
-version: v15.2.7
-timestamp: 2026-03-28T19:46:00+01:00
+agent: none
+version: none
+timestamp: none
 ```
 
 ## Letzter Release
 ```
-version: v15.2.6
+version: v15.2.7
 agent: main
-timestamp: 2026-03-28T17:20:14+01:00
+timestamp: 2026-03-28T18:42:34+00:00
 ```
 
 ## Regeln
