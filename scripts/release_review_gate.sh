@@ -4,6 +4,19 @@ set -euo pipefail
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+FRONTEND_ASSETS=(
+  "custom_components/copilot_ha/www/styx-card-base.js"
+  "custom_components/copilot_ha/www/styx-zone-card.js"
+  "custom_components/copilot_ha/www/styx-mood-card.js"
+  "custom_components/copilot_ha/www/styx-household-card.js"
+  "custom_components/copilot_ha/www/styx-neural-card.js"
+  "custom_components/copilot_ha/www/styx-chat-card.js"
+  "custom_components/copilot_ha/www/styx-error-card.js"
+  "custom_components/copilot_ha/www/styx-suggestions-card.js"
+  "custom_components/copilot_ha/www/styx-brain-card.js"
+  "custom_components/copilot_ha/www/styx-habitus-card.js"
+)
+
 errors=0
 warns=0
 
@@ -45,8 +58,9 @@ require_file "custom_components/copilot_ha/VERSION"
 require_file "custom_components/copilot_ha/manifest.json"
 require_file "custom_components/copilot_ha/__init__.py"
 require_file "custom_components/copilot_ha/config_flow.py"
-require_file "custom_components/copilot_ha/www/styx-card-base.js"
-require_file "custom_components/copilot_ha/www/styx-zone-card.js"
+for asset in "${FRONTEND_ASSETS[@]}"; do
+  require_file "$asset"
+done
 
 root_version="$(tr -d '[:space:]' < VERSION)"
 component_version="$(tr -d '[:space:]' < custom_components/copilot_ha/VERSION)"
@@ -95,10 +109,22 @@ manifest_config_flow="$(read_json_field custom_components/copilot_ha/manifest.js
   || fail "config_flow must be true, got: $manifest_config_flow"
 
 frontend_count="$(find custom_components/copilot_ha/www -maxdepth 1 -type f -name 'styx-*.js' | wc -l | tr -d '[:space:]')"
-if [[ "$frontend_count" -ge 8 ]]; then
+if [[ "$frontend_count" -ge ${#FRONTEND_ASSETS[@]} ]]; then
   pass "frontend card asset count looks complete ($frontend_count styx-*.js files)"
 else
   fail "frontend card asset count too low ($frontend_count)"
+fi
+
+if command -v node >/dev/null 2>&1; then
+  for asset in "${FRONTEND_ASSETS[@]}"; do
+    if node --check "$asset" >/dev/null 2>&1; then
+      pass "frontend syntax OK: $asset"
+    else
+      fail "frontend syntax error: $asset"
+    fi
+  done
+else
+  fail 'node runtime unavailable for frontend syntax validation'
 fi
 
 tracked_debug="$({

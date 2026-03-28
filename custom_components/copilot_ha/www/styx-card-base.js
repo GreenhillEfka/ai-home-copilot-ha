@@ -113,6 +113,54 @@ function styxValidateConfigWithSchema(config = {}, schema = []) {
   return errors;
 }
 
+function styxHasConfigValue(value) {
+  return !(value === undefined || value === null || value === '');
+}
+
+function styxResolveFieldDefault(field = {}, defaults = {}) {
+  if (Object.prototype.hasOwnProperty.call(field, 'default')) return field.default;
+  if (field.name && Object.prototype.hasOwnProperty.call(defaults, field.name)) return defaults[field.name];
+  return undefined;
+}
+
+function styxFormatFieldMetaValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => styxFormatFieldMetaValue(entry)).join(', ');
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'On' : 'Off';
+  }
+
+  if (value === undefined || value === null || value === '') {
+    return 'Empty';
+  }
+
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch (_err) {
+      return '[object]';
+    }
+  }
+
+  return String(value);
+}
+
+function styxCollectFieldExamples(field = {}) {
+  const examples = [];
+
+  if (Array.isArray(field.examples)) {
+    examples.push(...field.examples);
+  }
+
+  if (field.example !== undefined) {
+    examples.push(field.example);
+  }
+
+  return [...new Set(examples.filter((example) => example !== undefined && example !== null && example !== ''))];
+}
+
 class StyxConfigFormEditor extends HTMLElement {
   constructor() {
     super();
@@ -142,8 +190,9 @@ class StyxConfigFormEditor extends HTMLElement {
 
   setConfig(config) {
     this._config = { ...(config || {}) };
-    this._draft = { ...this._defaults, ...this._config };
-    this._errors = this._validate(this._normalize(this._draft));
+    const normalized = this._normalize({ ...this._defaults, ...this._config });
+    this._draft = { ...normalized };
+    this._errors = this._validate(normalized);
     this._render();
   }
 
@@ -172,17 +221,50 @@ class StyxConfigFormEditor extends HTMLElement {
 
   _renderFieldMeta(field) {
     const badges = [];
+    const defaultValue = styxResolveFieldDefault(field, this._defaults);
+    const examples = styxCollectFieldExamples(field);
+
     if (field.required) badges.push('<span class="field-badge field-badge--required">Required</span>');
     if (!field.required) badges.push('<span class="field-badge">Optional</span>');
-    if (field.selector === 'entity' && field.domain) badges.push(`<span class="field-badge">${styxEsc(field.domain)}.*</span>`);
-    return `<span class="field-meta">${badges.join('')}</span>`;
+    if (field.selector === 'entity' && field.domain) badges.push(`<span class="field-badge field-badge--domain">${styxEsc(field.domain)}.*</span>`);
+    if (field.recommended) badges.push('<span class="field-badge field-badge--recommended">Recommended</span>');
+    if (defaultValue !== undefined) {
+      badges.push(`<span class="field-badge field-badge--default">Default: ${styxEsc(styxFormatFieldMetaValue(defaultValue))}</span>`);
+    }
+    if (examples.length > 0) {
+      badges.push(`<span class="field-badge field-badge--example">${examples.length > 1 ? `${examples.length} examples` : 'Example'}</span>`);
+    }
+
+    return badges.length > 0 ? `<span class="field-meta">${badges.join('')}</span>` : '';
+  }
+
+  _renderFieldNotes(field, error) {
+    const notes = [];
+    const examples = styxCollectFieldExamples(field);
+
+    if (field.help) {
+      notes.push(`<div class="help">${styxEsc(field.help)}</div>`);
+    }
+
+    if (field.recommended && field.recommendation) {
+      notes.push(`<div class="hint hint--recommended">${styxEsc(field.recommendation)}</div>`);
+    }
+
+    if (examples.length > 0) {
+      notes.push(`<div class="hint hint--example">Example: ${examples.map((example) => styxEsc(styxFormatFieldMetaValue(example))).join(' · ')}</div>`);
+    }
+
+    if (error) {
+      notes.push(`<div class="error">${styxEsc(error)}</div>`);
+    }
+
+    return notes.join('');
   }
 
   _renderField(field) {
     const value = this._draft[field.name];
     const error = this._errors[field.name];
-    const help = field.help ? `<div class="help">${styxEsc(field.help)}</div>` : '';
-    const errorHtml = error ? `<div class="error">${styxEsc(error)}</div>` : '';
+    const notes = this._renderFieldNotes(field, error);
 
     if (field.selector === 'boolean') {
       return `
@@ -192,8 +274,7 @@ class StyxConfigFormEditor extends HTMLElement {
               <span class="label">${styxEsc(field.label || field.name)}</span>
               ${this._renderFieldMeta(field)}
             </span>
-            ${help}
-            ${errorHtml}
+            ${notes}
           </span>
           <input type="checkbox" data-field="${styxEsc(field.name)}" ${value ? 'checked' : ''} />
         </label>`;
@@ -211,8 +292,7 @@ class StyxConfigFormEditor extends HTMLElement {
           value="${styxEsc(value ?? '')}"
           placeholder="${styxEsc(field.placeholder || '')}"
         />
-        ${help}
-        ${errorHtml}
+        ${notes}
       </label>`;
   }
 
@@ -229,8 +309,8 @@ class StyxConfigFormEditor extends HTMLElement {
         sections.push(section);
       }
       const section = byTitle.get(title);
-      if (!section.description && field.sectionHelp) {
-        section.description = field.sectionHelp;
+      if (!section.description && (field.sectionHelp || field.sectionDescription)) {
+        section.description = field.sectionHelp || field.sectionDescription;
       }
       section.fields.push(field);
     }
@@ -243,21 +323,29 @@ class StyxConfigFormEditor extends HTMLElement {
       const toggleFields = fields.filter((field) => field.selector === 'boolean');
       const enabledToggles = toggleFields.filter((field) => Boolean(this._draft[field.name])).length;
       const requiredFields = fields.filter((field) => field.required);
-      const completedRequired = requiredFields.filter((field) => {
-        const value = this._draft[field.name];
-        return !(value === undefined || value === null || value === '');
-      }).length;
+      const completedRequired = requiredFields.filter((field) => styxHasConfigValue(this._draft[field.name])).length;
       const errorCount = fields.filter((field) => Boolean(this._errors[field.name])).length;
       const meta = [];
+
       if (requiredFields.length > 0) {
-        meta.push(`<span class="section-meta">${completedRequired}/${requiredFields.length} required</span>`);
+        const requiredComplete = completedRequired === requiredFields.length;
+        meta.push(`
+          <span class="section-meta ${requiredComplete ? 'section-meta--complete' : 'section-meta--progress'}">
+            ${requiredComplete ? 'Required complete' : `${completedRequired}/${requiredFields.length} required`}
+          </span>`);
       }
+
       if (toggleFields.length > 0) {
-        meta.push(`<span class="section-meta">${enabledToggles}/${toggleFields.length} enabled</span>`);
+        meta.push(`
+          <span class="section-meta ${enabledToggles > 0 ? 'section-meta--active' : 'section-meta--idle'}">
+            ${enabledToggles}/${toggleFields.length} enabled
+          </span>`);
       }
+
       if (errorCount > 0) {
         meta.push(`<span class="section-meta section-meta--error">${errorCount} issue${errorCount === 1 ? '' : 's'}</span>`);
       }
+
       const sectionMeta = meta.length > 0 ? `<span class="section-meta-group">${meta.join('')}</span>` : '';
       const heading = title
         ? `<div class="section-heading"><div class="section-title">${styxEsc(title)}</div>${sectionMeta}</div>`
@@ -335,6 +423,22 @@ class StyxConfigFormEditor extends HTMLElement {
           border: 1px solid var(--divider-color, rgba(255,255,255,0.08));
           white-space: nowrap;
         }
+        .section-meta--progress {
+          color: var(--warning-color, #f59e0b);
+          background: rgba(245, 158, 11, 0.12);
+        }
+        .section-meta--complete {
+          color: var(--success-color, #22c55e);
+          background: rgba(34, 197, 94, 0.12);
+        }
+        .section-meta--active {
+          color: var(--accent-color, #4fc3f7);
+          background: rgba(79, 195, 247, 0.12);
+        }
+        .section-meta--idle {
+          color: var(--secondary-text-color, #9e9eb8);
+          background: rgba(255,255,255,0.05);
+        }
         .section-meta--error {
           color: var(--error-color, #ef5350);
           background: rgba(239, 83, 80, 0.12);
@@ -387,6 +491,19 @@ class StyxConfigFormEditor extends HTMLElement {
           color: var(--warning-color, #f59e0b);
           background: rgba(245, 158, 11, 0.12);
         }
+        .field-badge--domain,
+        .field-badge--default {
+          color: var(--accent-color, #4fc3f7);
+          background: rgba(79, 195, 247, 0.12);
+        }
+        .field-badge--recommended {
+          color: var(--success-color, #22c55e);
+          background: rgba(34, 197, 94, 0.12);
+        }
+        .field-badge--example {
+          color: var(--primary-text-color, #e0e0f0);
+          background: rgba(168, 85, 247, 0.12);
+        }
         input[type="text"] {
           width: 100%;
           box-sizing: border-box;
@@ -404,6 +521,16 @@ class StyxConfigFormEditor extends HTMLElement {
         .help {
           font-size: 0.82rem;
           color: var(--secondary-text-color, #9e9eb8);
+        }
+        .hint {
+          font-size: 0.79rem;
+          line-height: 1.4;
+        }
+        .hint--recommended {
+          color: var(--success-color, #22c55e);
+        }
+        .hint--example {
+          color: var(--accent-color, #4fc3f7);
         }
         .error {
           font-size: 0.82rem;

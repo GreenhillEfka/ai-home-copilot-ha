@@ -19,8 +19,12 @@ FILES=(
   "custom_components/copilot_ha/www/styx-suggestions-card.js"
   "custom_components/copilot_ha/www/styx-brain-card.js"
   "custom_components/copilot_ha/www/styx-habitus-card.js"
+  "docs/HA_15_2_0_RELEASE_ARTIFACT_FINGERPRINTS_2026-03-27.json"
   "scripts/release_review_gate.sh"
   "scripts/release_handoff_summary.sh"
+  "scripts/check_15_2_0_core_pairing_anchor.sh"
+  "scripts/check_15_2_0_release_artifact_fingerprints.sh"
+  "scripts/check_15_2_0_release_readiness_chain.sh"
 )
 
 usage() {
