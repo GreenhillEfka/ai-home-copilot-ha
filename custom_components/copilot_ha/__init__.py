@@ -659,6 +659,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to register Lovelace card resources")
 
+    # Register Habitus Zone WebSocket API (zone CRUD, Core sync, autocomplete)
+    try:
+        from .habitus_zones_api import async_register_habitus_zone_api
+        async_register_habitus_zone_api(hass)
+        _LOGGER.info("PilotSuite habitus-zone WS API registered")
+    except Exception:
+        _LOGGER.exception("Failed to register habitus-zone WS API")
+
     # Dashboard setup: always update wiring + ensure storage dashboard exists.
     try:
         from .dashboard_wiring import (
