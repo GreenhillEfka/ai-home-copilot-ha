@@ -2,6 +2,16 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.2.4] - 2026-03-28
+
+### Added
+- config-flow: reintroduced `STEP_MODULES` between `NETWORK` and `REVIEW` for automation mode and presence hold default persistence.
+- integration setup now exposes `automation_mode` and `presence_hold_default` as first-class options in the zone/module setup flow (PR #166).
+
+### Fixed
+- release-readiness continuity by consolidating latest HA-side lane changes from open PR scope for v15.2.x before paired core cut.
+
+
 ## [15.2.3] - 2026-03-28
 
 ### Fixed
