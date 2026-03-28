@@ -45,6 +45,390 @@ function registerStyxCard(tagName, cls, meta = {}) {
   });
 }
 
+function styxNormalizeEntity(value) {
+  return typeof value === 'string' ? value.trim() : value;
+}
+
+function styxNormalizeBoolean(value, fallback = false) {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true' || value === 'on' || value === '1' || value === 1) return true;
+  if (value === 'false' || value === 'off' || value === '0' || value === 0) return false;
+  return Boolean(fallback);
+}
+
+function styxNormalizeConfigWithSchema(config = {}, schema = [], defaults = {}) {
+  const normalized = { ...defaults, ...(config || {}) };
+
+  for (const field of schema) {
+    const name = field.name;
+    const raw = normalized[name];
+
+    if (field.selector === 'boolean') {
+      normalized[name] = styxNormalizeBoolean(raw, field.default ?? defaults[name] ?? false);
+      continue;
+    }
+
+    if (field.selector === 'entity') {
+      normalized[name] = styxNormalizeEntity(raw);
+      continue;
+    }
+
+    if (field.selector === 'text' && typeof raw === 'string') {
+      normalized[name] = raw.trim();
+    }
+  }
+
+  return normalized;
+}
+
+function styxValidateConfigWithSchema(config = {}, schema = []) {
+  const errors = {};
+
+  for (const field of schema) {
+    const value = config[field.name];
+
+    if (field.required && (value === undefined || value === null || value === '')) {
+      errors[field.name] = `${field.name} is required`;
+      continue;
+    }
+
+    if ((field.selector === 'entity' || field.selector === 'text') && value !== undefined && value !== null && typeof value !== 'string') {
+      errors[field.name] = `${field.name} must be string`;
+      continue;
+    }
+
+    if (field.selector === 'entity' && typeof value === 'string' && value) {
+      const domain = field.domain || 'sensor';
+      if (!value.startsWith(`${domain}.`)) {
+        errors[field.name] = `${field.name} must be a ${domain}.* entity`;
+      }
+      continue;
+    }
+
+    if (field.selector === 'boolean' && value !== undefined && typeof value !== 'boolean') {
+      errors[field.name] = `${field.name} must be boolean`;
+    }
+  }
+
+  return errors;
+}
+
+class StyxConfigFormEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._schema = [];
+    this._defaults = {};
+    this._config = {};
+    this._draft = {};
+    this._errors = {};
+    this._cardName = 'Styx card';
+    this._normalize = (config) => config;
+    this._validate = () => ({});
+  }
+
+  configureForCard(cardClass) {
+    this._cardName = cardClass?.name || 'Styx card';
+    this._schema = typeof cardClass?.getConfigForm === 'function' ? (cardClass.getConfigForm() || []) : [];
+    this._defaults = typeof cardClass?.getStubConfig === 'function' ? (cardClass.getStubConfig() || {}) : {};
+    this._normalize = typeof cardClass?.normalizeConfig === 'function'
+      ? (config) => cardClass.normalizeConfig(config)
+      : (config) => styxNormalizeConfigWithSchema(config, this._schema, this._defaults);
+    this._validate = typeof cardClass?.validateConfig === 'function'
+      ? (config) => cardClass.validateConfig(config)
+      : (config) => styxValidateConfigWithSchema(config, this._schema);
+    this._render();
+  }
+
+  setConfig(config) {
+    this._config = { ...(config || {}) };
+    this._draft = { ...this._defaults, ...this._config };
+    this._errors = this._validate(this._normalize(this._draft));
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  _onFieldInput(field, event) {
+    const target = event.target;
+    const value = field.selector === 'boolean' ? Boolean(target.checked) : target.value;
+    this._draft = { ...this._draft, [field.name]: value };
+
+    const normalized = this._normalize(this._draft);
+    this._errors = this._validate(normalized);
+
+    if (Object.keys(this._errors).length === 0) {
+      this.dispatchEvent(new CustomEvent('config-changed', {
+        detail: { config: normalized },
+        bubbles: true,
+        composed: true,
+      }));
+    }
+
+    this._render();
+  }
+
+  _renderFieldMeta(field) {
+    const badges = [];
+    if (field.required) badges.push('<span class="field-badge field-badge--required">Required</span>');
+    if (!field.required) badges.push('<span class="field-badge">Optional</span>');
+    if (field.selector === 'entity' && field.domain) badges.push(`<span class="field-badge">${styxEsc(field.domain)}.*</span>`);
+    return `<span class="field-meta">${badges.join('')}</span>`;
+  }
+
+  _renderField(field) {
+    const value = this._draft[field.name];
+    const error = this._errors[field.name];
+    const help = field.help ? `<div class="help">${styxEsc(field.help)}</div>` : '';
+    const errorHtml = error ? `<div class="error">${styxEsc(error)}</div>` : '';
+
+    if (field.selector === 'boolean') {
+      return `
+        <label class="row row--toggle">
+          <span class="label-wrap">
+            <span class="label-row">
+              <span class="label">${styxEsc(field.label || field.name)}</span>
+              ${this._renderFieldMeta(field)}
+            </span>
+            ${help}
+            ${errorHtml}
+          </span>
+          <input type="checkbox" data-field="${styxEsc(field.name)}" ${value ? 'checked' : ''} />
+        </label>`;
+    }
+
+    return `
+      <label class="row">
+        <span class="label-row">
+          <span class="label">${styxEsc(field.label || field.name)}</span>
+          ${this._renderFieldMeta(field)}
+        </span>
+        <input
+          type="text"
+          data-field="${styxEsc(field.name)}"
+          value="${styxEsc(value ?? '')}"
+          placeholder="${styxEsc(field.placeholder || '')}"
+        />
+        ${help}
+        ${errorHtml}
+      </label>`;
+  }
+
+
+  _getSections() {
+    const sections = [];
+    const byTitle = new Map();
+
+    for (const field of this._schema) {
+      const title = field.section || '';
+      if (!byTitle.has(title)) {
+        const section = { title, description: '', fields: [] };
+        byTitle.set(title, section);
+        sections.push(section);
+      }
+      const section = byTitle.get(title);
+      if (!section.description && field.sectionHelp) {
+        section.description = field.sectionHelp;
+      }
+      section.fields.push(field);
+    }
+
+    return sections;
+  }
+
+  _renderSections() {
+    return this._getSections().map(({ title, description, fields }) => {
+      const toggleFields = fields.filter((field) => field.selector === 'boolean');
+      const enabledToggles = toggleFields.filter((field) => Boolean(this._draft[field.name])).length;
+      const requiredFields = fields.filter((field) => field.required);
+      const completedRequired = requiredFields.filter((field) => {
+        const value = this._draft[field.name];
+        return !(value === undefined || value === null || value === '');
+      }).length;
+      const errorCount = fields.filter((field) => Boolean(this._errors[field.name])).length;
+      const meta = [];
+      if (requiredFields.length > 0) {
+        meta.push(`<span class="section-meta">${completedRequired}/${requiredFields.length} required</span>`);
+      }
+      if (toggleFields.length > 0) {
+        meta.push(`<span class="section-meta">${enabledToggles}/${toggleFields.length} enabled</span>`);
+      }
+      if (errorCount > 0) {
+        meta.push(`<span class="section-meta section-meta--error">${errorCount} issue${errorCount === 1 ? '' : 's'}</span>`);
+      }
+      const sectionMeta = meta.length > 0 ? `<span class="section-meta-group">${meta.join('')}</span>` : '';
+      const heading = title
+        ? `<div class="section-heading"><div class="section-title">${styxEsc(title)}</div>${sectionMeta}</div>`
+        : '';
+      const help = description ? `<div class="section-help">${styxEsc(description)}</div>` : '';
+      return `<div class="section">${heading}${help}${fields.map((field) => this._renderField(field)).join('')}</div>`;
+    }).join('');
+  }
+
+  _render() {
+    const errorSummary = Object.keys(this._errors).length > 0
+      ? `<div class="summary">Config incomplete: ${Object.values(this._errors).map(styxEsc).join(' · ')}</div>`
+      : '<div class="summary summary--ok">Config valid</div>';
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+          color: var(--primary-text-color, #e0e0f0);
+          font-family: var(--paper-font-body1_-_font-family, system-ui, sans-serif);
+        }
+        .editor {
+          display: grid;
+          gap: 12px;
+          padding: 8px 0;
+        }
+        .summary {
+          padding: 10px 12px;
+          border-radius: 10px;
+          background: rgba(245, 158, 11, 0.12);
+          color: var(--warning-color, #f59e0b);
+          font-size: 0.85rem;
+        }
+        .summary--ok {
+          background: rgba(34, 197, 94, 0.12);
+          color: var(--success-color, #22c55e);
+        }
+        .section {
+          display: grid;
+          gap: 12px;
+        }
+        .section + .section {
+          margin-top: 4px;
+          padding-top: 12px;
+          border-top: 1px solid var(--divider-color, rgba(255,255,255,0.08));
+        }
+        .section-heading {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+        .section-meta-group {
+          display: inline-flex;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 6px;
+        }
+        .section-title {
+          font-size: 0.76rem;
+          font-weight: 700;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--secondary-text-color, #9e9eb8);
+        }
+        .section-meta {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-size: 0.72rem;
+          line-height: 1.2;
+          color: var(--secondary-text-color, #9e9eb8);
+          background: rgba(255,255,255,0.05);
+          border: 1px solid var(--divider-color, rgba(255,255,255,0.08));
+          white-space: nowrap;
+        }
+        .section-meta--error {
+          color: var(--error-color, #ef5350);
+          background: rgba(239, 83, 80, 0.12);
+        }
+        .section-help {
+          margin-top: -4px;
+          font-size: 0.82rem;
+          line-height: 1.4;
+          color: var(--secondary-text-color, #9e9eb8);
+        }
+        .row {
+          display: grid;
+          gap: 6px;
+        }
+        .row--toggle {
+          grid-template-columns: 1fr auto;
+          align-items: start;
+        }
+        .label-wrap {
+          display: grid;
+          gap: 4px;
+        }
+        .label-row {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .label {
+          font-weight: 600;
+        }
+        .field-meta {
+          display: inline-flex;
+          flex-wrap: wrap;
+          gap: 6px;
+        }
+        .field-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-size: 0.72rem;
+          line-height: 1.2;
+          color: var(--secondary-text-color, #9e9eb8);
+          background: rgba(255,255,255,0.06);
+          border: 1px solid var(--divider-color, rgba(255,255,255,0.08));
+        }
+        .field-badge--required {
+          color: var(--warning-color, #f59e0b);
+          background: rgba(245, 158, 11, 0.12);
+        }
+        input[type="text"] {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid var(--divider-color, rgba(255,255,255,0.12));
+          background: var(--secondary-background-color, rgba(255,255,255,0.04));
+          color: inherit;
+        }
+        input[type="checkbox"] {
+          width: 18px;
+          height: 18px;
+          margin-top: 3px;
+        }
+        .help {
+          font-size: 0.82rem;
+          color: var(--secondary-text-color, #9e9eb8);
+        }
+        .error {
+          font-size: 0.82rem;
+          color: var(--error-color, #ef5350);
+        }
+      </style>
+      <div class="editor">
+        <div class="summary-title"><strong>${styxEsc(this._cardName)} config</strong></div>
+        ${errorSummary}
+        ${this._renderSections()}
+      </div>`;
+
+    this.shadowRoot.querySelectorAll('[data-field]').forEach((input) => {
+      const field = this._schema.find((entry) => entry.name === input.dataset.field);
+      if (!field) return;
+      const eventName = field.selector === 'boolean' ? 'change' : 'input';
+      input.addEventListener(eventName, (event) => this._onFieldInput(field, event));
+    });
+  }
+}
+
+if (!customElements.get('styx-config-form-editor')) {
+  customElements.define('styx-config-form-editor', StyxConfigFormEditor);
+}
+
 /* -----------------------------------------------------------------------
  * StyxCardBase — shared HTMLElement base for all cards
  * ----------------------------------------------------------------------- */
@@ -59,7 +443,23 @@ class StyxCardBase extends HTMLElement {
 
   /** Default config element (override in subclass if needed). */
   static getConfigElement() {
+    if (typeof this.getConfigForm === 'function') {
+      const editor = document.createElement('styx-config-form-editor');
+      editor.configureForCard(this);
+      return editor;
+    }
     return document.createElement('hui-generic-entity-row');
+  }
+
+  static normalizeConfig(config = {}) {
+    const schema = typeof this.getConfigForm === 'function' ? (this.getConfigForm() || []) : [];
+    const defaults = typeof this.getStubConfig === 'function' ? (this.getStubConfig() || {}) : {};
+    return styxNormalizeConfigWithSchema(config, schema, defaults);
+  }
+
+  static validateConfig(config = {}) {
+    const schema = typeof this.getConfigForm === 'function' ? (this.getConfigForm() || []) : [];
+    return styxValidateConfigWithSchema(config, schema);
   }
 
   /**
@@ -67,7 +467,14 @@ class StyxCardBase extends HTMLElement {
    * Override in subclass; call super.setConfig(config) to store config.
    */
   setConfig(config) {
-    this._config = config;
+    const cls = this.constructor;
+    const normalized = typeof cls.normalizeConfig === 'function' ? cls.normalizeConfig(config) : config;
+    const errors = typeof cls.validateConfig === 'function' ? cls.validateConfig(normalized) : {};
+    const errorList = Object.values(errors || {});
+    if (errorList.length > 0) {
+      throw new Error(errorList[0]);
+    }
+    this._config = normalized;
   }
 
   /**
@@ -356,6 +763,11 @@ const STYX_UI_EVENTS = (window.UiState && window.UiState.EventKeys)
 
 window.StyxCardBase = StyxCardBase;
 window.StyxCoreApiCard = StyxCoreApiCard;
+window.StyxConfigFormEditor = StyxConfigFormEditor;
 window.styxEsc = styxEsc;
+window.styxNormalizeEntity = styxNormalizeEntity;
+window.styxNormalizeBoolean = styxNormalizeBoolean;
+window.styxNormalizeConfigWithSchema = styxNormalizeConfigWithSchema;
+window.styxValidateConfigWithSchema = styxValidateConfigWithSchema;
 window.registerStyxCard = registerStyxCard;
 window.STYX_UI_EVENTS = STYX_UI_EVENTS;

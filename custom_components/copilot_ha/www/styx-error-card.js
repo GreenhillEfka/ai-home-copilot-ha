@@ -57,25 +57,121 @@ class StyxErrorCard extends _ErrBase {
   }
 
   static getConfigElement() {
-    return document.createElement('hui-generic-entity-row');
+    return super.getConfigElement?.() || document.createElement('hui-generic-entity-row');
   }
 
   static getStubConfig() {
     return {
-      title: 'Fehler & Reparatur',
+      title: 'Fehler & Reparaturvorschlaege',
       hours: 24,
       max_errors: 20,
+      core_url: '',
     };
   }
 
+  static getConfigForm() {
+    return [
+      {
+        name: 'title',
+        label: 'Title',
+        selector: 'text',
+        placeholder: 'Fehler & Reparaturvorschlaege',
+        help: 'Optional card title shown in the header.',
+      },
+      {
+        name: 'core_url',
+        label: 'Core URL',
+        selector: 'text',
+        placeholder: 'http://homeassistant.local:8909',
+        help: 'Optional Core base URL override for the error digest endpoint.',
+      },
+      {
+        name: 'hours',
+        label: 'Hours',
+        selector: 'text',
+        placeholder: '24',
+        help: 'How many past hours to include in the error digest.',
+      },
+      {
+        name: 'max_errors',
+        label: 'Max errors',
+        selector: 'text',
+        placeholder: '20',
+        help: 'Maximum number of errors to render.',
+      },
+    ];
+  }
+
+  static normalizeConfig(config = {}) {
+    const defaults = this.getStubConfig();
+    const normalize = window.styxNormalizeConfigWithSchema;
+    const normalized = typeof normalize === 'function'
+      ? normalize(config, this.getConfigForm(), defaults)
+      : { ...defaults, ...(config || {}) };
+
+    if (typeof normalized.title !== 'string') {
+      normalized.title = defaults.title;
+    }
+    if (typeof normalized.core_url !== 'string') {
+      normalized.core_url = defaults.core_url;
+    }
+
+    normalized.title = normalized.title.trim() || defaults.title;
+    normalized.core_url = normalized.core_url.trim();
+
+    const parsedHours = Number.parseInt(normalized.hours, 10);
+    normalized.hours = Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : defaults.hours;
+
+    const parsedMax = Number.parseInt(normalized.max_errors, 10);
+    normalized.max_errors = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : defaults.max_errors;
+    return normalized;
+  }
+
+  static validateConfig(config = {}) {
+    const validate = window.styxValidateConfigWithSchema;
+    const errors = typeof validate === 'function'
+      ? validate(config, this.getConfigForm())
+      : {};
+
+    if (config.title !== undefined && typeof config.title !== 'string') {
+      errors.title = 'title must be string';
+    }
+    if (config.core_url !== undefined && typeof config.core_url !== 'string') {
+      errors.core_url = 'core_url must be string';
+    }
+
+    const rawHours = config.hours;
+    if (rawHours !== undefined) {
+      const parsed = Number.parseInt(rawHours, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        errors.hours = 'hours must be a positive integer';
+      }
+    }
+
+    const rawMax = config.max_errors;
+    if (rawMax !== undefined) {
+      const parsed = Number.parseInt(rawMax, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        errors.max_errors = 'max_errors must be a positive integer';
+      }
+    }
+
+    return errors;
+  }
+
   setConfig(config) {
-    this._config = {
-      title: config.title || 'Fehler & Reparaturvorschlaege',
-      hours: config.hours || 24,
-      max_errors: config.max_errors || 20,
-      core_url: config.core_url || '',
-      ...config,
-    };
+    const normalized = this.constructor.normalizeConfig(config);
+    const errors = this.constructor.validateConfig(normalized);
+    const errorList = Object.values(errors || {});
+    if (errorList.length > 0) {
+      throw new Error(errorList[0]);
+    }
+
+    if (typeof super.setConfig === 'function') {
+      super.setConfig(normalized);
+    } else {
+      this._config = normalized;
+    }
   }
 
   set hass(hass) {

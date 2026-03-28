@@ -28,23 +28,93 @@ class StyxHouseholdCard extends _HouseholdBase {
   }
 
   static getConfigElement() {
-    return document.createElement('hui-generic-entity-row');
+    return super.getConfigElement?.() || document.createElement('hui-generic-entity-row');
   }
 
   static getStubConfig() {
-    return { title: 'Haushaltsuebersicht' };
+    return {
+      title: 'Haushaltsuebersicht',
+      show_weather: true,
+      show_prices: true,
+      show_alerts: true,
+      show_zones: true,
+      weather_entity: 'weather.home',
+    };
+  }
+
+  static getConfigForm() {
+    return [
+      {
+        name: 'title',
+        label: 'Title',
+        selector: 'text',
+        placeholder: 'Haushaltsuebersicht',
+        help: 'Optional card title shown in the header.',
+      },
+      {
+        name: 'weather_entity',
+        label: 'Weather entity',
+        selector: 'text',
+        placeholder: 'weather.home',
+        help: 'Weather entity used for the current weather section.',
+      },
+      { name: 'show_weather', label: 'Show weather', selector: 'boolean', default: true },
+      { name: 'show_prices', label: 'Show prices', selector: 'boolean', default: true },
+      { name: 'show_alerts', label: 'Show alerts', selector: 'boolean', default: true },
+      { name: 'show_zones', label: 'Show zones', selector: 'boolean', default: true },
+    ];
+  }
+
+  static normalizeConfig(config = {}) {
+    const defaults = this.getStubConfig();
+    const normalize = window.styxNormalizeConfigWithSchema;
+    const normalized = typeof normalize === 'function'
+      ? normalize(config, this.getConfigForm(), defaults)
+      : { ...defaults, ...(config || {}) };
+
+    if (typeof normalized.title !== 'string') {
+      normalized.title = defaults.title;
+    }
+    if (typeof normalized.weather_entity !== 'string') {
+      normalized.weather_entity = defaults.weather_entity;
+    }
+
+    normalized.title = normalized.title.trim() || defaults.title;
+    normalized.weather_entity = normalized.weather_entity.trim() || defaults.weather_entity;
+    return normalized;
+  }
+
+  static validateConfig(config = {}) {
+    const validate = window.styxValidateConfigWithSchema;
+    const errors = typeof validate === 'function'
+      ? validate(config, this.getConfigForm())
+      : {};
+
+    if (config.title !== undefined && typeof config.title !== 'string') {
+      errors.title = 'title must be string';
+    }
+    if (config.weather_entity !== undefined && typeof config.weather_entity !== 'string') {
+      errors.weather_entity = 'weather_entity must be string';
+    } else if (typeof config.weather_entity === 'string' && config.weather_entity && !config.weather_entity.startsWith('weather.')) {
+      errors.weather_entity = 'weather_entity must be a weather.* entity';
+    }
+
+    return errors;
   }
 
   setConfig(config) {
-    this._config = {
-      title: config.title || 'Haushaltsuebersicht',
-      show_weather: config.show_weather !== false,
-      show_prices: config.show_prices !== false,
-      show_alerts: config.show_alerts !== false,
-      show_zones: config.show_zones !== false,
-      weather_entity: config.weather_entity || 'weather.home',
-      ...config,
-    };
+    const normalized = this.constructor.normalizeConfig(config);
+    const errors = this.constructor.validateConfig(normalized);
+    const errorList = Object.values(errors || {});
+    if (errorList.length > 0) {
+      throw new Error(errorList[0]);
+    }
+
+    if (typeof super.setConfig === 'function') {
+      super.setConfig(normalized);
+    } else {
+      this._config = normalized;
+    }
   }
 
   set hass(hass) {

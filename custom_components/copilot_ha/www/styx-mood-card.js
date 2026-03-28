@@ -38,12 +38,79 @@ class StyxMoodCard extends _Base {
     this._lastMood = null;
   }
 
+  static getConfigElement() {
+    return super.getConfigElement?.() || document.createElement('hui-generic-entity-row');
+  }
+
   static getStubConfig() {
-    return { entity: 'sensor.copilot_ha_mood' };
+    return {
+      entity: 'sensor.copilot_ha_mood',
+      title: 'Stimmung',
+    };
+  }
+
+  static getConfigForm() {
+    return [
+      {
+        name: 'entity',
+        label: 'Entity',
+        selector: 'entity',
+        domain: 'sensor',
+        required: true,
+        placeholder: 'sensor.copilot_ha_mood',
+        help: 'Primary mood sensor used by the card.',
+      },
+      {
+        name: 'title',
+        label: 'Title',
+        selector: 'text',
+        placeholder: 'Stimmung',
+        help: 'Optional card title shown in the header.',
+      },
+    ];
+  }
+
+  static normalizeConfig(config = {}) {
+    const defaults = this.getStubConfig();
+    const normalize = window.styxNormalizeConfigWithSchema;
+    const normalized = typeof normalize === 'function'
+      ? normalize(config, this.getConfigForm(), defaults)
+      : { ...defaults, ...(config || {}) };
+
+    if (typeof normalized.title !== 'string') {
+      normalized.title = defaults.title;
+    }
+
+    normalized.title = normalized.title.trim() || defaults.title;
+    return normalized;
+  }
+
+  static validateConfig(config = {}) {
+    const validate = window.styxValidateConfigWithSchema;
+    const errors = typeof validate === 'function'
+      ? validate(config, this.getConfigForm())
+      : {};
+
+    if (config.title !== undefined && typeof config.title !== 'string') {
+      errors.title = 'title must be string';
+    }
+
+    return errors;
   }
 
   setConfig(config) {
-    this._config = config;
+    const normalized = this.constructor.normalizeConfig(config);
+    const errors = this.constructor.validateConfig(normalized);
+    const errorList = Object.values(errors || {});
+    if (errorList.length > 0) {
+      throw new Error(errorList[0]);
+    }
+
+    if (typeof super.setConfig === 'function') {
+      super.setConfig(normalized);
+    } else {
+      this._config = normalized;
+    }
   }
 
   getCardSize() {

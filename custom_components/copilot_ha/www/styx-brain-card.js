@@ -34,10 +34,12 @@ const LAYER_CONFIG = {
   output:  { color: "#fb923c", bg: "#fb923c", label: "Output",  icon: "O", order: 2 },
 };
 
-class StyxBrainCard extends HTMLElement {
+const _BrainBase = window.StyxCardBase || HTMLElement;
+
+class StyxBrainCard extends _BrainBase {
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    if (!this.shadowRoot) this.attachShadow({ mode: "open" });
     this._config = {};
     this._nodes = [];
     this._edges = [];
@@ -49,16 +51,102 @@ class StyxBrainCard extends HTMLElement {
   }
 
   static getConfigElement() {
-    return document.createElement("hui-generic-entity-row");
+    return super.getConfigElement?.() || document.createElement("hui-generic-entity-row");
   }
 
   static getStubConfig() {
-    return { entity: "sensor.pilotsuite_brain_graph_nodes" };
+    return {
+      entity: "sensor.pilotsuite_brain_graph_nodes",
+      edge_entity: "sensor.pilotsuite_brain_graph_edges",
+      title: "Neural Pipeline",
+      max_nodes: 150,
+    };
+  }
+
+  static getConfigForm() {
+    return [
+      {
+        name: 'entity',
+        label: 'Node entity',
+        selector: 'entity',
+        domain: 'sensor',
+        required: true,
+        placeholder: 'sensor.pilotsuite_brain_graph_nodes',
+        help: 'Primary brain graph node sensor.',
+      },
+      {
+        name: 'edge_entity',
+        label: 'Edge entity',
+        selector: 'entity',
+        domain: 'sensor',
+        required: true,
+        placeholder: 'sensor.pilotsuite_brain_graph_edges',
+        help: 'Brain graph edge sensor used for connections.',
+      },
+      {
+        name: 'title',
+        label: 'Title',
+        selector: 'text',
+        placeholder: 'Neural Pipeline',
+        help: 'Optional card title shown in the header.',
+      },
+      {
+        name: 'max_nodes',
+        label: 'Max nodes',
+        selector: 'text',
+        placeholder: '150',
+        help: 'Maximum number of nodes to render.',
+      },
+    ];
+  }
+
+  static normalizeConfig(config = {}) {
+    const defaults = this.getStubConfig();
+    const normalize = window.styxNormalizeConfigWithSchema;
+    const normalized = typeof normalize === 'function'
+      ? normalize(config, this.getConfigForm(), defaults)
+      : { ...defaults, ...(config || {}) };
+
+    if (typeof normalized.title !== 'string') normalized.title = defaults.title;
+    normalized.title = normalized.title.trim() || defaults.title;
+
+    const parsedMax = Number.parseInt(normalized.max_nodes, 10);
+    normalized.max_nodes = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : defaults.max_nodes;
+    return normalized;
+  }
+
+  static validateConfig(config = {}) {
+    const validate = window.styxValidateConfigWithSchema;
+    const errors = typeof validate === 'function'
+      ? validate(config, this.getConfigForm())
+      : {};
+
+    if (config.title !== undefined && typeof config.title !== 'string') {
+      errors.title = 'title must be string';
+    }
+
+    const rawMax = config.max_nodes;
+    if (rawMax !== undefined) {
+      const parsed = Number.parseInt(rawMax, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        errors.max_nodes = 'max_nodes must be a positive integer';
+      }
+    }
+
+    return errors;
   }
 
   setConfig(config) {
-    if (!config.entity) throw new Error("Please define an entity");
-    this._config = config;
+    const normalized = this.constructor.normalizeConfig(config);
+    const errors = this.constructor.validateConfig(normalized);
+    const errorList = Object.values(errors || {});
+    if (errorList.length > 0) throw new Error(errorList[0]);
+
+    if (typeof super.setConfig === 'function') {
+      super.setConfig(normalized);
+    } else {
+      this._config = normalized;
+    }
   }
 
   set hass(hass) {
@@ -173,7 +261,7 @@ class StyxBrainCard extends HTMLElement {
 
   _render() {
     const w = 580, h = 380;
-    const positioned = this._layoutNodes(this._nodes.slice(0, 150), w, h);
+    const positioned = this._layoutNodes(this._nodes.slice(0, this._config.max_nodes || 150), w, h);
 
     const idMap = {};
     positioned.forEach((n, i) => {
@@ -368,7 +456,7 @@ class StyxBrainCard extends HTMLElement {
       </style>
       <ha-card>
         <div class="brain-header">
-          <span class="brain-title"><span class="pulse-dot"></span>Neural Pipeline</span>
+          <span class="brain-title"><span class="pulse-dot"></span>${this._esc(this._config.title || 'Neural Pipeline')}</span>
           <span class="brain-meta">${nodeCount} Neuronen &middot; ${edgeCount} Synapsen</span>
         </div>
         <div class="pipeline-bar">
@@ -658,6 +746,8 @@ class StyxBrainCard extends HTMLElement {
   }
 
   _esc(s) {
+    if (typeof super._esc === 'function') return super._esc(s);
+    if (typeof window.styxEsc === 'function') return window.styxEsc(s);
     const el = document.createElement('span');
     el.textContent = s || '';
     return el.innerHTML;

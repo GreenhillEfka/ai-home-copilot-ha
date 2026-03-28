@@ -78,25 +78,104 @@ class StyxSuggestionsCard extends _SugBase {
   }
 
   static getConfigElement() {
-    return document.createElement('hui-generic-entity-row');
+    return super.getConfigElement?.() || document.createElement('hui-generic-entity-row');
   }
 
   static getStubConfig() {
     return {
-      title: 'Vorschläge',
+      title: 'KI-Vorschläge',
       max_suggestions: 10,
       show_actions: true,
+      core_url: '',
     };
   }
 
+  static getConfigForm() {
+    return [
+      {
+        name: 'title',
+        label: 'Title',
+        selector: 'text',
+        placeholder: 'KI-Vorschläge',
+        help: 'Optional card title shown in the header.',
+      },
+      {
+        name: 'core_url',
+        label: 'Core URL',
+        selector: 'text',
+        placeholder: 'http://homeassistant.local:8909',
+        help: 'Optional Core base URL override for suggestions endpoints.',
+      },
+      {
+        name: 'max_suggestions',
+        label: 'Max suggestions',
+        selector: 'text',
+        placeholder: '10',
+        help: 'Maximum number of suggestions to render.',
+      },
+      { name: 'show_actions', label: 'Show actions', selector: 'boolean', default: true },
+    ];
+  }
+
+  static normalizeConfig(config = {}) {
+    const defaults = this.getStubConfig();
+    const normalize = window.styxNormalizeConfigWithSchema;
+    const normalized = typeof normalize === 'function'
+      ? normalize(config, this.getConfigForm(), defaults)
+      : { ...defaults, ...(config || {}) };
+
+    if (typeof normalized.title !== 'string') {
+      normalized.title = defaults.title;
+    }
+    if (typeof normalized.core_url !== 'string') {
+      normalized.core_url = defaults.core_url;
+    }
+
+    normalized.title = normalized.title.trim() || defaults.title;
+    normalized.core_url = normalized.core_url.trim();
+
+    const parsedMax = Number.parseInt(normalized.max_suggestions, 10);
+    normalized.max_suggestions = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : defaults.max_suggestions;
+    return normalized;
+  }
+
+  static validateConfig(config = {}) {
+    const validate = window.styxValidateConfigWithSchema;
+    const errors = typeof validate === 'function'
+      ? validate(config, this.getConfigForm())
+      : {};
+
+    if (config.title !== undefined && typeof config.title !== 'string') {
+      errors.title = 'title must be string';
+    }
+    if (config.core_url !== undefined && typeof config.core_url !== 'string') {
+      errors.core_url = 'core_url must be string';
+    }
+
+    const rawMax = config.max_suggestions;
+    if (rawMax !== undefined) {
+      const parsed = Number.parseInt(rawMax, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        errors.max_suggestions = 'max_suggestions must be a positive integer';
+      }
+    }
+
+    return errors;
+  }
+
   setConfig(config) {
-    this._config = {
-      title: config.title || 'KI-Vorschläge',
-      max_suggestions: config.max_suggestions || 10,
-      show_actions: config.show_actions !== false,
-      core_url: config.core_url || '',
-      ...config,
-    };
+    const normalized = this.constructor.normalizeConfig(config);
+    const errors = this.constructor.validateConfig(normalized);
+    const errorList = Object.values(errors || {});
+    if (errorList.length > 0) {
+      throw new Error(errorList[0]);
+    }
+
+    if (typeof super.setConfig === 'function') {
+      super.setConfig(normalized);
+    } else {
+      this._config = normalized;
+    }
   }
 
   set hass(hass) {
@@ -456,6 +535,10 @@ class StyxSuggestionsCard extends _SugBase {
             <button class="act-reject" data-id="${this._esc(id)}" data-action="reject" ${actionsDisabledGlobal ? 'disabled' : ''}>Ablehnen</button>
           </div>` : '';
 
+        // Lücke 1 (V15_UX_GATE): Pattern + Lift sichtbar machen
+        const patternInfo = s.pattern ? `<div class="sg-pattern"><span class="pattern-icon">🔗</span> ${this._esc(String(s.pattern))}</div>` : '';
+        const liftInfo = s.lift != null ? `<div class="sg-lift"><span class="lift-icon">📈</span> ${Number(s.lift).toFixed(2)}× Korrelation</div>` : '';
+
         return `
           <div class="suggestion" data-id="${this._esc(id)}">
             <div class="sg-header">
@@ -463,6 +546,7 @@ class StyxSuggestionsCard extends _SugBase {
               ${this._confidenceBadge(s.confidence)}
             </div>
             <div class="sg-desc">${this._esc(s.description || '')}</div>
+            ${patternInfo || liftInfo ? `<div class="sg-reasoning">${patternInfo}${liftInfo}</div>` : ''}
             <div class="sg-tags">
               <span class="tag" style="background:${catColor}20;color:${catColor};border:1px solid ${catColor}40">${this._esc(cat)}</span>
               <span class="tag" style="background:${riskColor}20;color:${riskColor};border:1px solid ${riskColor}40">Risiko: ${this._esc(risk)}</span>
@@ -706,6 +790,24 @@ class StyxSuggestionsCard extends _SugBase {
           color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
           margin-bottom: 8px;
           line-height: 1.4;
+        }
+        /* Lücke 1 (V15_UX_GATE): Pattern + Lift Styling */
+        .sg-reasoning {
+          font-size: 11px;
+          color: var(--ps-text-secondary, var(--secondary-text-color, #9fb1c3));
+          margin-bottom: 8px;
+          padding: 6px 8px;
+          background: rgba(79,195,247,0.06);
+          border-radius: 6px;
+          border-left: 2px solid var(--ps-accent, #4fc3f7);
+        }
+        .sg-pattern, .sg-lift {
+          display: inline-block;
+          margin-right: 10px;
+          white-space: nowrap;
+        }
+        .pattern-icon, .lift-icon {
+          margin-right: 4px;
         }
         .sg-tags {
           display: flex;

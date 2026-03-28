@@ -80,12 +80,13 @@ class StyxZoneCard extends _ZoneBase {
   }
 
   static getConfigElement() {
-    return document.createElement('hui-generic-entity-row');
+    return super.getConfigElement?.() || document.createElement('hui-generic-entity-row');
   }
 
   static getStubConfig() {
     return {
       entity: 'sensor.copilot_ha_habitus_zones',
+      title: 'Zonen',
       show_mood: true,
       show_neuron_activity: true,
       show_quick_actions: true,
@@ -96,20 +97,79 @@ class StyxZoneCard extends _ZoneBase {
     };
   }
 
-  setConfig(config) {
-    if (!config.entity) {
-      throw new Error('Please define an entity');
+  static getConfigForm() {
+    return [
+      {
+        name: 'entity',
+        label: 'Entity',
+        section: 'Data source',
+        selector: 'entity',
+        domain: 'sensor',
+        required: true,
+        placeholder: 'sensor.copilot_ha_habitus_zones',
+        help: 'Primary zone summary sensor used by the card.',
+        sectionHelp: 'Choose the sensor entity that provides the canonical zone summary payload for this card.',
+      },
+      {
+        name: 'title',
+        label: 'Title',
+        section: 'Header',
+        selector: 'text',
+        placeholder: 'Zonen',
+        help: 'Optional card title shown in the header.',
+        sectionHelp: 'Set the visible card title without changing the underlying zone source.',
+      },
+      { name: 'show_mood', label: 'Show mood gauges', section: 'Visible panels', sectionHelp: 'Toggle which zone insight panels stay visible in the card UI.', selector: 'boolean', default: true },
+      { name: 'show_neuron_activity', label: 'Show neuron activity', section: 'Visible panels', selector: 'boolean', default: true },
+      { name: 'show_quick_actions', label: 'Show quick actions', section: 'Visible panels', sectionHelp: 'Toggle which zone insight panels stay visible in the card UI.', selector: 'boolean', default: true, recommended: true },
+      { name: 'show_health_score', label: 'Show health score', section: 'Visible panels', selector: 'boolean', default: true, recommended: true },
+      { name: 'show_module_states', label: 'Show module states', section: 'Visible panels', selector: 'boolean', default: true },
+      { name: 'show_autonomy_log', label: 'Show autonomy log', section: 'Visible panels', selector: 'boolean', default: true },
+      { name: 'show_presence_hold', label: 'Show presence hold', section: 'Visible panels', selector: 'boolean', default: true, recommended: true },
+    ];
+  }
+
+  static normalizeConfig(config = {}) {
+    const defaults = this.getStubConfig();
+    const normalize = window.styxNormalizeConfigWithSchema;
+    const normalized = typeof normalize === 'function'
+      ? normalize(config, this.getConfigForm(), defaults)
+      : { ...defaults, ...(config || {}) };
+
+    if (typeof normalized.title !== 'string') {
+      normalized.title = defaults.title;
     }
-    this._config = {
-      ...config,
-      show_mood: config.show_mood !== false,
-      show_neuron_activity: config.show_neuron_activity !== false,
-      show_quick_actions: config.show_quick_actions !== false,
-      show_health_score: config.show_health_score !== false,
-      show_module_states: config.show_module_states !== false,
-      show_autonomy_log: config.show_autonomy_log !== false,
-      show_presence_hold: config.show_presence_hold !== false,
-    };
+
+    normalized.title = normalized.title.trim() || defaults.title;
+    return normalized;
+  }
+
+  static validateConfig(config = {}) {
+    const validate = window.styxValidateConfigWithSchema;
+    const errors = typeof validate === 'function'
+      ? validate(config, this.getConfigForm())
+      : {};
+
+    if (config.title !== undefined && typeof config.title !== 'string') {
+      errors.title = 'title must be string';
+    }
+
+    return errors;
+  }
+
+  setConfig(config) {
+    const normalized = this.constructor.normalizeConfig(config);
+    const errors = this.constructor.validateConfig(normalized);
+    const errorList = Object.values(errors || {});
+    if (errorList.length > 0) {
+      throw new Error(errorList[0]);
+    }
+
+    if (typeof super.setConfig === 'function') {
+      super.setConfig(normalized);
+    } else {
+      this._config = normalized;
+    }
   }
 
   set hass(hass) {

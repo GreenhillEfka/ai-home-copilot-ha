@@ -17,15 +17,92 @@ class StyxHabitusCard extends _HabitusBase {
   }
 
   static getConfigElement() {
-    return document.createElement("hui-generic-entity-row");
+    return super.getConfigElement?.() || document.createElement("hui-generic-entity-row");
   }
 
   static getStubConfig() {
-    return { entity: "sensor.pilotsuite_habitus_rules_count", max_rules: 5 };
+    return {
+      entity: "sensor.pilotsuite_habitus_rules_count",
+      title: "Erkannte Muster",
+      max_rules: 5,
+    };
+  }
+
+  static getConfigForm() {
+    return [
+      {
+        name: 'entity',
+        label: 'Entity',
+        selector: 'entity',
+        domain: 'sensor',
+        required: true,
+        placeholder: 'sensor.pilotsuite_habitus_rules_count',
+        help: 'Primary habitus rules count sensor.',
+      },
+      {
+        name: 'title',
+        label: 'Title',
+        selector: 'text',
+        placeholder: 'Erkannte Muster',
+        help: 'Optional card title shown in the header.',
+      },
+      {
+        name: 'max_rules',
+        label: 'Max rules',
+        selector: 'text',
+        placeholder: '5',
+        help: 'Maximum number of rules to render.',
+      },
+    ];
+  }
+
+  static normalizeConfig(config = {}) {
+    const defaults = this.getStubConfig();
+    const normalize = window.styxNormalizeConfigWithSchema;
+    const normalized = typeof normalize === 'function'
+      ? normalize(config, this.getConfigForm(), defaults)
+      : { ...defaults, ...(config || {}) };
+
+    if (typeof normalized.title !== 'string') normalized.title = defaults.title;
+    normalized.title = normalized.title.trim() || defaults.title;
+
+    const parsedMax = Number.parseInt(normalized.max_rules, 10);
+    normalized.max_rules = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : defaults.max_rules;
+    return normalized;
+  }
+
+  static validateConfig(config = {}) {
+    const validate = window.styxValidateConfigWithSchema;
+    const errors = typeof validate === 'function'
+      ? validate(config, this.getConfigForm())
+      : {};
+
+    if (config.title !== undefined && typeof config.title !== 'string') {
+      errors.title = 'title must be string';
+    }
+
+    const rawMax = config.max_rules;
+    if (rawMax !== undefined) {
+      const parsed = Number.parseInt(rawMax, 10);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        errors.max_rules = 'max_rules must be a positive integer';
+      }
+    }
+
+    return errors;
   }
 
   setConfig(config) {
-    this._config = { max_rules: 5, ...config };
+    const normalized = this.constructor.normalizeConfig(config);
+    const errors = this.constructor.validateConfig(normalized);
+    const errorList = Object.values(errors || {});
+    if (errorList.length > 0) throw new Error(errorList[0]);
+
+    if (typeof super.setConfig === 'function') {
+      super.setConfig(normalized);
+    } else {
+      this._config = normalized;
+    }
   }
 
   set hass(hass) {
@@ -149,7 +226,7 @@ class StyxHabitusCard extends _HabitusBase {
       </style>
       <ha-card>
         <div class="header">
-          <span class="title">Erkannte Muster</span>
+          <span class="title">${this._esc(this._config.title || 'Erkannte Muster')}</span>
           <span class="count">${total} Regeln</span>
         </div>
         ${rulesHtml}
