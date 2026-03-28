@@ -5,7 +5,7 @@
 ## Aktiver Release
 ```
 agent: main
-version: v15.2.4
+version: v15.2.5
 timestamp: 2026-03-28T19:08:00+01:00
 ```
 

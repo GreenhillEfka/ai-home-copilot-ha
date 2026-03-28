@@ -2,7 +2,7 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
-## [15.2.4] - 2026-03-28
+## [15.2.5] - 2026-03-28
 
 ### Added
 - config-flow: reintroduced `STEP_MODULES` between `NETWORK` and `REVIEW` for automation mode and presence hold default persistence.
