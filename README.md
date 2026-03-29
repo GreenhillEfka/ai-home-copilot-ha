@@ -4,7 +4,7 @@
 
 PilotSuite HACS-Integration für Home Assistant.
 
-## State of the Art (Stand: 2026-03-28)
+## State of the Art (Stand: 2026-03-29)
 
 - Aktive Release-Linie: **v15.2.9** (lokal vorbereitet, offizieller GitHub-Tag aktuell: **v15.2.9**)
 - Kontrakt-Ziel: **paired with Core v15.2.9+**
