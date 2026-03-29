@@ -4,9 +4,9 @@
 
 ## Aktiver Release
 ```
-agent: none
-version: none
-timestamp: none
+agent: pilotclaw
+version: v15.2.9
+timestamp: 2026-03-29T09:38:00Z
 ```
 
 ## Letzter Release

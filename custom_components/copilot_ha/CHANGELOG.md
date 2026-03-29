@@ -2,6 +2,12 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.2.9] - 2026-03-29
+
+### Changed
+- Maintenance-aligned HA/HACS release marker to align with Core v15.2.9 lane.
+- Version and release metadata synchronized (VERSION, manifest, changelog head update) for release readiness continuity.
+
 ## [15.2.7] - 2026-03-28
 
 ### Added
