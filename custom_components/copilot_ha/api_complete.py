@@ -704,5 +704,8 @@ class PilotSuiteCompleteAPI:
         self.weather = WeatherAPI(api)
         self.calendar = CalendarAPI(api)
         
-        # Batch 4 & 5 will be added in next iteration
-        # (Media, Hardware, Styx, System, etc.)
+        # Batch 4: Media & Hardware
+        # (To be added: Sonos, Tags, Hardware, Camera, etc.)
+        
+        # Batch 5: Styx & System
+        # (To be added: Chat, Multi-Home, Dashboard, Debug, etc.)
