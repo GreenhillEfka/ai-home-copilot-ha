@@ -98,6 +98,86 @@ class CopilotApiClient:
         try:
             async with self._session.post(
                 url,
+
+    # ── Module APIs (Slices 67-82) ─────────────────────────────────────
+    
+    async def get_modules_list(self) -> dict:
+        """Get list of registered modules."""
+        return await self._get_json("/api/v1/modules/list")
+    
+    async def get_module_status(self, module_name: str) -> dict:
+        """Get status of a specific module."""
+        return await self._get_json(f"/api/v1/modules/{module_name}/status")
+    
+    async def get_module_config(self, module_name: str) -> dict:
+        """Get configuration of a specific module."""
+        return await self._get_json(f"/api/v1/modules/{module_name}/config")
+    
+    async def execute_module_action(self, module_name: str, action: str, params: dict | None = None) -> dict:
+        """Execute a module action."""
+        payload = {"action": action}
+        if params:
+            payload.update(params)
+        return await self._post_json(f"/api/v1/modules/{module_name}/action", payload)
+    
+    # Presence Module
+    async def get_presence_zones(self) -> dict:
+        """Get presence status for all zones."""
+        return await self._get_json("/api/v1/modules/presence/zones")
+    
+    async def get_presence_zone(self, zone_id: str) -> dict:
+        """Get presence status for a specific zone."""
+        return await self._get_json(f"/api/v1/modules/presence/zone/{zone_id}")
+    
+    # Light Module
+    async def get_light_zones(self) -> dict:
+        """Get light status for all zones."""
+        return await self._get_json("/api/v1/modules/light/zones")
+    
+    async def activate_light_scene(self, zone_id: str, scene: str) -> dict:
+        """Activate light scene for a zone."""
+        return await self._post_json(f"/api/v1/modules/light/zone/{zone_id}/scene", {"scene": scene})
+    
+    # Climate Module
+    async def get_climate_zones(self) -> dict:
+        """Get climate status for all zones."""
+        return await self._get_json("/api/v1/modules/climate/zones")
+    
+    async def set_climate_setpoint(self, zone_id: str, temperature: float) -> dict:
+        """Set climate setpoint for a zone."""
+        return await self._post_json(f"/api/v1/modules/climate/zone/{zone_id}/setpoint", {"temperature": temperature})
+    
+    # Humidity Module
+    async def get_humidity_zones(self) -> dict:
+        """Get humidity status for all zones."""
+        return await self._get_json("/api/v1/modules/humidity/zones")
+    
+    # Energy Module
+    async def get_energy_forecast(self) -> dict:
+        """Get energy forecast."""
+        return await self._get_json("/api/v1/modules/energy/forecast")
+    
+    async def get_energy_optimization(self) -> dict:
+        """Get energy optimization recommendations."""
+        return await self._get_json("/api/v1/modules/energy/optimization")
+    
+    # TimeOfDay Module
+    async def get_timeofday_current(self) -> dict:
+        """Get current time of day state."""
+        return await self._get_json("/api/v1/modules/timeofday/current")
+    
+    async def get_timeofday_zones(self) -> dict:
+        """Get time of day state for all zones."""
+        return await self._get_json("/api/v1/modules/timeofday/zones")
+    
+    # Rules Module
+    async def get_rules_list(self) -> dict:
+        """List all rules."""
+        return await self._get_json("/api/v1/modules/rules/list")
+    
+    async def activate_rule(self, rule_id: str) -> dict:
+        """Activate a rule."""
+        return await self._post_json(f"/api/v1/modules/rules/{rule_id}/activate", {})
                 json=payload,
                 headers=self._headers(),
                 timeout=aiohttp.ClientTimeout(total=10),
