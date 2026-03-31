@@ -595,6 +595,54 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to set up ZoneDetector")
 
+    # ── COMPLETE ENTITIES INTEGRATION (ALL 286+ APIs) ─────────────────────
+    # Set up all entities for all 5 batches
+    
+    try:
+        from .api_wrapper import PilotSuiteAPI
+        from .complete_entities import async_create_complete_entities
+        from .complete_entities_batch3 import async_create_batch3_entities
+        from .complete_entities_batch4_5 import async_create_batch4_5_entities
+        import aiohttp
+        
+        config = merged_entry_config(entry)
+        host = config.get(CONF_HOST, DEFAULT_HOST)
+        port = config.get(CONF_PORT, DEFAULT_PORT)
+        token = config.get(CONF_TOKEN, "")
+        
+        base_url = f"http://{host}:{port}"
+        
+        async with aiohttp.ClientSession() as session:
+            api = PilotSuiteAPI(session, base_url, token)
+            
+            # Batch 1-2: Core + Automation entities
+            batch1_2_entities = await async_create_complete_entities(hass, api, entry)
+            if batch1_2_entities:
+                from homeassistant.helpers.entity_platform import async_get_current_platform
+                platform = async_get_current_platform()
+                await platform.async_add_entities(batch1_2_entities)
+                _LOGGER.info("Added %d entities (Batch 1-2: Core, Automation)", len(batch1_2_entities))
+            
+            # Batch 3: Intelligence entities
+            batch3_entities = await async_create_batch3_entities(hass, api, entry)
+            if batch3_entities:
+                from homeassistant.helpers.entity_platform import async_get_current_platform
+                platform = async_get_current_platform()
+                await platform.async_add_entities(batch3_entities)
+                _LOGGER.info("Added %d entities (Batch 3: Intelligence)", len(batch3_entities))
+            
+            # Batch 4-5: Media/Hardware + Styx/System entities
+            batch4_5_entities = await async_create_batch4_5_entities(hass, api, entry)
+            if batch4_5_entities:
+                from homeassistant.helpers.entity_platform import async_get_current_platform
+                platform = async_get_current_platform()
+                await platform.async_add_entities(batch4_5_entities)
+                _LOGGER.info("Added %d entities (Batch 4-5: Media, Hardware, Styx, System)", len(batch4_5_entities))
+        
+        _LOGGER.info("✅ Complete entities integration finished — ALL 286+ APIs supported")
+    except Exception as e:
+        _LOGGER.exception("Failed to set up complete entities: %s", e)
+    
     # Pattern Proposal Engine (PS-085)
     try:
         from .pattern_proposal import async_setup_pattern_proposal
