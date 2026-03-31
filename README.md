@@ -1,302 +1,303 @@
-# PilotSuite HACS Integration
+# PilotSuite Styx — Home Assistant Integration
 
-[![Release](https://img.shields.io/github/v/release/GreenhillEfka/pilotsuite-styx-ha)](https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases)
-
-**PilotSuite HA Integration** — Die Home Assistant-Integration für PilotSuite Core. Stellt Entities, Dashboard-Cards und Config-Flow bereit.
-
-**Aktuelle Version:** v15.2.10  
-**Erfordert:** PilotSuite Core v15.2.93+
+**Version:** 15.3.0  
+**Status:** ✅ Life-Long-Learning Dachsystem
 
 ---
 
-## Was ist PilotSuite HA?
+## 🎯 VISION
 
-PilotSuite HA ist die **Home Assistant-native Integration** für PilotSuite Core:
+**"Ein SmartHome, das CLEVERER ist als sein Nutzer"**
 
-- **Entities** — Sensors, Buttons, Selects für alle Intelligence Modules
-- **Dashboard Cards** — Lovelace Cards für Module, Zonen, Mood, Brain
-- **Config Flow** — Einfache Einrichtung über Home Assistant UI
-- **Event Forwarding** — HA Events → Core (state_changed)
-- **Webhook Receiver** — Core Events → HA (mood, proposals, alerts)
-- **Blueprints** — Vorkonfigurierte Automationen
+Diese HA-Integration verbindet PilotSuite Core mit Home Assistant:
+- **Zone Sync** — Core ↔ HA bidirektional
+- **Entity Tags** — Automatische Zone-Zuordnung
+- **Module Config** — active/learning/off pro Zone
+- **Chat Interface** — Lovelace Card für PilotSuite Chat
+- **Learning Viz** — Zeigt was System lernt
 
 ---
 
-## Installation
+## 📦 INSTALLATION
 
-### Voraussetzungen
+### Via HACS (Empfohlen)
 
-1. **Home Assistant** >= 2024.1.0
-2. **HACS** installiert
-3. **PilotSuite Core Add-on** installiert und laufend (v15.2.93+)
+1. **HACS installieren** (falls nicht vorhanden)
+2. **Repository hinzufügen:**
+   ```
+   https://github.com/GreenhillEfka/pilotsuite-styx-ha
+   ```
+3. **PilotSuite Styx installieren**
+4. **Neu starten**
+5. **Integration einrichten:**
+   - Einstellungen → Geräte & Dienste → + Hinzufügen
+   - "PilotSuite Styx" wählen
+   - Core URL eingeben (default: `http://homeassistant.local:8909`)
+   - API Token eingeben (aus Core Config)
 
-### Schritt 1: Core Add-on installieren
+### Manuell
 
-```
-Home Assistant → Einstellungen → Add-ons → Add-on Store
-→ ⋮ (Menü) → Repositories → URL hinzufügen:
-   https://github.com/GreenhillEfka/pilotsuite-styx-core
-→ PilotSuite Core installieren → Starten
-```
+```bash
+# Clone Repository
+git clone https://github.com/GreenhillEfka/pilotsuite-styx-ha
+cd pilotsuite-styx-ha
 
-### Schritt 2: HA Integration installieren (HACS)
+# Copy to HA custom_components
+cp -r custom_components/copilot_ha /config/custom_components/
 
-```
-HACS → Integrationen → ⋮ (Menü) → Benutzerdefinierte Repositories
-→ Repository: https://github.com/GreenhillEfka/pilotsuite-styx-ha
-→ Kategorie: Integration
-→ PilotSuite installieren
-→ Home Assistant NEU STARTEN
-```
-
-### Schritt 3: Integration konfigurieren
-
-```
-Einstellungen → Geräte & Dienste → Integration hinzufügen
-→ PilotSuite suchen und auswählen
-→ Config Flow folgt (Core wird auto-discovered)
-→ Fertig
+# Restart HA
 ```
 
 ---
 
-## Intelligence Modules (Slices 67-82)
+## ⚙️ KONFIGURATION
 
-### Presence Intelligence
+### Config Flow (UI)
 
-**Entities:**
-- `sensor.pilot_suite_presence_{zone}` — Präsenz-Status pro Zone
-- `sensor.pilot_suite_presence_count` — Anzahl belegter Zonen
-- `button.pilot_suite_presence_override_{zone}_{state}` — Präsenz überschreiben
-- `select.pilot_suite_presence_mode_{zone}` — Präsenz-Modus
+1. **Core Connection:**
+   - Host: `homeassistant.local` oder IP
+   - Port: `8909` (default)
+   - Token: Aus Core Config
 
-**Dashboard Card:**
+2. **Zone Auto-Discovery:**
+   - HA Areas scannen
+   - Zone Types zuweisen (living, bath, kitchen, ...)
+   - Bestätigen
+
+3. **Entity Mapping:**
+   - Auto-Assign via Tags
+   - Manuell korrigieren (optional)
+
+4. **Module Config:**
+   - Pro Zone Module aktivieren
+   - State setzen (active/learning/off)
+
+### YAML (Optional)
+
 ```yaml
-type: custom:styx-modules-card
-title: Presence Modules
+copilot_ha:
+  core_url: http://homeassistant.local:8909
+  core_token: YOUR_API_TOKEN
+  
+  zones:
+    - zone_id: living
+      zone_type: living
+      name: Wohnzimmer
+      modules:
+        light: active
+        motion: active
+        music: learning
+  
+  tags:
+    - entity_id: light.wohnzimmer_haupt
+      tags: [domain:light, zone_living, auto_assign]
 ```
-
-### Light Intelligence
-
-**Entities:**
-- `sensor.pilot_suite_light_{zone}` — Licht-Status pro Zone
-- `button.pilot_suite_light_scene_{zone}_{scene}` — Licht-Szene aktivieren
-- `select.pilot_suite_light_scene_{zone}` — Licht-Szene auswählen
-
-**Szenen:** relax, focus, movie, night, morning, party, reading
-
-### Climate/HVAC
-
-**Entities:**
-- `sensor.pilot_suite_climate_{zone}` — Temperatur pro Zone
-- `button.pilot_suite_climate_setpoint_{zone}_{temp}` — Temperatur setzen
-- `select.pilot_suite_climate_mode_{zone}` — Klima-Modus
-
-**Modi:** heat, cool, auto, eco, comfort, away  
-**Temperaturen:** 18°C, 20°C, 22°C, 24°C
-
-### Humidity Control
-
-**Entities:**
-- `sensor.pilot_suite_humidity_{zone}` — Luftfeuchtigkeit pro Zone
-- Attribute: ventilation_active, mold_risk
-
-### Energy Management
-
-**Entities:**
-- `sensor.pilot_suite_energy_forecast` — Energie-Prognose
-- `button.pilot_suite_energy_optimize` — Optimierung starten
-
-**Forecast:** 24h, 7d, current_price, optimization_potential
-
-### Time of Day
-
-**Entities:**
-- `sensor.pilot_suite_time_of_day` — Aktuelle Tageszeit
-- `select.pilot_suite_timeofday_mode` — Tageszeit-Modus
-
-**Zeiten:** morning, day, evening, night, late_night
-
-### Rules Engine
-
-**Entities:**
-- `sensor.pilot_suite_active_rules` — Anzahl aktiver Regeln
-- `button.pilot_suite_rule_activate_{rule}` — Regel aktivieren
-- `select.pilot_suite_rules_mode` — Rules-Modus
-
-**Modi:** active, passive, learning, disabled
 
 ---
 
-## Dashboard Cards
+## 🔗 LOVELACE CARDS
 
-### Modules Card
+### Installation
 
-Übersicht aller Intelligence Modules:
+```yaml
+# configuration.yaml
+lovelace:
+  mode: yaml
+  resources:
+    - url: /hacsfiles/copilot_ha/styx-modules-card.js
+      type: module
+    - url: /hacsfiles/copilot_ha/styx-zone-card.js
+      type: module
+    - url: /hacsfiles/copilot_ha/styx-learning-card.js
+      type: module
+```
+
+### Cards
+
+#### 1. Modules Card
 
 ```yaml
 type: custom:styx-modules-card
 title: PilotSuite Modules
-refresh_interval: 30
-show_actions: true
-show_status: true
+show_state: true
 ```
 
-### Zone Card
-
-Zonen-Übersicht mit Mood, Präsenz, Modulen:
+#### 2. Zone Card
 
 ```yaml
 type: custom:styx-zone-card
-entity: sensor.pilot_suite_habitus_zones
-show_mood: true
-show_presence: true
+title: Habituszonen
+show_entities: true
 show_modules: true
 ```
 
-### Brain Card
-
-Brain Graph Visualisierung:
+#### 3. Learning Card
 
 ```yaml
-type: custom:styx-brain-card
-entity: sensor.pilot_suite_brain_graph
-show_nodes: true
-show_edges: true
+type: custom:styx-learning-card
+title: Lern-Fortschritt
+show_intelligence_score: true
+show_patterns: true
 ```
 
-### Mood Card
-
-Mood Engine Dashboard:
+#### 4. Chat Card
 
 ```yaml
-type: custom:styx-mood-card
-entity: sensor.pilot_suite_mood
-show_dimensions: true
-show_history: true
+type: custom:styx-chat-card
+title: PilotSuite Chat
+session_id: default
+character: styx
 ```
 
 ---
 
-## API-Endpoints
+## 🏷️ TAG SYSTEM
 
-PilotSuite HA stellt folgende Core-APIs bereit:
+### Automatische Entity-Zuordnung
+
+Tags ermögichen automatische Zone→Entity Zuordnung:
+
+```yaml
+# Domain Tags
+domain:light      # light.*, switch.light
+domain:climate    # climate.*, sensor.temperature
+domain:motion     # binary_sensor.motion, binary_sensor.presence
+domain:media      # media_player.*
+domain:energy     # sensor.power, sensor.energy
+
+# Zone Tags
+zone_living       # Wohnzimmer
+zone_bath         # Bad
+zone_kitchen      # Küche
+zone_office       # Büro
+zone_bedroom      # Schlafzimmer
+
+# Status Tags
+auto_assign       # Automatisch zuweisen
+needs_review      # Manuelle Prüfung nötig
+manual_override   # Manuell überschrieben
+```
+
+### Beispiel
+
+```yaml
+entity:
+  entity_id: light.wohnzimmer_haupt
+  tags:
+    - domain:light
+    - zone_living
+    - auto_assign
+  
+  # Ergebnis:
+  assigned_zone: living
+  enabled_modules: [light]
+```
+
+---
+
+## 🔧 SERVICES
+
+### `copilot_ha.sync_zones`
+
+Synchronisiert Zonen zwischen Core und HA.
+
+```yaml
+service: copilot_ha.sync_zones
+data:
+  direction: bidirectional  # core_to_ha, ha_to_core, bidirectional
+```
+
+### `copilot_ha.set_module_state`
+
+Setzt Module-State für eine Zone.
+
+```yaml
+service: copilot_ha.set_module_state
+data:
+  zone_id: living
+  module_id: light
+  state: active  # active, learning, off
+```
+
+### `copilot_ha.add_feedback`
+
+Gibt Feedback für ein Pattern.
+
+```yaml
+service: copilot_ha.add_feedback
+data:
+  pattern_id: p_001
+  feedback_type: accepted  # accepted, rejected, ignored, corrected
+  comment: "Funktioniert perfekt!"
+```
+
+---
+
+## 📊 ENTITIES
+
+### Sensors
+
+| Entity | Beschreibung |
+|--------|--------------|
+| `sensor.pilotsuite_system_health` | Core System Health |
+| `sensor.pilotsuite_intelligence_score` | Intelligence Score (0-100) |
+| `sensor.pilotsuite_patterns_learned` | Gelernte Patterns |
+| `sensor.pilotsuite_active_automations` | Aktive Automatisierungen |
+| `sensor.pilotsuite_mood_state` | Aktuelle Stimmung |
+
+### Buttons
+
+| Entity | Beschreibung |
+|--------|--------------|
+| `button.pilotsuite_sync_zones` | Zonen synchronisieren |
+| `button.pilotsuite_clear_cache` | Cache leeren |
+
+### Selects
+
+| Entity | Beschreibung |
+|--------|--------------|
+| `select.pilotsuite_living_light_scene` | Licht-Szene Wohnzimmer |
+| `select.pilotsuite_living_climate_mode` | Klima-Modus Wohnzimmer |
+
+---
+
+## 🔗 API-ENDPOINTS (via Core)
 
 | Endpoint | Beschreibung |
-|----------|-------------|
-| `GET /api/v1/modules/list` | Alle Module auflisten |
-| `GET /api/v1/modules/presence/zones` | Präsenz aller Zonen |
-| `GET /api/v1/modules/light/zones` | Licht-Status aller Zonen |
-| `POST /api/v1/modules/light/zone/{id}/scene` | Licht-Szene aktivieren |
-| `GET /api/v1/modules/climate/zones` | Klima-Status aller Zonen |
-| `POST /api/v1/modules/climate/zone/{id}/setpoint` | Temperatur setzen |
-| `GET /api/v1/modules/humidity/zones` | Luftfeuchtigkeit aller Zonen |
-| `GET /api/v1/modules/energy/forecast` | Energie-Prognose |
-| `GET /api/v1/modules/timeofday/current` | Aktuelle Tageszeit |
-| `GET /api/v1/modules/rules/list` | Alle Regeln |
+|----------|--------------|
+| `/api/v1/habitus` | Life-Long-Learning API |
+| `/api/v1/chat` | Chat API (Telegram, WhatsApp, REST) |
+| `/api/v1/learning` | Learning Visualization |
+| `/api/v1/backend` | Backend UI (10 Tabs) |
+| `/api/v1/neurons` | Neurons API (3 Layers) |
+| `/api/v1/hub/zones` | Zone Sync API |
 
 ---
 
-## Konfiguration
+## 🎉 RELEASE v15.3.0
 
-### Config Flow Optionen
+**Datum:** 2026-04-01  
+**Tag:** v15.3.0  
+**Status:** ✅ READY FOR PRODUCTION
 
-| Option | Beschreibung | Default |
-|--------|-------------|---------|
-| **Host** | Core Add-on Host | auto-discover |
-| **Port** | Core Add-on Port | 8909 |
-| **Token** | API Auth Token | auto-fetch |
-| **Modules Enabled** | Module aktivieren | alle |
-| **Auto-Create Zones** | Zonen aus HA Areas | true |
-
-### YAML-Konfiguration (optional)
-
-```yaml
-copilot_ha:
-  host: homeassistant.local
-  port: 8909
-  token: !secret pilotsuite_token
-  modules:
-    - presence
-    - light
-    - climate
-    - humidity
-    - energy
-    - timeofday
-    - rules
-```
+**Key Features:**
+- ✅ Zone Sync (Core ↔ HA bidirektional)
+- ✅ Tag System (automatische Entity-Zuordnung)
+- ✅ Module Config (active/learning/off)
+- ✅ Lovelace Cards (Modules, Zones, Learning, Chat)
+- ✅ Services (sync_zones, set_module_state, add_feedback)
 
 ---
 
-## Entities Übersicht
-
-### Sensors (Beispiele)
-
-| Entity | Beschreibung |
-|--------|-------------|
-| `sensor.pilot_suite_presence_count` | Belegte Zonen |
-| `sensor.pilot_suite_light_wohnzimmer` | Licht Wohnzimmer |
-| `sensor.pilot_suite_climate_bad` | Klima Bad |
-| `sensor.pilot_suite_humidity_kuche` | Luftfeuchtigkeit Küche |
-| `sensor.pilot_suite_energy_forecast` | Energie-Prognose |
-| `sensor.pilot_suite_time_of_day` | Tageszeit |
-| `sensor.pilot_suite_active_rules` | Aktive Regeln |
-
-### Buttons (Beispiele)
-
-| Entity | Beschreibung |
-|--------|-------------|
-| `button.pilot_suite_light_scene_wohnzimmer_relax` | Szene Relax |
-| `button.pilot_suite_climate_setpoint_bad_22` | 22°C Bad |
-| `button.pilot_suite_rule_activate_movie_night` | Regel aktivieren |
-
-### Selects (Beispiele)
-
-| Entity | Beschreibung |
-|--------|-------------|
-| `select.pilot_suite_light_scene_wohnzimmer` | Szene auswählen |
-| `select.pilot_suite_climate_mode_wohnzimmer` | Klima-Modus |
-| `select.pilot_suite_presence_mode_wohnzimmer` | Präsenz-Modus |
-
----
-
-## Troubleshooting
-
-### Core wird nicht gefunden
-
-```
-1. Core Add-on läuft? → Add-ons → PilotSuite Core → Starten
-2. Port 8909 erreichbar? → http://homeassistant.local:8909/health
-3. Token korrekt? → Einstellungen → Geräte & Dienste → PilotSuite → Configure
-```
-
-### Entities fehlen
-
-```
-1. Integration neu laden → Einstellungen → Geräte & Dienste → PilotSuite → Reload
-2. HA neu starten
-3. Logs prüfen → Einstellungen → System → Logs
-```
-
-### Dashboard Cards laden nicht
-
-```
-1. Browser-Cache leeren (Strg+Shift+R)
-2. Lovelace Resources prüfen → /config/lovelace/resources
-3. Card-URL: /local/pilotsuite/www/styx-modules-card.js
-```
-
----
-
-## Links
+## 🔗 LINKS
 
 | Resource | URL |
 |----------|-----|
-| **GitHub (HA)** | https://github.com/GreenhillEfka/pilotsuite-styx-ha |
-| **GitHub (Core)** | https://github.com/GreenhillEfka/pilotsuite-styx-core |
-| **Issues** | https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues |
-| **Docs** | https://github.com/GreenhillEfka/pilotsuite-styx-ha/tree/main/docs |
+| **GitHub** | https://github.com/GreenhillEfka/pilotsuite-styx-ha |
+| **Core Repo** | https://github.com/GreenhillEfka/pilotsuite-styx-core |
+| **Vision** | https://github.com/GreenhillEfka/pilotsuite-styx-core/blob/main/docs/VISION.md |
+| **Discord** | https://discord.com/invite/clawd |
 
 ---
 
-**PilotSuite HA Integration — v15.2.10 (2026-03-31)**
+**🚀 PILOTSUITE — DAS DACHSYSTEM.**
