@@ -2,6 +2,32 @@
 
 All notable changes to PilotSuite will be documented in this file.
 
+## [15.2.10] - 2026-03-31
+
+### Added
+- **Core v15.2.93 Alignment** — HA Integration aligned with Core Slices 67-83 (Presence, Light, Climate, Humidity, Energy, Rules, TimeOfDay)
+- **Thin Client Architecture** — HA reduced to pure transport layer (Event Forwarding → Core, Commands ← Core)
+- **Zone Config Flow** — Simplified zone setup, Core is single source of truth
+- **Dashboard Cards** — 9 Tabs (Overview, Zones, Music Cloud, Suggestions, Automation, AI/LLM, Modules, Neurons, Chat)
+
+### Changed
+- HA no longer contains business logic — all intelligence moved to Core
+- Event forwarder sends raw HA states to Core (no preprocessing)
+- Webhook handler receives Core decisions and executes as HA service calls
+- Config flow simplified: Core decides, HA displays
+
+### Fixed
+- HA↔Core contract clarified: Core = Single Source of Truth, HA = Thin Client
+- Version alignment with Core v15.2.93
+- HACS installability verified
+
+### Meta
+- Release v15.2.10 — Installable via HACS, requires Core v15.2.93 Add-on
+- GitHub: GreenhillEfka/pilotsuite-styx-ha
+- HACS-Installation: Repository URL hinzufügen, PilotSuite installieren
+
+---
+
 ## [15.2.9] - 2026-03-29
 
 ### Changed
