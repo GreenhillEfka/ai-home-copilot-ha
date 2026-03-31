@@ -645,6 +645,55 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:
         _LOGGER.exception("Failed to set up agent auto-config")
 
+    # ── Slices 67-82: Module Integration ─────────────────────────────
+    # Set up Module Sensors, Buttons, and Selects for HA
+    
+    try:
+        from .module_sensors import async_create_module_sensors
+        from .module_buttons import async_create_module_buttons
+        from .module_selects import async_create_module_selects
+        from .api import CopilotApiClient
+        import aiohttp
+        
+        # Create API client for module setup
+        config = merged_entry_config(entry)
+        host = config.get(CONF_HOST, DEFAULT_HOST)
+        port = config.get(CONF_PORT, DEFAULT_PORT)
+        token = config.get(CONF_TOKEN, "")
+        
+        base_url = f"http://{host}:{port}"
+        
+        async with aiohttp.ClientSession() as session:
+            api = CopilotApiClient(session, base_url, token)
+            
+            # Create module entities
+            module_sensors = await async_create_module_sensors(hass, api, entry)
+            module_buttons = await async_create_module_buttons(hass, api, entry)
+            module_selects = await async_create_module_selects(hass, api, entry)
+            
+            # Add entities to HA
+            if module_sensors:
+                from homeassistant.helpers.entity_platform import async_get_current_platform
+                platform = async_get_current_platform()
+                await platform.async_add_entities(module_sensors)
+                _LOGGER.info("Added %d module sensors", len(module_sensors))
+            
+            if module_buttons:
+                from homeassistant.helpers.entity_platform import async_get_current_platform
+                platform = async_get_current_platform()
+                await platform.async_add_entities(module_buttons)
+                _LOGGER.info("Added %d module buttons", len(module_buttons))
+            
+            if module_selects:
+                from homeassistant.helpers.entity_platform import async_get_current_platform
+                platform = async_get_current_platform()
+                await platform.async_add_entities(module_selects)
+                _LOGGER.info("Added %d module selects", len(module_selects))
+        
+        _LOGGER.info("Module integration complete (Slices 67-82)")
+    except Exception as e:
+        _LOGGER.exception("Failed to set up module integration: %s", e)
+    
     # Register suggestion panel services (accept/reject/snooze)
     try:
         from .suggestion_panel import async_setup_suggestion_services
