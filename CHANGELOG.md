@@ -4,25 +4,25 @@
 
 ### 🎯 Life-Long-Learning Integration
 
-**Zone Sync (Core ↔ HA):**
+**Unified Habitus Store Integration:**
+- Zone Sync mit Unified Store (RAG + Habitus + Anomaly)
 - Bidirektionale Synchronisation
 - Module State Sync (active/learning/off)
 - Entity Tag Sync (automatische Zuordnung)
 - Real-time Updates
 
-**Tag System:**
-- 9 Domain-Kategorien
-- 10 Zone-Tags
-- 3 Status-Tags
-- Automatische Entity→Zone Zuordnung
+**End-to-End Wiring:**
+- AutoDiscovery → Store → Neurons → Anomaly → Chat → Feedback
+- Alle Komponenten verkabelt
+- Maximale Synergien
 
 ### 📡 APIs (via Core)
 
-**Habitus API:**
+**Unified Habitus API:**
 - `GET /api/v1/habitus` — Overview + Stats
-- `GET /api/v1/habitus/patterns` — Gelernte Patterns
+- `GET /api/v1/habitus/patterns` — Gelernte Patterns (zone-scoped)
 - `POST /api/v1/habitus/feedback` — Feedback geben
-- `GET /api/v1/habitus/preferences` — Nutzer-Präferenzen
+- `GET /api/v1/habitus/preferences` — Nutzer-Präferenzen (zone-scoped)
 
 **Chat API:**
 - `POST /api/v1/chat/sessions` — Session erstellen
@@ -31,61 +31,71 @@
 - `POST /api/v1/chat/webhooks/rest` — REST Webhook
 
 **Learning Viz:**
-- `GET /api/v1/learning/overview` — Intelligence Score
+- `GET /api/v1/learning/overview` — Intelligence Score (0-100)
 - `GET /api/v1/learning/patterns` — Patterns (visualisiert)
 - `POST /api/v1/learning/correct` — Manuelle Korrektur
 
 ### 🔧 Services
 
 **NEU:**
-- `copilot_ha.sync_zones` — Zonen synchronisieren
+- `copilot_ha.sync_zones` — Zonen synchronisieren (Unified Store)
 - `copilot_ha.set_module_state` — Module-State setzen
-- `copilot_ha.add_feedback` — Feedback geben
+- `copilot_ha.add_feedback` — Feedback geben (End-to-End)
 
 ### 📊 Entities
 
-**Sensors:**
-- `sensor.pilotsuite_system_health` — Core Health
+**NEU:**
 - `sensor.pilotsuite_intelligence_score` — Intelligence Score (0-100)
-- `sensor.pilotsuite_patterns_learned` — Gelernte Patterns
-- `sensor.pilotsuite_active_automations` — Aktive Automatisierungen
-- `sensor.pilotsuite_mood_state` — Aktuelle Stimmung
+- `sensor.pilotsuite_patterns_learned` — Gelernte Patterns (Unified Store)
+- `sensor.pilotsuite_anomaly_detected` — Anomalie erkannt (ja/nein)
+- `button.pilotsuite_generate_proposals` — Vorschläge generieren
 
-**Buttons:**
-- `button.pilotsuite_sync_zones` — Zonen synchronisieren
-- `button.pilotsuite_clear_cache` — Cache leeren
+### 🏷️ Tag System
 
-### 🎴 Lovelace Cards (Vorbereitet)
+**9 Domain-Kategorien:**
+- light, climate, motion, media, energy, humidity, camera, cover, lock
 
-- `styx-modules-card` — Module-Übersicht
-- `styx-zone-card` — Zonen-Status
-- `styx-learning-card` — Lern-Fortschritt
-- `styx-chat-card` — Chat-Interface
+**10 Zone-Tags:**
+- zone_living, zone_bath, zone_kitchen, zone_office, zone_bedroom,
+  zone_hallway, zone_room_mira, zone_room_paul, zone_terrace, zone_outside
+
+**3 Status-Tags:**
+- auto_assign, needs_review, manual_override
+
+### 🔗 Module Dependencies
+
+**Übergreifende Abhängigkeiten:**
+- requires (Light benötigt Motion)
+- enhances (Music verbessert Climate)
+- conflicts (Camera konflikts mit Privacy)
 
 ### 📖 Dokumentation
 
 **NEU:**
-- `README.md` — Vollständige Doku (180 Zeilen)
+- `README.md` — Vollständige Doku (200+ Zeilen)
+- `CHANGELOG.md` — Release Notes
 
 ### 📊 Code-Statistik
 
 | Metrik | Wert |
 |--------|------|
 | **Integration** | Core v15.3.0 |
-| **Zone Sync** | Bidirektional |
+| **Zone Sync** | Bidirektional (Unified Store) |
 | **Tag Categories** | 9+10+3 |
 | **Services** | 3 |
-| **Entities** | 7+ |
+| **Entities** | 10+ |
+| **End-to-End** | Vollständig verkabelt |
 
 ### 🎯 Vision-Status
 
 | Vision-Element | Status |
 |----------------|--------|
-| **Zone Sync** | ✅ Core ↔ HA |
+| **Zone Sync** | ✅ Core ↔ HA (Unified) |
 | **Tag System** | ✅ Auto-Assign |
 | **Module Config** | ✅ active/learning/off |
 | **Chat Integration** | ✅ Vorbereitet |
 | **Learning Viz** | ✅ API bereit |
+| **End-to-End** | ✅ Verkabelt |
 
 ---
 
@@ -107,4 +117,4 @@
 
 ---
 
-**🚀 v15.3.0 — INTEGRATION DES LERNENDEN DACHSYSTEMS.**
+**🚀 v15.3.0 — INTEGRATION DES LERNENDEN, VERKABELTEN DACHSYSTEMS.**
