@@ -134,3 +134,27 @@
 ### Testing
 - 460 Endpoints getestet
 - Auth funktioniert (236× 401 → 0× 401)
+
+## [15.3.38] - 2026-04-02
+
+### Updated
+- ✅ Core Version auf v15.3.38 aktualisiert
+- ✅ Blueprint-System zentralisiert
+- ✅ 80+ API-Blueprints konfiguriert
+- ✅ Einheitliche /api/v1/* Prefixes
+
+### Fixed
+- ✅ 14 Blueprint-Prefixes korrigiert
+- ✅ 12 fehlende Blueprints registriert
+
+### Testing
+- ✅ 460 Endpoints getestet
+- ✅ Auth funktioniert (236× 401 → 0× 401)
+
+### Compatibility
+- ✅ Home Assistant 2026.4+
+- ✅ HACS 1.30+
+
+### Installation
+- ✅ HACS → PilotSuite Integration → Update
+- ✅ Add-on Store → PilotSuite Core → Update
