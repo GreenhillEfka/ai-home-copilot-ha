@@ -1,6 +1,6 @@
 # PilotSuite Styx — Home Assistant Integration
 
-**Version:** 15.3.0  
+**Version:** 15.3.38  
 **Status:** ✅ Integration des lernenden Dachsystems — End-to-End Verkabelt
 
 ---
