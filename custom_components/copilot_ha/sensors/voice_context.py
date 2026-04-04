@@ -77,75 +77,60 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
         neural_data: Dict[str, Any],
         suggestions: list,
     ) -> Dict[str, Any]:
-        """Build voice context from neural system data."""
-        # Mood tone mapping
-        mood_tones = {
-            "relax": {"tone": "calm", "greeting": "Entspannt"},
-            "focus": {"tone": "focused", "greeting": "Fokussiert"},
-            "active": {"tone": "energetic", "greeting": "Bereit"},
-            "sleep": {"tone": "quiet", "greeting": "Gute Nacht"},
-            "away": {"tone": "standby", "greeting": "Abwesend"},
-            "alert": {"tone": "urgent", "greeting": "Achtung"},
-            "social": {"tone": "friendly", "greeting": "Gesellig"},
-            "recovery": {"tone": "gentle", "greeting": "Erholung"},
-        }
+        """Build voice context from Core-provided projection.
         
+        Core exportiert bereits:
+        - mood.state (MoodState enum)
+        - time.description_de / description_en
+        - zone.typical_activities
+        - user_preferences.language
+        
+        HA soll nur projizieren, nicht erfinden.
+        """
         dominant_mood = mood_data.get("mood", "unknown")
         confidence = mood_data.get("confidence", 0.0)
         
-        tone_info = mood_tones.get(dominant_mood, mood_tones["relax"])
+        # Core-provided mood state → direct projection (no local heuristic)
+        mood_state = dominant_mood
         
-        # Generate voice suggestions
+        # Time of day → Core liefert Grußformeln direkt
+        core_time = neural_data.get("time", {})
+        time_greeting = core_time.get("description_de", "Hallo") or core_time.get("description_en", "Hello")
+        
+        # Zone activities → Core liefert typical_activities pro Zone
+        zone_name = neural_data.get("zone", {}).get("current", "unknown")
+        zone_activities = neural_data.get("zone", {}).get("typical_activities", [])
+        
+        # Suggestions → nur Core-provided Aktivitäten projizieren (keine lokale Übersetzung)
         voice_suggestions = []
-        for suggestion in suggestions[:3]:
-            action = suggestion.get("action", "")
-            suggestion_conf = suggestion.get("confidence", 0.0)
-            
-            if suggestion_conf >= 0.5:
-                voice_suggestions.append(
-                    f"{tone_info['greeting']}: {self._action_to_voice(action)}"
-                )
+        for act in zone_activities[:3]:
+            voice_suggestions.append(f"{act} ist aktuell.")
+        
+        # Core-provided zone context
+        core_zone = neural_data.get("zone", {})
         
         return {
             "mood": {
-                "dominant": dominant_mood,
+                "dominant": mood_state,
                 "confidence": confidence,
                 "contributors": mood_data.get("contributors", []),
             },
             "zone": {
-                "current": neural_data.get("zone", "unknown"),
-                "presence": neural_data.get("presence", []),
+                "current": zone_name,
+                "presence": core_zone.get("presence", neural_data.get("presence", [])),
             },
             "voice": {
-                "tone": tone_info["tone"],
-                "greeting": tone_info["greeting"],
+                "tone": dominant_mood,  # Core-provided mood → direct tone mapping
+                "greeting": time_greeting,
                 "suggestions": voice_suggestions,
             },
             "metadata": {
                 "last_update": neural_data.get("last_update", ""),
+                "context_version": "1.1",
             },
         }
     
-    def _action_to_voice(self, action: str) -> str:
-        """Convert technical action to voice-friendly phrase."""
-        action_lower = action.lower()
-        
-        if "light" in action_lower or "licht" in action_lower:
-            if "on" in action_lower or "an" in action_lower:
-                return "Licht einschalten"
-            elif "off" in action_lower or "aus" in action_lower:
-                return "Licht ausschalten"
-            elif "dim" in action_lower:
-                return "Licht dimmen"
-        
-        if "climate" in action_lower or "temperatur" in action_lower:
-            return "Temperatur anpassen"
-        
-        if "media" in action_lower or "music" in action_lower:
-            return "Medien steuern"
-        
-        return action
-    
+
     def _build_voice_prompt(self, context: Dict[str, Any]) -> str:
         """Build a natural language prompt for HA Assist."""
         voice = context.get("voice", {})
