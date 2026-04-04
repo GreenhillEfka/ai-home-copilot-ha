@@ -1,6 +1,6 @@
 # PilotSuite Styx — Home Assistant Integration
 
-**Version:** 15.3.38  
+**Version:** 15.3.39
 **Status:** ✅ Integration des lernenden Dachsystems — End-to-End Verkabelt
 
 ---
@@ -348,20 +348,20 @@ max: 100
 
 ---
 
-## 🎉 RELEASE v15.3.0
+## 🎉 RELEASE PREP v15.3.39
 
-**Datum:** 2026-04-01  
-**Tag:** v15.3.0  
-**Status:** ✅ READY FOR PRODUCTION
+**Datum:** 2026-04-05
+**Geplanter Tag:** v15.3.39
+**Status:** 🟡 Repo-Stand konsolidiert — separater Tag-/Release-/Asset-Schritt noch ausstehend
 
-**Key Features:**
-- ✅ Zone Sync (Core ↔ HA bidirektional)
-- ✅ Tag System (automatische Entity-Zuordnung)
-- ✅ Module Config (active/learning/off)
-- ✅ Lovelace Cards (Modules, Zones, Learning, Chat)
-- ✅ Services (sync_zones, set_module_state, add_feedback)
-- ✅ End-to-End Wiring (alle Komponenten verkabelt)
-- ✅ Unified Habitus Store (RAG + Habitus + Anomaly)
+**Konsolidierter Stand:**
+- ✅ main-basierte HA-Wahrheit als Basis festgezogen
+- ✅ Versionsparität auf den führenden Release-Surfaces hergestellt
+- ✅ README-/CHANGELOG-Drift bereinigt
+- ✅ HACS-Dateiname-Vertrag bleibt `pilotsuite-styx-ha.zip`
+- ⛔ Noch kein Tag gesetzt
+- ⛔ Noch kein GitHub-Release publiziert
+- ⛔ Noch kein HACS-usable-Claim
 
 ---
 
