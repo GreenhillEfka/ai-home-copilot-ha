@@ -8,7 +8,7 @@ on:
 
 jobs:
   validate-repo-shape:
-    runs-on: ubuntu-latest
+    runs-on: ha-runner
     steps:
       - uses: actions/checkout@v4
       - name: Verify single HACS integration
@@ -35,13 +35,29 @@ PY
           echo "Versions aligned: $root_v"
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ha-runner
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
       - name: Syntax check
         run: |
-          pip install pyyaml pydantic voluptuous aiohttp
           python3 -m py_compile $(find custom_components -name '*.py')
+
+  test:
+    runs-on: ha-runner
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Run tests
+        run: |
+          python3 -m pytest tests/ -v --tb=short
