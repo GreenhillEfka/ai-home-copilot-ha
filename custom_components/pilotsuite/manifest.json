@@ -1,0 +1,12 @@
+{
+  "domain": "pilotsuite",
+  "name": "PilotSuite",
+  "version": "1.0.0",
+  "documentation": "https://github.com/pilotsuite/homeassistant",
+  "issue_tracker": "https://github.com/pilotsuite/homeassistant/issues",
+  "dependencies": [],
+  "codeowners": ["@pilotsuite"],
+  "requirements": [],
+  "iot_class": "local_polling",
+  "integration_type": "hub"
+}
