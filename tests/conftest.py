@@ -51,6 +51,20 @@ hc = sys.modules["homeassistant.core"]
 hc.HomeAssistant = type("HomeAssistant", (), {"data": {}})
 hc.callback = lambda f: f
 
+
+class _FakeEvent:
+    """Minimal Event stub."""
+    def __init__(self, **kw): vars(self).update(kw)
+
+
+class _FakeState:
+    """Minimal State stub."""
+    def __init__(self, **kw): vars(self).update(kw)
+
+
+hc.Event = _FakeEvent
+hc.State = _FakeState
+
 # homeassistant.config_entries
 hce = sys.modules["homeassistant.config_entries"]
 hce.ConfigEntry = type("ConfigEntry", (), {})
