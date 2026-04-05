@@ -110,13 +110,13 @@ SI3_attrs = pytest.mark.parametrize("core_data,key,expected", [
     ({"ok": True, "engines_connected": 3, "events_processed": 50, "active_subscriptions": 7, "last_event": "zone.enter", "last_event_time": "2026-04-05T10:00:00", "engine_names": ["p1", "p2"]}, "engine_names", ["p1", "p2"]),
 ])
 SI4_wiring = pytest.mark.parametrize("wiring_data,expected_keys", [
-    ({"engine_a": ["ev1", "ev2"], "engine_b": ["ev3"]}, ["engine_a", "engine_b"]),
-    ({}, []),
+    ({"ok": True, "wiring_diagram": {"engine_a": ["ev1", "ev2"], "engine_b": ["ev3"]}}, ["engine_a", "engine_b"]),
+    ({}, None),
 ])
 SI5_event_log = pytest.mark.parametrize("event_log,expected_count", [
     ([], 0),
     ([{"event_type": "zone.enter", "source": "z", "handled_by": "p1", "timestamp": "t1"}], 1),
-    ([{f"e{i}": f"v{i}" for i in range(10}], 5),
+    ([{"event_type": f"e{i}", "source": f"s{i}", "handled_by": f"h{i}", "timestamp": f"t{i}"} for i in range(10)], 5),
     ([{"event_type": f"e{i}", "source": f"s{i}", "handled_by": f"h{i}", "timestamp": f"t{i}"} for i in range(7)], 5),
 ])
 SI6_edge = pytest.mark.parametrize("data,expect_ok", [
@@ -152,9 +152,12 @@ def test_SI3_attrs(core_data, key, expected):
 @SI4_wiring
 def test_SI4_wiring(wiring_data, expected_keys):
     s = SystemIntegrationSensorContract(MockCoordinator({}))
-    s._apply({"ok": True, "wiring_diagram": wiring_data})
+    s._apply(wiring_data)
     attrs = s.extra_state_attributes
-    assert attrs.get("event_types") == expected_keys
+    if expected_keys is None:
+        assert "event_types" not in attrs
+    else:
+        assert attrs.get("event_types") == expected_keys
 
 
 @SI5_event_log

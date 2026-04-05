@@ -67,7 +67,7 @@ class LightIntelligenceSensorContract:
     @property
     def icon(self):
         sun = self._light_data.get("sun", {})
-        phase = sun.get("phase", "day")
+        phase = sun.get("phase", "unknown")
         return _PHASE_ICONS.get(phase, "mdi:brightness-auto")
 
     @property
@@ -144,8 +144,8 @@ LI2 = pytest.mark.parametrize("data,expected_icon", [
     ({"sun": {}}, "mdi:brightness-auto"),
 ])
 LI3 = pytest.mark.parametrize("data,key,expected", [
-    ({"sun": {"elevation": 45.0, "azimuth": 180.0, "phase": "day"}, "sun_elevation", 45.0),
-    ({"sun": {"elevation": 45.0, "azimuth": 180.0, "phase": "day"}, "sun_azimuth", 180.0),
+    ({"sun": {"elevation": 45.0, "azimuth": 180.0, "phase": "day"}}, "sun_elevation", 45.0),
+    ({"sun": {"elevation": 45.0, "azimuth": 180.0, "phase": "day"}}, "sun_azimuth", 180.0),
     ({"global_outdoor_lux": 50000, "cloud_filter_active": True, "zones": [{"needs_light": True}, {"needs_light": False}]}, "outdoor_lux", 50000),
     ({"global_outdoor_lux": 50000, "cloud_filter_active": True, "zones": [{"needs_light": True}, {"needs_light": False}]}, "cloud_filter_active", True),
     ({"global_outdoor_lux": 50000, "cloud_filter_active": True, "zones": [{"needs_light": True}, {"needs_light": False}]}, "zone_count", 2),

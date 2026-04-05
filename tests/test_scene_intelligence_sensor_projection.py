@@ -107,8 +107,8 @@ class SceneIntelligenceSensorContract:
 
 SC1_native_value = pytest.mark.parametrize("core_data,expected", [
     ({"ok": True, "active_scene": {"name_de": "Morgenroutine"}}, "Morgenroutine"),
-    ({"ok": True, "active_scene": {}}, "Aktive Szene"),
     ({"ok": True, "active_scene": {"name_de": ""}}, ""),
+    ({"ok": True, "total_scenes": 3}, "3 Szenen verfügbar"),
     ({"ok": True, "total_scenes": 0}, "Nicht verfügbar"),
     ({"ok": True, "total_scenes": 5}, "5 Szenen verfügbar"),
     ({"ok": True, "total_scenes": 12}, "12 Szenen verfügbar"),

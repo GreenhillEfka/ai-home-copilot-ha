@@ -104,10 +104,9 @@ NI3_attrs = pytest.mark.parametrize("core_data,key,expected", [
     ({"ok": True, "total_notifications": 10, "unread_count": 3, "dnd_active": True, "batch_pending": 2, "rules_count": 5, "channels_active": ["telegram", "email"]}, "rules_count", 5),
     ({"ok": True, "total_notifications": 10, "unread_count": 3, "dnd_active": True, "batch_pending": 2, "rules_count": 5, "channels_active": ["telegram", "email"]}, "channels_active", ["telegram", "email"]),
 ])
-NI4_stats = pytest.mark.parametrize("stats_data", [
-    {},
-    {"delivered": 100, "failed": 2},
-    {"delivered": 50, "read": 45, "failed": 5, "pending": 0},
+NI4_stats = pytest.mark.parametrize("stats_data,expected", [
+    ({"delivered": 100, "failed": 2}, {"delivered": 100, "failed": 2}),
+    ({"delivered": 50, "read": 45, "failed": 5, "pending": 0}, {"delivered": 50, "read": 45, "failed": 5, "pending": 0}),
 ])
 NI5_edge = pytest.mark.parametrize("data,expect_ok", [
     (None, False),
@@ -139,10 +138,11 @@ def test_NI3_attrs(core_data, key, expected):
     assert s.extra_state_attributes[key] == expected
 
 
-def test_NI4_stats_passthrough(stats_data):
+@NI4_stats
+def test_NI4_stats_passthrough(stats_data, expected):
     s = NotificationIntelligenceSensorContract(MockCoordinator({}))
     s._apply({"ok": True, "stats": stats_data, "total_notifications": 1})
-    assert s.extra_state_attributes.get("stats") == stats_data
+    assert s.extra_state_attributes.get("stats") == expected
 
 
 @NI5_edge

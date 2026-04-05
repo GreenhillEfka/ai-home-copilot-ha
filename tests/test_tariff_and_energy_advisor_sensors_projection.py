@@ -186,9 +186,9 @@ EA2 = pytest.mark.parametrize("data,expected_icon", [
     ({"ok": True}, "mdi:flash"),
 ])
 EA3 = pytest.mark.parametrize("data,key,expected", [
-    ({"ok": True, "eco_score": {"grade": "A", "score": 90, "trend": "improving"}, "eco_grade", "A"),
-    ({"ok": True, "eco_score": {"grade": "A", "score": 90, "trend": "improving"}, "eco_score", 90),
-    ({"ok": True, "eco_score": {"grade": "A", "score": 90, "trend": "improving"}, "eco_trend", "improving"),
+    ({"ok": True, "eco_score": {"grade": "A", "score": 90, "trend": "improving"}}, "eco_grade", "A"),
+    ({"ok": True, "eco_score": {"grade": "A", "score": 90, "trend": "improving"}}, "eco_score", 90),
+    ({"ok": True, "eco_score": {"grade": "A", "score": 90, "trend": "improving"}}, "eco_trend", "improving"),
     ({"ok": True, "total_daily_kwh": 12.5}, "total_daily_kwh", 12.5),
 ])
 
