@@ -42,4 +42,4 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Run tests
         run: |
-          pytest custom_components/copilot_ha/tests tests/test_last_7_sensors.py -q
+          pytest tests/ -q --ignore=custom_components
