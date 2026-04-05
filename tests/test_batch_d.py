@@ -243,3 +243,41 @@ from custom_components.copilot_ha.sensors.zone_presence_trigger import ZonePrese
 async def test_zone_presence_trigger_ha_lokal():
     sensor = ZonePresenceTriggerSensor(make_coord(active_zone="living_room", presence_detected=True))
     assert not hasattr(sensor, '_core_base_url')
+
+
+# ─── automation_suggestion_sensor ───────────────────────────────────────────────
+from custom_components.copilot_ha.sensors.automation_suggestion_sensor import AutomationSuggestionSensor
+
+class FakeRespAuto:
+    def __init__(self, status, json_data=None):
+        self._status = status
+        self._json = json_data or {}
+    status = property(lambda s: s._status)
+    async def json(self): return self._json
+    async def __aenter__(self): return self
+    async def __aexit__(self, *args): pass
+
+
+class FakeSessionAuto:
+    def __init__(self, resp): self._resp = resp
+    def get(self, *args, **kwargs): return self._resp
+
+
+def make_core_coord():
+    c = MagicMock()
+    c._core_base_url = lambda: "http://core:8765"
+    c._core_headers = lambda: {"Authorization": "Bearer test"}
+    return c
+
+
+@pytest.mark.asyncio
+async def test_automation_suggestion_sensor_200():
+    from unittest.mock import patch
+    data = {"ok": True, "suggestions": ["Light dim at 22:00"], "count": 1, "confidence": 0.85}
+    with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as m:
+        m.return_value = FakeSessionAuto(FakeRespAuto(200, data))
+        sensor = AutomationSuggestionSensor(make_core_coord())
+        sensor.hass = MagicMock()
+        await sensor.async_update()
+    attrs = sensor.extra_state_attributes
+    assert attrs["count"] == 1
