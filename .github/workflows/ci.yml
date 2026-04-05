@@ -27,6 +27,7 @@ jobs:
           manifest_v=$(python3 -c "import json; print(json.loads(open('custom_components/copilot_ha/manifest.json').read())['version'])")
           test "$root_v" = "$comp_v"
           test "$root_v" = "$manifest_v"
+          echo "Versions aligned: $root_v"
 
   test:
     needs: validate-repo-shape
@@ -41,4 +42,4 @@ jobs:
         run: pip install -r requirements_test.txt
       - name: Run tests
         run: |
-          pytest custom_components/copilot_ha/tests tests/test_last_7_sensors.py
+          pytest custom_components/copilot_ha/tests tests/test_last_7_sensors.py -q
