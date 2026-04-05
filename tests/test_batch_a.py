@@ -86,16 +86,16 @@ async def test_voice_context_ha_lokal():
 # ─── media_sensors ─────────────────────────────────────────────────────────────
 @pytest.mark.asyncio
 async def test_media_sensors_ha_lokal():
-    from custom_components.copilot_ha.sensors.media_sensors import MediaSensors
-    sensor = MediaSensors(make_coord(active_media="Jazz", volume=35))
+    from custom_components.copilot_ha.sensors.media_sensors import MediaActivitySensor
+    sensor = MediaActivitySensor(make_coord(active_media="Jazz", volume=35))
     assert not hasattr(sensor, '_core_base_url')
 
 
 # ─── time_sensors ──────────────────────────────────────────────────────────────
 @pytest.mark.asyncio
 async def test_time_sensors_ha_lokal():
-    from custom_components.copilot_ha.sensors.time_sensors import TimeSensors
-    sensor = TimeSensors(make_coord(current_time="18:45", day_of_week="Sunday"))
+    from custom_components.copilot_ha.sensors.time_sensors import TimeOfDaySensor
+    sensor = TimeOfDaySensor(make_coord(current_time="18:45", day_of_week="Sunday"))
     assert not hasattr(sensor, '_core_base_url')
 
 

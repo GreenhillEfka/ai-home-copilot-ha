@@ -82,9 +82,73 @@ hup.CoordinatorEntity = _CoordinatorEntity
 he = sys.modules["homeassistant.helpers.entity"]
 
 class _Entity(object):
-    def __init__(self, *args, **kwargs): pass
+    _attr_name: str | None = None
+    _attr_state: str | None = None
+    _attr_icon: str | None = None
+    _attr_extra_state_attributes: dict | None = None
+    _attr_device_class: str | None = None
+    _attr_unique_id: str | None = None
+    _attr_available: bool = True
+    _attr_should_poll: bool = False
+    _attr_native_value: object | None = None
+    _attr_native_unit_of_measurement: str | None = None
 
-he.Entity = type("Entity", (object,), {"__init__": lambda self, *a, **k: None})
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @property
+    def state(self) -> str | None:
+        return self._attr_state
+
+    @property
+    def native_value(self) -> object | None:
+        return self._attr_native_value
+
+    @property
+    def name(self) -> str | None:
+        return self._attr_name
+
+    @property
+    def icon(self) -> str | None:
+        return self._attr_icon
+
+    @property
+    def extra_state_attributes(self) -> dict | None:
+        return self._attr_extra_state_attributes
+
+    @property
+    def device_class(self) -> str | None:
+        return self._attr_device_class
+
+    @property
+    def available(self) -> bool:
+        return self._attr_available
+
+    async def async_update(self):
+        pass
+
+he.Entity = type("Entity", (object,), {
+    "__init__": lambda self, **k: _Entity(**k).__init__(**k),
+    "_attr_name": None,
+    "_attr_state": None,
+    "_attr_icon": None,
+    "_attr_extra_state_attributes": None,
+    "_attr_device_class": None,
+    "_attr_unique_id": None,
+    "_attr_available": True,
+    "_attr_should_poll": False,
+    "_attr_native_value": None,
+    "_attr_native_unit_of_measurement": None,
+    "state": property(lambda self: self._attr_state),
+    "native_value": property(lambda self: self._attr_native_value),
+    "name": property(lambda self: self._attr_name),
+    "icon": property(lambda self: self._attr_icon),
+    "extra_state_attributes": property(lambda self: self._attr_extra_state_attributes),
+    "device_class": property(lambda self: self._attr_device_class),
+    "available": property(lambda self: self._attr_available),
+    "async_update": lambda self: None,
+})
 
 class _EntityCategory(object):
     DIAGNOSTIC = "diagnostic"
@@ -131,13 +195,69 @@ sys.modules["homeassistant.util.dt"] = _dt
 # ─── homeassistant.components.sensor ─────────────────────────────────────────────
 _hcs = sys.modules["homeassistant.components.sensor"]
 _hcs.SensorEntity = type("SensorEntity", (object,), {"__init__": lambda self, *a, **k: None})
-_hcs.SensorDeviceClass = type("SensorDeviceClass", (object,), {})
+_hcs.SensorDeviceClass = type("SensorDeviceClass", (object,), {
+    "ENERGY": "energy",
+    "POWER": "power",
+    "TEMPERATURE": "temperature",
+    "HUMIDITY": "humidity",
+    "BATTERY": "battery",
+    "ILLUMINANCE": "illuminance",
+    "MONETARY": "monetary",
+    "TIMESTAMP": "timestamp",
+    "DURATION": "duration",
+    "DATA_SIZE": "data_size",
+    "SWITCH": "switch",
+    "VOLUME": "volume",
+    "WEIGHT": "weight",
+    "ENUM": "enum",
+    "NONE": "None",
+    "DATE": "date",
+    "APPARENT_POWER": "apparent_power",
+    "POWER_FACTOR": "power_factor",
+})
+_hcs.SensorStateClass = type("SensorStateClass", (object,), {
+    "MEASUREMENT": "measurement",
+    "TOTAL_INCREASING": "total_increasing",
+    "TOTAL": "total",
+})
 
 # ─── homeassistant.components.binary_sensor ──────────────────────────────────────
 _hcbs = sys.modules["homeassistant.components.binary_sensor"]
 _hcbs.BinarySensorEntity = type("BinarySensorEntity", (object,), {"__init__": lambda self, *a, **k: None})
 _hcbs.BinarySensorDeviceClass = type("BinarySensorDeviceClass", (object,), {
     "OCCUPANCY": "occupancy",
+    "MOTION": "motion",
+    "DOOR": "door",
+    "WINDOW": "window",
+    "SMOKE": "smoke",
+    "CO": "carbon_monoxide",
+    "MOISTURE": "moisture",
+    "GAS": "gas",
+    "SAFETY": "safety",
+    "BATTERY": "battery",
+    "POWER": "power",
+    "LOCK": "lock",
+    "PRESENCE": "presence",
+    "TAMPER": "tamper",
+    "CONNECTED": "connectivity",
+    "COLD": "cold",
+    "DRY": "dry",
+    "HEAT": "heat",
+    "LIGHT": "light",
+    "NOT_HOME": "not_home",
+    "OCCUPIED": "occupied",
+    "PLAYING": "playing",
+    "PROBLEM": "problem",
+    "RUNNING": "running",
+    "UNSAFE": "unsafe",
+    "BELL": "bell",
+    "CHARGING": "charging",
+    "ENTRY": "entry",
+    "JAMMING": "jamming",
+    "CLOSED": "closed",
+    "NONE": "none",
+    "STATE_ON": "on",
+    "STATE_OFF": "off",
     "__init__": lambda self, *a, **k: None,
 })
 
