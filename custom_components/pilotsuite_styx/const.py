@@ -1,0 +1,5 @@
+"""Constants for PilotSuite Styx Integration."""
+DOMAIN = "pilotsuite_styx"
+CONF_CORE_URL = "core_url"
+DEFAULT_CORE_URL = "http://localhost:8909"
+VERSION = "15.3.40"
