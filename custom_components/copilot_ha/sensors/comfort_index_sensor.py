@@ -2,6 +2,9 @@
 
 Exposes a composite comfort score (0-100) and lighting suggestions
 as a Home Assistant sensor with rich attributes.
+
+HA-83: Core endpoints /comfort and /comfort/lighting may not exist.
+Sensor gracefully degrades to state=None with warning log.
 """
 from __future__ import annotations
 
@@ -75,7 +78,11 @@ class ComfortIndexSensor(CopilotBaseEntity):
         return attrs
 
     async def async_update(self) -> None:
-        """Fetch comfort index from Core API."""
+        """Fetch comfort index from Core API.
+
+        HA-83: Core endpoint GET /api/v1/comfort missing.
+        Gracefully degrades: state=None, warning logged.
+        """
         try:
             session = self.coordinator._session
             if session is None:
@@ -87,6 +94,11 @@ class ComfortIndexSensor(CopilotBaseEntity):
             async with session.get(url, headers=headers, timeout=10) as resp:
                 if resp.status == 200:
                     self._comfort_data = await resp.json()
+                elif resp.status == 404:
+                    _LOGGER.warning(
+                        "comfort_index_sensor: Core endpoint /comfort "
+                        "not found (HA-83). Sensor state=None until PilotClaw implements endpoint."
+                    )
                 else:
                     _LOGGER.debug("Comfort API returned %s", resp.status)
         except Exception as e:

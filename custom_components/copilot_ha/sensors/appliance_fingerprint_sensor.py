@@ -2,6 +2,9 @@
 
 Exposes appliance fingerprinting data as an HA sensor.
 State shows the count of known device fingerprints.
+
+HA-83: Core endpoints /energy/fingerprints and /energy/fingerprints/usage
+may not exist. Sensor gracefully degrades to state=0 with warning log.
 """
 
 from __future__ import annotations
@@ -43,6 +46,11 @@ class ApplianceFingerprintSensor(CopilotBaseEntity, SensorEntity):
         }
 
     async def async_update(self) -> None:
+        """Fetch fingerprints from Core API.
+
+        HA-83: Core endpoint GET /api/v1/energy/fingerprints missing.
+        Gracefully degrades: state=0, warning logged.
+        """
         session = async_get_clientsession(self.hass)
         base = f"{self._core_base_url()}/api/v1/energy"
         headers = self._core_headers()
@@ -60,6 +68,14 @@ class ApplianceFingerprintSensor(CopilotBaseEntity, SensorEntity):
                             for fp in data.get("fingerprints", [])
                         ]
                         self._data["fingerprint_count"] = data.get("count", 0)
+                elif resp.status == 404:
+                    _LOGGER.warning(
+                        "appliance_fingerprint_sensor: Core endpoint /energy/fingerprints "
+                        "not found (HA-83). Sensor state=0 until PilotClaw implements endpoint."
+                    )
+                    self._data["fingerprint_count"] = 0
+                else:
+                    _LOGGER.debug("Energy fingerprints API: HTTP %s", resp.status)
 
             async with session.get(
                 f"{base}/fingerprints/usage", headers=headers, timeout=15
@@ -72,5 +88,10 @@ class ApplianceFingerprintSensor(CopilotBaseEntity, SensorEntity):
                              "runs": s["total_runs"], "kwh": s["total_kwh"]}
                             for s in data.get("devices", [])
                         ]
+                elif resp.status == 404:
+                    _LOGGER.debug(
+                        "appliance_fingerprint_sensor: Core endpoint "
+                        "/energy/fingerprints/usage not found (HA-83)."
+                    )
         except Exception as exc:
-            _LOGGER.error("Failed to fetch fingerprint data: %s", exc)
+            _LOGGER.debug("Failed to fetch fingerprint data: %s", exc)
