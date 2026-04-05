@@ -6,31 +6,26 @@ and cross-module pattern discovery as Home Assistant sensors.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from ..const import DOMAIN
+from ..entity import CopilotBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class ModuleHealthSensor(CoordinatorEntity, SensorEntity):
+class ModuleHealthSensor(CopilotBaseEntity, SensorEntity):
     """Sensor showing overall module integration health."""
 
     _attr_name = "PilotSuite Module Health"
     _attr_unique_id = "copilot_module_health"
     _attr_icon = "mdi:heart-pulse"
     _attr_should_poll = False
-
-    def __init__(self, coordinator) -> None:
-        super().__init__(coordinator)
-        self._attr_native_value = "unknown"
-        self._attr_extra_state_attributes = {}
 
     @property
     def native_value(self) -> str:
@@ -43,10 +38,10 @@ class ModuleHealthSensor(CoordinatorEntity, SensorEntity):
         return "healthy"
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         if not self.coordinator.data:
             return {}
-        attrs = {}
+        attrs: dict[str, Any] = {}
         bus = self.coordinator.data.get("bus_stats")
         if bus:
             attrs["bus_events_published"] = bus.get("events_published", 0)
@@ -56,16 +51,13 @@ class ModuleHealthSensor(CoordinatorEntity, SensorEntity):
         return attrs
 
 
-class SynapseActivitySensor(CoordinatorEntity, SensorEntity):
+class SynapseActivitySensor(CopilotBaseEntity, SensorEntity):
     """Sensor showing synapse learning activity."""
 
     _attr_name = "PilotSuite Synapse Activity"
     _attr_unique_id = "copilot_synapse_activity"
     _attr_icon = "mdi:transit-connection-variant"
     _attr_should_poll = False
-
-    def __init__(self, coordinator) -> None:
-        super().__init__(coordinator)
 
     @property
     def native_value(self) -> str:
@@ -75,7 +67,7 @@ class SynapseActivitySensor(CoordinatorEntity, SensorEntity):
         return str(learning.get("total_updates", 0))
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         if not self.coordinator.data:
             return {}
         learning = self.coordinator.data.get("learning_stats", {})
@@ -87,16 +79,13 @@ class SynapseActivitySensor(CoordinatorEntity, SensorEntity):
         }
 
 
-class CrossPatternSensor(CoordinatorEntity, SensorEntity):
+class CrossPatternSensor(CopilotBaseEntity, SensorEntity):
     """Sensor showing discovered cross-module patterns."""
 
     _attr_name = "PilotSuite Cross Patterns"
     _attr_unique_id = "copilot_cross_patterns"
     _attr_icon = "mdi:chart-scatter-plot"
     _attr_should_poll = False
-
-    def __init__(self, coordinator) -> None:
-        super().__init__(coordinator)
 
     @property
     def native_value(self) -> str:
@@ -106,7 +95,7 @@ class CrossPatternSensor(CoordinatorEntity, SensorEntity):
         return str(cross.get("patterns_discovered", 0))
 
     @property
-    def extra_state_attributes(self) -> Dict[str, Any]:
+    def extra_state_attributes(self) -> dict[str, Any]:
         if not self.coordinator.data:
             return {}
         cross = self.coordinator.data.get("cross_module_stats", {})
@@ -128,11 +117,8 @@ async def async_setup_entry(
         _LOGGER.error("Coordinator not available for entry %s", entry.entry_id)
         return
 
-    entities = [
+    async_add_entities([
         ModuleHealthSensor(coordinator),
         SynapseActivitySensor(coordinator),
         CrossPatternSensor(coordinator),
-    ]
-
-    async_add_entities(entities)
-    _LOGGER.info("Module integration sensors set up for entry %s", entry.entry_id)
+    ])
