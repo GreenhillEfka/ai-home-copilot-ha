@@ -9,10 +9,11 @@ Setup für:
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Any, Dict
 
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, CONF_CORE_URL, CONF_API_TOKEN
@@ -28,11 +29,11 @@ PLATFORMS = ["sensor", "binary_sensor", "select", "button"]
 async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
     """Integration setupen (YAML)."""
     hass.data.setdefault(DOMAIN, {})
-    
+
     # Register Lovelace Cards
     cards = register_cards()
     _LOGGER.info(f"Registered {len(cards)} Lovelace Cards")
-    
+
     return True
 
 
@@ -40,16 +41,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Config Entry setupen."""
     core_url = entry.data.get(CONF_CORE_URL, "http://homeassistant.local:8909")
     api_token = entry.data.get(CONF_API_TOKEN, "")
-    
+
     # Create client
     client = get_zone_automation_client(hass, core_url, api_token)
-    
+
     # Store client
     hass.data[DOMAIN][entry.entry_id] = {
         "client": client,
         "core_url": core_url,
     }
-    
+
     # Setup Zone Automation Events
     try:
         event_handler = await setup_zone_automation_events(hass, client)
@@ -57,50 +58,64 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Zone Automation Events started")
     except Exception as e:
         _LOGGER.error(f"Zone Automation Events setup failed: {e}")
-    
+
     # Setup platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    
+
     # Register services
     await _register_services(hass, client)
-    
+
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Config Entry entladen."""
+    # Guard: prevent repeated unload calls (v3.10.0).
+    if entry.state == ConfigEntryState.UNLOAD_IN_PROGRESS:
+        _LOGGER.debug(
+            "Config entry %s already unloading — returning True (idempotent)",
+            entry.entry_id,
+        )
+        return True
+
     # Unload platforms
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    
+
     if unload_ok:
         # Stop event handler
-        if entry.entry_id in hass.data[DOMAIN]:
-            event_handler = hass.data[DOMAIN][entry.entry_id].get("event_handler")
-            if event_handler:
-                event_handler.stop()
-            
-            # Close client
-            client = hass.data[DOMAIN][entry.entry_id].get("client")
-            if client:
-                await client.close()
-            
-            hass.data[DOMAIN].pop(entry.entry_id)
-    
+        entry_data = hass.data[DOMAIN].pop(entry.entry_id, {})
+        # Safer entry-data handling: guard against non-Mapping stored data (v3.10.0).
+        if not isinstance(entry_data, Mapping):
+            _LOGGER.debug(
+                "Entry store for %s is not a Mapping; skipping manual cleanup",
+                entry.entry_id,
+            )
+            return unload_ok
+
+        event_handler = entry_data.get("event_handler")
+        if event_handler:
+            event_handler.stop()
+
+        # Close client
+        client = entry_data.get("client")
+        if client:
+            await client.close()
+
     return unload_ok
 
 
 async def _register_services(hass: HomeAssistant, client) -> None:
     """Services registrieren."""
-    
+
     async def set_neuron_mode(service_call):
         """Service: set_neuron_mode."""
         zone_id = service_call.data.get("zone_id")
         neuron_id = service_call.data.get("neuron_id")
         mode = service_call.data.get("mode")
-        
+
         result = await client.set_neuron_mode(zone_id, neuron_id, mode)
         _LOGGER.info(f"set_neuron_mode: {result}")
-    
+
     async def configure_light_automation(service_call):
         """Service: configure_light_automation."""
         zone_id = service_call.data.get("zone_id")
@@ -112,11 +127,11 @@ async def _register_services(hass: HomeAssistant, client) -> None:
             "time_dependent": service_call.data.get("time_dependent", True),
             "mood_dependent": service_call.data.get("mood_dependent", True),
         }
-        
+
         result = await client.set_zone_config(zone_id, {"light": config})
         _LOGGER.info(f"configure_light_automation: {result}")
-    
+
     hass.services.async_register(DOMAIN, "set_neuron_mode", set_neuron_mode)
     hass.services.async_register(DOMAIN, "configure_light_automation", configure_light_automation)
-    
+
     _LOGGER.info("Registered services: set_neuron_mode, configure_light_automation")
