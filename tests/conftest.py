@@ -136,7 +136,10 @@ _hcs.SensorDeviceClass = type("SensorDeviceClass", (object,), {})
 # ─── homeassistant.components.binary_sensor ──────────────────────────────────────
 _hcbs = sys.modules["homeassistant.components.binary_sensor"]
 _hcbs.BinarySensorEntity = type("BinarySensorEntity", (object,), {"__init__": lambda self, *a, **k: None})
-_hcbs.BinarySensorDeviceClass = type("BinarySensorDeviceClass", (object,), {})
+_hcbs.BinarySensorDeviceClass = type("BinarySensorDeviceClass", (object,), {
+    "OCCUPANCY": "occupancy",
+    "__init__": lambda self, *a, **k: None,
+})
 
 # ─── remaining components ───────────────────────────────────────────────────────
 for _comp, _cls_name in [
