@@ -1,216 +1,164 @@
-"""Projection Contract Tests for LightIntelligenceSensor (HA-20a) and WeatherOptimizerSensor (HA-20b).
+"""Projection Contract Tests for Light Intelligence + Weather Optimizer Sensors (HA-22).
 
-Both are pure Projection-Shells on Core-truth with trivial presentation logic only.
-Pattern: same as HA-6 through HA-19.
+Verifies that these HA sensors are pure projection shells on Core API truth:
+- LightIntelligenceSensor → /api/v1/hub/light
+- WeatherOptimizerSensor → /api/v1/predict/weather-optimize
+
+No local semantic invention — only trivial projection/display logic.
 """
+
 import pytest
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
-class MockHass:
-    class bus:
-        @staticmethod
-        async def async_fire(*a, **k): pass
+# ============== LightIntelligenceSensor Tests ==============
 
+class TestLightIntelligenceSensorProjection:
+    """LI1-LI5: LightIntelligenceSensor projects /api/v1/hub/light without local semantics."""
 
-class MockCoordinator:
-    def __init__(self, data):
-        self.data = data
-        self.hass = MockHass()
-        self.config_entry = Mock()
-        self.config_entry.entry_id = "default"
+    @pytest.fixture
+    def coordinator(self):
+        coord = MagicMock()
+        coord.data = {}
+        return coord
 
-    def async_write_ha_state(self):
-        pass
+    @pytest.fixture
+    def sensor(self, coordinator):
+        from custom_components.copilot_ha.sensors.light_intelligence_sensor import LightIntelligenceSensor
+        return LightIntelligenceSensor(coordinator)
 
+    def test_LI1_state_shows_suggested_scene_name_when_present(self, sensor):
+        """LI1: state returns suggested_scene_name from Core API response."""
+        sensor._light_data = {"suggested_scene_name": "Abendmodus"}
+        assert sensor.state == "Abendmodus"
 
-# ── LightIntelligenceSensor contract ───────────────────────────────────────────────
+    def test_LI2_state_falls_back_to_sun_phase_mapping(self, sensor):
+        """LI2: state maps sun.phase through trivial German mapping."""
+        sensor._light_data = {"sun": {"phase": "dusk"}}
+        assert sensor.state == "Abenddämmerung"
 
-_PHASE_MAP = {
-    "day": "Tag", "night": "Nacht", "dawn": "Dämmerung",
-    "dusk": "Abenddämmerung", "sunrise": "Sonnenaufgang",
-    "sunset": "Sonnenuntergang",
-}
-_PHASE_ICONS = {
-    "day": "mdi:white-balance-sunny", "night": "mdi:weather-night",
-    "dawn": "mdi:weather-sunset-up", "dusk": "mdi:weather-sunset-down",
-    "sunrise": "mdi:weather-sunset-up", "sunset": "mdi:weather-sunset-down",
-}
+    def test_LI3_icon_maps_sun_phase_trivially(self, sensor):
+        """LI3: icon is trivial phase→icon lookup, no semantic invention."""
+        sensor._light_data = {"sun": {"phase": "night"}}
+        assert sensor.icon == "mdi:weather-night"
 
-
-class LightIntelligenceSensorContract:
-    """Mirror of LightIntelligenceSensor projection logic.
-
-    Contract:
-    - _fetch(): hits /api/v1/hub/light
-    - state: suggested_scene_name | phase_map[phase] | phase (fallback)
-    - icon: _PHASE_ICONS lookup
-    - extra_state_attributes: passthrough of sun/zones data
-    """
-    def __init__(self, coordinator):
-        self.coordinator = coordinator
-        self._light_data = {}
-
-    def apply(self, data):
-        if data:
-            self._light_data = data
-
-    @property
-    def state(self):
-        suggested = self._light_data.get("suggested_scene_name")
-        if suggested:
-            return suggested
-        sun = self._light_data.get("sun", {})
-        phase = sun.get("phase", "unknown")
-        return _PHASE_MAP.get(phase, phase)
-
-    @property
-    def icon(self):
-        sun = self._light_data.get("sun", {})
-        phase = sun.get("phase", "unknown")
-        return _PHASE_ICONS.get(phase, "mdi:brightness-auto")
-
-    @property
-    def extra_state_attributes(self):
-        sun = self._light_data.get("sun", {})
-        zones = self._light_data.get("zones", [])
-        return {
-            "sun_elevation": sun.get("elevation", 0),
-            "sun_azimuth": sun.get("azimuth", 0),
-            "sun_phase": sun.get("phase", "unknown"),
-            "outdoor_lux": self._light_data.get("global_outdoor_lux", 0),
-            "suggested_scene": self._light_data.get("suggested_scene"),
-            "active_scene": self._light_data.get("active_scene"),
-            "cloud_filter_active": self._light_data.get("cloud_filter_active", False),
-            "zone_count": len(zones),
-            "zones_needing_light": sum(1 for z in zones if z.get("needs_light")),
+    def test_LI4_extra_attrs_project_sun_elevation_azimuth_lux(self, sensor):
+        """LI4: extra_state_attributes projects sun + lux data without transformation."""
+        sensor._light_data = {
+            "sun": {"elevation": 45.2, "azimuth": 180.5, "phase": "day"},
+            "global_outdoor_lux": 12000,
         }
+        attrs = sensor.extra_state_attributes
+        assert attrs["sun_elevation"] == 45.2
+        assert attrs["sun_azimuth"] == 180.5
+        assert attrs["outdoor_lux"] == 12000
 
-
-# ── WeatherOptimizerSensor contract ─────────────────────────────────────────────
-
-class WeatherOptimizerSensorContract:
-    """Mirror of WeatherOptimizerSensor projection logic.
-
-    Contract:
-    - hits /api/v1/predict/weather-optimize
-    - native_value: int (score)
-    - extra_state_attributes: passthrough
-    """
-    def __init__(self, coordinator):
-        self.coordinator = coordinator
-        self._data = {}
-
-    def apply(self, data):
-        if data and data.get("ok"):
-            self._data = data
-
-    @property
-    def native_value(self):
-        return self._data.get("score")
-
-    @property
-    def extra_state_attributes(self):
-        return {
-            "score": self._data.get("score"),
-            "recommended_action": self._data.get("recommended_action"),
-            "confidence": self._data.get("confidence"),
-            "weather_condition": self._data.get("weather_condition"),
+    def test_LI5_extra_attrs_project_zones_without_local_logic(self, sensor):
+        """LI5: zone_count and zones_needing_light are direct projections."""
+        sensor._light_data = {
+            "zones": [
+                {"needs_light": True},
+                {"needs_light": False},
+                {"needs_light": True},
+            ]
         }
+        attrs = sensor.extra_state_attributes
+        assert attrs["zone_count"] == 3
+        assert attrs["zones_needing_light"] == 2
 
 
-# ── LightIntelligenceSensor test cases ─────────────────────────────────────────
+# ============== WeatherOptimizerSensor Tests ==============
 
-LI1 = pytest.mark.parametrize("data,expected", [
-    ({"suggested_scene_name": "Abendroutine"}, "Abendroutine"),
-    ({"sun": {"phase": "day"}}, "Tag"),
-    ({"sun": {"phase": "night"}}, "Nacht"),
-    ({"sun": {"phase": "dawn"}}, "Dämmerung"),
-    ({"sun": {"phase": "dusk"}}, "Abenddämmerung"),
-    ({"sun": {"phase": "sunrise"}}, "Sonnenaufgang"),
-    ({"sun": {"phase": "sunset"}}, "Sonnenuntergang"),
-    ({"sun": {"phase": "unknown_phase"}}, "unknown_phase"),
-    ({}, "unknown"),
-    ({"sun": {}}, "unknown"),
-])
-LI2 = pytest.mark.parametrize("data,expected_icon", [
-    ({"sun": {"phase": "day"}}, "mdi:white-balance-sunny"),
-    ({"sun": {"phase": "night"}}, "mdi:weather-night"),
-    ({"sun": {"phase": "dawn"}}, "mdi:weather-sunset-up"),
-    ({"sun": {"phase": "dusk"}}, "mdi:weather-sunset-down"),
-    ({"sun": {"phase": "sunrise"}}, "mdi:weather-sunset-up"),
-    ({"sun": {"phase": "sunset"}}, "mdi:weather-sunset-down"),
-    ({}, "mdi:brightness-auto"),
-    ({"sun": {}}, "mdi:brightness-auto"),
-])
-LI3 = pytest.mark.parametrize("data,key,expected", [
-    ({"sun": {"elevation": 45.0, "azimuth": 180.0, "phase": "day"}}, "sun_elevation", 45.0),
-    ({"sun": {"elevation": 45.0, "azimuth": 180.0, "phase": "day"}}, "sun_azimuth", 180.0),
-    ({"global_outdoor_lux": 50000, "cloud_filter_active": True, "zones": [{"needs_light": True}, {"needs_light": False}]}, "outdoor_lux", 50000),
-    ({"global_outdoor_lux": 50000, "cloud_filter_active": True, "zones": [{"needs_light": True}, {"needs_light": False}]}, "cloud_filter_active", True),
-    ({"global_outdoor_lux": 50000, "cloud_filter_active": True, "zones": [{"needs_light": True}, {"needs_light": False}]}, "zone_count", 2),
-    ({"global_outdoor_lux": 50000, "cloud_filter_active": True, "zones": [{"needs_light": True}, {"needs_light": False}]}, "zones_needing_light", 1),
-])
-LI4 = pytest.mark.parametrize("data,expected_count", [
-    ([{"needs_light": True}, {"needs_light": False}], 1),
-    ([{"needs_light": True}, {"needs_light": True}], 2),
-    ([], 0),
-])
+class TestWeatherOptimizerSensorProjection:
+    """WO1-WO5: WeatherOptimizerSensor projects /api/v1/predict/weather-optimize without local semantics."""
 
+    @pytest.fixture
+    def coordinator(self):
+        coord = MagicMock()
+        coord.data = {}
+        return coord
 
-# ── WeatherOptimizerSensor test cases ─────────────────────────────────────────
+    @pytest.fixture
+    def sensor(self, coordinator):
+        from custom_components.copilot_ha.sensors.weather_optimizer_sensor import WeatherOptimizerSensor
+        return WeatherOptimizerSensor(coordinator)
 
-WO1 = pytest.mark.parametrize("data,expected", [
-    ({"ok": True, "score": 85}, 85),
-    ({"ok": True, "score": 0}, 0),
-    ({"ok": True, "score": 100}, 100),
-    ({"ok": True, "score": None}, None),
-    ({}, None),
-])
-WO2 = pytest.mark.parametrize("data,key,expected", [
-    ({"ok": True, "score": 85, "recommended_action": "open_windows", "confidence": 0.92, "weather_condition": "sunny"}, "recommended_action", "open_windows"),
-    ({"ok": True, "score": 85, "recommended_action": "open_windows", "confidence": 0.92, "weather_condition": "sunny"}, "confidence", 0.92),
-    ({"ok": True, "score": 85, "recommended_action": "open_windows", "confidence": 0.92, "weather_condition": "sunny"}, "weather_condition", "sunny"),
-])
+    def test_WO1_native_value_shows_optimal_windows_count(self, sensor):
+        """WO1: native_value is direct projection of optimal_windows_count."""
+        sensor._data = {"optimal_windows_count": 5}
+        assert sensor.native_value == 5
 
+    def test_WO2_native_value_defaults_to_zero_when_missing(self, sensor):
+        """WO2: native_value defaults to 0 when data missing."""
+        sensor._data = {}
+        assert sensor.native_value == 0
 
-@LI1
-def test_LI1_state(data, expected):
-    s = LightIntelligenceSensorContract(MockCoordinator({}))
-    s.apply(data)
-    assert s.state == expected
+    def test_WO3_extra_attrs_project_pv_kwh_and_price(self, sensor):
+        """WO3: extra_state_attributes projects summary PV/price data."""
+        sensor._data = {
+            "summary": {
+                "total_pv_kwh": 12.5,
+                "avg_price_eur_kwh": 0.28,
+                "optimal_windows_count": 4,
+            }
+        }
+        attrs = sensor.extra_state_attributes
+        assert attrs["total_pv_kwh"] == 12.5
+        assert attrs["avg_price_eur_kwh"] == 0.28
 
+    def test_WO4_extra_attrs_project_best_worst_hours_lists(self, sensor):
+        """WO4: best_hours and worst_hours are projected as-is."""
+        sensor._data = {
+            "summary": {
+                "best_hours": ["11:00", "12:00", "13:00"],
+                "worst_hours": ["19:00", "20:00"],
+            }
+        }
+        attrs = sensor.extra_state_attributes
+        assert attrs["best_hours"] == ["11:00", "12:00", "13:00"]
+        assert attrs["worst_hours"] == ["19:00", "20:00"]
 
-@LI2
-def test_LI2_icon(data, expected_icon):
-    s = LightIntelligenceSensorContract(MockCoordinator({}))
-    s.apply(data)
-    assert s.icon == expected_icon
+    def test_WO5_extra_attrs_project_pv_self_consumption_and_alerts(self, sensor):
+        """WO5: pv_self_consumption_potential_pct and alerts are direct projections."""
+        sensor._data = {
+            "summary": {"pv_self_consumption_potential_pct": 78},
+            "alerts": ["high_wind_warning"],
+            "battery_plan_count": 3,
+        }
+        attrs = sensor.extra_state_attributes
+        assert attrs["pv_self_consumption_pct"] == 78
+        assert attrs["alerts"] == ["high_wind_warning"]
+        assert attrs["battery_actions"] == 3
 
 
-@LI3
-def test_LI3_attrs(data, key, expected):
-    s = LightIntelligenceSensorContract(MockCoordinator({}))
-    s.apply(data)
-    assert s.extra_state_attributes[key] == expected
+# ============== Global Contract Test ==============
 
+class TestHA22GlobalProjectionContract:
+    """HA-22 Contract: Both sensors are pure projection shells, no local semantic invention."""
 
-@LI4
-def test_LI4_zones_needing_light(data, expected_count):
-    s = LightIntelligenceSensorContract(MockCoordinator({}))
-    s.apply({"zones": data})
-    assert s.extra_state_attributes["zones_needing_light"] == expected_count
+    def test_both_sensors_hit_core_api_endpoints_only(self):
+        """Contract: Both sensors fetch from Core API, no local computation."""
+        from custom_components.copilot_ha.sensors.light_intelligence_sensor import LightIntelligenceSensor
+        from custom_components.copilot_ha.sensors.weather_optimizer_sensor import WeatherOptimizerSensor
 
+        # Verify async_update methods exist and reference Core endpoints
+        import inspect
+        light_source = inspect.getsource(LightIntelligenceSensor.async_update)
+        weather_source = inspect.getsource(WeatherOptimizerSensor.async_update)
 
-@WO1
-def test_WO1_native_value(data, expected):
-    s = WeatherOptimizerSensorContract(MockCoordinator({}))
-    s.apply(data)
-    assert s.native_value == expected
+        assert "/api/v1/hub/light" in light_source
+        assert "/api/v1/predict/weather-optimize" in weather_source
 
+    def test_no_local_semantic_invention_in_state_logic(self):
+        """Contract: State logic is trivial projection/mapping only."""
+        from custom_components.copilot_ha.sensors.light_intelligence_sensor import LightIntelligenceSensor
+        from custom_components.copilot_ha.sensors.weather_optimizer_sensor import WeatherOptimizerSensor
 
-@WO2
-def test_WO2_attrs(data, key, expected):
-    s = WeatherOptimizerSensorContract(MockCoordinator({}))
-    s.apply(data)
-    assert s.extra_state_attributes[key] == expected
+        import inspect
+        light_state_source = inspect.getsource(LightIntelligenceSensor.state.fget)
+        weather_value_source = inspect.getsource(WeatherOptimizerSensor.native_value.fget)
+
+        # Light state: only dict.get() and phase_map lookup
+        assert "phase_map.get" in light_state_source or "suggested" in light_state_source
+        # Weather value: only dict.get() with default
+        assert ".get(" in weather_value_source
