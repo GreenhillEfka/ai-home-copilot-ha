@@ -117,7 +117,6 @@ class CopilotApiClient:
         except aiohttp.ClientError as e:
             raise CopilotApiError(f"Client error calling {url}: {e}") from e
 
-
     # ── Module APIs (Slices 67-82) ─────────────────────────────────────
 
     async def get_modules_list(self) -> dict:
@@ -173,7 +172,7 @@ class CopilotApiClient:
 
     # Energy Module
     async def get_energy_forecast(self) -> dict:
-        """Get energy forecast."""
+        """Get energy forecast data."""
         return await self._get_json("/api/v1/energy/forecast")
 
     async def get_energy_optimization(self) -> dict:
@@ -197,7 +196,6 @@ class CopilotApiClient:
     async def activate_rule(self, rule_id: str) -> dict:
         """Activate an automation rule."""
         return await self._post_json(f"/api/v1/rules/{rule_id}/activate", {})
-
 
     async def _put_json(self, path: str, payload: dict) -> dict:
         url = f"{self._base_url}{path}"
