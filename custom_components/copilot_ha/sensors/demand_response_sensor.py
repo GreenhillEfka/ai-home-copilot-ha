@@ -2,6 +2,9 @@
 
 Exposes demand response status as an HA sensor.
 State shows current grid signal level.
+
+HA-83: Core endpoint /energy/demand-response/status may not exist.
+Sensor gracefully degrades to state=Normal with warning log.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ class DemandResponseSensor(CopilotBaseEntity, SensorEntity):
 
     _attr_name = "Demand Response"
     _attr_unique_id = "copilot_demand_response"
+    _attr_native_unit_of_measurement = "level"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator)
@@ -57,6 +61,11 @@ class DemandResponseSensor(CopilotBaseEntity, SensorEntity):
         }
 
     async def async_update(self) -> None:
+        """Fetch demand response status from Core API.
+
+        HA-83: Core endpoint GET /api/v1/energy/demand-response/status missing.
+        Gracefully degrades: state=Normal, warning logged.
+        """
         session = async_get_clientsession(self.hass)
         url = f"{self._core_base_url()}/api/v1/energy/demand-response/status"
         headers = self._core_headers()
@@ -67,7 +76,14 @@ class DemandResponseSensor(CopilotBaseEntity, SensorEntity):
                     if data.get("ok"):
                         self._data = data
                         self._signal_level = data.get("current_signal", 0)
+                elif resp.status == 404:
+                    _LOGGER.warning(
+                        "demand_response_sensor: Core endpoint "
+                        "/energy/demand-response/status not found (HA-83). "
+                        "Sensor state=Normal until PilotClaw implements endpoint."
+                    )
+                    self._signal_level = 0
                 else:
-                    _LOGGER.warning("Demand response API returned %s", resp.status)
+                    _LOGGER.debug("Demand response API returned %s", resp.status)
         except Exception as exc:
-            _LOGGER.error("Failed to fetch demand response status: %s", exc)
+            _LOGGER.debug("Failed to fetch demand response status: %s", exc)
