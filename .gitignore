@@ -29,8 +29,9 @@ Thumbs.db
 *.tmp
 *.log
 
-# Test infrastructure (separate repo)
+# Test infrastructure
 tests/
+!tests/
 -e 
 # Agent working files (separate repo)
 agents/
