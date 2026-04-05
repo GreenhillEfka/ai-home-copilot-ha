@@ -28,11 +28,6 @@ def leaf(name: str) -> types.ModuleType:
     return mod
 
 
-def cls(name: str, bases=(), ns=None):
-    """Create a class inheriting from object so super().__init__ works."""
-    return type(name, bases + (object,), ns or {})
-
-
 # ─── package tree ────────────────────────────────────────────────────────────────
 stub("homeassistant")
 stub("homeassistant.core")
@@ -63,33 +58,45 @@ leaf("homeassistant.exceptions")
 
 # ─── homeassistant.core ────────────────────────────────────────────────────────
 hc = sys.modules["homeassistant.core"]
-hc.HomeAssistant = cls("HomeAssistant", (), {"data": {}})
+hc.HomeAssistant = type("HomeAssistant", (object,), {"data": {}})
 hc.callback = staticmethod(lambda f: f)
-hc.Event = cls("Event")
-hc.State = cls("State")
+hc.Event = type("Event", (object,), {})
+hc.State = type("State", (object,), {})
 
 # ─── homeassistant.helpers.update_coordinator ────────────────────────────────────
 hup = sys.modules["homeassistant.helpers.update_coordinator"]
-hup.DataUpdateCoordinator = cls("DataUpdateCoordinator")
-hup.UpdateFailed = cls("UpdateFailed", (Exception,))
 
-# CoordinatorEntity must support [] subscripting (is a Generic in real HA)
-class _CoordEnt(Generic[_T]):
-    __class_getitem__ = classmethod(lambda cls, item: _CoordEnt)
-hup.CoordinatorEntity = _CoordEnt
+def _coordinator_init(self, *args, **kwargs):
+    pass
 
-# ─── homeassistant.helpers.entity ────────────────────────────────────────────────
+hup.DataUpdateCoordinator = type("DataUpdateCoordinator", (object,), {"__init__": _coordinator_init})
+hup.UpdateFailed = type("UpdateFailed", (Exception, object), {})
+
+class _CoordinatorEntity(Generic[_T], object):
+    __class_getitem__ = classmethod(lambda cls, item: _CoordinatorEntity)
+    def __init__(self, *args, **kwargs):
+        pass
+hup.CoordinatorEntity = _CoordinatorEntity
+
+# ─── homeassistant.helpers.entity ───────────────────────────────────────────────
 he = sys.modules["homeassistant.helpers.entity"]
-he.Entity = cls("Entity")
-he.EntityCategory = cls("EntityCategory")
-he.EntityCategory.DIAGNOSTIC = "diagnostic"
-he.EntityCategory.CONFIG = "config"
-he.EntityCategory.CONFIGURATOR = "configurator"
-he.DeviceInfo = cls("DeviceInfo")
+
+class _Entity(object):
+    def __init__(self, *args, **kwargs): pass
+
+he.Entity = type("Entity", (object,), {"__init__": lambda self, *a, **k: None})
+
+class _EntityCategory(object):
+    DIAGNOSTIC = "diagnostic"
+    CONFIG = "config"
+    CONFIGURATOR = "configurator"
+
+he.EntityCategory = _EntityCategory
+he.DeviceInfo = type("DeviceInfo", (object,), {"__init__": lambda self, *a, **k: None})
 
 # ─── homeassistant.helpers.device_registry ──────────────────────────────────────
 hdr = sys.modules["homeassistant.helpers.device_registry"]
-hdr.DeviceInfo = cls("DeviceInfo")
+hdr.DeviceInfo = type("DeviceInfo", (object,), {"__init__": lambda self, *a, **k: None})
 
 # ─── homeassistant.helpers.aiohttp_client ───────────────────────────────────────
 haio = sys.modules["homeassistant.helpers.aiohttp_client"]
@@ -97,18 +104,18 @@ haio.async_get_clientsession = MagicMock(return_value=MagicMock())
 
 # ─── homeassistant.helpers.entity_platform ──────────────────────────────────────
 hep = sys.modules["homeassistant.helpers.entity_platform"]
-hep.AddEntitiesCallback = cls("AddEntitiesCallback")
+hep.AddEntitiesCallback = type("AddEntitiesCallback", (object,), {"__init__": lambda self, *a, **k: None})
 
 # ─── homeassistant.helpers.storage ───────────────────────────────────────────────
 hst = sys.modules["homeassistant.helpers.storage"]
-hst.Store = cls("Store")
+hst.Store = type("Store", (object,), {"__init__": lambda self, *a, **k: None})
 
 # ─── homeassistant.helpers.dispatcher ───────────────────────────────────────────
 hdis = sys.modules["homeassistant.helpers.dispatcher"]
 hdis.async_dispatcher_connect = MagicMock()
 hdis.async_dispatcher_send = MagicMock()
 
-# ─── homeassistant.helpers ───────────────────────────────────────────────────────
+# ─── homeassistant.helpers ──────────────────────────────────────────────────────
 sys.modules["homeassistant.helpers"].cv = vol
 sys.modules["homeassistant.helpers"].entity_registry = types.ModuleType("homeassistant.helpers.entity_registry")
 
@@ -123,13 +130,13 @@ sys.modules["homeassistant.util.dt"] = _dt
 
 # ─── homeassistant.components.sensor ─────────────────────────────────────────────
 _hcs = sys.modules["homeassistant.components.sensor"]
-_hcs.SensorEntity = cls("SensorEntity")
-_hcs.SensorDeviceClass = cls("SensorDeviceClass")
+_hcs.SensorEntity = type("SensorEntity", (object,), {"__init__": lambda self, *a, **k: None})
+_hcs.SensorDeviceClass = type("SensorDeviceClass", (object,), {})
 
 # ─── homeassistant.components.binary_sensor ──────────────────────────────────────
 _hcbs = sys.modules["homeassistant.components.binary_sensor"]
-_hcbs.BinarySensorEntity = cls("BinarySensorEntity")
-_hcbs.BinarySensorDeviceClass = cls("BinarySensorDeviceClass")
+_hcbs.BinarySensorEntity = type("BinarySensorEntity", (object,), {"__init__": lambda self, *a, **k: None})
+_hcbs.BinarySensorDeviceClass = type("BinarySensorDeviceClass", (object,), {})
 
 # ─── remaining components ───────────────────────────────────────────────────────
 for _comp, _cls_name in [
@@ -138,10 +145,10 @@ for _comp, _cls_name in [
     ("camera", "Camera"),
 ]:
     _m = sys.modules[f"homeassistant.components.{_comp}"]
-    setattr(_m, _cls_name, cls(_cls_name))
+    setattr(_m, _cls_name, type(_cls_name, (object,), {"__init__": lambda self, *a, **k: None}))
 
-# ─── config_entries + const ─────────────────────────────────────────────────────
-sys.modules["homeassistant.config_entries"].ConfigEntry = cls("ConfigEntry")
+# ─── config_entries + const ────────────────────────────────────────────────────
+sys.modules["homeassistant.config_entries"].ConfigEntry = type("ConfigEntry", (object,), {"__init__": lambda self, *a, **k: None})
 _const = types.ModuleType("homeassistant.const")
 _const.EVENT_HOMEASSISTANT_START = "homeassistant.start"
 sys.modules["homeassistant.const"] = _const
