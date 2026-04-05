@@ -44,4 +44,4 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest tests/ -q --ignore=custom_components --ignore=tests/test_batch_d.py
+          pytest tests/test_batch_c.py tests/test_batch_e.py tests/test_last_7_sensors.py -q

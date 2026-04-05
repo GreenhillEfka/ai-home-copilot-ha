@@ -1,7 +1,7 @@
 """conftest.py — comprehensive homeassistant stub for CI runner.
 
-Uses types.ModuleType with __path__ so every stub is treated as a real
-package/sub-package by Python's import system.
+Every stub class inherits from object so super().__init__() works.
+Uses types.ModuleType with __path__ for proper package treatment.
 """
 from __future__ import annotations
 
@@ -28,7 +28,12 @@ def leaf(name: str) -> types.ModuleType:
     return mod
 
 
-# ─── full package tree ───────────────────────────────────────────────────────────
+def cls(name: str, bases=(), ns=None):
+    """Create a class inheriting from object so super().__init__ works."""
+    return type(name, bases + (object,), ns or {})
+
+
+# ─── package tree ────────────────────────────────────────────────────────────────
 stub("homeassistant")
 stub("homeassistant.core")
 stub("homeassistant.config_entries")
@@ -58,54 +63,56 @@ leaf("homeassistant.exceptions")
 
 # ─── homeassistant.core ────────────────────────────────────────────────────────
 hc = sys.modules["homeassistant.core"]
-hc.HomeAssistant = type("HomeAssistant", (), {"data": {}})
-hc.callback = lambda f: f
-hc.Event = type("Event", (), {})
-hc.State = type("State", (), {})
+hc.HomeAssistant = cls("HomeAssistant", (), {"data": {}})
+hc.callback = staticmethod(lambda f: f)
+hc.Event = cls("Event")
+hc.State = cls("State")
 
-# ─── homeassistant.helpers.update_coordinator ───────────────────────────────────
+# ─── homeassistant.helpers.update_coordinator ────────────────────────────────────
 hup = sys.modules["homeassistant.helpers.update_coordinator"]
-hup.DataUpdateCoordinator = type("DataUpdateCoordinator", (), {})
-hup.UpdateFailed = type("UpdateFailed", (Exception,), {})
+hup.DataUpdateCoordinator = cls("DataUpdateCoordinator")
+hup.UpdateFailed = cls("UpdateFailed", (Exception,))
 
-# CoordinatorEntity must support [] subscripting (Generic base)
+# CoordinatorEntity must support [] subscripting (is a Generic in real HA)
 class _CoordEnt(Generic[_T]):
-    pass
-_CoordEnt.__class_getitem__ = classmethod(lambda cls, item: _CoordEnt)
+    __class_getitem__ = classmethod(lambda cls, item: _CoordEnt)
 hup.CoordinatorEntity = _CoordEnt
 
-# ─── homeassistant.helpers.entity ──────────────────────────────────────────────
+# ─── homeassistant.helpers.entity ────────────────────────────────────────────────
 he = sys.modules["homeassistant.helpers.entity"]
-he.Entity = type("Entity", (), {})
-he.EntityCategory = type("EntityCategory", (), {})
-he.DeviceInfo = type("DeviceInfo", (), {})
+he.Entity = cls("Entity")
+he.EntityCategory = cls("EntityCategory")
+he.EntityCategory.DIAGNOSTIC = "diagnostic"
+he.EntityCategory.CONFIG = "config"
+he.EntityCategory.CONFIGURATOR = "configurator"
+he.DeviceInfo = cls("DeviceInfo")
 
 # ─── homeassistant.helpers.device_registry ──────────────────────────────────────
 hdr = sys.modules["homeassistant.helpers.device_registry"]
-hdr.DeviceInfo = type("DeviceInfo", (), {})
+hdr.DeviceInfo = cls("DeviceInfo")
 
-# ─── homeassistant.helpers.aiohttp_client ─────────────────────────────────────
+# ─── homeassistant.helpers.aiohttp_client ───────────────────────────────────────
 haio = sys.modules["homeassistant.helpers.aiohttp_client"]
 haio.async_get_clientsession = MagicMock(return_value=MagicMock())
 
-# ─── homeassistant.helpers.entity_platform ─────────────────────────────────────
+# ─── homeassistant.helpers.entity_platform ──────────────────────────────────────
 hep = sys.modules["homeassistant.helpers.entity_platform"]
-hep.AddEntitiesCallback = type("AddEntitiesCallback", (), {})
+hep.AddEntitiesCallback = cls("AddEntitiesCallback")
 
-# ─── homeassistant.helpers.storage ─────────────────────────────────────────────
+# ─── homeassistant.helpers.storage ───────────────────────────────────────────────
 hst = sys.modules["homeassistant.helpers.storage"]
-hst.Store = type("Store", (), {})
+hst.Store = cls("Store")
 
-# ─── homeassistant.helpers.dispatcher ─────────────────────────────────────────
+# ─── homeassistant.helpers.dispatcher ───────────────────────────────────────────
 hdis = sys.modules["homeassistant.helpers.dispatcher"]
 hdis.async_dispatcher_connect = MagicMock()
 hdis.async_dispatcher_send = MagicMock()
 
-# ─── homeassistant.helpers ─────────────────────────────────────────────────────
+# ─── homeassistant.helpers ───────────────────────────────────────────────────────
 sys.modules["homeassistant.helpers"].cv = vol
 sys.modules["homeassistant.helpers"].entity_registry = types.ModuleType("homeassistant.helpers.entity_registry")
 
-# ─── homeassistant.util.dt ─────────────────────────────────────────────────────
+# ─── homeassistant.util.dt ──────────────────────────────────────────────────────
 _dt = types.ModuleType("homeassistant.util.dt")
 _dt.as_utc = lambda s: s
 _dt.as_local = lambda s: s
@@ -114,25 +121,30 @@ _dt.utcnow = lambda: datetime.now(timezone.utc)
 _dt.get_age = lambda *a, **kw: "just now"
 sys.modules["homeassistant.util.dt"] = _dt
 
-# ─── homeassistant.components.* ─────────────────────────────────────────────────
+# ─── homeassistant.components.sensor ─────────────────────────────────────────────
 _hcs = sys.modules["homeassistant.components.sensor"]
-_hcs.SensorEntity = type("SensorEntity", (), {})
-_hcs.SensorDeviceClass = type("SensorDeviceClass", (), {})
+_hcs.SensorEntity = cls("SensorEntity")
+_hcs.SensorDeviceClass = cls("SensorDeviceClass")
 
-for _comp, _cls in [
-    ("binary_sensor", "BinarySensorEntity"),
+# ─── homeassistant.components.binary_sensor ──────────────────────────────────────
+_hcbs = sys.modules["homeassistant.components.binary_sensor"]
+_hcbs.BinarySensorEntity = cls("BinarySensorEntity")
+_hcbs.BinarySensorDeviceClass = cls("BinarySensorDeviceClass")
+
+# ─── remaining components ───────────────────────────────────────────────────────
+for _comp, _cls_name in [
     ("select", "SelectEntity"),
     ("button", "ButtonEntity"),
     ("camera", "Camera"),
 ]:
     _m = sys.modules[f"homeassistant.components.{_comp}"]
-    setattr(_m, _cls, type(_cls, (), {}))
+    setattr(_m, _cls_name, cls(_cls_name))
 
-# ─── config_entries + const ────────────────────────────────────────────────────
-sys.modules["homeassistant.config_entries"].ConfigEntry = type("ConfigEntry", (), {})
+# ─── config_entries + const ─────────────────────────────────────────────────────
+sys.modules["homeassistant.config_entries"].ConfigEntry = cls("ConfigEntry")
 _const = types.ModuleType("homeassistant.const")
 _const.EVENT_HOMEASSISTANT_START = "homeassistant.start"
 sys.modules["homeassistant.const"] = _const
 
-# ─── config_validation = voluptuous ─────────────────────────────────────────────
+# ─── config_validation = voluptuous ──────────────────────────────────────────────
 sys.modules["homeassistant.helpers.config_validation"] = vol
