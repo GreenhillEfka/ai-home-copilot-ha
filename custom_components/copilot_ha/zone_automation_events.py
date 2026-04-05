@@ -18,7 +18,11 @@ import logging
 from typing import Any, Dict, Optional
 from datetime import datetime, timezone
 
-from homeassistant.core import HomeAssistant, Event, EventStateChangedData
+from homeassistant.core import HomeAssistant, Event
+try:
+    from homeassistant.core import EventStateChangedData
+except ImportError:  # pragma: no cover - HA version compatibility
+    EventStateChangedData = dict
 from homeassistant.helpers import entity_registry
 
 from .zone_automation_client import ZoneAutomationClient

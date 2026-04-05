@@ -377,3 +377,8 @@ def create_unifi_context(
 ) -> UnifiContextCoordinator:
     """Factory function to create UniFi context coordinator."""
     return UnifiContextCoordinator(hass=hass, host=host, port=port, token=token)
+
+# Backward-compatible aliases expected by existing integrations/tests
+
+# Backward-compatible alias expected by legacy tests
+AIHomeCopilotUniFiDataUpdateCoordinator = UnifiContextCoordinator

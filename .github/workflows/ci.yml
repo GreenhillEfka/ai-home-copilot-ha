@@ -1,5 +1,4 @@
 name: CI
-import json, sys; from pathlib import Path
 
 on:
   push:
@@ -25,19 +24,21 @@ jobs:
         run: |
           root_v=$(cat VERSION)
           comp_v=$(cat custom_components/copilot_ha/VERSION)
-          manifest_v=$(python3 -c "import json; print(json.loads(Path('custom_components/copilot_ha/manifest.json').read_text())['version'])")
+          manifest_v=$(python3 -c "import json; print(json.loads(open('custom_components/copilot_ha/manifest.json').read())['version'])")
           test "$root_v" = "$comp_v"
           test "$root_v" = "$manifest_v"
-          echo "Versions aligned: $root_v"
 
-  lint:
+  test:
+    needs: validate-repo-shape
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install Python deps
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Syntax check
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install -r requirements_test.txt
+      - name: Run tests
         run: |
-          pip install pyyaml pydantic voluptuous aiohttp
-          python3 -m py_compile $(find custom_components -name '*.py')
+          pytest custom_components/copilot_ha/tests tests/test_last_7_sensors.py

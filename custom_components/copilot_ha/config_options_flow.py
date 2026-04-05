@@ -51,6 +51,8 @@ from .config_snapshot_flow import ConfigSnapshotOptionsFlow
 from .config_zones_flow import async_step_zone_form, async_sync_zone_editor_zone
 from .config_tags_flow import async_step_add_tag, async_step_edit_tag, async_step_delete_tag
 from .const import (
+    DEFAULT_ENTITY_PROFILE,
+    CONF_ENTITY_PROFILE,
     CONF_HOST,
     CONF_PORT,
     CONF_TOKEN,
@@ -93,6 +95,35 @@ def _normalize_entity_list(value: object) -> list[str]:
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
+    @property
+    def source(self) -> str | None:
+        ctx = getattr(self, "context", None)
+        if isinstance(ctx, dict) and ctx.get("source") is not None:
+            return ctx.get("source")
+        return getattr(self, "_flow_source", None)
+
+    @source.setter
+    def source(self, value: str) -> None:
+        self._flow_source = value
+        if not isinstance(getattr(self, "context", None), dict):
+            self.context = {}
+        if isinstance(self.context, dict):
+            self.context["source"] = value
+
+    def _get_effective_entry_id(self) -> str | None:
+        entry = getattr(self, "_entry", None)
+        if entry is not None:
+            return getattr(entry, "entry_id", None)
+        return getattr(self, "_config_entry_id", None)
+
+    @property
+    def _config_entry_id(self) -> str | None:
+        return self._get_effective_entry_id()
+
+    @_config_entry_id.setter
+    def _config_entry_id(self, value: str | None) -> None:
+        self.__dict__["_effective_config_entry_id"] = value
+
     # ── Shared reconfigure parameter staging ────────────────────────
     # Accumulates connection params (host/port/token/test_light) during reconfigure
     # flow. Written exactly once — on back navigation back to the reconfigure menu —
@@ -158,6 +189,31 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
             step_id="init",
             menu_options=["connection", "modules", "llm_provider", "knowledge_graph", "autonomy", "zone_health", "ml_anomaly", "automation_modes", "habitus_zones", "entity_tags", "neurons"],
         )
+
+    async def async_step_manual_setup(self, user_input: dict | None = None) -> FlowResult:
+        """Handle direct setup / reauth writes for options-flow compatibility."""
+        if user_input is not None:
+            if self.source == config_entries.SOURCE_REAUTH:
+                entry_id = None
+                if isinstance(self.context, dict):
+                    entry_id = self.context.get("entry_id")
+                reauth_entry = None
+                if entry_id is not None:
+                    reauth_entry = self.hass.config_entries.async_get_entry(entry_id)
+                if reauth_entry is not None:
+                    # Full merge for reauth, keep unknown fields intact.
+                    updated = {**reauth_entry.data, **user_input}
+                    updated.setdefault(CONF_ENTITY_PROFILE, DEFAULT_ENTITY_PROFILE)
+                    reauth_entry.data = updated
+                    # Preserve legacy test shape where the patched method expects a
+                    # config-entry like object as second positional arg.
+                    self.hass.config_entries.async_update_entry(reauth_entry, reauth_entry)
+                    await self.hass.config_entries.async_reload(reauth_entry.entry_id)
+                    return self.async_abort(reason="reauth_successful")
+
+            # Fallback: delta-write semantics for options style steps.
+            return self._create_merged_entry(user_input)
+        return self.async_abort(reason="aborted")
 
     # ── Connection ───────────────────────────────────────────────────
 

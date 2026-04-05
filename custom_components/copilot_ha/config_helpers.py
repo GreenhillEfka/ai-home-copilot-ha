@@ -84,7 +84,15 @@ async def fetch_setup_token(
 
     base = build_base_url(host, port)
     url = f"{base}/api/v1/auth/setup-token"
-    session = async_get_clientsession(hass)
+
+    close_session = False
+    session = None
+    try:
+        session = async_get_clientsession(hass)
+    except Exception:
+        session = aiohttp.ClientSession()
+        close_session = True
+
     try:
         async with session.get(
             url, timeout=aiohttp.ClientTimeout(total=timeout_s)
@@ -104,6 +112,9 @@ async def fetch_setup_token(
         _LOGGER.debug("Could not fetch setup token from %s", url)
     except Exception:
         _LOGGER.debug("Unexpected error fetching setup token from %s", url, exc_info=True)
+    finally:
+        if close_session and session is not None:
+            await session.close()
     return ""
 
 
@@ -157,7 +168,12 @@ async def validate_input(hass: HomeAssistant, data: dict) -> None:
     token = data.get("token", "")
     if host and port:
         from homeassistant.helpers.aiohttp_client import async_get_clientsession
-        session = async_get_clientsession(hass)
+        close_session = False
+        try:
+            session = async_get_clientsession(hass)
+        except Exception:
+            session = aiohttp.ClientSession()
+            close_session = True
         url = f"{build_base_url(host, port)}/api/v1/status"
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         try:
@@ -186,6 +202,10 @@ async def validate_input(hass: HomeAssistant, data: dict) -> None:
             raise HomeAssistantError(
                 f"Cannot reach Core Add-on at {host}:{port}: {err}"
             )
+        finally:
+            if close_session:
+                await session.close()
+
 
 
 async def discover_reachable_core_endpoint(

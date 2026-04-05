@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 from homeassistant.core import HomeAssistant, Event, callback
 from homeassistant.helpers.storage import Store
@@ -135,6 +135,23 @@ def _zone_slug(zone_id: str | None) -> str:
     return slug.split(":", 1)[1] if ":" in slug else slug
 
 
+def _normalize_zone_type(zone_type: str | None) -> str:
+    normalized = (zone_type or "room").strip().lower()
+    aliases = {
+        "living": "area",
+        "kitchen": "area",
+        "kueche": "area",
+        "terrace": "outdoor",
+        "terrassenbereich": "outdoor",
+        "outside": "outdoor",
+        "outdoor": "outdoor",
+        "area": "area",
+        "room": "room",
+        "floor": "floor",
+    }
+    return aliases.get(normalized, normalized)
+
+
 
 def default_module_overrides_for_zone(
     zone_id: str | None,
@@ -147,7 +164,8 @@ def default_module_overrides_for_zone(
     approval is required, and explanations are expected.
     """
     slug = _zone_slug(zone_id)
-    enabled_modules = set(_ZONE_MODULE_DEFAULTS.get(slug, _ZONE_TYPE_FALLBACK_DEFAULTS.get(zone_type, set())))
+    normalized_zone_type = _normalize_zone_type(zone_type)
+    enabled_modules = set(_ZONE_MODULE_DEFAULTS.get(slug, _ZONE_TYPE_FALLBACK_DEFAULTS.get(normalized_zone_type, set())))
     existing = overrides if isinstance(overrides, dict) else {}
     result: dict[str, dict[str, Any]] = {}
 

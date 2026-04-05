@@ -98,6 +98,18 @@ class CopilotApiClient:
         try:
             async with self._session.post(
                 url,
+                headers=self._headers(),
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status >= 400:
+                    body = await resp.text()
+                    raise CopilotApiError(f"HTTP {resp.status} for {url}: {body[:200]}")
+                return await resp.json()
+        except asyncio.TimeoutError as e:
+            raise CopilotApiError(f"Timeout calling {url}") from e
+        except aiohttp.ClientError as e:
+            raise CopilotApiError(f"Client error calling {url}: {e}") from e
 
     # ── Module APIs (Slices 67-82) ─────────────────────────────────────
     
@@ -174,28 +186,10 @@ class CopilotApiClient:
     async def get_rules_list(self) -> dict:
         """List all rules."""
         return await self._get_json("/api/v1/modules/rules/list")
-    
+
     async def activate_rule(self, rule_id: str) -> dict:
         """Activate a rule."""
         return await self._post_json(f"/api/v1/modules/rules/{rule_id}/activate", {})
-                json=payload,
-                headers=self._headers(),
-                timeout=aiohttp.ClientTimeout(total=10),
-            ) as resp:
-                if resp.status >= 400:
-                    body = await resp.text()
-                    raise CopilotApiError(f"HTTP {resp.status} for {url}: {body[:200]}")
-                # Some endpoints may return empty 204.
-                if resp.status == 204:
-                    return {}
-                ctype = resp.headers.get("Content-Type", "")
-                if "json" in ctype:
-                    return await resp.json()
-                return {"text": (await resp.text())[:2000]}
-        except asyncio.TimeoutError as e:
-            raise CopilotApiError(f"Timeout calling {url}") from e
-        except aiohttp.ClientError as e:
-            raise CopilotApiError(f"Client error calling {url}: {e}") from e
 
     async def _put_json(self, path: str, payload: dict) -> dict:
         url = f"{self._base_url}{path}"

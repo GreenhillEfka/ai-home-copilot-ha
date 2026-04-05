@@ -29,6 +29,7 @@ FRONTEND_VIEW_STORE_VERSION = 1
 CONF_HOST = "host"
 CONF_PORT = "port"
 CONF_TOKEN = "token"
+CONF_API_TOKEN = CONF_TOKEN
 CONF_CORE_URL = "core_url"  # PilotSuite Core API URL (e.g., http://localhost:8080)
 CONF_TEST_LIGHT = "test_light_entity_id"
 CONF_WEBHOOK_ID = "webhook_id"

@@ -27,8 +27,8 @@ _presence_sensor_module = None
 def _get_area_presence_sensor_class():
     global _presence_sensor_module
     if _presence_sensor_module is None:
-        from . import area_presence_sensor as mod
-        _presence_sensor_module = mod
+        from .area_presence_sensor import AreaPresenceSensor
+        _presence_sensor_module = AreaPresenceSensor
     return _presence_sensor_module
 
 

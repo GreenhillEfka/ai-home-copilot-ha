@@ -421,10 +421,8 @@ def build_user_prefs_schema(data: dict) -> dict:
         ),
         vol.Optional(
             CONF_PRIMARY_USER,
-            default=data.get(CONF_PRIMARY_USER, DEFAULT_PRIMARY_USER or None),
-        ): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=["person"], multiple=False)
-        ),
+            default=(data.get(CONF_PRIMARY_USER, DEFAULT_PRIMARY_USER) or ""),
+        ): vol.All(vol.Coerce(str),),
         vol.Optional(
             CONF_USER_LEARNING_MODE,
             default=data.get(CONF_USER_LEARNING_MODE, DEFAULT_USER_LEARNING_MODE),
@@ -499,10 +497,8 @@ def build_waste_schema(data: dict) -> dict:
         ): bool,
         vol.Optional(
             CONF_WASTE_TTS_ENTITY,
-            default=data.get(CONF_WASTE_TTS_ENTITY, DEFAULT_WASTE_TTS_ENTITY) or None,
-        ): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=["media_player"], multiple=False)
-        ),
+            default=(data.get(CONF_WASTE_TTS_ENTITY, DEFAULT_WASTE_TTS_ENTITY) or ""),
+        ): vol.All(vol.Coerce(str),),
         vol.Optional(
             CONF_WASTE_REMINDER_EVENING_HOUR,
             default=data.get(CONF_WASTE_REMINDER_EVENING_HOUR, DEFAULT_WASTE_REMINDER_EVENING_HOUR),
@@ -539,10 +535,8 @@ def build_birthday_schema(data: dict) -> dict:
         ): bool,
         vol.Optional(
             CONF_BIRTHDAY_TTS_ENTITY,
-            default=data.get(CONF_BIRTHDAY_TTS_ENTITY, DEFAULT_BIRTHDAY_TTS_ENTITY) or None,
-        ): selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=["media_player"], multiple=False)
-        ),
+            default=(data.get(CONF_BIRTHDAY_TTS_ENTITY, DEFAULT_BIRTHDAY_TTS_ENTITY) or ""),
+        ): vol.All(vol.Coerce(str),),
         vol.Optional(
             CONF_BIRTHDAY_REMINDER_HOUR,
             default=data.get(CONF_BIRTHDAY_REMINDER_HOUR, DEFAULT_BIRTHDAY_REMINDER_HOUR),

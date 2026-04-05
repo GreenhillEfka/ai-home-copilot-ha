@@ -82,6 +82,19 @@ class ConfigFlow(_PilotSuiteConfigFlowBase):
     # Shared pending reconfigure data (accumulates across steps before final commit)
     _reconfigure_data: dict = {}
 
+    @property
+    def source(self) -> str | None:
+        ctx = self.context
+        if isinstance(ctx, dict):
+            return ctx.get("source")
+        return None
+
+    @source.setter
+    def source(self, value: str) -> None:
+        if self.context is None or not isinstance(self.context, dict):
+            self.context = {}
+        self.context["source"] = value
+
     async def get_zone_entity_suggestions(self, zone_name: str) -> dict:
         """Get entity suggestions for a zone."""
         return await get_zone_entity_suggestions(self.hass, zone_name)

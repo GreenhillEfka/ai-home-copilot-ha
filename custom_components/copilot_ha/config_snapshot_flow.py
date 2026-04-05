@@ -69,7 +69,10 @@ def _resolve_snapshot_import_path(path: str) -> str:
     if candidate.startswith("/local/"):
         # HA serves /config/www as /local
         rel = candidate[len("/local/") :].lstrip("/")
-        candidate = os.path.join("/config/www", rel)
+        if rel.startswith("config/www"):
+            candidate = os.path.join("/", rel)
+        else:
+            candidate = os.path.join("/config/www", rel)
 
     # 3. Normalise the assembled path (resolve . / .. / duplicate slashes)
     candidate = os.path.normpath(candidate)

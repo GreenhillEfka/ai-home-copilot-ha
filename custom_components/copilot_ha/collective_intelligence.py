@@ -270,7 +270,8 @@ class CollectiveIntelligence:
         
         for key, value in weights.items():
             noise = np.random.laplace(0, scale)
-            noisy_weights[key] = value + noise
+            noisy = value + noise
+            noisy_weights[key] = max(-3.0, min(3.0, float(noisy)))
             
         return noisy_weights
         

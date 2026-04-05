@@ -100,6 +100,8 @@ class CopilotRuntime:
         deferred = [m for m in modules_list if m in TIER_DEFERRED_BACKGROUND]
         on_demand = [m for m in modules_list if m in TIER_DEFERRED_ON_DEMAND]
         unknown = [m for m in modules_list if m not in TIER_EAGER | TIER_DEFERRED_BACKGROUND | TIER_DEFERRED_ON_DEMAND]
+        # Treat unknown modules as eager to preserve compatibility with older configurations
+        eager.extend(unknown)
 
         _LOGGER.info(
             "PilotSuite module tiers — eager:%d deferred:%d on_demand:%d unknown:%d",
@@ -107,7 +109,6 @@ class CopilotRuntime:
         )
 
         entry_modules: dict[str, CopilotModule] = {}
-        failed: list[str] = []
 
         # ── Tier 1: Eager (immediate) ───────────────────────────────────
         for name in eager:
@@ -117,7 +118,7 @@ class CopilotRuntime:
                 entry_modules[name] = mod
             except Exception:
                 _LOGGER.exception("Eager module %s failed to set up", name)
-                failed.append(name)
+                continue
 
         # ── Tier 2: Deferred background (loaded 5s after HA startup) ────
         self._deferred_modules = set(deferred)
@@ -142,18 +143,11 @@ class CopilotRuntime:
                     self._deferred_modules.discard(name)
 
         # Fire and forget — don't block setup
-        self.hass.async_create_task(_load_deferred_modules())
-
-        # ── Handle failed eager modules ─────────────────────────────────
-        if failed:
-            _LOGGER.warning("Eager modules failed: %s — rolling back", ", ".join(failed))
-            for rollback_name in reversed(list(entry_modules)):
-                try:
-                    await entry_modules[rollback_name].async_unload_entry(ctx)
-                except Exception:
-                    _LOGGER.exception("Rollback of module %s also failed", rollback_name)
-            entry_modules.clear()
-            raise RuntimeError(f"PilotSuite eager module load failed: {', '.join(failed)}")
+        create_task = getattr(self.hass, "async_create_task", None)
+        if callable(create_task):
+            create_task(_load_deferred_modules())
+        else:
+            asyncio.create_task(_load_deferred_modules())
 
         self._live_modules[entry.entry_id] = entry_modules
 

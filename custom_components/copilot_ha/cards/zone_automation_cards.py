@@ -22,7 +22,11 @@ from datetime import datetime, timezone
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import Entity
-from homeassistant.components.lovelace import LovelaceCard
+
+try:
+    from homeassistant.components.lovelace import LovelaceCard  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover - HA version compatibility
+    LovelaceCard = type("LovelaceCard", (), {})
 
 _LOGGER = logging.getLogger(__name__)
 

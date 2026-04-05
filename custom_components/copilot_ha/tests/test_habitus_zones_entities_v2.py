@@ -742,8 +742,8 @@ class TestEntitiesV2Registry:
             ENTITIES_V2,
         )
 
-        # 8 entity types defined in habitus_zones_entities_v2.py
-        assert len(ENTITIES_V2) == 8
+        # 9 entity types currently exposed for Habitus Zones v2
+        assert len(ENTITIES_V2) == 9
 
     def test_entities_v2_all_are_classes(self) -> None:
         from custom_components.copilot_ha.habitus_zones_entities_v2 import (

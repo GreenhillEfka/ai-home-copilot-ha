@@ -31,14 +31,14 @@ jobs:
           echo "$VERSION" > VERSION
           echo "$VERSION" > custom_components/copilot_ha/VERSION
           python3 - <<PY
-import json
-from pathlib import Path
-m = Path('custom_components/copilot_ha/manifest.json')
-d = json.loads(m.read_text())
-d['version'] = '$VERSION'
-m.write_text(json.dumps(d, indent=2) + '\n')
-print(f"copilot_ha: {d['version']}")
-PY
+            import json
+            from pathlib import Path
+            m = Path('custom_components/copilot_ha/manifest.json')
+            d = json.loads(m.read_text())
+            d['version'] = '$VERSION'
+            m.write_text(json.dumps(d, indent=2) + '\n')
+            print(f"copilot_ha: {d['version']}")
+          PY
 
       - name: Verify consistency
         run: |
@@ -60,31 +60,31 @@ PY
       - name: Build minimal HACS ZIP
         run: |
           python3 - <<'PY'
-from pathlib import Path
-import shutil
-import zipfile
+            from pathlib import Path
+            import shutil
+            import zipfile
 
-root = Path('dist-hacs')
-if root.exists():
-    shutil.rmtree(root)
-(root / 'custom_components').mkdir(parents=True)
+            root = Path('dist-hacs')
+            if root.exists():
+                shutil.rmtree(root)
+            (root / 'custom_components').mkdir(parents=True)
 
-ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
-shutil.copytree('custom_components/copilot_ha', root / 'custom_components' / 'copilot_ha', ignore=ignore)
-shutil.copy2('hacs.json', root / 'hacs.json')
-if Path('README.md').exists():
-    shutil.copy2('README.md', root / 'README.md')
-if Path('VERSION').exists():
-    shutil.copy2('VERSION', root / 'VERSION')
+            ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
+            shutil.copytree('custom_components/copilot_ha', root / 'custom_components' / 'copilot_ha', ignore=ignore)
+            shutil.copy2('hacs.json', root / 'hacs.json')
+            if Path('README.md').exists():
+                shutil.copy2('README.md', root / 'README.md')
+            if Path('VERSION').exists():
+                shutil.copy2('VERSION', root / 'VERSION')
 
-with zipfile.ZipFile('pilotsuite-styx-ha.zip', 'w', compression=zipfile.ZIP_DEFLATED) as zf:
-    for path in sorted(root.rglob('*')):
-        if path.is_file():
-            zf.write(path, path.relative_to(root))
+            with zipfile.ZipFile('pilotsuite-styx-ha.zip', 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+                for path in sorted(root.rglob('*')):
+                    if path.is_file():
+                        zf.write(path, path.relative_to(root))
 
-shutil.copy2('pilotsuite-styx-ha.zip', f"v{Path('VERSION').read_text().strip()}.zip")
-print(f"ZIP size: {Path('pilotsuite-styx-ha.zip').stat().st_size} bytes")
-PY
+            shutil.copy2('pilotsuite-styx-ha.zip', f"v{Path('VERSION').read_text().strip()}.zip")
+            print(f"ZIP size: {Path('pilotsuite-styx-ha.zip').stat().st_size} bytes")
+          PY
 
       - name: Verify ZIP before upload
         run: |

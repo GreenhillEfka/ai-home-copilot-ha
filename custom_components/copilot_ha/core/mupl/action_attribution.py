@@ -73,14 +73,14 @@ class PresenceAttribution(AttributionSource):
         if len(present_users) == 1:
             return AttributionResult(
                 user_id=present_users[0],
-                confidence=0.4 * self.weight,
+                confidence=0.4,
                 sources={"presence": 0.4}
             )
         elif len(present_users) > 1:
             # Multiple users present - lower confidence
             return AttributionResult(
                 user_id=present_users[0],  # First user as fallback
-                confidence=0.2 * self.weight,
+                confidence=0.2,
                 sources={"presence": 0.2, "multiple_present": len(present_users)}
             )
         
@@ -104,7 +104,7 @@ class DeviceOwnershipAttribution(AttributionSource):
         if entity_id in self.device_owners:
             return AttributionResult(
                 user_id=self.device_owners[entity_id],
-                confidence=0.3 * self.weight,
+                confidence=0.3,
                 sources={"device_ownership": 0.3}
             )
         return None
@@ -137,7 +137,7 @@ class RoomLocationAttribution(AttributionSource):
                         # Extract user from presence sensor name
                         return AttributionResult(
                             user_id=state.state.lower(),
-                            confidence=0.3 * self.weight,
+                            confidence=0.3,
                             sources={"room_location": 0.3}
                         )
         return None
@@ -177,7 +177,7 @@ class TimePatternAttribution(AttributionSource):
         if time_of_day in patterns:
             return AttributionResult(
                 user_id=patterns[time_of_day],
-                confidence=0.2 * self.weight,
+                confidence=0.2,
                 sources={"time_pattern": 0.2, "time_of_day": time_of_day}
             )
         

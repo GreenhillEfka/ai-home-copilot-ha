@@ -283,3 +283,8 @@ def create_weather_context(
 ) -> WeatherContextCoordinator:
     """Factory function to create Weather context coordinator."""
     return WeatherContextCoordinator(hass=hass, host=host, port=port, token=token)
+
+# Backward-compatible aliases expected by existing integrations/tests
+
+# Backward-compatible alias expected by legacy tests
+AIHomeCopilotWeatherDataUpdateCoordinator = WeatherContextCoordinator

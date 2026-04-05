@@ -224,3 +224,8 @@ def create_energy_context(
 ) -> EnergyContextCoordinator:
     """Factory function to create Energy context coordinator."""
     return EnergyContextCoordinator(hass=hass, host=host, port=port, token=token)
+
+# Backward-compatible aliases expected by existing integrations/tests
+
+# Backward-compatible alias expected by legacy tests
+AIHomeCopilotEnergyDataUpdateCoordinator = EnergyContextCoordinator

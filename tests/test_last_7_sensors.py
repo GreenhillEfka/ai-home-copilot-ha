@@ -247,11 +247,7 @@ async def test_notification_sensor_loads_notifications_and_digest():
     sensor = NotificationSensor(coordinator)
     sensor.hass = MagicMock()
 
-    with patch(
-        "custom_components.copilot_ha.sensors.notification_sensor.async_get_clientsession",
-        return_value=session,
-    ):
-        await sensor.async_update()
+    await sensor.async_update()
 
     assert sensor.native_value == "3 pending"
     assert sensor.icon == "mdi:bell-alert"
