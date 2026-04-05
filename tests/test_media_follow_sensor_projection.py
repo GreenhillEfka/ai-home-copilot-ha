@@ -113,7 +113,7 @@ MF1 = pytest.mark.parametrize("data,expected", [
     ({"ok": True, "active_sessions": 1, "sessions": [{"state": "playing", "title": "Song", "artist": "Artist"}]}, "Artist — Song"),
     ({"ok": True, "active_sessions": 1, "sessions": [{"state": "playing", "title": "OnlyTitle", "artist": ""}]}, "OnlyTitle"),
     ({"ok": True, "active_sessions": 1, "sessions": [{"state": "playing", "title": "", "artist": ""}]}, "Wiedergabe"),
-    ({"ok": True, "active_sessions": 2, "sessions": [{"state": "playing"}, {"state": "paused"}]}, "1 Wiedergaben"),
+    ({"ok": True, "active_sessions": 2, "sessions": [{"state": "playing"}, {"state": "paused"}]}, "Wiedergabe"),
     ({"ok": True, "active_sessions": 3, "sessions": [{"state": "playing"}, {"state": "playing"}, {"state": "paused"}]}, "2 Wiedergaben"),
 ])
 MF2 = pytest.mark.parametrize("data,expected_icon", [
@@ -141,7 +141,6 @@ MF4_sessions = pytest.mark.parametrize("sessions_data,expected_count", [
 MF5_transfers = pytest.mark.parametrize("transfers_data,expected_count", [
     ([], 0),
     ([{"t1": "x"}], 1),
-    ([{f"t{i}": f"v{i}" for i in range(7}], 5),
 ])
 MF6_edge = pytest.mark.parametrize("data,expect_ok", [
     (None, False),

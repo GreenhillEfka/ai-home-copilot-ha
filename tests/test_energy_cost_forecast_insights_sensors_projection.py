@@ -126,7 +126,10 @@ class EnergyInsightsSensorContract:
     @property
     def native_value(self):
         if self._data and self._data.get("ok"):
-            return len(self._data.get("insights", []))
+            insights = self._data.get("insights")
+            if insights is None:
+                return 0
+            return len(insights)
         return 0
 
     @property
