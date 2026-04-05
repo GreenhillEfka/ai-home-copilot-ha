@@ -19,12 +19,12 @@ def make_coord(**kw):
 
 
 # ─── activity_sensors ─────────────────────────────────────────────────────────
-from custom_components.copilot_ha.sensors.activity_sensors import ActivitySensors
+from custom_components.copilot_ha.sensors.activity_sensors import ActivityLevelSensor
 
 
 @pytest.mark.asyncio
 async def test_activity_sensors_ha_lokal():
-    sensor = ActivitySensors(make_coord(current_activity="working", confidence=0.92))
+    sensor = ActivityLevelSensor(make_coord(current_activity="working", confidence=0.92))
     assert not hasattr(sensor, '_core_base_url')
     assert sensor.native_value == "working"
 
@@ -125,22 +125,22 @@ async def test_brain_architecture_sensor_ha_lokal():
 
 
 # ─── calendar_sensors ─────────────────────────────────────────────────────────
-from custom_components.copilot_ha.sensors.calendar_sensors import CalendarSensors
+from custom_components.copilot_ha.sensors.calendar_sensors import CalendarLoadSensor
 
 
 @pytest.mark.asyncio
 async def test_calendar_sensors_ha_lokal():
-    sensor = CalendarSensors(make_coord(upcoming_events=3, next_event="Meeting at 10:00"))
+    sensor = CalendarLoadSensor(make_coord(upcoming_events=3, next_event="Meeting at 10:00"))
     assert not hasattr(sensor, '_core_base_url')
 
 
 # ─── cognitive_sensors ────────────────────────────────────────────────────────
-from custom_components.copilot_ha.sensors.cognitive_sensors import CognitiveSensors
+from custom_components.copilot_ha.sensors.cognitive_sensors import AttentionLoadSensor
 
 
 @pytest.mark.asyncio
 async def test_cognitive_sensors_ha_lokal():
-    sensor = CognitiveSensors(make_coord(focus_score=0.88, cognitive_load="normal"))
+    sensor = AttentionLoadSensor(make_coord(focus_score=0.88, cognitive_load="normal"))
     assert not hasattr(sensor, '_core_base_url')
 
 
@@ -166,42 +166,42 @@ async def test_demand_response_sensor_ha_lokal():
 
 
 # ─── energy_insights ─────────────────────────────────────────────────────────
-from custom_components.copilot_ha.sensors.energy_insights import EnergyInsightsSensor
+from custom_components.copilot_ha.sensors.energy_insights import EnergyInsightSensor
 
 
 @pytest.mark.asyncio
 async def test_energy_insights_ha_lokal():
-    sensor = EnergyInsightsSensor(make_coord(insights=["Shift washing"], potential_savings_kwh=4.2))
+    sensor = EnergyInsightSensor(make_coord(insights=["Shift washing"], potential_savings_kwh=4.2))
     assert not hasattr(sensor, '_core_base_url')
 
 
 # ─── energy_sensors ─────────────────────────────────────────────────────────
-from custom_components.copilot_ha.sensors.energy_sensors import EnergySensors
+from custom_components.copilot_ha.sensors.energy_sensors import EnergyProxySensor
 
 
 @pytest.mark.asyncio
 async def test_energy_sensors_ha_lokal():
-    sensor = EnergySensors(make_coord(current_power_w=450, today_kwh=12.5))
+    sensor = EnergyProxySensor(make_coord(current_power_w=450, today_kwh=12.5))
     assert not hasattr(sensor, '_core_base_url')
 
 
 # ─── environment_sensors ────────────────────────────────────────────────────
-from custom_components.copilot_ha.sensors.environment_sensors import EnvironmentSensors
+from custom_components.copilot_ha.sensors.environment_sensors import LightLevelSensor
 
 
 @pytest.mark.asyncio
 async def test_environment_sensors_ha_lokal():
-    sensor = EnvironmentSensors(make_coord(indoor_temp=21.5, indoor_humidity=45))
+    sensor = LightLevelSensor(make_coord(indoor_temp=21.5, indoor_humidity=45))
     assert not hasattr(sensor, '_core_base_url')
 
 
 # ─── habit_learning_v2 ───────────────────────────────────────────────────────
-from custom_components.copilot_ha.sensors.habit_learning_v2 import HabitLearningV2Sensor
+from custom_components.copilot_ha.sensors.habit_learning_v2 import HabitLearningSensor
 
 
 @pytest.mark.asyncio
 async def test_habit_learning_v2_ha_lokal():
-    sensor = HabitLearningV2Sensor(make_coord(learned_habits=5, confidence=0.78))
+    sensor = HabitLearningSensor(make_coord(learned_habits=5, confidence=0.78))
     assert not hasattr(sensor, '_core_base_url')
 
 
@@ -216,12 +216,12 @@ async def test_light_intelligence_sensor_ha_lokal():
 
 
 # ─── presence_sensors ────────────────────────────────────────────────────────
-from custom_components.copilot_ha.sensors.presence_sensors import PresenceSensors
+from custom_components.copilot_ha.sensors.presence_sensors import PresenceRoomSensor
 
 
 @pytest.mark.asyncio
 async def test_presence_sensors_ha_lokal():
-    sensor = PresenceSensors(make_coord(primary_person="Andreas", confidence=0.95))
+    sensor = PresenceRoomSensor(make_coord(primary_person="Andreas", confidence=0.95))
     assert not hasattr(sensor, '_core_base_url')
 
 
