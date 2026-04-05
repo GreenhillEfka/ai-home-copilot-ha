@@ -30,7 +30,7 @@ Thumbs.db
 *.log
 
 # Test infrastructure (separate repo)
-tests/
+# tests/ directory now tracked — see HA-96
 -e 
 # Agent working files (separate repo)
 agents/
