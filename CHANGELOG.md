@@ -1,6 +1,6 @@
 # Changelog
 
-## [15.3.40] - 2026-04-05
+## [15.4.0] - 2026-04-05
 
 ### Added
 - Projection-Contract-Testsuite: 25 Testdateien, ~291 parametrized Cases.
