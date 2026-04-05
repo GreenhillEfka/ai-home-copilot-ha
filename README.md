@@ -1,6 +1,6 @@
 # PilotSuite Styx — Home Assistant Integration
 
-**Version:** 15.3.39
+**Version:** 15.4.0
 **Status:** ✅ Integration des lernenden Dachsystems — End-to-End Verkabelt
 
 ---
@@ -348,10 +348,10 @@ max: 100
 
 ---
 
-## 🎉 RELEASE PREP v15.3.39
+## 🎉 RELEASE PREP v15.4.0
 
 **Datum:** 2026-04-05
-**Geplanter Tag:** v15.3.39
+**Geplanter Tag:** v15.4.0
 **Status:** 🟡 Repo-Stand konsolidiert — separater Tag-/Release-/Asset-Schritt noch ausstehend
 
 **Konsolidierter Stand:**
