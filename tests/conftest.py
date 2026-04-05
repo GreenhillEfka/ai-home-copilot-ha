@@ -1,16 +1,18 @@
 """conftest.py — comprehensive homeassistant stub for CI runner.
 
 Uses types.ModuleType with __path__ so every stub is treated as a real
-package/sub-package by Python's import system. Stubs ALL homeassistant modules
-that the integration's sensor + coordinator files import.
+package/sub-package by Python's import system.
 """
 from __future__ import annotations
 
 import sys
 import types
 from datetime import datetime, timezone
+from typing import Generic, TypeVar
 from unittest.mock import MagicMock
 import voluptuous as vol
+
+_T = TypeVar("_T")
 
 
 def stub(name: str) -> types.ModuleType:
@@ -65,7 +67,12 @@ hc.State = type("State", (), {})
 hup = sys.modules["homeassistant.helpers.update_coordinator"]
 hup.DataUpdateCoordinator = type("DataUpdateCoordinator", (), {})
 hup.UpdateFailed = type("UpdateFailed", (Exception,), {})
-hup.CoordinatorEntity = type("CoordinatorEntity", (), {})
+
+# CoordinatorEntity must support [] subscripting (Generic base)
+class _CoordEnt(Generic[_T]):
+    pass
+_CoordEnt.__class_getitem__ = classmethod(lambda cls, item: _CoordEnt)
+hup.CoordinatorEntity = _CoordEnt
 
 # ─── homeassistant.helpers.entity ──────────────────────────────────────────────
 he = sys.modules["homeassistant.helpers.entity"]
@@ -91,8 +98,8 @@ hst.Store = type("Store", (), {})
 
 # ─── homeassistant.helpers.dispatcher ─────────────────────────────────────────
 hdis = sys.modules["homeassistant.helpers.dispatcher"]
-hdis.dispatcher_connect = MagicMock()
-hdis.dispatcher_send = MagicMock()
+hdis.async_dispatcher_connect = MagicMock()
+hdis.async_dispatcher_send = MagicMock()
 
 # ─── homeassistant.helpers ─────────────────────────────────────────────────────
 sys.modules["homeassistant.helpers"].cv = vol
