@@ -44,4 +44,4 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest tests/test_last_7_sensors.py -q
+          pytest tests/test_agent_status_sensor_projection.py tests/test_neuron_dashboard_sensors_projection.py tests/test_notification_sensor_projection.py -q
