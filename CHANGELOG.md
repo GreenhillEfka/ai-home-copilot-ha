@@ -1,160 +1,78 @@
 # Changelog
 
+## [15.3.40] - 2026-04-05
+
+### Added
+- Projection-Contract-Testsuite: 25 Testdateien, ~291 parametrized Cases.
+- 44 Sensoren als Pure Projection-Shells auf Core-API verifiziert.
+- 3 Sensoren als Coordinator-basierte Integration getestet.
+
+### Sensors verified as pure Projection-Shells
+habitus_zone, mood, autonomy, brain_activity, hub_dashboard, presence_intelligence,
+system_integration, notification_intelligence, agent_status, scene_intelligence,
+battery_optimizer, comfort_index, regional_context, tariff, energy_advisor,
+light_intelligence, weather_optimizer, media_follow, energy_cost, energy_forecast,
+energy_insights, zone_mode, demand_response, notification, proactive_alert,
+weather_warning, anomaly_alert, fuel, gas_meter, heat_pump, ev_charging,
+energy_sankey, energy_schedule, energy_report, area_presence (Core-sync),
+appliance_fingerprint, automation_suggestion, automation_template, cross_dependency,
+predictive_maintenance, brain_architecture, onboarding, anomaly_detection,
+activity_sensors, zone_presence_trigger
+
+### Fixed
+- MRO-Konflikt in module_integration.py (CoordinatorEntity + SensorEntity).
+- Testlogik-Bugs in HA-19/20 (410/410 green nach Fix).
+- UNLOAD_IN_PROGRESS Guard in async_unload_entry.
+
+### Release Gate
+- Alle 32 Commits sind test-only (kein Produktivcode).
+- Branch: `release/v15.3.40-testimprovement` auf Origin.
+- PS-151 drift guards: alle grün auf jedem Commit.
+- Kein Live-/Install-/Restart-Schritt bis PR-Merge.
+
+## [15.3.39] - 2026-04-05
+
+### Changed
+- Release-/Version-Surfaces auf eine frische, unrecycelte Zielversion oberhalb von `15.3.38` konsolidiert.
+- `VERSION`, `custom_components/copilot_ha/VERSION` und `custom_components/copilot_ha/manifest.json` berichten jetzt einheitlich `15.3.39`.
+- README-Release-Block von stale `v15.3.0` auf den aktuellen Release-Prep-Stand `v15.3.39` umgestellt.
+
+### Fixed
+- Drift zwischen Manifest, Repo-Version, komponenteninterner VERSION und Doku entfernt.
+- Doppelte konkurrierende `15.3.38`-Blöcke bereinigt.
+- Stale Release-Claims (`v15.3.0`, `READY FOR PRODUCTION`, veraltete Kompatibilitätsbehauptungen) aus dem aktiven Release-Pfad entfernt.
+
+### Release Gate
+- Dieser Stand ist **release-vorbereitet**, aber noch **nicht** getaggt und **nicht** veröffentlicht.
+- Nächster separater Schritt nach Review: Tag `v15.3.39` auf genau diesen Release-Commit setzen und danach erst GitHub-Release mit `pilotsuite-styx-ha.zip` anlegen.
+
+## [15.3.38] - 2026-04-02
+
+### Updated
+- Core-Version auf `v15.3.38` angehoben.
+- README und CHANGELOG als Release-Doku für den damaligen Stand ergänzt.
+- Main-basierte `voice_context`-Wahrheit entstand erst **nach** dem existierenden Tag `v15.3.38`; der alte Tag bleibt daher historisch und wird nicht recycelt.
+
 ## [v15.3.0] - 2026-04-01
 
-### 🎯 Life-Long-Learning Integration
-
-**Unified Habitus Store Integration:**
-- Zone Sync mit Unified Store (RAG + Habitus + Anomaly)
-- Bidirektionale Synchronisation
-- Module State Sync (active/learning/off)
-- Entity Tag Sync (automatische Zuordnung)
-- Real-time Updates
-
-**End-to-End Wiring:**
-- AutoDiscovery → Store → Neurons → Anomaly → Chat → Feedback
-- Alle Komponenten verkabelt
-- Maximale Synergien
-
-### 📡 APIs (via Core)
-
-**Unified Habitus API:**
-- `GET /api/v1/habitus` — Overview + Stats
-- `GET /api/v1/habitus/patterns` — Gelernte Patterns (zone-scoped)
-- `POST /api/v1/habitus/feedback` — Feedback geben
-- `GET /api/v1/habitus/preferences` — Nutzer-Präferenzen (zone-scoped)
-
-**Chat API:**
-- `POST /api/v1/chat/sessions` — Session erstellen
-- `POST /api/v1/chat/sessions/<id>/messages` — Nachricht senden
-- `POST /api/v1/chat/webhooks/telegram` — Telegram Webhook
-- `POST /api/v1/chat/webhooks/rest` — REST Webhook
-
-**Learning Viz:**
-- `GET /api/v1/learning/overview` — Intelligence Score (0-100)
-- `GET /api/v1/learning/patterns` — Patterns (visualisiert)
-- `POST /api/v1/learning/correct` — Manuelle Korrektur
-
-### 🔧 Services
-
-**NEU:**
-- `copilot_ha.sync_zones` — Zonen synchronisieren (Unified Store)
-- `copilot_ha.set_module_state` — Module-State setzen
-- `copilot_ha.add_feedback` — Feedback geben (End-to-End)
-
-### 📊 Entities
-
-**NEU:**
-- `sensor.pilotsuite_intelligence_score` — Intelligence Score (0-100)
-- `sensor.pilotsuite_patterns_learned` — Gelernte Patterns (Unified Store)
-- `sensor.pilotsuite_anomaly_detected` — Anomalie erkannt (ja/nein)
-- `button.pilotsuite_generate_proposals` — Vorschläge generieren
-
-### 🏷️ Tag System
-
-**9 Domain-Kategorien:**
-- light, climate, motion, media, energy, humidity, camera, cover, lock
-
-**10 Zone-Tags:**
-- zone_living, zone_bath, zone_kitchen, zone_office, zone_bedroom,
-  zone_hallway, zone_room_mira, zone_room_paul, zone_terrace, zone_outside
-
-**3 Status-Tags:**
-- auto_assign, needs_review, manual_override
-
-### 🔗 Module Dependencies
-
-**Übergreifende Abhängigkeiten:**
-- requires (Light benötigt Motion)
-- enhances (Music verbessert Climate)
-- conflicts (Camera konflikts mit Privacy)
-
-### 📖 Dokumentation
-
-**NEU:**
-- `README.md` — Vollständige Doku (200+ Zeilen)
-- `CHANGELOG.md` — Release Notes
-
-### 📊 Code-Statistik
-
-| Metrik | Wert |
-|--------|------|
-| **Integration** | Core v15.3.0 |
-| **Zone Sync** | Bidirektional (Unified Store) |
-| **Tag Categories** | 9+10+3 |
-| **Services** | 3 |
-| **Entities** | 10+ |
-| **End-to-End** | Vollständig verkabelt |
-
-### 🎯 Vision-Status
-
-| Vision-Element | Status |
-|----------------|--------|
-| **Zone Sync** | ✅ Core ↔ HA (Unified) |
-| **Tag System** | ✅ Auto-Assign |
-| **Module Config** | ✅ active/learning/off |
-| **Chat Integration** | ✅ Vorbereitet |
-| **Learning Viz** | ✅ API bereit |
-| **End-to-End** | ✅ Verkabelt |
-
----
+### Added
+- Zone Sync zwischen Core und Home Assistant.
+- Tag-System für automatische Zone-/Entity-Zuordnung.
+- Module-State-Steuerung pro Zone.
+- Vorbereitete Lovelace-Cards und zugehörige Services.
 
 ## [v15.2.10] - 2026-03-31
 
 ### Added
-- **Habitus Zones API** — Zone-Konfiguration
-- **Zone Auto-Setup** — Automatische Zonen-Erkennung
-- **Entity Mapping** — Role-based Assignment
-- **Module Sensors** — Batch 1-5 Entities
+- Habitus Zones API.
+- Zone Auto-Setup.
+- Entity Mapping.
+- Module Sensors Batch 1-5.
 
 ### Changed
-- ZoneType Enum als Single Source of Truth
-- Module-Konfiguration pro Zone
+- ZoneType Enum als Single Source of Truth.
+- Modul-Konfiguration pro Zone.
 
 ### Fixed
-- Zone↔Entity Mapping konsolidiert
-- HA↔Core Sync verbessert
-
----
-
-**🚀 v15.3.0 — INTEGRATION DES LERNENDEN, VERKABELTEN DACHSYSTEMS.**
-
-## [15.3.38] - 2026-04-02
-
-### Updated
-- Core Version auf v15.3.38 aktualisiert
-- Blueprint-System zentralisiert
-- 80+ API-Blueprints konfiguriert
-- Einheitliche /api/v1/* Prefixes
-
-### Fixed
-- 14 Blueprint-Prefixes korrigiert
-- 12 fehlende Blueprints registriert
-
-### Testing
-- 460 Endpoints getestet
-- Auth funktioniert (236× 401 → 0× 401)
-
-## [15.3.38] - 2026-04-02
-
-### Updated
-- ✅ Core Version auf v15.3.38 aktualisiert
-- ✅ Blueprint-System zentralisiert
-- ✅ 80+ API-Blueprints konfiguriert
-- ✅ Einheitliche /api/v1/* Prefixes
-
-### Fixed
-- ✅ 14 Blueprint-Prefixes korrigiert
-- ✅ 12 fehlende Blueprints registriert
-
-### Testing
-- ✅ 460 Endpoints getestet
-- ✅ Auth funktioniert (236× 401 → 0× 401)
-
-### Compatibility
-- ✅ Home Assistant 2026.4+
-- ✅ HACS 1.30+
-
-### Installation
-- ✅ HACS → PilotSuite Integration → Update
-- ✅ Add-on Store → PilotSuite Core → Update
+- Zone↔Entity-Mapping konsolidiert.
+- HA↔Core-Sync verbessert.
