@@ -22,6 +22,7 @@ from .zone_automation_client import get_zone_automation_client
 from .zone_automation_events import setup_zone_automation_events
 from .cards.zone_automation_cards import register_cards
 from .voice_sensors import async_setup_voice_sensors
+from .sensors.anomaly_aggregation_sensor import async_setup_anomaly_sensors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,6 +76,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Setup Voice Sensors (Slice 165)
     await async_setup_voice_sensors(hass)
+    
+    # Setup Anomaly Aggregation Sensors (HA-155)
+    await async_setup_anomaly_sensors(hass)
     
     return True
 

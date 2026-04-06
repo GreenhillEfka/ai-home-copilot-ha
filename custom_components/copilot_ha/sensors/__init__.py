@@ -90,9 +90,20 @@ from .zone_mode_sensor import ZoneModeSensor
 from .zone_presence_trigger import ZonePresenceTriggerSensor
 from .voice_sensors import (
     VoiceCommandHistorySensor,
+    VoicePipelineStatusSensor,
     VoiceSTTStatusSensor,
+    VoiceTTSStatusSensor,
+    VoiceCommandCountSensor,
     VoiceCommandsTodaySensor,
     VoiceLastCommandSensor,
+)
+from .anomaly_aggregation_sensor import (
+    AnomalyAggregationSensor,
+    AnomalyHealthScoreSensor,
+    AnomalyCriticalCountSensor,
+    AnomalyHighCountSensor,
+    AnomalyMediumCountSensor,
+    AnomalyCriticalListSensor,
 )
 from .agent_status_sensor import AgentStatusSensor
 from .brain_activity_sensor import BrainActivitySensor
@@ -208,7 +219,17 @@ __all__ = [
     "AgentStatusSensor",
     # Voice
     "VoiceCommandHistorySensor",
+    "VoicePipelineStatusSensor",
     "VoiceSTTStatusSensor",
+    "VoiceTTSStatusSensor",
+    "VoiceCommandCountSensor",
     "VoiceCommandsTodaySensor",
     "VoiceLastCommandSensor",
+    # Anomaly Aggregation
+    "AnomalyAggregationSensor",
+    "AnomalyHealthScoreSensor",
+    "AnomalyCriticalCountSensor",
+    "AnomalyHighCountSensor",
+    "AnomalyMediumCountSensor",
+    "AnomalyCriticalListSensor",
 ]
