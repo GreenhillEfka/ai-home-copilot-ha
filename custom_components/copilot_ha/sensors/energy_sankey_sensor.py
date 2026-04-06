@@ -55,14 +55,19 @@ class EnergySankeySensor(CopilotBaseEntity):
             attrs["flow_count"] = len(self._flow_data.get("flows", []))
 
             # Node labels for quick overview
-            attrs["sources"] = [
-                n["label"] for n in self._flow_data.get("nodes", [])
-                if n.get("category") == "source"
-            ]
-            attrs["consumers"] = [
-                n["label"] for n in self._flow_data.get("nodes", [])
-                if n.get("category") in ("device", "zone")
-            ]
+            nodes = self._flow_data.get("nodes", [])
+            if isinstance(nodes, list):
+                attrs["sources"] = [
+                    n["label"] for n in nodes
+                    if isinstance(n, dict) and n.get("category") == "source"
+                ]
+                attrs["consumers"] = [
+                    n["label"] for n in nodes
+                    if isinstance(n, dict) and n.get("category") in ("device", "zone")
+                ]
+            else:
+                attrs["sources"] = []
+                attrs["consumers"] = []
 
         return attrs
 
