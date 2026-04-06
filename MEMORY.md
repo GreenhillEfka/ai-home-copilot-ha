@@ -3,6 +3,7 @@
 | **C-030** | P3-008: Wi-Fi/BLE Fingerprinting | 2026-04-07 00:05 | Complete fingerprinting module with Wi-Fi RSSI, BLE beacon detection, sensor fusion, HA integration |
 | **C-031** | P3-009: mmWave Radar Integration | 2026-04-07 00:10 | Complete 60GHz mmWave radar module with static/motion detection, multi-target tracking, calibration, HA integration |
 | **C-032** | P3-006: Neo4j Knowledge Graph Integration | 2026-04-07 00:25 | Neo4j adapter (neo4j_adapter.py), Cypher query builder (cypher_adapter.py), Brain Graph export, visualization data export, 6 new REST API endpoints (/kg/neo4j/*), comprehensive documentation, 46 test cases |
+| **C-033** | Notification Integrations (Pushover, Telegram) | 2026-04-07 00:33 | Pushover handler (pushover.py), Telegram handler (telegram_notify.py), NotificationManager (notification_manager.py), API endpoints (/api/v1/notifications/*), HA notification sensors, config flow options in manifest.json/config.yaml |
 
 **Created:** 2026-04-01 03:47 Europe/Berlin
 **Owner:** openclaw-main
@@ -293,3 +294,18 @@
 - Slice 181-186: MCP/API Expansion
 - HA-155 Rest-Sensoren (comfort_index, energy_insights, etc.)
 *Last Updated: 2026-04-06 23:45 Europe/Berlin*
+
+---
+
+## 🆕 NEW FEATURES (2026-04-07)
+
+| ID | Feature | Status | Location |
+|----|---------|--------|----------|
+| N-001 | Analytics Dashboard Card | ✅ Done | cards/analytics_dashboard_card.py |
+| N-002 | Pushover Integration | ✅ Done | notifications/pushover.py |
+| N-003 | Telegram Integration | ✅ Done | notifications/telegram.py |
+| N-004 | Calendar Card | ✅ Done | cards/calendar_card.py |
+| N-005 | Weather Automation Card | ✅ Done | cards/weather_automation_card.py |
+| N-006 | Notification Card | ✅ Done | cards/notification_card.py |
+
+*All 6 requested features implemented on 2026-04-07*
