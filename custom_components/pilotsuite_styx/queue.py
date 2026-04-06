@@ -1,31 +1,23 @@
-"""PilotSuite Styx Queue Entities — HA-192.
-
-Sync mit Core API: /api/v1/jobs/*
+"""PilotSuite Styx Queue — HA-377.
+Auto-Sync Core: /api/v1/queues/*
 """
 from __future__ import annotations
-import logging
+import logging, requests
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import CONF_CORE_URL
-
 _LOGGER = logging.getLogger(__name__)
-
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry,
-    async_add_entities: AddEntitiesCallback,
-):
-    """Setup queue sensors from config entry."""
+async def async_setup_entry(hass, config_entry, async_add_entities):
     core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
-    entities = [CoreJobQueueSensor(core_url)]
-    async_add_entities(entities)
-
-class CoreJobQueueSensor(SensorEntity):
-    """Sensor for Core job queue status."""
+    async_add_entities([CoreQueueSensor(core_url)])
+class CoreQueueSensor(SensorEntity):
     def __init__(self, core_url: str):
         self._core_url = core_url
-        self._attr_name = "PilotSuite Job Queue"
-        self._attr_unique_id = "pilotsuite_job_queue"
+        self._attr_name = "PilotSuite Queues"
+        self._attr_unique_id = "pilotsuite_queues"
         self._attr_native_value = 0
-        self._attr_native_unit_of_measurement = "jobs"
+    def update(self):
+        resp = requests.get(f"{self._core_url}/api/v1/queues/list", timeout=5)
+        if resp.status_code == 200:
+            self._attr_native_value = len(resp.json().get("queues", []))
