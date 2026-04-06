@@ -64,6 +64,6 @@ homeassistant>=2024.1.0
 voluptuous-serialize>=2.6.0
 
 # Optional: Advanced Features
-# neo4j>=5.15.0  # Knowledge Graph (optional)
-# networkx>=3.2.0  # Graph analysis (optional)
+neo4j>=5.15.0  # Knowledge Graph (P1-005)
+networkx>=3.2.0  # Graph analysis (P1-005)
 # paho-mqtt>=2.0.0  # MQTT integration (optional)

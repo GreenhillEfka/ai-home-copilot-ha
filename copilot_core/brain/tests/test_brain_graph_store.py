@@ -10,9 +10,17 @@ class TestBrainGraphStore:
 
     @pytest.fixture
     def graph_store(self):
-        """Create test graph store."""
+        """Create test graph store with clean state."""
         from copilot_core.brain.graph_store import BrainGraphStore
-        store = BrainGraphStore(storage_path="/tmp/test_brain_graph")
+        import shutil
+        from pathlib import Path
+        
+        # Clean up any existing test data
+        test_path = Path("/tmp/test_brain_graph")
+        if test_path.exists():
+            shutil.rmtree(test_path)
+        
+        store = BrainGraphStore(storage_path="/tmp/test_brain_graph", auto_load=False)
         yield store
         store.clear()
 
@@ -82,9 +90,8 @@ class TestBrainGraphStore:
         graph_store.add_entity(entity_id, {"type": "persistent"})
         graph_store.save()
         
-        # Create new instance
+        # Create new instance (with auto_load=True to load saved data)
         new_store = type(graph_store)(storage_path="/tmp/test_brain_graph")
-        new_store.load()
         
         entity = new_store.get_entity(entity_id)
         assert entity is not None
