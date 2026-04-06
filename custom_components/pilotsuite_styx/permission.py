@@ -1,11 +1,11 @@
-"""PilotSuite Styx Permission — HA-247.
+"""PilotSuite Styx Permission Management — HA-269.
 
-Sync mit Core API: /api/v1/roles/*, /api/v1/permissions/*
+Sync mit Core API: /api/v1/permissions/*
 """
 from __future__ import annotations
 import logging
 import requests
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import CONF_CORE_URL
@@ -17,24 +17,22 @@ async def async_setup_entry(
     config_entry,
     async_add_entities: AddEntitiesCallback,
 ):
-    """Setup permission switch from config entry."""
+    """Setup permission sensor from config entry."""
     core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
-    entities = [CorePermissionSwitch(core_url)]
+    entities = [CorePermissionSensor(core_url)]
     async_add_entities(entities)
 
-class CorePermissionSwitch(SwitchEntity):
-    """Switch entity for permission control."""
+class CorePermissionSensor(SensorEntity):
+    """Sensor for Core permission count."""
     def __init__(self, core_url: str):
         self._core_url = core_url
-        self._attr_name = "PilotSuite Permission"
-        self._attr_unique_id = "pilotsuite_permission"
-        self._attr_is_on = False
+        self._attr_name = "PilotSuite Permissions"
+        self._attr_unique_id = "pilotsuite_permissions"
+        self._attr_native_value = 0
     
-    def turn_on(self, **kwargs):
-        """Grant permission."""
-        requests.post(f"{self._core_url}/api/v1/permissions/grant", json={"permission": "full", "user": "current"}, timeout=5)
-        self._attr_is_on = True
-    
-    def turn_off(self, **kwargs):
-        """Revoke permission."""
-        self._attr_is_on = False
+    def update(self):
+        """Update permission count from Core."""
+        resp = requests.get(f"{self._core_url}/api/v1/permissions/list", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            self._attr_native_value = len(data.get("permissions", []))
