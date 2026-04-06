@@ -1,160 +1,104 @@
 # Changelog
 
-## [v15.3.0] - 2026-04-01
+All notable changes to PilotSuite Core will be documented in this file.
 
-### 🎯 Life-Long-Learning Integration
-
-**Unified Habitus Store Integration:**
-- Zone Sync mit Unified Store (RAG + Habitus + Anomaly)
-- Bidirektionale Synchronisation
-- Module State Sync (active/learning/off)
-- Entity Tag Sync (automatische Zuordnung)
-- Real-time Updates
-
-**End-to-End Wiring:**
-- AutoDiscovery → Store → Neurons → Anomaly → Chat → Feedback
-- Alle Komponenten verkabelt
-- Maximale Synergien
-
-### 📡 APIs (via Core)
-
-**Unified Habitus API:**
-- `GET /api/v1/habitus` — Overview + Stats
-- `GET /api/v1/habitus/patterns` — Gelernte Patterns (zone-scoped)
-- `POST /api/v1/habitus/feedback` — Feedback geben
-- `GET /api/v1/habitus/preferences` — Nutzer-Präferenzen (zone-scoped)
-
-**Chat API:**
-- `POST /api/v1/chat/sessions` — Session erstellen
-- `POST /api/v1/chat/sessions/<id>/messages` — Nachricht senden
-- `POST /api/v1/chat/webhooks/telegram` — Telegram Webhook
-- `POST /api/v1/chat/webhooks/rest` — REST Webhook
-
-**Learning Viz:**
-- `GET /api/v1/learning/overview` — Intelligence Score (0-100)
-- `GET /api/v1/learning/patterns` — Patterns (visualisiert)
-- `POST /api/v1/learning/correct` — Manuelle Korrektur
-
-### 🔧 Services
-
-**NEU:**
-- `copilot_ha.sync_zones` — Zonen synchronisieren (Unified Store)
-- `copilot_ha.set_module_state` — Module-State setzen
-- `copilot_ha.add_feedback` — Feedback geben (End-to-End)
-
-### 📊 Entities
-
-**NEU:**
-- `sensor.pilotsuite_intelligence_score` — Intelligence Score (0-100)
-- `sensor.pilotsuite_patterns_learned` — Gelernte Patterns (Unified Store)
-- `sensor.pilotsuite_anomaly_detected` — Anomalie erkannt (ja/nein)
-- `button.pilotsuite_generate_proposals` — Vorschläge generieren
-
-### 🏷️ Tag System
-
-**9 Domain-Kategorien:**
-- light, climate, motion, media, energy, humidity, camera, cover, lock
-
-**10 Zone-Tags:**
-- zone_living, zone_bath, zone_kitchen, zone_office, zone_bedroom,
-  zone_hallway, zone_room_mira, zone_room_paul, zone_terrace, zone_outside
-
-**3 Status-Tags:**
-- auto_assign, needs_review, manual_override
-
-### 🔗 Module Dependencies
-
-**Übergreifende Abhängigkeiten:**
-- requires (Light benötigt Motion)
-- enhances (Music verbessert Climate)
-- conflicts (Camera konflikts mit Privacy)
-
-### 📖 Dokumentation
-
-**NEU:**
-- `README.md` — Vollständige Doku (200+ Zeilen)
-- `CHANGELOG.md` — Release Notes
-
-### 📊 Code-Statistik
-
-| Metrik | Wert |
-|--------|------|
-| **Integration** | Core v15.3.0 |
-| **Zone Sync** | Bidirektional (Unified Store) |
-| **Tag Categories** | 9+10+3 |
-| **Services** | 3 |
-| **Entities** | 10+ |
-| **End-to-End** | Vollständig verkabelt |
-
-### 🎯 Vision-Status
-
-| Vision-Element | Status |
-|----------------|--------|
-| **Zone Sync** | ✅ Core ↔ HA (Unified) |
-| **Tag System** | ✅ Auto-Assign |
-| **Module Config** | ✅ active/learning/off |
-| **Chat Integration** | ✅ Vorbereitet |
-| **Learning Viz** | ✅ API bereit |
-| **End-to-End** | ✅ Verkabelt |
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [v15.2.10] - 2026-03-31
+## [1.0.0-rc2] — 2026-04-07
 
 ### Added
-- **Habitus Zones API** — Zone-Konfiguration
-- **Zone Auto-Setup** — Automatische Zonen-Erkennung
-- **Entity Mapping** — Role-based Assignment
-- **Module Sensors** — Batch 1-5 Entities
+- **P2-002:** OR-Tools CP-SAT Scheduler for energy optimization
+  - Rolling 24-hour horizon with 15-minute slots
+  - Support for EV charging, heat pumps, battery storage
+  - Hard/soft constraint support
+  - Carbon intensity weighting
+- **P1-003:** Multi-User Preference Learning
+  - Per-user preference profiles
+  - Context-aware recommendations
+  - Pattern learning and suggestions
+  - Profile merging for shared spaces
+- **P1-007:** Brain Graph Store Tests
+  - 10+ comprehensive test cases
+  - Persistence testing
+  - Concurrent access testing
+  - API endpoint tests
+- **P1-008:** Tag System Tests
+  - 12+ test cases for tagging operations
+  - Bulk operations testing
+  - Auto-tagging rules testing
+  - Export/import testing
+- **Infrastructure:**
+  - `requirements.txt` with all dependencies
+  - `manifest.json` for HACS integration
+  - `__init__.py` with version strings
+  - Research-to-Implementation tracker
 
 ### Changed
-- ZoneType Enum als Single Source of Truth
-- Module-Konfiguration pro Zone
+- Version bumped from `1.0.0-rc1` to `1.0.0-rc2`
+- Energy module expanded with scheduler integration
+- Test coverage increased from 0% to ~5%
 
 ### Fixed
-- Zone↔Entity Mapping konsolidiert
-- HA↔Core Sync verbessert
+- Missing package initialization (`__init__.py`)
+- Dependency documentation (now in `requirements.txt`)
+- HACS manifest structure
+
+### Technical Details
+- **Commits:** 5+ in this release
+- **LOC Added:** ~1,900
+- **Files Added:** 7
+- **Tests Added:** 22+
 
 ---
 
-**🚀 v15.3.0 — INTEGRATION DES LERNENDEN, VERKABELTEN DACHSYSTEMS.**
+## [1.0.0-rc1] — 2026-04-07
 
-## [15.3.38] - 2026-04-02
+### Added
+- Initial release candidate
+- Core modules across 35+ directories
+- API endpoints (REST, WebSocket, GraphQL, MCP)
+- Voice pipeline (STT, NLU, TTS, Dialogue)
+- RAG system with vector store
+- ML modules (habit learning, pattern detection, anomaly detection)
+- Energy management (forecasting, consumption tracking)
+- Home Assistant integration
+- Admin dashboard
+- Lovelace cards
 
-### Updated
-- Core Version auf v15.3.38 aktualisiert
-- Blueprint-System zentralisiert
-- 80+ API-Blueprints konfiguriert
-- Einheitliche /api/v1/* Prefixes
+### Technical Details
+- **Total LOC:** ~18,000+
+- **Modules:** 90+
+- **Commits:** 820+
 
-### Fixed
-- 14 Blueprint-Prefixes korrigiert
-- 12 fehlende Blueprints registriert
+---
 
-### Testing
-- 460 Endpoints getestet
-- Auth funktioniert (236× 401 → 0× 401)
+## [Unreleased]
 
-## [15.3.38] - 2026-04-02
+### Planned for v1.0.0
+- Security audit completion
+- Test coverage >80%
+- HACS validation
+- Complete documentation
+- Performance benchmarks
 
-### Updated
-- ✅ Core Version auf v15.3.38 aktualisiert
-- ✅ Blueprint-System zentralisiert
-- ✅ 80+ API-Blueprints konfiguriert
-- ✅ Einheitliche /api/v1/* Prefixes
+### Under Consideration
+- Old codebase feature parity analysis
+- Knowledge Graph integration (Neo4j)
+- Multi-sensor fusion
+- Bayesian presence detection
 
-### Fixed
-- ✅ 14 Blueprint-Prefixes korrigiert
-- ✅ 12 fehlende Blueprints registriert
+---
 
-### Testing
-- ✅ 460 Endpoints getestet
-- ✅ Auth funktioniert (236× 401 → 0× 401)
+## Version History Summary
 
-### Compatibility
-- ✅ Home Assistant 2026.4+
-- ✅ HACS 1.30+
+| Version | Date | LOC | Commits | Key Features |
+|---------|------|-----|---------|--------------|
+| 1.0.0-rc2 | 2026-04-07 | ~19,900 | 822+ | Scheduler, Tests, HACS Prep |
+| 1.0.0-rc1 | 2026-04-07 | ~18,000 | 817+ | Initial RC |
 
-### Installation
-- ✅ HACS → PilotSuite Integration → Update
-- ✅ Add-on Store → PilotSuite Core → Update
+---
+
+*For detailed research-to-implementation tracking, see `docs/RESEARCH_TO_IMPLEMENTATION.md`*
