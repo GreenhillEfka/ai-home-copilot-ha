@@ -61,15 +61,24 @@ class ComfortIndexSensor(CopilotBaseEntity):
         }
 
         if self._comfort_data and self._comfort_data.get("ok"):
-            attrs["grade"] = self._comfort_data.get("grade")
-            attrs["zone_id"] = self._comfort_data.get("zone_id")
-            attrs["suggestions"] = self._comfort_data.get("suggestions", [])
+            data = self._comfort_data
+            if data.get("grade") is not None:
+                attrs["grade"] = data["grade"]
+            zone_id = data.get("zone_id")
+            if zone_id is not None:
+                attrs["zone_id"] = zone_id
+            suggestions = data.get("suggestions")
+            if suggestions is not None:
+                attrs["suggestions"] = suggestions
 
             for reading in self._comfort_data.get("readings", []):
-                factor = reading["factor"]
-                attrs[f"{factor}_score"] = reading["score"]
-                attrs[f"{factor}_status"] = reading["status"]
-                if reading["raw_value"] is not None:
+                factor = reading.get("factor")
+                if factor is None:
+                    continue
+                attrs[f"{factor}_score"] = reading.get("score")
+                if "status" in reading:
+                    attrs[f"{factor}_status"] = reading["status"]
+                if reading.get("raw_value") is not None:
                     attrs[f"{factor}_value"] = reading["raw_value"]
 
         return attrs
