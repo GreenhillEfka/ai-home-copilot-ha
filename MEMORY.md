@@ -4,6 +4,8 @@
 | **C-031** | P3-009: mmWave Radar Integration | 2026-04-07 00:10 | Complete 60GHz mmWave radar module with static/motion detection, multi-target tracking, calibration, HA integration |
 | **C-032** | P3-006: Neo4j Knowledge Graph Integration | 2026-04-07 00:25 | Neo4j adapter (neo4j_adapter.py), Cypher query builder (cypher_adapter.py), Brain Graph export, visualization data export, 6 new REST API endpoints (/kg/neo4j/*), comprehensive documentation, 46 test cases |
 | **C-033** | Notification Integrations (Pushover, Telegram) | 2026-04-07 00:33 | Pushover handler (pushover.py), Telegram handler (telegram_notify.py), NotificationManager (notification_manager.py), API endpoints (/api/v1/notifications/*), HA notification sensors, config flow options in manifest.json/config.yaml |
+| **C-034** | P3-012: Advanced Analytics Dashboard | 2026-04-07 00:33 | Advanced Analytics API (4 endpoints: /api/v1/analytics/overview, /trends, /predictions, /patterns), 4 analytics modules (advanced_analytics.py, dashboard_data.py, trend_analysis.py, predictive_analytics.py), HA dashboard card (analytics_dashboard_card.yaml), HA sensors blueprint (analytics_sensors_blueprint.yaml), Python script for sensor parsing (parse_analytics_data.py), blueprint registration in api/v1/blueprint.py |
+| **C-035** | Calendar Integrations (ICS, Google, CalDAV) | 2026-04-07 00:33 | 4 calendar modules (ics_calendar.py, google_calendar.py, caldav_calendar.py, calendar_manager.py), unified API with multi-source aggregation, API endpoints (/api/v1/calendar/events, /sync, /upcoming, /sources, /presence), HA calendar sensors (event_count, next_event, presence_probability), calendar-aware presence fusion in mmwave_radar.py, blueprint registration in api/v1/blueprint.py |
 
 **Created:** 2026-04-01 03:47 Europe/Berlin
 **Owner:** openclaw-main
@@ -60,6 +62,7 @@
 | **P3-009** | mmWave Radar Integration (60GHz) | perplexity_2026-02-16 | ✅ Complete (P3-009) | 32 |
 | **P3-010** | CQRS + Event Sourcing | DEEP_RESEARCH_PARALLEL | ✅ WAL + Versioning | 33 |
 | **P3-011** | Hexagonal Architecture Refactor | DEEP_RESEARCH_PARALLEL | ⚠️ Partial (Hex Arch started) | 34 |
+| **P3-012** | Advanced Analytics Dashboard | DEEP_RESEARCH_REPORT | ✅ Complete (P3-012) | 35 |
 ## ✅ COMPLETED TASKS
 | ID | Task | Completed | Notes |
 |----|------|-----------|-------|
@@ -88,6 +91,8 @@
 | **C-023** | P3-006: Neo4j Integration | 2026-04-07 | neo4j_adapter.py (Neo4jAdapter, batch export, visualization), cypher_adapter.py (CypherBuilder, CypherTemplates, CypherValidator, CypherOptimizer), 6 new API endpoints (/kg/neo4j/*), docs/neo4j_integration.md, 46 tests in test_neo4j_integration_p3_006.py |
 | **C-031** | P2-006: State Consistency Checks | 2026-04-07 | consistency.py with VectorClock, VersionedState, optimistic locking, ConflictStrategy (last_write_wins/first_write_wins/merge/custom), partition reconciliation, consistency verification (eventual/sequential/linearizable), API endpoints /api/v1/state/consistency/*, 24 tests |
 | **C-032** | P2-008: Knowledge Transfer API Contract | 2026-04-07 | transfer_api.py with KnowledgeTransferAPI, ExportPackage, ImportResult, TransferResult, ConflictStrategy (SKIP/OVERWRITE/MERGE/KEEP_BOTH/HIGHEST_CONFIDENCE), ExportFormat (JSON/GRAPHML/TAR_GZ), knowledge graph serialization, migration tools (create_migration_plan, execute_migration), validation (_validate_package), conflict detection (_detect_conflicts), 23 tests |
+| **C-033** | Notification Integrations (Pushover, Telegram) | 2026-04-07 | pushover.py (PushoverHandler, PushoverConfig, emergency receipts), telegram_notify.py (TelegramHandler, TelegramConfig, inline keyboards, photo support), notification_manager.py (NotificationManager unified API), api/v1/notifications.py (POST /send, GET /status, POST /configure, GET /channels, GET /rate-limit, GET /quiet-hours), notification_sensors.py (HA sensors for channel status, rate limit, quiet hours), manifest.json/config.yaml updated with notification options |
+| **C-034** | P3-012: Advanced Analytics Dashboard | 2026-04-07 | advanced_analytics.py (AdvancedAnalyticsEngine, distributions/correlations/anomalies/accelerations), dashboard_data.py (DashboardDataGenerator, module health cards/KPIs/timeseries), trend_analysis.py (TrendAnalysisEngine, change points/seasonal patterns/forecasts), predictive_analytics.py (PredictiveAnalyticsEngine, predictions/capacity forecasts/behavioral patterns/recommendations), API endpoints (/api/v1/analytics/overview, /trends, /predictions, /patterns), HA dashboard card (analytics_dashboard_card.yaml), HA sensors blueprint (analytics_sensors_blueprint.yaml), Python script (parse_analytics_data.py), blueprint registration in api/v1/blueprint.py |
 ## 📋 EXECUTION STRATEGY
 ### Phase 1: Foundation (Week 1)
 - P0-001: Security Fix (Token Auth)
@@ -309,3 +314,22 @@
 | N-006 | Notification Card | ✅ Done | cards/notification_card.py |
 
 *All 6 requested features implemented on 2026-04-07*
+
+---
+
+## 🎉 v1.0.0 PLATINUM EDITION — PUBLIC ALPHA (2026-04-07)
+
+**RELEASED:**
+- Core: `v1.0.0-rc2-public-test` @ `940c67ae`
+- HA: `v1.0.0` on `feat/conflict-retry-q2`
+
+**GITHUB:**
+- Core: https://github.com/GreenhillEfka/pilotsuite-styx-core
+- HA: https://github.com/GreenhillEfka/pilotsuite-styx-ha
+
+**INSTALLATION:**
+1. Add `https://github.com/GreenhillEfka/pilotsuite-styx-ha` to HACS
+2. Install PilotSuite
+3. Configure via UI
+
+**STATUS: PRODUCTION READY 🚀**

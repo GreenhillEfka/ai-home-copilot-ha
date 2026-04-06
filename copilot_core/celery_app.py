@@ -225,19 +225,22 @@ def backup_create(self, include_patterns=True, include_vectors=True):
 @app.task(bind=True, max_retries=3, default_retry_delay=300)
 def report_daily(self):
     """Generate daily report."""
+    import asyncio
     try:
         from copilot_core.reporting.engine import ReportGenerator, ReportDelivery
         
         generator = ReportGenerator()
         delivery = ReportDelivery()
         
-        report = await generator.generate_daily_summary()
+        # Run async methods in sync context
+        loop = asyncio.get_event_loop()
+        report = loop.run_until_complete(generator.generate_daily_summary())
         
         # Save to file
         timestamp = datetime.now().strftime("%Y%m%d")
         filepath = f"/config/pilotsuite/reports/daily_{timestamp}.json"
         
-        await delivery.deliver_to_file(report, filepath)
+        loop.run_until_complete(delivery.deliver_to_file(report, filepath))
         
         return {
             "success": True,
@@ -251,19 +254,22 @@ def report_daily(self):
 @app.task(bind=True, max_retries=3, default_retry_delay=300)
 def report_weekly(self):
     """Generate weekly report."""
+    import asyncio
     try:
         from copilot_core.reporting.engine import ReportGenerator, ReportDelivery
         
         generator = ReportGenerator()
         delivery = ReportDelivery()
         
-        report = await generator.generate_weekly_summary()
+        # Run async methods in sync context
+        loop = asyncio.get_event_loop()
+        report = loop.run_until_complete(generator.generate_weekly_summary())
         
         # Save to file
         timestamp = datetime.now().strftime("%Y%m%d")
         filepath = f"/config/pilotsuite/reports/weekly_{timestamp}.json"
         
-        await delivery.deliver_to_file(report, filepath)
+        loop.run_until_complete(delivery.deliver_to_file(report, filepath))
         
         return {
             "success": True,

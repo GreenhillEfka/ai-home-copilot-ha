@@ -4,6 +4,7 @@ Setup für:
 1. Zone Automation Event Handler (state_changed → CORE)
 2. Lovelace Cards Registry
 3. Services Registry
+4. Plugin System for dynamic modules
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from .const import DOMAIN, CONF_CORE_URL, CONF_API_TOKEN
 from .zone_automation_client import get_zone_automation_client
 from .zone_automation_events import setup_zone_automation_events
 from .cards.zone_automation_cards import register_cards
+from .plugin_setup import async_setup as async_setup_plugins
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +34,9 @@ async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
     # Register Lovelace Cards
     cards = register_cards()
     _LOGGER.info(f"Registered {len(cards)} Lovelace Cards")
+    
+    # Initialize plugin system
+    await async_setup_plugins(hass, config)
     
     return True
 

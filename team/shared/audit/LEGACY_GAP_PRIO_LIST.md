@@ -18,7 +18,7 @@
 | `PUT /api/v1/notifications/subscriptions/:device_id` | Keine Device-Token Updates | ❌ Offen |
 | `GET /api/v1/energy/baselines` | Keine Baseline-Referenz für Energy-Optimizer | ❌ Offen |
 | `GET /api/v1/energy/explain/:suggestion_id` | Keine Erklärbarkeit für Energy-Vorschläge | ❌ Offen |
-| `GET /api/v1/energy/suppress` | Keine Unterdrückung von Energy-Automatisierungen | ❌ Offen |
+| `GET /api/v1/energy/suppress` | Keine Unterdrückung von Energy-Automatisierungen | ✅ Implementiert |
 | `GET /api/v1/weather/pv-recommendations` | Keine PV-Optimierung (kritisch für Energy) | ❌ Offen |
 | `GET /api/v1/weather/forecast` | Keine Wettervorhersage für Habitus-Planung | ❌ Offen |
 
@@ -32,7 +32,7 @@
 | `GET /api/v1/habitus/dashboard_cards` | Keine Dashboard-Karten für Habitus-Zonen | ❌ Offen |
 | `GET /api/v1/habitus/dashboard_cards/health` | Keine Health-Visualisierung pro Zone | ❌ Offen |
 | `GET /api/v1/habitus/dashboard_cards/rules` | Keine Regel-Übersicht im Dashboard | ❌ Offen |
-| `GET /api/v1/health/deep` | Keine tiefe System-Diagnose | ❌ Offen |
+| `GET /api/v1/health/deep` | Keine tiefe System-Diagnose | ✅ Implementiert |
 | `GET /api/v1/health/metrics` | Keine granularen Health-Metriken | ❌ Offen |
 | `GET /api/v1/search` | Keine globale Suche (durch RAG teilweise ersetzt, aber Legacy-Bruch) | ❌ Offen |
 | `DELETE /api/v1/candidates/:candidate_id` | Keine Löschung von Kandidaten | ❌ Offen |

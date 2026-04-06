@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import time
 import hashlib
+import threading
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Callable
@@ -81,7 +82,7 @@ class QueryOptimizer:
 
 
 class ConnectionPool:
-    """Database connection pool with monitoring."""
+    """Database connection pool with monitoring (thread-safe)."""
 
     def __init__(self, max_connections: int = 20, connection_factory: Optional[Callable] = None):
         self.max_connections = max_connections
@@ -90,44 +91,49 @@ class ConnectionPool:
         self._active: set = set()
         self._wait_count = 0
         self._total_wait_ms = 0.0
+        self._lock = threading.Lock()
 
     @contextmanager
     def get_connection(self, timeout: float = 5.0):
         """Get connection from pool."""
         start = time.time()
         
-        for conn in self._connections:
-            if conn not in self._active:
+        with self._lock:
+            for conn in self._connections:
+                if conn not in self._active:
+                    self._active.add(conn)
+                    try:
+                        yield conn
+                    finally:
+                        with self._lock:
+                            self._active.discard(conn)
+                    return
+
+            if len(self._connections) < self.max_connections:
+                conn = self.connection_factory() if self.connection_factory else None
+                self._connections.append(conn)
                 self._active.add(conn)
                 try:
                     yield conn
                 finally:
-                    self._active.discard(conn)
+                    with self._lock:
+                        self._active.discard(conn)
                 return
 
-        if len(self._connections) < self.max_connections:
-            conn = self.connection_factory() if self.connection_factory else None
-            self._connections.append(conn)
-            self._active.add(conn)
-            try:
-                yield conn
-            finally:
-                self._active.discard(conn)
-            return
-
-        self._wait_count += 1
-        raise TimeoutError("Connection pool exhausted")
+            self._wait_count += 1
+            raise TimeoutError("Connection pool exhausted")
 
     def get_stats(self) -> ConnectionPoolStats:
         """Get pool statistics."""
-        return ConnectionPoolStats(
-            total_connections=len(self._connections),
-            active_connections=len(self._active),
-            idle_connections=len(self._connections) - len(self._active),
-            max_connections=self.max_connections,
-            wait_count=self._wait_count,
-            avg_wait_ms=self._total_wait_ms / max(1, self._wait_count)
-        )
+        with self._lock:
+            return ConnectionPoolStats(
+                total_connections=len(self._connections),
+                active_connections=len(self._active),
+                idle_connections=len(self._connections) - len(self._active),
+                max_connections=self.max_connections,
+                wait_count=self._wait_count,
+                avg_wait_ms=self._total_wait_ms / max(1, self._wait_count)
+            )
 
 
 class QueryCache:

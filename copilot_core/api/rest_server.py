@@ -18,6 +18,9 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 
+# Legacy gap endpoints
+from copilot_core.api.v1.legacy_gaps import router as legacy_gaps_router
+
 logger = logging.getLogger(__name__)
 
 
@@ -367,6 +370,9 @@ def create_app(config: Optional[APIConfig] = None) -> FastAPI:
 
     # Register routes
     register_routes(app, config)
+    
+    # Register legacy gap endpoints
+    app.include_router(legacy_gaps_router)
 
     return app
 

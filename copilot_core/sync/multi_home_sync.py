@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import asyncio
 import aiohttp
+import threading
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Set
 from dataclasses import dataclass, field
@@ -104,23 +105,28 @@ class MultiHomeSyncEngine:
         self._pending_sync_items: List[SyncItem] = []
         self._status = SyncStatus.IDLE
         self._last_error: Optional[str] = None
+        self._sync_lock = asyncio.Lock()
+        self._homes_lock = threading.Lock()
 
     def add_remote_home(self, remote: RemoteHome):
         """Add a remote home to sync with."""
-        self._remote_homes[remote.home_id] = remote
+        with self._homes_lock:
+            self._remote_homes[remote.home_id] = remote
         logger.info(f"Added remote home: {remote.name} ({remote.home_id})")
 
     def remove_remote_home(self, home_id: str) -> bool:
         """Remove a remote home."""
-        if home_id in self._remote_homes:
-            del self._remote_homes[home_id]
-            logger.info(f"Removed remote home: {home_id}")
-            return True
+        with self._homes_lock:
+            if home_id in self._remote_homes:
+                del self._remote_homes[home_id]
+                logger.info(f"Removed remote home: {home_id}")
+                return True
         return False
 
     def get_remote_homes(self) -> List[RemoteHome]:
         """Get all remote homes."""
-        return list(self._remote_homes.values())
+        with self._homes_lock:
+            return list(self._remote_homes.values())
 
     async def sync_now(self, home_ids: Optional[List[str]] = None) -> Dict[str, Any]:
         """
@@ -132,38 +138,43 @@ class MultiHomeSyncEngine:
         Returns:
             Sync result
         """
-        if self._status == SyncStatus.SYNCING:
-            return {"success": False, "error": "Sync already in progress"}
-        
-        self._status = SyncStatus.SYNCING
-        self._last_error = None
-        
-        results = {}
-        
-        for home_id, remote in self._remote_homes.items():
-            if not remote.enabled:
-                continue
+        async with self._sync_lock:
+            if self._status == SyncStatus.SYNCING:
+                return {"success": False, "error": "Sync already in progress"}
             
-            if home_ids and home_id not in home_ids:
-                continue
+            self._status = SyncStatus.SYNCING
+            self._last_error = None
             
-            try:
-                result = await self._sync_with_home(remote)
-                results[home_id] = result
-            except Exception as e:
-                logger.error(f"Sync failed with {home_id}: {e}")
-                results[home_id] = {"success": False, "error": str(e)}
-                self._last_error = str(e)
-        
-        self._status = SyncStatus.IDLE
-        
-        all_success = all(r.get("success", False) for r in results.values())
-        
-        return {
-            "success": all_success,
-            "homes_synced": len([r for r in results.values() if r.get("success")]),
-            "results": results,
-        }
+            results = {}
+            
+            # Get snapshot of remote homes under lock
+            with self._homes_lock:
+                remote_homes_snapshot = dict(self._remote_homes)
+            
+            for home_id, remote in remote_homes_snapshot.items():
+                if not remote.enabled:
+                    continue
+                
+                if home_ids and home_id not in home_ids:
+                    continue
+                
+                try:
+                    result = await self._sync_with_home(remote)
+                    results[home_id] = result
+                except Exception as e:
+                    logger.error(f"Sync failed with {home_id}: {e}")
+                    results[home_id] = {"success": False, "error": str(e)}
+                    self._last_error = str(e)
+            
+            self._status = SyncStatus.IDLE
+            
+            all_success = all(r.get("success", False) for r in results.values())
+            
+            return {
+                "success": all_success,
+                "homes_synced": len([r for r in results.values() if r.get("success")]),
+                "results": results,
+            }
 
     async def _sync_with_home(self, remote: RemoteHome) -> Dict[str, Any]:
         """Sync with a specific remote home."""

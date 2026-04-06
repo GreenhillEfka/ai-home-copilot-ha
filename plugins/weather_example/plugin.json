@@ -1,0 +1,12 @@
+{
+  "name": "weather_example",
+  "version": "1.0.0",
+  "description": "Example weather plugin using wttr.in API",
+  "author": "PilotSuite Team",
+  "min_pilotsuite_version": "0.1.0",
+  "dependencies": [],
+  "provides": ["weather", "example"],
+  "tags": ["weather", "example", "demo"],
+  "entry_module": "plugin",
+  "entry_class": "WeatherPlugin"
+}
