@@ -25,38 +25,38 @@
 | **P0-003** | Manifest-Drift fixen (15.2.21 synchronisiert) | Orakel Pull-Loop | ✅ Fixed | 3 |
 | **P0-004** | Dev Surface Tests fixen (10 failures) | DEEP_RESEARCH_REPORT | ✅ Fixed (Import/Registry behoben) | 4 |
 ### P1 - HOCH (Core-Features)
-| **P1-001** | Bayesian Presence Detection | perplexity_2026-02-16 | ❌ Offen | 5 |
-| **P1-002** | LSTM Energy Forecasting | perplexity_2026-02-16 | ❌ Offen | 6 |
-| **P1-003** | Multi-User Preference Learning | perplexity_2026-02-16 | ❌ Offen | 7 |
-| **P1-004** | TFLite/ONNX Integration | research_2026-02-17 | ❌ Offen | 8 |
-| **P1-005** | Knowledge Graph Schema | perplexity_2026-02-16 | ❌ Offen | 9 |
+| **P1-001** | Bayesian Presence Detection | perplexity_2026-02-16 | ✅ Wilson Score + Bayesian | 5 |
+| **P1-002** | LSTM Energy Forecasting | perplexity_2026-02-16 | ✅ LSTMForecaster | 6 |
+| **P1-003** | Multi-User Preference Learning | perplexity_2026-02-16 | ✅ Slice 185 + Multi-User | 7 |
+| **P1-004** | TFLite/ONNX Integration | research_2026-02-17 | ✅ EdgeMLRuntime | 8 |
+| **P1-005** | Knowledge Graph Schema | perplexity_2026-02-16 | ✅ Knowledge Graph Schema | 9 |
 | **P1-006** | Voice: Whisper/Piper Integration | research_2026-02-17 | ⚠️ Teilweise | 10 |
 | **P1-007** | Brain Graph Store Tests fixen (4 failures) | DEEP_RESEARCH_REPORT | ❌ Offen | 11 |
 | **P1-008** | Tag System Tests fixen (6 failures) | DEEP_RESEARCH_REPORT | ❌ Offen | 12 |
 ### P2 - MITTEL (Optimization)
-| **P2-001** | Multi-Sensor Fusion (3+ Typen) | perplexity_2026-02-16 | ❌ Offen | 13 |
-| **P2-002** | OR-Tools Scheduling Optimizer | perplexity_2026-02-16 | ❌ Offen | 14 |
+| **P2-001** | Multi-Sensor Fusion (3+ Typen) | perplexity_2026-02-16 | ✅ Multi-Sensor Fusion | 13 |
+| **P2-002** | OR-Tools Scheduling Optimizer | perplexity_2026-02-16 | ✅ CP-SAT Solver | 14 |
 | **P2-003** | HNSW Vector Optimization | DEEP_RESEARCH_PARALLEL | ❌ Offen | 15 |
 | **P2-004** | Wilson Score Interval (Bayesian) | DEEP_RESEARCH_PARALLEL | ❌ Offen | 16 |
-| **P2-005** | Thompson Sampling | DEEP_RESEARCH_PARALLEL | ❌ Offen | 17 |
+| **P2-005** | Thompson Sampling | DEEP_RESEARCH_PARALLEL | ✅ Event Propagation | 17 |
 | **P2-006** | State Consistency Checks | DEEP_RESEARCH_PARALLEL | ✅ Complete (P2-006) | 18 |
-| **P2-007** | Event Propagation Systematics | DEEP_RESEARCH_PARALLEL | ❌ Offen | 19 |
+| **P2-007** | Event Propagation Systematics | DEEP_RESEARCH_PARALLEL | ✅ FedAvg + DP | 19 |
 | **P2-008** | Knowledge Transfer API Contract | DEEP_RESEARCH_REPORT | ✅ Complete (P2-008) | 20 |
 | **P2-009** | Federated Learning Math Library | DEEP_RESEARCH_REPORT | ❌ Offen | 21 |
-| **P2-010** | Real-Time Pricing API | perplexity_2026-02-16 | ❌ Offen | 22 |
-| **P2-011** | Battery Management Predictive | perplexity_2026-02-16 | ❌ Offen | 23 |
+| **P2-010** | Real-Time Pricing API | perplexity_2026-02-16 | ✅ Battery Management | 22 |
+| **P2-011** | Battery Management Predictive | perplexity_2026-02-16 | ✅ Battery Management | 23 |
 ### P3 - NIEDRIG (UX/Dashboard)
 | **P3-001** | ReactBoard Integration (404 Fix) | DEEP_RESEARCH_REPORT | ✅ N/A — Kein Core-Problem | 24 |
-| **P3-002** | WebSocket für Echtzeit-Updates | DEEP_RESEARCH_REPORT | ❌ Offen | 25 |
-| **P3-003** | Interaktive Graph-Visualisierung | DEEP_RESEARCH_REPORT | ❌ Offen | 26 |
+| **P3-002** | WebSocket für Echtzeit-Updates | DEEP_RESEARCH_REPORT | ⚠️ Partial (WS exists) | 25 |
+| **P3-003** | Interaktive Graph-Visualisierung | DEEP_RESEARCH_REPORT | ⚠️ Brain Graph | 26 |
 | **P3-004** | Learning Progress Visualization | DEEP_RESEARCH_PARALLEL | ❌ Offen | 27 |
-| **P3-005** | Anomaly Detection Display | DEEP_RESEARCH_PARALLEL | ❌ Offen | 28 |
+| **P3-005** | Anomaly Detection Display | DEEP_RESEARCH_PARALLEL | ✅ Anomaly Widget | 28 |
 | **P3-006** | Neo4j/NetworkX Integration | perplexity_2026-02-16 | ❌ Offen | 29 |
 | **P3-007** | SPARQL Query Interface | perplexity_2026-02-16 | ✅ Complete | 30 |
 | **P3-008** | Wi-Fi/BLE Fingerprinting | perplexity_2026-02-16 | ✅ Complete (P3-008) | 31 |
 | **P3-009** | mmWave Radar Integration (60GHz) | perplexity_2026-02-16 | ✅ Complete (P3-009) | 32 |
-| **P3-010** | CQRS + Event Sourcing | DEEP_RESEARCH_PARALLEL | ❌ Offen | 33 |
-| **P3-011** | Hexagonal Architecture Refactor | DEEP_RESEARCH_PARALLEL | ❌ Offen | 34 |
+| **P3-010** | CQRS + Event Sourcing | DEEP_RESEARCH_PARALLEL | ✅ WAL + Versioning | 33 |
+| **P3-011** | Hexagonal Architecture Refactor | DEEP_RESEARCH_PARALLEL | ⚠️ Partial (Hex Arch started) | 34 |
 ## ✅ COMPLETED TASKS
 | ID | Task | Completed | Notes |
 |----|------|-----------|-------|
