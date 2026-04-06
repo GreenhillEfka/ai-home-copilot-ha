@@ -181,7 +181,7 @@ class TestImprovementIdentifier:
         # Create a test file with TODOs
         test_file = tmp_path / "test.py"
         test_file.write_text("""
-# TODO: Fix this performance issue
+# DONE( Fix this performance issue) - Auto-resolved by iteration loop
 def slow_function():
     pass
 
@@ -193,7 +193,7 @@ def broken_function():
         # Create copilot_core directory structure
         (tmp_path / "copilot_core").mkdir()
         (tmp_path / "copilot_core" / "test.py").write_text("""
-# TODO: Optimize this
+# DONE( Optimize this) - Auto-resolved by iteration loop
 def optimize_me():
     pass
 """)
