@@ -1,7 +1,7 @@
 {
   "domain": "pilotsuite_styx",
   "name": "PilotSuite Styx",
-  "version": "15.3.40",
+  "version": "15.5.0",
   "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha",
   "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",
   "dependencies": [],
