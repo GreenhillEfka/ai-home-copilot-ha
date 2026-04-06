@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-dashboards
+  namespace: logging
+  labels:
+    app: kibana
+    managed-by: kustomize
+data:
+  pilot-suite-logs-dashboard.ndjson: |
+    {"attributes":{"description":"PilotSuite Kubernetes Log Aggregation Dashboard","kibanaSavedObjectMeta":{"searchSourceJSON":"{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"},"options":{"useMargins":true},"panelsJSON":"[{\"gridData\":{\"x\":0,\"y\":0,\"w\":24,\"h\":15,\"i\":\"1\",\"wasm\":false},\"panelIndex\":\"1\",\"version\":\"8.11.0\",\"type\":\"visualization\",\"id\":\"pod-log-volume\"},{\"gridData\":{\"x\":24,\"y\":0,\"w\":24,\"h\":15,\"i\":\"2\",\"wasm\":false},\"panelIndex\":\"2\",\"version\":\"8.11.0\",\"type\":\"visualization\",\"id\":\"namespace-log-distribution\"},{\"gridData\":{\"x\":0,\"y\":15,\"w\":16,\"h\":15,\"i\":\"3\",\"wasm\":false},\"panelIndex\":\"3\",\"version\":\"8.11.0\",\"type\":\"visualization\",\"id\":\"error-rate-timeseries\"},{\"gridData\":{\"x\":16,\"y\":15,\"w\":16,\"h\":15,\"i\":\"4\",\"wasm\":false},\"panelIndex\":\"4\",\"version\":\"8.11.0\",\"type\":\"visualization\",\"id\":\"log-level-breakdown\"},{\"gridData\":{\"x\":32,\"y\":15,\"w\":16,\"h\":15,\"i\":\"5\",\"wasm\":false},\"panelIndex\":\"5\",\"version\":\"8.11.0\",\"type\":\"visualization\",\"id\":\"top-error-containers\"},{\"gridData\":{\"x\":0,\"y\":30,\"w\":48,\"h\":20,\"i\":\"6\",\"wasm\":false},\"panelIndex\":\"6\",\"version\":\"8.11.0\",\"type\":\"visualization\",\"id\":\"log-search-table\"}]","timeRestore":true,"timeTo":"now","timeFrom":"now-1h","refreshInterval":{"value":30,"display":"30 seconds","pause":false},"title":"PilotSuite Log Overview","uiStateJSON":"{}","version":1},"coreMigrationVersion":"8.8.0","created_at":"2026-04-06T00:00:00.000Z","type":"dashboard","updated_at":"2026-04-06T00:00:00.000Z","id":"pilot-suite-logs-overview"}
+  
+  pod-log-volume-visualization.ndjson: |
+    {"attributes":{"description":"Log volume per pod over time","kibanaSavedObjectMeta":{"searchSourceJSON":"{\"index\":\"kubernetes-*\",\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"},"visState":"{\"title\":\"Pod Log Volume\",\"type\":\"histogram\",\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"date_histogram\",\"params\":{\"field\":\"@timestamp\",\"customInterval\":\"1m\",\"min_doc_count\":1,\"extended_bounds\":{}}},{\"id\":\"3\",\"enabled\":true,\"type\":\"terms\",\"params\":{\"field\":\"kubernetes.pod_name\",\"size\":10,\"orderBy\":\"1\",\"order\":\"desc\"}}],\"params\":{\"type\":\"histogram\",\"grid\":{\"categoryAxis\":\"x-axis\",\"valueAxis\":\"y-axis\",\"drawLinesBetweenPoints\":true,\"horizontalLines\":[]},\"categoryAxes\":[{\"id\":\"x-axis\",\"type\":\"category\",\"position\":\"bottom\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\"},\"labels\":{\"show\":true,\"filter\":true,\"truncate\":100},\"title\":{}}],\"valueAxes\":[{\"id\":\"y-axis\",\"type\":\"value\",\"position\":\"left\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\",\"mode\":\"normal\"},\"labels\":{\"show\":true,\"rotate\":0,\"filter\":false,\"truncate\":100},\"title\":{\"text\":\"Count\"}}],\"seriesParams\":[{\"show\":true,\"type\":\"histogram\",\"mode\":\"normal\",\"data\":{\"label\":\"Count\",\"id\":\"1\"},\"valueAxis\":\"y-axis\",\"drawLinesBetweenPoints\":true,\"showCircles\":true}],\"addTooltip\":true,\"addLegend\":true,\"legendPosition\":\"right\",\"times\":[],\"addTimeMarker\":true,\"labels\":{\"show\":false},\"thresholdLine\":{\"show\":false,\"width\":1,\"style\":\"full\",\"color\":\"#E7664C\",\"value\":10}},\"isVislibVis\":true}","title":"Pod Log Volume"},"coreMigrationVersion":"8.8.0","created_at":"2026-04-06T00:00:00.000Z","type":"visualization","updated_at":"2026-04-06T00:00:00.000Z","id":"pod-log-volume"}
+  
+  namespace-log-distribution-visualization.ndjson: |
+    {"attributes":{"description":"Log distribution by namespace","kibanaSavedObjectMeta":{"searchSourceJSON":"{\"index\":\"kubernetes-*\",\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"},"visState":"{\"title\":\"Namespace Log Distribution\",\"type\":\"pie\",\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"params\":{\"field\":\"kubernetes.namespace_name\",\"size\":15,\"orderBy\":\"1\",\"order\":\"desc\"}}],\"params\":{\"type\":\"pie\",\"addTooltip\":true,\"addLegend\":true,\"legendPosition\":\"right\",\"isDonut\":true,\"labels\":{\"show\":true,\"values\":true,\"last_level\":true,\"truncate\":100},\"size\":50},\"isVislibVis\":true}","title":"Namespace Log Distribution"},"coreMigrationVersion":"8.8.0","created_at":"2026-04-06T00:00:00.000Z","type":"visualization","updated_at":"2026-04-06T00:00:00.000Z","id":"namespace-log-distribution"}
+  
+  error-rate-timeseries-visualization.ndjson: |
+    {"attributes":{"description":"Error rate over time","kibanaSavedObjectMeta":{"searchSourceJSON":"{\"index\":\"kubernetes-*\",\"query\":{\"query\":\"level: ERROR OR level: error OR message: ERROR\",\"language\":\"kuery\"},\"filter\":[]}"},"visState":"{\"title\":\"Error Rate Timeseries\",\"type\":\"line\",\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"date_histogram\",\"params\":{\"field\":\"@timestamp\",\"customInterval\":\"5m\",\"min_doc_count\":1,\"extended_bounds\":{}}}],\"params\":{\"type\":\"line\",\"grid\":{\"categoryAxis\":\"x-axis\",\"valueAxis\":\"y-axis\",\"drawLinesBetweenPoints\":true,\"horizontalLines\":[]},\"categoryAxes\":[{\"id\":\"x-axis\",\"type\":\"category\",\"position\":\"bottom\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\"},\"labels\":{\"show\":true,\"filter\":true,\"truncate\":100},\"title\":{}}],\"valueAxes\":[{\"id\":\"y-axis\",\"type\":\"value\",\"position\":\"left\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\",\"mode\":\"normal\"},\"labels\":{\"show\":true,\"rotate\":0,\"filter\":false,\"truncate\":100},\"title\":{\"text\":\"Error Count\"}}],\"seriesParams\":[{\"show\":true,\"type\":\"line\",\"mode\":\"normal\",\"data\":{\"label\":\"Errors\",\"id\":\"1\"},\"valueAxis\":\"y-axis\",\"drawLinesBetweenPoints\":true,\"showCircles\":true}],\"addTooltip\":true,\"addLegend\":true,\"legendPosition\":\"right\",\"times\":[],\"addTimeMarker\":true,\"labels\":{\"show\":false},\"thresholdLine\":{\"show\":true,\"width\":2,\"style\":\"dashed\",\"color\":\"#E7664C\",\"value\":100}},\"isVislibVis\":true}","title":"Error Rate Timeseries"},"coreMigrationVersion":"8.8.0","created_at":"2026-04-06T00:00:00.000Z","type":"visualization","updated_at":"2026-04-06T00:00:00.000Z","id":"error-rate-timeseries"}
+  
+  log-level-breakdown-visualization.ndjson: |
+    {"attributes":{"description":"Log level breakdown","kibanaSavedObjectMeta":{"searchSourceJSON":"{\"index\":\"kubernetes-*\",\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"},"visState":"{\"title\":\"Log Level Breakdown\",\"type\":\"histogram\",\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"params\":{\"field\":\"level\",\"size\":10,\"orderBy\":\"1\",\"order\":\"desc\"}}],\"params\":{\"type\":\"histogram\",\"grid\":{\"categoryAxis\":\"x-axis\",\"valueAxis\":\"y-axis\",\"drawLinesBetweenPoints\":true,\"horizontalLines\":[]},\"categoryAxes\":[{\"id\":\"x-axis\",\"type\":\"category\",\"position\":\"bottom\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\"},\"labels\":{\"show\":true,\"filter\":true,\"truncate\":100},\"title\":{}}],\"valueAxes\":[{\"id\":\"y-axis\",\"type\":\"value\",\"position\":\"left\",\"show\":true,\"style\":{},\"scale\":{\"type\":\"linear\",\"mode\":\"normal\"},\"labels\":{\"show\":true,\"rotate\":0,\"filter\":false,\"truncate\":100},\"title\":{\"text\":\"Count\"}}],\"seriesParams\":[{\"show\":true,\"type\":\"histogram\",\"mode\":\"normal\",\"data\":{\"label\":\"Count\",\"id\":\"1\"},\"valueAxis\":\"y-axis\",\"drawLinesBetweenPoints\":true,\"showCircles\":true}],\"addTooltip\":true,\"addLegend\":true,\"legendPosition\":\"right\",\"times\":[],\"addTimeMarker\":true,\"labels\":{\"show\":false}},\"isVislibVis\":true}","title":"Log Level Breakdown"},"coreMigrationVersion":"8.8.0","created_at":"2026-04-06T00:00:00.000Z","type":"visualization","updated_at":"2026-04-06T00:00:00.000Z","id":"log-level-breakdown"}
+  
+  top-error-containers-visualization.ndjson: |
+    {"attributes":{"description":"Top containers by error count","kibanaSavedObjectMeta":{"searchSourceJSON":"{\"index\":\"kubernetes-*\",\"query\":{\"query\":\"level: ERROR OR level: error OR message: ERROR\",\"language\":\"kuery\"},\"filter\":[]}"},"visState":"{\"title\":\"Top Error Containers\",\"type\":\"table\",\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"params\":{}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"params\":{\"field\":\"kubernetes.container_name\",\"size\":10,\"orderBy\":\"1\",\"order\":\"desc\"}},{\"id\":\"3\",\"enabled\":true,\"type\":\"terms\",\"params\":{\"field\":\"kubernetes.namespace_name\",\"size\":10,\"orderBy\":\"1\",\"order\":\"desc\"}}],\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":false,\"totalFunc\":\"sum\"},\"isVislibVis\":true}","title":"Top Error Containers"},"coreMigrationVersion":"8.8.0","created_at":"2026-04-06T00:00:00.000Z","type":"visualization","updated_at":"2026-04-06T00:00:00.000Z","id":"top-error-containers"}
+  
+  log-search-table-visualization.ndjson: |
+    {"attributes":{"description":"Full log search table","kibanaSavedObjectMeta":{"searchSourceJSON":"{\"index\":\"kubernetes-*\",\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"},"visState":"{\"title\":\"Log Search Table\",\"type\":\"table\",\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"params\":{}}],\"params\":{\"perPage\":25,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":false,\"totalFunc\":\"sum\"},\"isVislibVis\":true}","title":"Log Search Table"},"coreMigrationVersion":"8.8.0","created_at":"2026-04-06T00:00:00.000Z","type":"visualization","updated_at":"2026-04-06T00:00:00.000Z","id":"log-search-table"}
+  
+  setup-script.sh: |
+    #!/bin/bash
+    # Kibana Dashboard Setup Script for PilotSuite
+    # Run this after Kibana is ready to import dashboards
+    
+    KIBANA_URL="http://kibana.logging.svc.cluster.local:5601"
+    ELASTICSEARCH_URL="http://elasticsearch.logging.svc.cluster.local:9200"
+    
+    echo "Waiting for Elasticsearch to be ready..."
+    until curl -s "${ELASTICSEARCH_URL}/_cluster/health" | grep -q '"status":"green"\|"status":"yellow"'; do
+      echo "Elasticsearch is not ready yet..."
+      sleep 5
+    done
+    echo "Elasticsearch is ready!"
+    
+    echo "Creating ILM policy..."
+    curl -X PUT "${ELASTICSEARCH_URL}/_ilm/policy/kubernetes-logs-policy" \
+      -H 'Content-Type: application/json' \
+      -d @/usr/share/kibana/config/index-templates/ilm-policy.json
+    
+    echo "Creating index templates..."
+    curl -X PUT "${ELASTICSEARCH_URL}/_index_template/kubernetes-logs-template" \
+      -H 'Content-Type: application/json' \
+      -d @/usr/share/kibana/config/index-templates/kubernetes-logs-template.json
+    
+    curl -X PUT "${ELASTICSEARCH_URL}/_index_template/system-logs-template" \
+      -H 'Content-Type: application/json' \
+      -d @/usr/share/kibana/config/index-templates/system-logs-template.json
+    
+    echo "Waiting for Kibana to be ready..."
+    until curl -s "${KIBANA_URL}/api/status" | grep -q '"overall":{"state":"green"}'; do
+      echo "Kibana is not ready yet..."
+      sleep 5
+    done
+    echo "Kibana is ready!"
+    
+    echo "Importing dashboards..."
+    for file in /usr/share/kibana/config/dashboards/*.ndjson; do
+      echo "Importing $(basename $file)..."
+      curl -X POST "${KIBANA_URL}/api/saved_objects/_import" \
+        -H 'kbn-xsrf: true' \
+        --form file=@"$file"
+    done
+    
+    echo "Dashboard setup complete!"
+    echo "Access Kibana at: ${KIBANA_URL}"

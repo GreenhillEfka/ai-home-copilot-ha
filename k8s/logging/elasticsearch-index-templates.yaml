@@ -1,0 +1,188 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch-index-templates
+  namespace: logging
+  labels:
+    app: elasticsearch
+    managed-by: kustomize
+data:
+  kubernetes-logs-template.json: |
+    {
+      "index_patterns": ["kubernetes-*"],
+      "template": {
+        "settings": {
+          "number_of_shards": 2,
+          "number_of_replicas": 1,
+          "index.lifecycle.name": "kubernetes-logs-policy",
+          "index.lifecycle.rollover_alias": "kubernetes-logs",
+          "index.refresh_interval": "5s"
+        },
+        "mappings": {
+          "properties": {
+            "@timestamp": {
+              "type": "date"
+            },
+            "time": {
+              "type": "date"
+            },
+            "message": {
+              "type": "text",
+              "analyzer": "standard"
+            },
+            "log": {
+              "type": "text"
+            },
+            "stream": {
+              "type": "keyword"
+            },
+            "kubernetes": {
+              "type": "object",
+              "properties": {
+                "pod_name": {
+                  "type": "keyword"
+                },
+                "pod_id": {
+                  "type": "keyword"
+                },
+                "namespace_name": {
+                  "type": "keyword"
+                },
+                "namespace_id": {
+                  "type": "keyword"
+                },
+                "container_name": {
+                  "type": "keyword"
+                },
+                "container_id": {
+                  "type": "keyword"
+                },
+                "container_image": {
+                  "type": "keyword"
+                },
+                "host": {
+                  "type": "keyword"
+                },
+                "labels": {
+                  "type": "object"
+                },
+                "annotations": {
+                  "type": "object"
+                }
+              }
+            },
+            "cluster_name": {
+              "type": "keyword"
+            },
+            "environment": {
+              "type": "keyword"
+            },
+            "level": {
+              "type": "keyword"
+            },
+            "logger": {
+              "type": "keyword"
+            }
+          }
+        }
+      },
+      "priority": 100,
+      "_meta": {
+        "description": "Index template for Kubernetes container logs in PilotSuite",
+        "version": "1.0.0"
+      }
+    }
+  
+  system-logs-template.json: |
+    {
+      "index_patterns": ["kubelet-*", "kube-apiserver-*"],
+      "template": {
+        "settings": {
+          "number_of_shards": 1,
+          "number_of_replicas": 1,
+          "index.lifecycle.name": "system-logs-policy",
+          "index.lifecycle.rollover_alias": "system-logs",
+          "index.refresh_interval": "10s"
+        },
+        "mappings": {
+          "properties": {
+            "@timestamp": {
+              "type": "date"
+            },
+            "time": {
+              "type": "date"
+            },
+            "message": {
+              "type": "text",
+              "analyzer": "standard"
+            },
+            "log": {
+              "type": "text"
+            },
+            "stream": {
+              "type": "keyword"
+            },
+            "tag": {
+              "type": "keyword"
+            },
+            "cluster_name": {
+              "type": "keyword"
+            },
+            "environment": {
+              "type": "keyword"
+            }
+          }
+        }
+      },
+      "priority": 100,
+      "_meta": {
+        "description": "Index template for Kubernetes system component logs",
+        "version": "1.0.0"
+      }
+    }
+  
+  ilm-policy.json: |
+    {
+      "policy": {
+        "phases": {
+          "hot": {
+            "min_age": "0ms",
+            "actions": {
+              "rollover": {
+                "max_size": "50gb",
+                "max_age": "7d"
+              },
+              "set_priority": {
+                "priority": 100
+              }
+            }
+          },
+          "warm": {
+            "min_age": "7d",
+            "actions": {
+              "set_priority": {
+                "priority": 50
+              },
+              "shrink": {
+                "number_of_shards": 1
+              }
+            }
+          },
+          "cold": {
+            "min_age": "30d",
+            "actions": {
+              "set_priority": {
+                "priority": 0
+              },
+              "freeze": {}
+            }
+          },
+          "delete": {
+            "min_age": "90d",
+            "actions": {
+              "delete": {}
+            }
+          }
+        }
+      }
+    }

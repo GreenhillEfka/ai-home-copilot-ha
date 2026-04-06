@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: logging
+  labels:
+    app: fluentd
+    managed-by: kustomize
+data:
+  fluent.conf: |
+    # Fluentd Configuration for PilotSuite Log Aggregation
+    # Collects logs from all pods and forwards to Elasticsearch
+    
+    @include containers.conf
+    @include system.conf
+    @include elasticsearch.conf
+  
+  containers.conf: |
+    # Container log source configuration
+    <source>
+      @type tail
+      @id in_tail_container_logs
+      path /var/log/containers/*.log
+      pos_file /var/log/fluentd-containers.log.pos
+      tag kubernetes.*
+      read_from_head true
+      <parse>
+        @type json
+        time_key time
+        time_format %Y-%m-%dT%H:%M:%S.%NZ
+      </parse>
+    </source>
+    
+    # Enrich with Kubernetes metadata
+    <filter kubernetes.**>
+      @type kubernetes_metadata
+      @id filter_kube_metadata
+      kubernetes_url https://kubernetes.default.svc
+      verify_ssl false
+    </filter>
+    
+    # Add cluster name to all logs
+    <filter kubernetes.**>
+      @type record_modifier
+      <record>
+        cluster_name pilot-suite
+        environment production
+      </record>
+    </filter>
+    
+    # Exclude Fluentd's own logs
+    <filter kubernetes.**>
+      @type grep
+      <exclude>
+        key $.kubernetes.container_name
+        pattern ^fluentd$
+      </exclude>
+    </filter>
+  
+  system.conf: |
+    # System component logs
+    <source>
+      @type tail
+      @id in_tail_kubelet_logs
+      path /var/log/kubelet.log
+      pos_file /var/log/kubelet.log.pos
+      tag kubelet
+      <parse>
+        @type regexp
+        expression /^(?<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)(?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<message>.*)$/
+        time_format %Y-%m-%d %H:%M:%S.%L
+      </parse>
+    </source>
+    
+    <source>
+      @type tail
+      @id in_tail_kube_apiserver_logs
+      path /var/log/kube-apiserver.log
+      pos_file /var/log/kube-apiserver.log.pos
+      tag kube-apiserver
+      <parse>
+        @type regexp
+        expression /^(?<time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)(?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<message>.*)$/
+        time_format %Y-%m-%d %H:%M:%S.%L
+      </parse>
+    </source>
+  
+  elasticsearch.conf: |
+    # Buffer configuration for reliable delivery
+    <match **>
+      @type elasticsearch
+      @id out_elasticsearch
+      host elasticsearch.logging.svc.cluster.local
+      port 9200
+      scheme http
+      logstash_format true
+      logstash_prefix kubernetes
+      logstash_dateformat %Y.%m.%d
+      include_tag_key true
+      tag_key @log_name
+      type_name _doc
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/kubernetes.system.buffer
+        flush_mode interval
+        retry_type exponential_backoff
+        flush_thread_count 2
+        flush_interval 5s
+        retry_forever
+        retry_max_interval 30
+        chunk_limit_size 2M
+        queue_limit_length 8
+        overflow_action block
+      </buffer>
+    </match>

@@ -13,6 +13,10 @@ resources:
 - cluster-autoscaler-config.yaml
 - cluster-autoscaler.yaml
 - servicemonitor.yaml
+- ingress.yaml
+- canary-deployment.yaml
+- canary-service.yaml
+- canary-ingress.yaml
 
 commonLabels:
   app: symbiosis
