@@ -456,6 +456,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
             step_id="habitus_zones",
             menu_options=[
                 "create_zone",
+                "auto_setup",
+                "import_yaml",
                 "edit_zone",
                 "delete_zone",
                 "generate_dashboard",
@@ -575,6 +577,139 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
             _LOGGER.debug("Core zone-editor sync not confirmed for deleted zone: %s", zid)
 
         return await self.async_step_habitus_zones()
+
+
+    async def async_step_auto_setup(self, user_input: dict | None = None) -> FlowResult:
+        """Zero-Config Zone Auto-Setup: discover HA areas and suggest Habitus mappings."""
+        from .zone_auto_setup import suggest_zone_from_ha_areas
+        from homeassistant.helpers import area_registry as ar
+
+        areg = ar.async_get(self.hass)
+        ha_areas = [area.name for area in areg.areas]
+
+        if user_input is None:
+            suggestions = suggest_zone_from_ha_areas(ha_areas)
+            matched = [s for s in suggestions if s["status"] == "ready"]
+            unmatched = [s for s in suggestions if s["status"] == "unmatched"]
+
+            options = [
+                selector.SelectOptionDict(
+                    value=s["ha_area"],
+                    label=f"{s['icon']} {s['ha_area']} → {s['zone_name']} ({s['zone_type']}) [✓]"
+                    if s["status"] == "ready"
+                    else f"mdi:help {s['ha_area']} → keine Übereinstimmung",
+                )
+                for s in suggestions
+            ]
+
+            schema = vol.Schema({
+                vol.Required("selected_areas", default=[s["ha_area"] for s in matched]): 
+                    selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=options,
+                            multiple=True,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                vol.Optional("priority", default=50): vol.All(int, vol.Range(min=1, max=100)),
+            })
+            return self.async_show_form(step_id="auto_setup_confirm", data_schema=schema)
+
+        selected = user_input.get("selected_areas", [])
+        suggestions = suggest_zone_from_ha_areas(ha_areas)
+        selected_sugs = [s for s in suggestions if s["ha_area"] in selected]
+
+        # Import zone_auto_setup helpers
+        from .zone_auto_setup import ZONE_TYPE_META
+
+        zones_to_create = []
+        for sug in selected_sugs:
+            ztype = sug["zone_type"]
+            meta = ZONE_TYPE_META.get(ztype, {})
+            zones_to_create.append({
+                "zone_id": f"zone:{sug['ha_area'].lower().replace(' ', '_')}",
+                "zone_type": ztype,
+                "name": sug["ha_area"],
+                "name_de": sug["zone_name"],
+                "priority": user_input.get("priority", 50),
+                "enabled_modules": meta.get("modules", []),
+                "keywords_de": meta.get("keywords", []),
+                "entities": {},
+            })
+
+        if zones_to_create:
+            from .habitus_zones_store_v2 import async_get_zones_v2, async_set_zones_v2
+            existing = await async_get_zones_v2(self.hass, self._config_entry_id)
+            existing_ids = {z.zone_id for z in existing}
+            new_zones = [z for z in zones_to_create if z["zone_id"] not in existing_ids]
+            all_zones = [*existing, *new_zones]
+            await async_set_zones_v2(self.hass, self._config_entry_id, all_zones)
+
+        return self.async_show_menu(
+            step_id="habitus_zones",
+            menu_options=["create_zone", "edit_zone", "delete_zone", "generate_dashboard", "publish_dashboard", "bulk_edit", "auto_setup", "import_yaml", "back"],
+            description_placeholders={
+                "description": (
+                    f"✓ Auto-Setup fertig! {len(zones_to_create)} Zonen erstellt.\n"
+                    f"Erstelle weitere Zonen manuell oder importiere eine YAML-Konfiguration."
+                )
+            },
+        )
+
+    async def async_step_import_yaml(self, user_input: dict | None = None) -> FlowResult:
+        """Import zone configuration from YAML."""
+        from .zone_auto_setup import parse_zone_yaml, get_example_yaml
+
+        if user_input is None:
+            example = get_example_yaml()
+            schema = vol.Schema({
+                vol.Required("yaml_config"): str,
+            })
+            return self.async_show_form(
+                step_id="import_yaml",
+                data_schema=schema,
+                description_placeholders={"example": example[:500] + "..."},
+            )
+
+        yaml_str = user_input.get("yaml_config", "")
+        result = parse_zone_yaml(yaml_str)
+
+        if "error" in result:
+            return self.async_show_form(
+                step_id="import_yaml",
+                data_schema=vol.Schema({vol.Required("yaml_config"): str}),
+                errors={"yaml_config": result["error"]},
+            )
+
+        from .habitus_zones_store_v2 import async_get_zones_v2, async_set_zones_v2
+        existing = await async_get_zones_v2(self.hass, self._config_entry_id)
+        existing_ids = {z.zone_id for z in existing}
+
+        new_zones = []
+        for ztype, config in result.get("zones", {}).items():
+            zone_id = f"zone:{config.get('name', ztype).lower().replace(' ', '_')}"
+            if zone_id not in existing_ids:
+                new_zones.append(type("HabitusZoneV2", (), {
+                    "zone_id": zone_id,
+                    "zone_type": ztype,
+                    "name": config.get("name", ztype),
+                    "name_de": config.get("name", ztype),
+                    "priority": config.get("priority", 50),
+                    "enabled_modules": config.get("enabled_modules", []),
+                    "keywords_de": config.get("keywords_de", []),
+                    "entities": {},
+                })())
+
+        if new_zones:
+            await async_set_zones_v2(self.hass, self._config_entry_id, [*existing, *new_zones])
+
+        return self.async_show_menu(
+            step_id="habitus_zones",
+            menu_options=["create_zone", "edit_zone", "delete_zone", "generate_dashboard", "publish_dashboard", "bulk_edit", "auto_setup", "import_yaml", "back"],
+            description_placeholders={
+                "description": f"✓ {len(new_zones)} Zonen aus YAML importiert."
+            },
+        )
 
     async def async_step_bulk_edit(self, user_input: dict | None = None) -> FlowResult:
         """Bulk editor to paste YAML/JSON (no 255-char limit) with validation."""
