@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import sys
 import types
+import os
 from datetime import datetime, timezone
 from typing import Generic, TypeVar
 from unittest.mock import MagicMock
 import voluptuous as vol
+import pytest
 
 _T = TypeVar("_T")
 
@@ -74,8 +76,9 @@ hup.UpdateFailed = type("UpdateFailed", (Exception, object), {})
 
 class _CoordinatorEntity(Generic[_T], object):
     __class_getitem__ = classmethod(lambda cls, item: _CoordinatorEntity)
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, coordinator, *args, **kwargs):
+        self.coordinator = coordinator
+        super().__init__(*args, **kwargs)
 hup.CoordinatorEntity = _CoordinatorEntity
 
 # ─── homeassistant.helpers.entity ───────────────────────────────────────────────
@@ -164,7 +167,62 @@ hdr.DeviceInfo = type("DeviceInfo", (object,), {"__init__": lambda self, *a, **k
 
 # ─── homeassistant.helpers.aiohttp_client ───────────────────────────────────────
 haio = sys.modules["homeassistant.helpers.aiohttp_client"]
-haio.async_get_clientsession = MagicMock(return_value=MagicMock())
+
+
+class _FakeSessionGet:
+    """Fake session.get() returning an async context manager (for aiohttp protocol)."""
+    def __init__(self, handler):
+        self._handler = handler  # callable(url, headers, timeout) → coroutine
+
+    async def __call__(self, url, headers=None, timeout=None):
+        return await self._handler(url, headers, timeout)
+
+    def __await__(self):
+        return self._handler(None).__await__()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+
+class _FakeSession:
+    """Fake aiohttp client session with async context manager + get protocol."""
+    def __init__(self, get_handler=None):
+        self.get = _FakeSessionGet(get_handler or (lambda *a, **k: _FakeResponse(404, {})))
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+
+class _FakeResponse:
+    """Fake aiohttp response."""
+    def __init__(self, status, json_data):
+        self.status = status
+        self._json = json_data
+
+    async def json(self):
+        return self._json
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+
+async def _default_session_maker(hass):
+    """Default session factory — returns a bare FakeSession."""
+    return _FakeSession()
+
+
+haio.async_get_clientsession = MagicMock(side_effect=_default_session_maker)
+haio._FakeSession = _FakeSession  # expose for tests if needed
+haio._FakeResponse = _FakeResponse  # expose for tests if needed
 
 # ─── homeassistant.helpers.entity_platform ──────────────────────────────────────
 hep = sys.modules["homeassistant.helpers.entity_platform"]
@@ -278,3 +336,24 @@ sys.modules["homeassistant.const"] = _const
 
 # ─── config_validation = voluptuous ──────────────────────────────────────────────
 sys.modules["homeassistant.helpers.config_validation"] = vol
+
+# ─── custom_components stub (for sensor unit tests) ─────────────────────────────
+_copilot_ha_root = os.path.join(os.path.dirname(__file__), "..", "custom_components", "copilot_ha")
+_copilot_ha = stub("custom_components.copilot_ha")
+_copilot_ha.__path__ = [_copilot_ha_root]
+# Stub child packages so relative imports resolve
+for _sub in ("sensors", "core", "api"):
+    _submod = stub(f"custom_components.copilot_ha.{_sub}")
+    _submod.__path__ = [os.path.join(_copilot_ha_root, _sub)]
+
+# ─── Sensor test fixtures ─────────────────────────────────────────────────────────
+
+@pytest.fixture
+def coordinator():
+    """Minimal coordinator mock for sensor unit tests."""
+    from unittest.mock import MagicMock
+    coord = MagicMock()
+    coord.api = MagicMock()
+    coord.data = {}
+    coord._config = {"host": "testhost", "port": 8909, "token": "testtoken"}
+    return coord
