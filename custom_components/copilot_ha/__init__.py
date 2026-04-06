@@ -21,6 +21,7 @@ from .security_overview_panel import async_publish_security_overview_panel
 from .zone_automation_client import get_zone_automation_client
 from .zone_automation_events import setup_zone_automation_events
 from .cards.zone_automation_cards import register_cards
+from .voice_sensors import async_setup_voice_sensors
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,9 +71,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await async_publish_hacs_status_panel(hass)
     
     # Publish Security Overview panel (Slice 142)
-    core_url = config.data.get("core_url", "http://localhost:8909")
-    api_token = config.data.get("api_token", "")
     await async_publish_security_overview_panel(hass, core_url, api_token)
+    
+    # Setup Voice Sensors (Slice 165)
+    await async_setup_voice_sensors(hass)
     
     return True
 
