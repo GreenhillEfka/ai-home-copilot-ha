@@ -1,6 +1,6 @@
-"""PilotSuite Styx Camera Entities — HA-202.
+"""PilotSuite Styx Camera Entity — HA-231.
 
-Sync mit Core API: /api/v1/camera/*, /api/v1/media/*
+Sync mit Core API: /api/v1/cameras/*
 """
 from __future__ import annotations
 import logging
@@ -17,28 +17,30 @@ async def async_setup_entry(
     config_entry,
     async_add_entities: AddEntitiesCallback,
 ):
-    """Setup camera entities from config entry."""
+    """Setup camera entity from config entry."""
     core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
-    entities = [CoreStreamCamera(core_url)]
+    entities = [CoreCameraEntity(core_url)]
     async_add_entities(entities)
 
-class CoreStreamCamera(Camera):
+class CoreCameraEntity(Camera):
     """Camera entity for Core stream."""
     def __init__(self, core_url: str):
         self._core_url = core_url
-        self._attr_name = "PilotSuite Core Stream"
-        self._attr_unique_id = "pilotsuite_core_stream"
-        self._stream_url = None
+        self._attr_name = "PilotSuite Camera"
+        self._attr_unique_id = "pilotsuite_camera"
+        self._attr_is_recording = False
+        self._attr_is_on = True
     
-    def camera_image(self, width: int | None = None, height: int | None = None) -> bytes | None:
-        """Return camera image."""
-        resp = requests.get(f"{self._core_url}/api/v1/camera/stream", timeout=5)
+    def camera_image(self, width=None, height=None):
+        """Get camera image."""
+        resp = requests.get(f"{self._core_url}/api/v1/cameras/snapshot", timeout=5)
         if resp.status_code == 200:
-            data = resp.json()
-            self._stream_url = data.get("stream_url")
+            return resp.content
         return None
     
-    @property
-    def stream_source(self) -> str | None:
-        """Return the source of the stream."""
-        return self._stream_url
+    def update(self):
+        """Update camera state from Core."""
+        resp = requests.get(f"{self._core_url}/api/v1/cameras/record", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            self._attr_is_recording = data.get("recording", False)
