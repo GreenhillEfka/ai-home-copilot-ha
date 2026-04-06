@@ -1,5 +1,5 @@
-"""PilotSuite Styx Debug — HA-421.
-Auto-Sync Core: /api/v1/debug/*
+"""PilotSuite Styx Health V2 — HA-418.
+Auto-Sync Core: /api/v1/health/v2/*
 """
 from __future__ import annotations
 import logging, requests
@@ -10,14 +10,14 @@ from .const import CONF_CORE_URL
 _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
-    async_add_entities([CoreDebugSensor(core_url)])
-class CoreDebugSensor(SensorEntity):
+    async_add_entities([CoreHealthV2Sensor(core_url)])
+class CoreHealthV2Sensor(SensorEntity):
     def __init__(self, core_url: str):
         self._core_url = core_url
-        self._attr_name = "PilotSuite Debug"
-        self._attr_unique_id = "pilotsuite_debug"
-        self._attr_native_value = "disabled"
+        self._attr_name = "PilotSuite Health V2"
+        self._attr_unique_id = "pilotsuite_health_v2"
+        self._attr_native_value = "unknown"
     def update(self):
-        resp = requests.get(f"{self._core_url}/api/v1/debug/info", timeout=5)
+        resp = requests.get(f"{self._core_url}/api/v1/health/v2/full", timeout=5)
         if resp.status_code == 200:
-            self._attr_native_value = "enabled" if resp.json().get("info", {}).get("enabled") else "disabled"
+            self._attr_native_value = "healthy" if resp.json().get("ok") else "unhealthy"
