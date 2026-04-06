@@ -31,7 +31,7 @@
     "requests>=2.31.0",
     "numpy>=1.26.0"
   ],
-  "version": "100.0.0-rc2",
+  "version": "15.4.0",
   "code": [
     "pilotsuite_core @ git+https://github.com/GreenhillEfka/pilotsuite-styx-core.git@v1.0.0-rc2-public-test"
   ]
