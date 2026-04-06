@@ -765,3 +765,221 @@ async def async_auto_create_habitus_zones(
     )
     return len(zones)
 
+"""
+Zone Auto-Setup for PilotSuite HACS Integration
+================================================
+Provides:
+- Example YAML config generation for all zone types
+- HA area → Habitus zone mapping assistant
+- Import/export zone configuration as YAML
+- Zero-config flow integration with config_flow
+
+Author: Styx Agent — 2026-04-06
+"""
+
+
+import logging
+import re
+from typing import Any
+
+from homeassistant.core import HomeAssistant
+
+from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
+
+
+# ── Zone type metadata ────────────────────────────────────────────────────────
+
+ZONE_TYPE_META = {
+    "living": {
+        "name_de": "Wohnzimmer",
+        "icon": "mdi:sofa",
+        "modules": ["light", "motion", "music", "volume", "tv", "climate"],
+        "keywords": ["wohnzimmer", "living", "lounge", "couch", "tv", "wohn"],
+        "typical_entities": ["light", "switch", "media_player", "climate", "sensor"],
+    },
+    "kitchen": {
+        "name_de": "Küche",
+        "icon": "mdi:silverware-fork-knife",
+        "modules": ["light", "motion", "music", "volume", "climate"],
+        "keywords": ["küche", "kitchen", "cooking", "essen", "koch"],
+        "typical_entities": ["light", "sensor", "switch", "climate"],
+    },
+    "bath": {
+        "name_de": "Badezimmer",
+        "icon": "mdi:shower",
+        "modules": ["light", "motion", "climate"],
+        "keywords": ["bath", "badezimmer", "dusche", "wc", "sanitär"],
+        "typical_entities": ["light", "humidifier", "climate", "sensor"],
+    },
+    "bedroom": {
+        "name_de": "Schlafzimmer",
+        "icon": "mdi:bed",
+        "modules": ["light", "motion", "music", "volume", "climate"],
+        "keywords": ["schlafzimmer", "bedroom", "sleep", "night"],
+        "typical_entities": ["light", "climate", "sensor", "media_player"],
+    },
+    "office": {
+        "name_de": "Büro",
+        "icon": "mdi:desk",
+        "modules": ["light", "motion", "music", "volume", "climate"],
+        "keywords": ["büro", "office", "work", "computer", "desk", "arbeit"],
+        "typical_entities": ["light", "switch", "media_player", "climate", "sensor"],
+    },
+    "hallway": {
+        "name_de": "Flur",
+        "icon": "mdi:door",
+        "modules": ["light", "motion", "camera"],
+        "keywords": ["flur", "hallway", "corridor", "entrée", "diele"],
+        "typical_entities": ["light", "binary_sensor", "camera"],
+    },
+    "room_mira": {
+        "name_de": "Zimmer Mira",
+        "icon": "mdi:account",
+        "modules": ["light", "motion", "music", "volume", "climate"],
+        "keywords": ["mira", "kinderzimmer", "kinder", "kids"],
+        "typical_entities": ["light", "climate", "sensor", "media_player"],
+    },
+    "room_paul": {
+        "name_de": "Zimmer Paul",
+        "icon": "mdi:account",
+        "modules": ["light", "motion", "music", "volume", "climate"],
+        "keywords": ["paul", "kinderzimmer", "kinder", "kids"],
+        "typical_entities": ["light", "climate", "sensor", "media_player"],
+    },
+    "terrace": {
+        "name_de": "Terrasse",
+        "icon": "mdi:tree",
+        "modules": ["light", "motion", "music", "volume", "camera"],
+        "keywords": ["terrasse", "terrace", "patio", "balkon", "garden", "terrassen"],
+        "typical_entities": ["light", "switch", "camera", "sensor"],
+    },
+    "outside": {
+        "name_de": "Außenbereich",
+        "icon": "mdi:leaf",
+        "modules": ["light", "motion", "camera"],
+        "keywords": ["outside", "außen", "garden", "garage", "hof"],
+        "typical_entities": ["light", "binary_sensor", "camera", "sensor"],
+    },
+}
+
+
+def get_example_yaml() -> str:
+    """Generate a complete example YAML config for all zone types."""
+    lines = [
+        "# ═══════════════════════════════════════════════════════════════",
+        "# PilotSuite Habitus Zones — Example Configuration",
+        "# Copy this to your PilotSuite config and adjust as needed.",
+        "# Run the Zero-Config Flow first: POST /api/v1/habitus/zones/discover",
+        "# ═══════════════════════════════════════════════════════════════",
+        "",
+        "# ── Zone Definitions ──────────────────────────────────────────────",
+        "",
+    ]
+    
+    for ztype, meta in ZONE_TYPE_META.items():
+        lines.extend([
+            f"{ztype}:",
+            f'  name: "{meta["name_de"]}"',
+            f'  icon: "{meta["icon"]}"',
+            f'  priority: 50',
+            f'  enabled_modules:',
+        ])
+        for mod in meta["modules"]:
+            lines.append(f"    - {mod}")
+        lines.extend([
+            f'  keywords_de: [{", ".join(repr(k) for k in meta["keywords"])}]',
+            f'  typical_entities: [{", ".join(meta["typical_entities"])}]',
+            "",
+        ])
+    
+    lines.extend([
+        "# ── Module Override Examples ───────────────────────────────────────",
+        "",
+        "# living:",
+        "#   module_overrides:",
+        "#     light:",
+        "#       input_signals: [light, sensor]",
+        "#       output_mode: proposal_then_service_call",
+        "#     tv:",
+        "#       output_mode: explainable_manual",
+        "",
+        "# ── Entity Mappings (per Area) ───────────────────────────────────",
+        "",
+        "# entity_mappings:",
+        "#   Wohnzimmer:",
+        "#     lights: [light.lamp_left, light.lamp_right]",
+        "#     climate: [climate.living_room]",
+        "#     media: [media_player.tv_sony]",
+        "",
+    ])
+    
+    return "\n".join(lines)
+
+
+def parse_zone_yaml(yaml_str: str) -> dict[str, Any]:
+    """Parse a YAML zone config string into a structured dict."""
+    try:
+        import yaml
+    except ImportError:
+        return {"error": "yaml library not available"}
+    
+    try:
+        data = yaml.safe_load(yaml_str) or {}
+        validated = {}
+        
+        for ztype, config in data.items():
+            if ztype.startswith("#") or not isinstance(config, dict):
+                continue
+            if ztype not in ZONE_TYPE_META:
+                _LOGGER.warning("Unknown zone type in YAML: %s", ztype)
+                continue
+            
+            validated[ztype] = {
+                "zone_type": ztype,
+                "name": config.get("name", ZONE_TYPE_META[ztype]["name_de"]),
+                "priority": int(config.get("priority", 50)),
+                "enabled_modules": config.get("enabled_modules", ZONE_TYPE_META[ztype]["modules"]),
+                "keywords_de": config.get("keywords_de", ZONE_TYPE_META[ztype]["keywords"]),
+                "entity_mappings": config.get("entity_mappings", {}),
+                "module_overrides": config.get("module_overrides", {}),
+            }
+        
+        return {"zones": validated, "count": len(validated)}
+    
+    except Exception as e:
+        _LOGGER.error("Failed to parse zone YAML: %s", e)
+        return {"error": str(e)}
+
+
+def suggest_zone_from_ha_areas(ha_areas: list[str]) -> list[dict[str, Any]]:
+    """Map HA areas to Habitus zone types using keyword matching."""
+    suggestions = []
+    
+    for area in ha_areas:
+        area_lower = area.lower()
+        best_match = None
+        best_score = 0
+        
+        for ztype, meta in ZONE_TYPE_META.items():
+            kws = meta["keywords"]
+            score = sum(
+                1 for kw in kws
+                if kw in area_lower or area_lower in kw
+            )
+            if score > best_score:
+                best_score = score
+                best_match = (ztype, meta)
+        
+        suggestions.append({
+            "ha_area": area,
+            "zone_type": best_match[0] if best_match else None,
+            "zone_name": best_match[1]["name_de"] if best_match else "unknown",
+            "confidence": min(best_score / max(len(area.split()), 1), 1.0) if best_score else 0.0,
+            "icon": best_match[1]["icon"] if best_match else "mdi:help",
+            "suggested_modules": best_match[1]["modules"] if best_match else [],
+            "status": "ready" if best_match else "unmatched",
+        })
+    
+    return suggestions
