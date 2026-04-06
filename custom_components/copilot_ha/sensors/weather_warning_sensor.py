@@ -67,16 +67,18 @@ class WeatherWarningSensor(CopilotBaseEntity, SensorEntity):
                 "color": w.get("color", ""),
             })
 
-        # Aggregate PV impact
+        # Aggregate PV impact (with type safety)
         max_pv_reduction = 0
         pv_recommendations = []
-        for imp in impacts:
-            red = imp.get("pv_reduction_pct", 0)
-            if red > max_pv_reduction:
-                max_pv_reduction = red
-            rec = imp.get("recommendation_de", "")
-            if rec and rec not in pv_recommendations:
-                pv_recommendations.append(rec)
+        if isinstance(impacts, list):
+            for imp in impacts:
+                if isinstance(imp, dict):
+                    red = imp.get("pv_reduction_pct", 0)
+                    if red > max_pv_reduction:
+                        max_pv_reduction = red
+                    rec = imp.get("recommendation_de", "")
+                    if rec and rec not in pv_recommendations:
+                        pv_recommendations.append(rec)
 
         return {
             "total_warnings": self._data.get("total", 0),
