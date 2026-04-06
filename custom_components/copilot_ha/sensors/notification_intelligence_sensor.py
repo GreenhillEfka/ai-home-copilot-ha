@@ -47,8 +47,10 @@ class NotificationIntelligenceSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
-        total = self._data.get("total_notifications", 0)
-        unread = self._data.get("unread_count", 0)
+        if not self._data:
+            return "Keine Benachrichtigungen"
+        total = self._data.get("total_notifications", 0) or 0
+        unread = self._data.get("unread_count", 0) or 0
         if total == 0:
             return "Keine Benachrichtigungen"
         if unread == 0:
@@ -57,39 +59,50 @@ class NotificationIntelligenceSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def icon(self) -> str:
-        dnd = self._data.get("dnd_active", False)
+        if not self._data:
+            return "mdi:bell-check"
+        dnd = self._data.get("dnd_active", False) or False
         if dnd:
             return "mdi:bell-off"
-        unread = self._data.get("unread_count", 0)
+        unread = self._data.get("unread_count", 0) or 0
         if unread > 0:
             return "mdi:bell-badge"
         return "mdi:bell-check"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        if not self._data:
+            return {
+                "total_notifications": 0,
+                "unread_count": 0,
+                "dnd_active": False,
+                "batch_pending": 0,
+                "rules_count": 0,
+                "channels_active": [],
+            }
         attrs: dict[str, Any] = {
-            "total_notifications": self._data.get("total_notifications", 0),
-            "unread_count": self._data.get("unread_count", 0),
-            "dnd_active": self._data.get("dnd_active", False),
-            "batch_pending": self._data.get("batch_pending", 0),
-            "rules_count": self._data.get("rules_count", 0),
-            "channels_active": self._data.get("channels_active", []),
+            "total_notifications": self._data.get("total_notifications", 0) or 0,
+            "unread_count": self._data.get("unread_count", 0) or 0,
+            "dnd_active": bool(self._data.get("dnd_active", False)),
+            "batch_pending": self._data.get("batch_pending", 0) or 0,
+            "rules_count": self._data.get("rules_count", 0) or 0,
+            "channels_active": self._data.get("channels_active", []) or [],
         }
 
-        stats = self._data.get("stats", {})
-        if stats:
-            attrs["total_sent"] = stats.get("total_sent", 0)
-            attrs["total_suppressed"] = stats.get("total_suppressed", 0)
+        stats = self._data.get("stats")
+        if stats and isinstance(stats, dict):
+            attrs["total_sent"] = stats.get("total_sent", 0) or 0
+            attrs["total_suppressed"] = stats.get("total_suppressed", 0) or 0
             attrs["by_priority"] = stats.get("by_priority", {})
 
-        recent = self._data.get("recent", [])
-        if recent:
+        recent = self._data.get("recent")
+        if recent and isinstance(recent, list):
             attrs["recent"] = [
                 {
-                    "title": n.get("title"),
-                    "priority": n.get("priority"),
-                    "channel": n.get("channel"),
-                    "read": n.get("read"),
+                    "title": n.get("title") if isinstance(n, dict) else None,
+                    "priority": n.get("priority") if isinstance(n, dict) else None,
+                    "channel": n.get("channel") if isinstance(n, dict) else None,
+                    "read": n.get("read") if isinstance(n, dict) else None,
                 }
                 for n in recent[:5]
             ]
