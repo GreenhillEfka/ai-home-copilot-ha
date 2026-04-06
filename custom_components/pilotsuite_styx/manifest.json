@@ -6,6 +6,6 @@
   "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",
   "dependencies": [],
   "codeowners": ["@GreenhillEfka"],
-  "requirements": [],
+  "requirements": ["httpx"],
   "iot_class": "local_polling"
 }
