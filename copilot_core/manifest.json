@@ -1,7 +1,7 @@
 {
   "domain": "pilotsuite",
   "name": "PilotSuite Core",
-  "version": "1.0.0-rc2",
+  "version": "1.0.0",
   "config_flow": true,
   "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/blob/main/README.md",
   "requirements": [
