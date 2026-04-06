@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN, SIGNAL_CONTEXT_ENTITIES_REFRESH
+from .coordinator import CopilotDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 from .entity import CopilotBaseEntity
@@ -35,7 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         return
 
     if not is_full_entity_profile(entry):
-        async_add_entities([CopilotOnlineBinarySensor(coordinator)], True)
+        async_add_entities([CopilotOnlineBinarySensor(coordinator, entry)], True)
         return
 
     dynamic_context_unique_ids: set[str] = set()
@@ -57,7 +60,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
             _LOGGER.exception("Failed to create UniFi context binary entities")
         return entities_out
 
-    entities = [CopilotOnlineBinarySensor(coordinator)]
+    entities = [
+        CopilotOnlineBinarySensor(coordinator, entry),
+        CoreApiHealthyBinarySensor(coordinator, entry),
+        CopilotSyncStatusBinarySensor(coordinator, entry),
+    ]
 
     # Events Forwarder quality binary sensor (v0.1 kernel)
     if isinstance(data, dict) and data.get("events_forwarder_state") is not None:
@@ -71,7 +78,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 TvActiveBinarySensor(media_coordinator),
             ]
         )
-    
+
     # Media Context v2 doesn't have binary sensor entities currently
 
     # Mesh Monitoring Binary Sensors (Z-Wave / Zigbee)
@@ -141,12 +148,12 @@ async def _discover_camera_entities(hass: HomeAssistant) -> list[tuple[str, str]
     from homeassistant.helpers import entity_registry
     er = entity_registry.async_get(hass)
     cameras = []
-    
+
     for entity_id, entry in er.entities.items():
         if entry.domain == "camera":
             camera_name = entry.name or entry.original_name or entity_id.split(".")[-1]
             cameras.append((entity_id, camera_name))
-    
+
     return cameras
 
 
@@ -154,6 +161,10 @@ class CopilotOnlineBinarySensor(CopilotBaseEntity, BinarySensorEntity):
     _attr_name = "Online"
     _attr_unique_id = "copilot_ha_online"
     _attr_icon = "mdi:robot"
+
+    def __init__(self, coordinator: CopilotDataUpdateCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
 
     @property
     def is_on(self) -> bool | None:
@@ -164,5 +175,76 @@ class CopilotOnlineBinarySensor(CopilotBaseEntity, BinarySensorEntity):
             if ok is None:
                 return None
             return bool(ok)
-        # Defensive fallback for unexpected coordinator payload types.
         return bool(getattr(self.coordinator.data, "ok", False))
+
+
+class CopilotSyncStatusBinarySensor(CopilotBaseEntity, BinarySensorEntity):
+    """Binary sensor: is the integration in sync (no errors/warnings in digest)."""
+
+    _attr_name = "Sync Status"
+    _attr_unique_id = "copilot_ha_sync_status"
+    _attr_icon = "mdi:check-circle-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: CopilotDataUpdateCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+
+    @property
+    def is_on(self) -> bool | None:
+        entry_data = self._hass_entry_data()
+        if entry_data is None:
+            return None
+        digest = entry_data.get("error_digest")
+        if not hasattr(digest, "as_dict"):
+            return None
+        d = digest.as_dict()
+        return d.get("errors_total", 0) == 0 and d.get("warnings_total", 0) == 0
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        entry_data = self._hass_entry_data()
+        if entry_data is None:
+            return {}
+        digest = entry_data.get("error_digest")
+        if not hasattr(digest, "as_dict"):
+            return {}
+        d = digest.as_dict()
+        return {
+            "errors_total": d.get("errors_total", 0),
+            "warnings_total": d.get("warnings_total", 0),
+            "last_error_at": d.get("last_error_at"),
+            "last_warning_at": d.get("last_warning_at"),
+        }
+
+    def _hass_entry_data(self) -> dict[str, Any] | None:
+        return self.hass.data.get(DOMAIN, {}).get(self._entry.entry_id)
+
+
+class CoreApiHealthyBinarySensor(CopilotBaseEntity, BinarySensorEntity):
+    """Binary sensor: is the Core API endpoint reachable and responding?"""
+
+    _attr_name = "Core API Healthy"
+    _attr_unique_id = "copilot_ha_core_api_healthy"
+    _attr_icon = "mdi:api"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: CopilotDataUpdateCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._entry = entry
+
+    @property
+    def is_on(self) -> bool | None:
+        if not self.coordinator.data:
+            return None
+        if isinstance(self.coordinator.data, dict):
+            return bool(self.coordinator.data.get("ok"))
+        return bool(getattr(self.coordinator.data, "ok", False))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        attrs: dict[str, Any] = {}
+        if self.coordinator.data and isinstance(self.coordinator.data, dict):
+            attrs["version"] = self.coordinator.data.get("version")
+            attrs["core_url"] = self.coordinator.data.get("core_url")
+        return attrs

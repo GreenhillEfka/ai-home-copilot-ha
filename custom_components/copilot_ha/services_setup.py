@@ -5,6 +5,7 @@ Extracted from __init__.py to keep async_setup() lean.
 from __future__ import annotations
 
 import logging
+import time
 
 import voluptuous as vol
 
@@ -1889,13 +1890,8 @@ def _register_diagnostics_service(hass: HomeAssistant) -> None:
             except Exception:  # noqa: BLE001
                 pass
 
-            # Uptime
-            try:
-                start_time = hass.loop.time()
-                # Not easily available without patching — use 0 as placeholder
-                uptime_summary = None
-            except Exception:  # noqa: BLE001
-                uptime_summary = None
+            # Uptime — not easily available without HA internals, skip
+            uptime_summary = None
 
             result = {
                 "ok": core_reachable,
