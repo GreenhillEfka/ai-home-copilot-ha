@@ -1,5 +1,7 @@
 # MEMORY.md - PilotSuite Research Tasks & Learnings
 | **C-029** | P2-002: OR-Tools Scheduling Optimizer | 2026-04-07 00:20 | Full CP-SAT implementation with soft constraints |
+| **C-030** | P3-008: Wi-Fi/BLE Fingerprinting | 2026-04-07 00:05 | Complete fingerprinting module with Wi-Fi RSSI, BLE beacon detection, sensor fusion, HA integration |
+| **C-031** | P3-009: mmWave Radar Integration | 2026-04-07 00:10 | Complete 60GHz mmWave radar module with static/motion detection, multi-target tracking, calibration, HA integration |
 
 **Created:** 2026-04-01 03:47 Europe/Berlin
 **Owner:** openclaw-main
@@ -37,22 +39,22 @@
 | **P2-003** | HNSW Vector Optimization | DEEP_RESEARCH_PARALLEL | ❌ Offen | 15 |
 | **P2-004** | Wilson Score Interval (Bayesian) | DEEP_RESEARCH_PARALLEL | ❌ Offen | 16 |
 | **P2-005** | Thompson Sampling | DEEP_RESEARCH_PARALLEL | ❌ Offen | 17 |
-| **P2-006** | Event Propagation Systematics | DEEP_RESEARCH_PARALLEL | ❌ Offen | 18 |
-| **P2-007** | State Consistency Checks | DEEP_RESEARCH_PARALLEL | ❌ Offen | 19 |
-| **P2-008** | Federated Learning Math Library | DEEP_RESEARCH_REPORT | ❌ Offen | 20 |
-| **P2-009** | Knowledge Transfer API Contract | DEEP_RESEARCH_REPORT | ❌ Offen | 21 |
+| **P2-006** | State Consistency Checks | DEEP_RESEARCH_PARALLEL | ✅ Complete (P2-006) | 18 |
+| **P2-007** | Event Propagation Systematics | DEEP_RESEARCH_PARALLEL | ❌ Offen | 19 |
+| **P2-008** | Knowledge Transfer API Contract | DEEP_RESEARCH_REPORT | ✅ Complete (P2-008) | 20 |
+| **P2-009** | Federated Learning Math Library | DEEP_RESEARCH_REPORT | ❌ Offen | 21 |
 | **P2-010** | Real-Time Pricing API | perplexity_2026-02-16 | ❌ Offen | 22 |
 | **P2-011** | Battery Management Predictive | perplexity_2026-02-16 | ❌ Offen | 23 |
 ### P3 - NIEDRIG (UX/Dashboard)
-| **P3-001** | ReactBoard Integration (404 Fix) | DEEP_RESEARCH_REPORT | ❌ Offen | 24 |
+| **P3-001** | ReactBoard Integration (404 Fix) | DEEP_RESEARCH_REPORT | ✅ N/A — Kein Core-Problem | 24 |
 | **P3-002** | WebSocket für Echtzeit-Updates | DEEP_RESEARCH_REPORT | ❌ Offen | 25 |
 | **P3-003** | Interaktive Graph-Visualisierung | DEEP_RESEARCH_REPORT | ❌ Offen | 26 |
 | **P3-004** | Learning Progress Visualization | DEEP_RESEARCH_PARALLEL | ❌ Offen | 27 |
 | **P3-005** | Anomaly Detection Display | DEEP_RESEARCH_PARALLEL | ❌ Offen | 28 |
 | **P3-006** | Neo4j/NetworkX Integration | perplexity_2026-02-16 | ❌ Offen | 29 |
-| **P3-007** | SPARQL Query Interface | perplexity_2026-02-16 | ❌ Offen | 30 |
-| **P3-008** | Wi-Fi/BLE Fingerprinting | perplexity_2026-02-16 | ❌ Offen | 31 |
-| **P3-009** | mmWave Radar Integration (60GHz) | perplexity_2026-02-16 | ❌ Offen | 32 |
+| **P3-007** | SPARQL Query Interface | perplexity_2026-02-16 | ✅ Complete | 30 |
+| **P3-008** | Wi-Fi/BLE Fingerprinting | perplexity_2026-02-16 | ✅ Complete (P3-008) | 31 |
+| **P3-009** | mmWave Radar Integration (60GHz) | perplexity_2026-02-16 | ✅ Complete (P3-009) | 32 |
 | **P3-010** | CQRS + Event Sourcing | DEEP_RESEARCH_PARALLEL | ❌ Offen | 33 |
 | **P3-011** | Hexagonal Architecture Refactor | DEEP_RESEARCH_PARALLEL | ❌ Offen | 34 |
 ## ✅ COMPLETED TASKS
@@ -79,6 +81,9 @@
 | **C-019** | Pattern Detection | 2026-04-01 | presence/pattern_detection.py (ML-based) |
 | **C-020** | API Analytics | 2026-04-01 | /api/v1/presence/analytics/{patterns,predict,anomaly} |
 | **C-021** | Symbiose HA-Core Stack | 2026-04-06 | HA habitus_zone_sync + Brain Graph + Lovelace Cards + Core API + Dashboard |
+| **C-022** | P3-007: SPARQL Query Interface | 2026-04-07 | sparql_endpoint.py with SELECT parser, graph pattern matching, /api/v1/knowledge/sparql endpoint |
+| **C-031** | P2-006: State Consistency Checks | 2026-04-07 | consistency.py with VectorClock, VersionedState, optimistic locking, ConflictStrategy (last_write_wins/first_write_wins/merge/custom), partition reconciliation, consistency verification (eventual/sequential/linearizable), API endpoints /api/v1/state/consistency/*, 24 tests |
+| **C-032** | P2-008: Knowledge Transfer API Contract | 2026-04-07 | transfer_api.py with KnowledgeTransferAPI, ExportPackage, ImportResult, TransferResult, ConflictStrategy (SKIP/OVERWRITE/MERGE/KEEP_BOTH/HIGHEST_CONFIDENCE), ExportFormat (JSON/GRAPHML/TAR_GZ), knowledge graph serialization, migration tools (create_migration_plan, execute_migration), validation (_validate_package), conflict detection (_detect_conflicts), 23 tests |
 ## 📋 EXECUTION STRATEGY
 ### Phase 1: Foundation (Week 1)
 - P0-001: Security Fix (Token Auth)
@@ -216,6 +221,7 @@
 | **C-042** | Model Registry | 2026-04-06 23:40 | `rag/model_registry.py` — 16 Model-Profile, Health-Checks, Recommendations by Use-Case |
 | **C-043** | RAG Analytics API | 2026-04-06 23:45 | Bereits vorhanden: `/api/rag/search/analytics`, `/api/rag/feedback` |
 | **C-044** | Syntax-Checks | 2026-04-06 23:45 | `ollama_client.py` + `model_registry.py` ✅ |
+| **C-045** | P3-001: ReactBoard 404 Investigation | 2026-04-07 00:10 | N/A — ReactBoard ist OpenClaw-extern, nicht im Core Add-on. React TSX-files (SOTA_*.tsx) sind unbuildbar ohne npm packages. Flask static assets funktionieren korrekt. |
 ## 📊 MCP TOOLS STATUS (25/25)
 | Tool | Status | Implementation |
 |------|--------|----------------|

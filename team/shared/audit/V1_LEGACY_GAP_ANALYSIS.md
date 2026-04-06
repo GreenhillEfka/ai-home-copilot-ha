@@ -137,6 +137,60 @@
 - `POST /v1/chat/completions`
 - `PUT /api/v1/notifications/subscriptions/:device_id`
 
+### Prio-Liste P0–P2 (für die 41 FEHLEND-Endpoints)
+
+#### P0 (Showstopper für v1.0)
+- `GET /api/v1/onyx/status` — Hardware-/Service-Bridge nicht beobacht- und steuerbar
+- `POST /api/v1/onyx/ha/service-call` — Hardware-/Home-Assistant-Kommandos nicht ausführbar
+- `POST /api/v1/agent/verify` — Sicherheits-/Integritätsprüfung fehlt
+- `POST /api/v1/agent/self-heal` — Notfall-Recovery nicht triggerbar
+- `GET /api/v1/health/deep` — Deep-Health für Incident-Crash/Recovery unzugänglich
+- `GET /api/v1/energy/health` — Energiestatus unbekannt (Safety-/Reliability-Risiko)
+- `GET /api/v1/energy/suppress` — Notfall-/Drosselpfad nicht verfügbar
+- `POST /api/v1/mood/zones/:zone_name/force_mood` — Eingriffsfähigkeit auf Zone/Umfeld fehlt
+
+#### P1 (wichtige Komfort-/Betriebsfeatures)
+- `GET /api/v1/agent/status`
+- `GET /api/v1/candidates/graph_candidates`
+- `GET /api/v1/energy/baselines`
+- `GET /api/v1/energy/explain/:suggestion_id`
+- `GET /api/v1/energy/shifting`
+- `GET /api/v1/events`
+- `POST /api/v1/events`
+- `GET /api/v1/health/metrics`
+- `GET /api/v1/notifications/subscriptions`
+- `PUT /api/v1/notifications/subscriptions/:device_id`
+- `POST /api/v1/notifications/:notification_id/read`
+- `POST /api/v1/notifications/clear`
+- `POST /api/v1/notifications/send`
+- `POST /api/v1/notifications/subscribe`
+- `POST /api/v1/notifications/unsubscribe`
+- `GET /api/v1/search`
+- `GET /api/v1/weather/`
+- `GET /api/v1/weather/forecast`
+- `GET /api/v1/weather/health`
+- `GET /api/v1/weather/pv-recommendations`
+- `GET /v1/models/:model_id`
+- `POST /api/v1/dev/logs`
+- `POST /api/v1/echo`
+- `POST /api/v1/graph/cache/clear`
+- `POST /api/v1/graph/ops`
+- `POST /v1/chat/completions`
+
+#### P2 (Nice-to-have / Legacy-Historie / UI-Cockpit)
+- `DELETE /api/v1/candidates/:candidate_id`
+- `DELETE /api/v1/notifications/:notification_id`
+- `GET /api/v1/habitus/dashboard_cards`
+- `GET /api/v1/habitus/dashboard_cards/health`
+- `GET /api/v1/habitus/dashboard_cards/rules`
+- `GET /api/v1/habitus/dashboard_cards/zone/:zone_id`
+- `GET /api/v1/habitus/dashboard_cards/zones`
+
+**Prio-Zusammenfassung:** P0=8, P1=26, P2=7
+
+---
+
+
 ## Legacy-Endpunkte, die **im neuen Runtime-Code noch existieren, aber nicht in API-Referenz dokumentiert sind**
 
 `25` Endpunkte (nicht öffentlich sichtbar in Doku):
