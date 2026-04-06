@@ -1,293 +1,191 @@
-# PilotSuite Core
+# PilotSuite Core — Home Assistant Integration
 
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![Version](https://img.shields.io/badge/version-1.0.0--rc2-blue)](https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/GreenhillEfka/pilotsuite-styx-ha/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**AI-Powered Smart Home Automation Platform**
-
----
-
-## 🚀 Features
-
-### Core Capabilities
-
-- **🧠 RAG System** — Vector search, embeddings, semantic retrieval
-- **🤖 ML Engine** — Pattern detection, habit learning, anomaly detection
-- **🏠 Presence Detection** — Multi-sensor fusion, Bayesian inference, Wilson Score
-- **⚡ Energy Optimization** — LSTM forecasting, OR-Tools scheduler, load shifting
-- **🧠 Knowledge Graph** — Neo4j/NetworkX, temporal reasoning, SPARQL-like queries
-- **🎤 Voice Pipeline** — Whisper STT, NLU, Piper TTS, emotion recognition
-- **📊 Admin Dashboard** — Real-time monitoring, analytics, Lovelace cards
-- **🔌 REST API** — FastAPI server, JWT auth, 25+ endpoints
-- **🔒 Security** — Encrypted storage, audit logging, rate limiting
-
-### Home Assistant Integration
-
-- Custom entities (sensors, buttons, switches)
-- Lovelace dashboard cards (9 custom cards)
-- Habitual zone automation
-- Brain Graph visualization
-- Real-time WebSocket commands
+**AI-Powered Smart Home Automation Platform for Home Assistant**
 
 ---
 
 ## 📦 Installation
 
-### Via HACS (Recommended)
+### Voraussetzung
 
-1. Open HACS in Home Assistant
-2. Go to **Integrations** → **⋮** → **Custom repositories**
-3. Add repository: `https://github.com/GreenhillEfka/pilotsuite-styx-ha`
-4. Select category: **Integration**
-5. Click **Add**
-6. Search for "PilotSuite Core" and install
-7. Restart Home Assistant
-8. Go to **Settings** → **Devices & Services** → **Add Integration** → **PilotSuite Core**
+- Home Assistant 2024.1.0 oder höher
+- HACS installiert
+- PilotSuite Core Add-on (läuft auf Port 8080)
 
-### Manual Installation
+### Schritt 1: HACS Custom Repository
 
-```bash
-# SSH into Home Assistant
-cd /config/custom_components
-git clone https://github.com/GreenhillEfka/pilotsuite-styx-ha.git pilotsuite
+1. Öffne **HACS** in Home Assistant
+2. Klicke auf **⋮** (drei Punkte) → **Custom repositories**
+3. Eintragen:
+   - **Repository:** `https://github.com/GreenhillEfka/pilotsuite-styx-ha`
+   - **Category:** `Integration`
+4. Klicke **Hinzufügen**
 
-# Add to configuration.yaml
+### Schritt 2: Installation
+
+1. Suche nach **"PilotSuite Core"** in HACS Integrations
+2. Klicke **Download**
+3. Wähle Version **1.0.0**
+4. Klicke **Download**
+5. **Home Assistant neustarten**
+
+### Schritt 3: Integration konfigurieren
+
+1. **Einstellungen** → **Geräte & Dienste**
+2. **Integration hinzufügen**
+3. Suche **"PilotSuite Core"**
+4. Config Flow:
+   - **API Endpoint:** `http://<core-add-on-ip>:8080`
+   - **Token:** (wird im Add-on generiert)
+5. **Speichern**
+
+---
+
+## 🎯 Features
+
+### Lovelace Cards (19)
+
+| Card | Beschreibung |
+|------|-------------|
+| Brain Graph | Wissensgraph Visualisierung |
+| Presence Status | Anwesenheits-Erkennung |
+| Energy Dashboard | Energie-Optimierung |
+| Habit Patterns | Gewohnheits-Muster |
+| Suggestions | AI-Empfehlungen |
+| Notifications | Benachrichtigungs-Center |
+| Calendar | Kalender-Integration |
+| Weather Automation | Wetter-Automatisierung |
+| Analytics | Erweiterte Analysen |
+| System Health | System-Überwachung |
+| Scene Control | Szenen-Steuerung |
+| Plugin Manager | Plugin-Verwaltung |
+| Sync Status | Multi-Home Sync |
+| Report Viewer | Berichte |
+| Contract Status | Contract-Überwachung |
+| ML Status | ML-Modell-Status |
+| + 3 weitere | Siehe `lovelace/` |
+
+### Entities
+
+- **Sensoren:** Presence, Energy, Mood, Analytics
+- **Switches:** Automation Toggles
+- **Binary Sensoren:** Status Indicators
+- **Notifications:** Pushover, Telegram
+
+### API Client
+
+- REST API Client zu Core Add-on
+- WebSocket für Echtzeit-Updates
+- GraphQL Support
+- Rate Limiting
+
+---
+
+## 🔧 Configuration
+
+### configuration.yaml (Optional)
+
+```yaml
 pilotsuite:
-  # Optional configuration
+  api_endpoint: http://localhost:8080
+  token: your-token-here
+  polling_interval: 30
   debug: false
-  llm_model: ollama/qwen3.5:397b-cloud
 ```
 
----
-
-## ⚙️ Configuration
-
-### Basic Configuration
-
-```yaml
-pilotsuite:
-  debug: false                    # Enable debug logging
-  llm_model: ollama/qwen3.5:397b-cloud  # Default LLM model
-  data_dir: /config/pilotsuite    # Data directory
-```
-
-### Advanced Configuration
-
-```yaml
-pilotsuite:
-  # RAG Configuration
-  rag:
-    vector_store: faiss
-    embedding_model: sentence-transformers/all-MiniLM-L6-v2
-    dimension: 384
-  
-  # ML Configuration
-  ml:
-    pattern_min_confidence: 0.6
-    habit_learning_enabled: true
-  
-  # Presence Configuration
-  presence:
-    sensors:
-      - pir.living_room
-      - radar.bedroom
-      - wifi.fingerprinting
-    wilson_confidence: 0.95
-  
-  # Energy Configuration
-  energy:
-    forecasting_enabled: true
-    scheduler_enabled: true
-    devices:
-      - wallbox.ev_charger
-      - climate.heat_pump
-      - battery.home
-  
-  # API Configuration
-  api:
-    enabled: true
-    host: 0.0.0.0
-    port: 8080
-    jwt_expiry_hours: 24
-    rate_limit_requests: 100
-```
-
----
-
-## 🔌 Services
-
-### `pilotsuite.learn_pattern`
-
-Learn automation pattern from user behavior.
-
-```yaml
-service: pilotsuite.learn_pattern
-data:
-  user_id: user_1
-  trigger:
-    type: state
-    entity_id: light.living_room
-    to: "on"
-  action:
-    entity_id: climate.living_room
-    service: climate.set_temperature
-    data:
-      temperature: 22
-```
-
-### `pilotsuite.get_suggestions`
-
-Get automation suggestions.
-
-```yaml
-service: pilotsuite.get_suggestions
-data:
-  context:
-    time_of_day: morning
-    occupancy: home
-```
-
-### `pilotsuite.optimize_energy`
-
-Run energy optimization.
-
-```yaml
-service: pilotsuite.optimize_energy
-data:
-  devices:
-    - wallbox.ev_charger
-    - climate.heat_pump
-  horizon_hours: 24
-```
-
----
-
-## 📊 Lovelace Cards
-
-### Brain Graph Card
+### Lovelace Dashboard
 
 ```yaml
 type: custom:pilotsuite-brain-graph
-title: Knowledge Graph
-height: 400
-```
+title: Brain Graph
 
-### Habit Pattern Card
+type: custom:pilotsuite-presence-status
+title: Presence
 
-```yaml
-type: custom:pilotsuite-habit-pattern
-entity: sensor.habit_patterns
-show_history: true
-```
-
-### Energy Optimization Card
-
-```yaml
-type: custom:pilotsuite-energy-optimization
-devices:
-  - wallbox.ev_charger
-  - climate.heat_pump
-show_forecast: true
+type: custom:pilotsuite-energy-dashboard
+title: Energy
 ```
 
 ---
 
-## 🔧 API Usage
+## 📊 Architecture
 
-### Authentication
-
-```bash
-# Get JWT token
-curl -X POST http://localhost:8080/api/v1/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{"api_key": "your_api_key", "scope": "read"}'
 ```
-
-### Event Ingestion
-
-```bash
-# Create event
-curl -X POST http://localhost:8080/api/v1/events \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"type": "motion", "entity_id": "pir.living_room"}'
-```
-
-### Vector Search
-
-```bash
-# Similarity search
-curl -X GET http://localhost:8080/api/v1/vector/similar/entity_123 \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-### Knowledge Graph
-
-```bash
-# Query graph
-curl -X POST http://localhost:8080/api/v1/kg/query \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "SELECT ?e WHERE { ?e type \"device\" }"}'
-```
-
----
-
-## 🧪 Testing
-
-```bash
-# Run tests
-pytest copilot_core/ -v
-
-# With coverage
-pytest copilot_core/ --cov=copilot_core --cov-report=html
-
-# Specific test suite
-pytest copilot_core/rag/tests/test_vector_store.py -v
-pytest copilot_core/presence/tests/test_presence.py -v
-pytest copilot_core/brain/tests/test_brain_graph_store.py -v
+┌─────────────────────────────────────┐
+│   Home Assistant Integration        │
+│   (This Repository)                 │
+│                                     │
+│   - Lovelace Cards                  │
+│   - Sensors, Switches, Binary       │
+│   - Config Flow                     │
+│   - API Client → Core               │
+└──────────────┬──────────────────────┘
+               │ HTTP/REST (Port 8080)
+               ▼
+┌─────────────────────────────────────┐
+│   Core Add-on                       │
+│   (Separate Repository)             │
+│                                     │
+│   - REST API Server                 │
+│   - ML Models                       │
+│   - Database                        │
+│   - Celery Workers                  │
+└─────────────────────────────────────┘
 ```
 
 ---
 
 ## 📖 Documentation
 
-- **[Installation Guide](docs/INSTALL.md)** — Detailed installation steps
-- **[API Reference](docs/API_REFERENCE.md)** — Complete API documentation
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** — Common issues and solutions
-- **[Changelog](CHANGELOG.md)** — Version history
+| Doc | Link |
+|-----|------|
+| Installation | [INSTALL_HACS.md](docs/INSTALL_HACS.md) |
+| Architecture | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| API Reference | [API_REFERENCE.md](docs/API_REFERENCE.md) |
+| Quick Start | [QUICK_START_GUIDE.md](docs/QUICK_START_GUIDE.md) |
 
 ---
 
-## 🤝 Contributing
+## 🐛 Troubleshooting
 
-Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) first.
+| Problem | Lösung |
+|---------|--------|
+| Integration nicht sichtbar | HA Neustart erzwingen |
+| API Connection Failed | Core Add-on läuft? |
+| Entities fehlen | Integration neu hinzufügen |
+| Cards nicht geladen | Browser Cache leeren |
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Logs prüfen
 
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+**Einstellungen** → **System** → **Logs** → Filter: `pilotsuite`
 
 ---
 
-## 🙏 Acknowledgments
+## 🚀 Releases
 
-- Home Assistant team for the amazing platform
-- Ollama for local LLM inference
-- OpenAI Whisper for STT
-- Piper for TTS
-- Google OR-Tools for optimization
-- Neo4j for graph database
-- FastAPI for the web framework
+| Version | Date | Notes |
+|---------|------|-------|
+| 1.0.0 | 2026-04-07 | Initial Release |
 
 ---
 
-**Built with ❤️ by the PilotSuite Team**
+## 📝 License
+
+MIT License — See [LICENSE](LICENSE)
+
+---
+
+## 🙏 Credits
+
+- **Author:** @GreenhillEfka
+- **Based on:** PilotSuite Styx Architecture
+- **HACS:** [hacs.xyz](https://hacs.xyz)
+
+---
+
+**GitHub:** https://github.com/GreenhillEfka/pilotsuite-styx-ha  
+**Issues:** https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues
