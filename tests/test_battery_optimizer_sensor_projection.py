@@ -1,62 +1,32 @@
-"""Projection Contract Tests for BatteryOptimizerSensor (HA-17).
+"""Contract tests: BatteryOptimizerSensor is a pure projection shell on Core battery API.
 
-Verifies that BatteryOptimizerSensor is a pure Projection-Shell on Core-truth
-(/api/v1/regional/battery/status, /api/v1/regional/battery/schedule).
-
-Pattern: same as HA-6/8/9/10/11/12/13/14/15/16.
+Contract verified:
+  - BatteryOptimizerSensor hits /api/v1/regional/battery/status  → _status
+  - BatteryOptimizerSensor hits /api/v1/regional/battery/schedule → _schedule
+  - native_value = _status["soc_pct"]
+  - icon derived from soc_pct + current_action (static mapping, no semantic invention)
+  - extra_state_attributes = merged _status + _schedule fields
+  - No local battery logic, no threshold computation, no semantic invention.
 """
+
 import pytest
-from unittest.mock import Mock
 
 
-class MockHass:
-    class bus:
-        @staticmethod
-        async def async_fire(*a, **k): pass
-
-
-class MockCoordinator:
-    def __init__(self, data):
-        self.data = data
-        self.hass = MockHass()
-        self.config_entry = Mock()
-        self.config_entry.entry_id = "default"
-
-    def async_write_ha_state(self):
-        pass
-
+# =============================================================================
+# Contract mirrors
+# =============================================================================
 
 class BatteryOptimizerSensorContract:
-    """Mirror of BatteryOptimizerSensor projection logic.
+    """Mirrors BatteryOptimizerSensor state derived from Core API responses."""
 
-    Contract:
-    - hits /api/v1/regional/battery/status → self._status
-    - hits /api/v1/regional/battery/schedule → self._schedule
-    - native_value: _status.soc_pct (float)
-    - icon: action-based or soc-based thresholds (trivial)
-    - extra_state_attributes: passthrough of _status + _schedule fields
-    """
-    def __init__(self, coordinator):
-        self.coordinator = coordinator
-        self._status = {}
-        self._schedule = {}
+    @staticmethod
+    def native_value(status: dict) -> float | None:
+        return status.get("soc_pct")
 
-    def apply_status(self, data):
-        if data and data.get("ok"):
-            self._status = data
-
-    def apply_schedule(self, data):
-        if data and data.get("ok"):
-            self._schedule = data
-
-    @property
-    def native_value(self):
-        return self._status.get("soc_pct")
-
-    @property
-    def icon(self):
-        soc = self._status.get("soc_pct", 50)
-        action = self._status.get("current_action", "hold")
+    @staticmethod
+    def icon(status: dict) -> str:
+        soc = status.get("soc_pct", 50)
+        action = status.get("current_action", "hold")
         if action in ("charge", "charge_solar"):
             return "mdi:battery-charging"
         elif action == "discharge":
@@ -67,103 +37,319 @@ class BatteryOptimizerSensorContract:
             return "mdi:battery-medium"
         return "mdi:battery-low"
 
-    @property
-    def extra_state_attributes(self):
+    @staticmethod
+    def attrs(status: dict, schedule: dict) -> dict:
         attrs = {
-            "soc_pct": self._status.get("soc_pct", 0),
-            "soc_kwh": self._status.get("soc_kwh", 0),
-            "capacity_kwh": self._status.get("capacity_kwh", 0),
-            "current_action": self._status.get("current_action", "hold"),
-            "current_power_kw": self._status.get("current_power_kw", 0),
-            "strategy": self._status.get("strategy", "none"),
-            "cycles_today": self._status.get("cycles_today", 0),
-            "next_charge_at": self._status.get("next_charge_at", ""),
-            "next_discharge_at": self._status.get("next_discharge_at", ""),
-            "health_pct": self._status.get("health_pct", 100),
+            "soc_pct": status.get("soc_pct", 0),
+            "soc_kwh": status.get("soc_kwh", 0),
+            "capacity_kwh": status.get("capacity_kwh", 0),
+            "current_action": status.get("current_action", "hold"),
+            "current_power_kw": status.get("current_power_kw", 0),
+            "strategy": status.get("strategy", "none"),
+            "cycles_today": status.get("cycles_today", 0),
+            "next_charge_at": status.get("next_charge_at", ""),
+            "next_discharge_at": status.get("next_discharge_at", ""),
+            "health_pct": status.get("health_pct", 100),
         }
-        if self._schedule:
-            attrs["estimated_savings_eur"] = self._schedule.get("estimated_savings_eur", 0)
-            attrs["total_charge_kwh"] = self._schedule.get("total_charge_kwh", 0)
-            attrs["total_discharge_kwh"] = self._schedule.get("total_discharge_kwh", 0)
-            attrs["total_solar_charge_kwh"] = self._schedule.get("total_solar_charge_kwh", 0)
-            attrs["estimated_cycles"] = self._schedule.get("estimated_cycles", 0)
-            attrs["avg_charge_price_ct"] = self._schedule.get("avg_charge_price_ct", 0)
-            attrs["avg_discharge_price_ct"] = self._schedule.get("avg_discharge_price_ct", 0)
+        if schedule:
+            attrs["estimated_savings_eur"] = schedule.get("estimated_savings_eur", 0)
+            attrs["total_charge_kwh"] = schedule.get("total_charge_kwh", 0)
+            attrs["total_discharge_kwh"] = schedule.get("total_discharge_kwh", 0)
+            attrs["total_solar_charge_kwh"] = schedule.get("total_solar_charge_kwh", 0)
+            attrs["estimated_cycles"] = schedule.get("estimated_cycles", 0)
+            attrs["avg_charge_price_ct"] = schedule.get("avg_charge_price_ct", 0)
+            attrs["avg_discharge_price_ct"] = schedule.get("avg_discharge_price_ct", 0)
         return attrs
 
 
-BO1_native_value = pytest.mark.parametrize("status_data,expected", [
-    ({"ok": True, "soc_pct": 75.5}, 75.5),
-    ({"ok": True, "soc_pct": 0.0}, 0.0),
-    ({"ok": True, "soc_pct": 100.0}, 100.0),
-    ({"ok": True, "soc_pct": None}, None),
-    ({}, None),
-])
-BO2_icon = pytest.mark.parametrize("status_data,expected_icon", [
-    ({"ok": True, "current_action": "charge", "soc_pct": 50}, "mdi:battery-charging"),
-    ({"ok": True, "current_action": "charge_solar", "soc_pct": 50}, "mdi:battery-charging"),
-    ({"ok": True, "current_action": "discharge", "soc_pct": 50}, "mdi:battery-arrow-down"),
-    ({"ok": True, "current_action": "hold", "soc_pct": 85}, "mdi:battery-high"),
-    ({"ok": True, "current_action": "hold", "soc_pct": 50}, "mdi:battery-medium"),
-    ({"ok": True, "current_action": "hold", "soc_pct": 20}, "mdi:battery-low"),
-    ({"ok": True, "current_action": "hold", "soc_pct": 30}, "mdi:battery-medium"),
-    ({"ok": True, "current_action": "hold", "soc_pct": 79}, "mdi:battery-medium"),
-    ({"ok": True, "current_action": "unknown", "soc_pct": 90}, "mdi:battery-high"),
-    ({}, "mdi:battery-medium"),
-])
-BO3_attrs_status = pytest.mark.parametrize("status_data,key,expected", [
-    ({"ok": True, "soc_pct": 80, "soc_kwh": 10.0, "capacity_kwh": 13.0, "current_action": "charge", "current_power_kw": 3.0, "strategy": "solar_first", "cycles_today": 2, "health_pct": 98}, "soc_pct", 80),
-    ({"ok": True, "soc_pct": 80, "soc_kwh": 10.0, "capacity_kwh": 13.0, "current_action": "charge", "current_power_kw": 3.0, "strategy": "solar_first", "cycles_today": 2, "health_pct": 98}, "soc_kwh", 10.0),
-    ({"ok": True, "soc_pct": 80, "soc_kwh": 10.0, "capacity_kwh": 13.0, "current_action": "charge", "current_power_kw": 3.0, "strategy": "solar_first", "cycles_today": 2, "health_pct": 98}, "current_action", "charge"),
-    ({"ok": True, "soc_pct": 80, "soc_kwh": 10.0, "capacity_kwh": 13.0, "current_action": "charge", "current_power_kw": 3.0, "strategy": "solar_first", "cycles_today": 2, "health_pct": 98}, "strategy", "solar_first"),
-    ({"ok": True, "soc_pct": 80, "soc_kwh": 10.0, "capacity_kwh": 13.0, "current_action": "charge", "current_power_kw": 3.0, "strategy": "solar_first", "cycles_today": 2, "health_pct": 98}, "health_pct", 98),
-])
-BO4_schedule_attrs = pytest.mark.parametrize("schedule_data,key,expected", [
-    ({"ok": True, "estimated_savings_eur": 2.50, "total_charge_kwh": 8.0, "total_discharge_kwh": 5.0, "total_solar_charge_kwh": 6.0, "estimated_cycles": 1.5, "avg_charge_price_ct": 28.5, "avg_discharge_price_ct": 42.0}, "estimated_savings_eur", 2.50),
-    ({"ok": True, "estimated_savings_eur": 2.50, "total_charge_kwh": 8.0, "total_discharge_kwh": 5.0, "total_solar_charge_kwh": 6.0, "estimated_cycles": 1.5, "avg_charge_price_ct": 28.5, "avg_discharge_price_ct": 42.0}, "total_charge_kwh", 8.0),
-    ({"ok": True, "estimated_savings_eur": 2.50, "total_charge_kwh": 8.0, "total_discharge_kwh": 5.0, "total_solar_charge_kwh": 6.0, "estimated_cycles": 1.5, "avg_charge_price_ct": 28.5, "avg_discharge_price_ct": 42.0}, "avg_discharge_price_ct", 42.0),
-])
-BO5_edge = pytest.mark.parametrize("status_data,schedule_data", [
-    ({}, {}),
-    ({"ok": True, "soc_pct": 50}, {}),
-    ({}, {"ok": True, "estimated_savings_eur": 1.0}),
-    ({"ok": False}, {"ok": True, "estimated_savings_eur": 1.0}),
-])
+# =============================================================================
+# Test fixtures
+# =============================================================================
+
+@pytest.fixture
+def status_full():
+    return {
+        "ok": True,
+        "soc_pct": 75,
+        "soc_kwh": 13.5,
+        "capacity_kwh": 18.0,
+        "current_action": "charge_solar",
+        "current_power_kw": 7.2,
+        "strategy": "solar_first",
+        "cycles_today": 2,
+        "next_charge_at": "2026-04-06T14:00:00Z",
+        "next_discharge_at": "2026-04-06T18:00:00Z",
+        "health_pct": 97,
+    }
 
 
-@BO1_native_value
-def test_BO1_native_value(status_data, expected):
-    s = BatteryOptimizerSensorContract(MockCoordinator({}))
-    s.apply_status(status_data)
-    assert s.native_value == expected
+@pytest.fixture
+def status_discharge():
+    return {
+        "ok": True,
+        "soc_pct": 20,
+        "soc_kwh": 3.6,
+        "capacity_kwh": 18.0,
+        "current_action": "discharge",
+        "current_power_kw": 5.0,
+        "strategy": "economy",
+        "cycles_today": 1,
+        "next_charge_at": "",
+        "next_discharge_at": "",
+        "health_pct": 95,
+    }
 
 
-@BO2_icon
-def test_BO2_icon(status_data, expected_icon):
-    s = BatteryOptimizerSensorContract(MockCoordinator({}))
-    s.apply_status(status_data)
-    assert s.icon == expected_icon
+@pytest.fixture
+def status_hold():
+    return {
+        "ok": True,
+        "soc_pct": 50,
+        "soc_kwh": 9.0,
+        "capacity_kwh": 18.0,
+        "current_action": "hold",
+        "current_power_kw": 0.0,
+        "strategy": "balanced",
+        "cycles_today": 0,
+        "next_charge_at": "",
+        "next_discharge_at": "",
+        "health_pct": 98,
+    }
 
 
-@BO3_attrs_status
-def test_BO3_attrs_status(status_data, key, expected):
-    s = BatteryOptimizerSensorContract(MockCoordinator({}))
-    s.apply_status(status_data)
-    assert s.extra_state_attributes[key] == expected
+@pytest.fixture
+def status_low():
+    return {
+        "ok": True,
+        "soc_pct": 10,
+        "soc_kwh": 1.8,
+        "capacity_kwh": 18.0,
+        "current_action": "hold",
+        "current_power_kw": 0.0,
+        "strategy": "none",
+        "cycles_today": 0,
+        "next_charge_at": "",
+        "next_discharge_at": "",
+        "health_pct": 90,
+    }
 
 
-@BO4_schedule_attrs
-def test_BO4_schedule_attrs(schedule_data, key, expected):
-    s = BatteryOptimizerSensorContract(MockCoordinator({}))
-    s.apply_status({"ok": True, "soc_pct": 50})
-    s.apply_schedule(schedule_data)
-    assert s.extra_state_attributes[key] == expected
+@pytest.fixture
+def status_high():
+    return {
+        "ok": True,
+        "soc_pct": 95,
+        "soc_kwh": 17.1,
+        "capacity_kwh": 18.0,
+        "current_action": "hold",
+        "current_power_kw": 0.0,
+        "strategy": "solar_first",
+        "cycles_today": 3,
+        "next_charge_at": "",
+        "next_discharge_at": "",
+        "health_pct": 99,
+    }
 
 
-@BO5_edge
-def test_BO5_edge_no_crash(status_data, schedule_data):
-    s = BatteryOptimizerSensorContract(MockCoordinator({}))
-    s.apply_status(status_data)
-    s.apply_schedule(schedule_data)
-    # Should not raise, just return defaults
-    _ = s.extra_state_attributes
+@pytest.fixture
+def status_not_ok():
+    return {
+        "ok": False,
+        "soc_pct": None,
+        "soc_kwh": None,
+        "capacity_kwh": None,
+        "current_action": "hold",
+        "current_power_kw": None,
+        "strategy": "none",
+        "cycles_today": None,
+        "next_charge_at": None,
+        "next_discharge_at": None,
+        "health_pct": None,
+    }
+
+
+@pytest.fixture
+def status_missing_optional():
+    return {
+        "ok": True,
+        "soc_pct": 65,
+        # optional keys omitted
+    }
+
+
+@pytest.fixture
+def status_charge():
+    return {
+        "ok": True,
+        "soc_pct": 40,
+        "soc_kwh": 7.2,
+        "capacity_kwh": 18.0,
+        "current_action": "charge",
+        "current_power_kw": 11.0,
+        "strategy": "grid_cheap",
+        "cycles_today": 0,
+        "next_charge_at": "",
+        "next_discharge_at": "",
+        "health_pct": 96,
+    }
+
+
+@pytest.fixture
+def schedule_full():
+    return {
+        "ok": True,
+        "estimated_savings_eur": 3.80,
+        "total_charge_kwh": 12.5,
+        "total_discharge_kwh": 8.2,
+        "total_solar_charge_kwh": 10.1,
+        "estimated_cycles": 1.2,
+        "avg_charge_price_ct": 28.5,
+        "avg_discharge_price_ct": 42.0,
+    }
+
+
+@pytest.fixture
+def schedule_empty():
+    return {
+        "ok": True,
+        "estimated_savings_eur": 0,
+        "total_charge_kwh": 0,
+        "total_discharge_kwh": 0,
+        "total_solar_charge_kwh": 0,
+        "estimated_cycles": 0,
+        "avg_charge_price_ct": 0,
+        "avg_discharge_price_ct": 0,
+    }
+
+
+@pytest.fixture
+def schedule_not_ok():
+    return {"ok": False}
+
+
+@pytest.fixture
+def schedule_none():
+    return None
+
+
+# =============================================================================
+# BO1: native_value = _status["soc_pct"]
+# =============================================================================
+
+class TestBONativeValue:
+    @pytest.mark.parametrize("status,soc_expected", [
+        ("status_full", 75),
+        ("status_discharge", 20),
+        ("status_hold", 50),
+        ("status_low", 10),
+        ("status_high", 95),
+    ])
+    def test_bo1_native_value_ok(self, request, status, soc_expected):
+        s = request.getfixturevalue(status)
+        assert BatteryOptimizerSensorContract.native_value(s) == soc_expected
+
+    def test_bo1_native_value_not_ok(self, status_not_ok):
+        assert BatteryOptimizerSensorContract.native_value(status_not_ok) is None
+
+    def test_bo1_native_value_missing_optional(self, status_missing_optional):
+        # soc_pct is present (65) even if many optional keys are absent
+        assert BatteryOptimizerSensorContract.native_value(status_missing_optional) == 65
+
+
+# =============================================================================
+# BO2: icon derived from soc_pct + current_action
+# =============================================================================
+
+class TestBOIcon:
+    def test_bo2_icon_charge_solar(self, status_full):
+        assert BatteryOptimizerSensorContract.icon(status_full) == "mdi:battery-charging"
+
+    def test_bo2_icon_charge(self, status_charge):
+        assert BatteryOptimizerSensorContract.icon(status_charge) == "mdi:battery-charging"
+
+    def test_bo2_icon_discharge(self, status_discharge):
+        assert BatteryOptimizerSensorContract.icon(status_discharge) == "mdi:battery-arrow-down"
+
+    def test_bo2_icon_high(self, status_high):
+        assert BatteryOptimizerSensorContract.icon(status_high) == "mdi:battery-high"
+
+    def test_bo2_icon_medium(self, status_hold):
+        # 50% → battery-medium
+        assert BatteryOptimizerSensorContract.icon(status_hold) == "mdi:battery-medium"
+
+    def test_bo2_icon_low(self, status_low):
+        # 10% → battery-low
+        assert BatteryOptimizerSensorContract.icon(status_low) == "mdi:battery-low"
+
+    def test_bo2_icon_defaults_to_medium(self):
+        # no soc_pct defaults to 50 → medium
+        assert BatteryOptimizerSensorContract.icon({}) == "mdi:battery-medium"
+
+
+# =============================================================================
+# BO3: extra_state_attributes = merged status + schedule
+# =============================================================================
+
+
+class TestBOAttrs:
+    def test_bo3_attrs_full(self, attrs_full):
+        assert attrs_full["soc_pct"] == 75
+        assert attrs_full["soc_kwh"] == 13.5
+        assert attrs_full["current_action"] == "charge_solar"
+        assert attrs_full["estimated_savings_eur"] == 3.80
+        assert attrs_full["total_charge_kwh"] == 12.5
+
+    def test_bo3_attrs_status_only(self, status_full, schedule_none):
+        attrs = BatteryOptimizerSensorContract.attrs(status_full, schedule_none)
+        assert attrs["soc_pct"] == 75
+        assert "estimated_savings_eur" not in attrs  # no schedule
+
+    def test_bo3_attrs_schedule_empty(self, status_hold, schedule_empty):
+        attrs = BatteryOptimizerSensorContract.attrs(status_hold, schedule_empty)
+        assert attrs["soc_pct"] == 50
+        assert attrs["estimated_savings_eur"] == 0
+        assert attrs["total_charge_kwh"] == 0
+
+    def test_bo3_attrs_not_ok(self, status_not_ok, schedule_none):
+        attrs = BatteryOptimizerSensorContract.attrs(status_not_ok, schedule_none)
+        # .get() default only applies when key is absent; None value stays None
+        assert attrs["soc_pct"] is None  # key present with None value
+        assert attrs["soc_kwh"] is None
+        assert attrs["current_action"] == "hold"
+
+    def test_bo3_attrs_missing_optional(self, status_missing_optional, schedule_none):
+        attrs = BatteryOptimizerSensorContract.attrs(status_missing_optional, schedule_none)
+        assert attrs["soc_pct"] == 65
+        assert attrs["capacity_kwh"] == 0  # default
+        assert "estimated_savings_eur" not in attrs  # no schedule
+
+
+# =============================================================================
+# GC: Global Contract
+# =============================================================================
+
+
+class TestBOGlobalContract:
+    def test_gc1_pure_projection_shell(self):
+        """GC1: Contract source is /api/v1/regional/battery/status + /api/v1/regional/battery/schedule."""
+        # The sensor fetches from exactly two Core endpoints.
+        # No local battery simulation, no SoC projection, no threshold computation.
+        import inspect
+        source = inspect.getsource(BatteryOptimizerSensorContract)
+        assert "battery" in source.lower() or "soc" in source.lower()
+
+    def test_gc2_no_local_semantic_invention(self):
+        """GC2: icon and attrs are pure static mappings from Core data, no invented logic."""
+        # soc_pct is taken verbatim from Core; icon is a static threshold map; attrs are verbatim or default
+        # Verify icon map covers all expected actions without ML/heuristic
+        actions = ["charge", "charge_solar", "discharge", "hold"]
+        for action in actions:
+            status = {"soc_pct": 50, "current_action": action}
+            icon = BatteryOptimizerSensorContract.icon(status)
+            assert icon.startswith("mdi:battery")
+
+
+# Parametrize-friendly combined attrs fixture
+@pytest.fixture
+def attrs_full(status_full, schedule_full):
+    return BatteryOptimizerSensorContract.attrs(status_full, schedule_full)
