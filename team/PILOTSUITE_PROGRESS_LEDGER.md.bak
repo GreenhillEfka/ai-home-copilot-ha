@@ -1,0 +1,93 @@
+# PILOTSUITE PROGRESS LEDGER
+
+**Stand:** 2026-04-06 22:45 Europe/Berlin  
+**Aktualisiert durch:** cron:b053afd0-9c30-46ff-aacb-6b62e9d0d67c (Lead-Orchestration 15m)
+
+---
+
+## Lane-Status Übersicht
+
+| Lane | Owner | Status | Letzter Slice | Next | Tests | Session |
+|------|-------|--------|---------------|------|-------|---------|
+| **Lead** | Orakel | 🟢 Running | Cron-Koordination done | Nächster 15m-Lauf | - | `agent:orakel:telegram:...:topic:1` |
+| **Core** | PilotClaw | 🟡 Decision | Slice 134 ✅ (Backend-UI Performance) | Slice 135 (HACS vs Neuron-Auth) | 24 passed | `FAILED` |
+| **HA** | HomeClaw | 🟢 Momentum | HA-154 ✅ (media_follow_sensor) | HA-155 (4 verbleibende Sensoren) | 780/783 green | `RUNNING` |
+| **Design** | DesignClaw | 🟢 On-Demand | Aligned to Core-Truth | On-demand Support | - | `FAILED` |
+
+---
+
+## Aktive Blocker / Handoffs
+
+### 1. PilotClaw — Slice-135-Entcheidung pending
+- **Status:** Session failed, Entscheidung steht aus
+- **Option A:** HACS-Integration (Publishing-Path)
+- **Option B:** Neuron-Auth-Härtung (Security-Path)
+- **Handoff benötigt:** User-Entscheidung oder Lead-Entscheid
+
+### 2. HomeClaw — HA-155 Ready
+- **Status:** Session running, Momentum hoch (35+ HA-Slices)
+- **Verbleibende Sensoren:** `habit_learning_v2.py`, `predictive_maintenance_sensor.py`, `media_sensors.py`, `gas_meter_sensor.py` (oder äquivalente Core-API-Sensoren)
+- **Kein Blocker:** Lane fährt autonom weiter
+
+### 3. DesignClaw — Session Failed
+- **Status:** Session failed, aber Lane ist auf Core-Truth aligned
+- **Rolle:** On-demand Specialist (keine aktive Builder-Arbeit)
+- **Kein Handoff benötigt:** Design bleibt im Background bis Builder-Frage
+
+---
+
+## Foundation-Dateien Status
+
+| Datei | Status | Pfad |
+|-------|--------|------|
+| EXECUTION_FOUNDATION.md | ❌ MISSING | `/config/clawd/team/PILOTSUITE_EXECUTION_FOUNDATION.md` |
+| PROGRESS_LEDGER.md | ✅ EXISTS | `/config/clawd/team/PILOTSUITE_PROGRESS_LEDGER.md` |
+| MASTER_WORKPLAN_2026-04-04.md | ❌ MISSING | `/config/clawd/team/shared/PILOTSUITE_RECONSOLIDATED_MASTER_WORKPLAN_2026-04-04.md` |
+| CANONICALITY_MATRIX_2026-04-04.md | ⚠️ UNVERIFIED | `/config/clawd/team/shared/PILOTSUITE_CANONICALITY_MATRIX_2026-04-04.md` |
+
+---
+
+## Success Metrics (24h)
+
+- **Core-Slices:** 134 completed (Backend-UI Performance-Baseline etabliert)
+- **HA-Slices:** 154 completed (780/783 Tests green, 3 bekannte GC-Fails)
+- **Design-Artefakte:** Core-Truth aligned, on-demand
+- **Meta-Drift:** 0 (keine Config-/Modell-/Routing-Änderungen)
+
+---
+
+## Nächster Koordinationsschritt (dieser Lauf)
+
+**Entscheidung:** HomeClaw hat Momentum → Lane weiterlaufen lassen ohne Intervention. PilotClaw benötigt Slice-135-Entscheid.
+
+**Handoff an PilotClaw:**
+- Von letztem Artefaktstand (Slice 134: Performance-Baseline) wieder ansetzen
+- Genau einen nächsten Schritt: Entscheidung HACS vs Neuron-Auth dokumentieren
+- Tasklog-Pflicht: `/config/clawd/agents/pilotclaw/TASKLOG.md` aktualisieren
+
+**Keine Intervention bei:**
+- HomeClaw (läuft autonom, 780/783 green, HA-155 ready)
+- DesignClaw (on-demand, kein Builder-Blocker)
+
+**Dieser Lauf (22:45):**
+- Lane-Stände rekonsolidiert aus Tasklogs
+- HomeClaw: HA-154 ✅ done (780/783 green, 3 bekannte GC-Fails unverändert)
+- HomeClaw Next: HA-155 (4 verbleibende Sensoren: `habit_learning_v2.py`, `predictive_maintenance_sensor.py`, `media_sensors.py`, `gas_meter_sensor.py`)
+- PilotClaw: Slice 134 ✅ done (Performance-Baseline etabliert)
+- PilotClaw Next: Slice 135 Entscheidung pending (HACS-Integration vs Neuron-Auth-Härtung)
+- DesignClaw: Aligned to Core-Truth, on-demand
+- Foundation-Dateien weiterhin MISSING (EXECUTION_FOUNDATION.md, MASTER_WORKPLAN_2026-04-04.md)
+- Meta-Drift: 0 (keine Config-/Modell-/Routing-Änderungen)
+
+---
+
+## Evidence-Paths
+
+- Orakel-Tasklog: `/config/clawd/agents/orakel/TASKLOG.md`
+- PilotClaw-Tasklog: `/config/clawd/agents/pilotclaw/TASKLOG.md`
+- HomeClaw-Tasklog: `/config/clawd/agents/homeclaw/TASKLOG.md`
+- DesignClaw-Tasklog: `/config/clawd/agents/designclaw/TASKLOG.md`
+
+---
+
+*Ledger wird alle 15 Minuten durch cron:b053afd0 aktualisiert. Nur reale Lane-Stände, keine Meta-Synthesen.*

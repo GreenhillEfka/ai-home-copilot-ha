@@ -1,13 +1,11 @@
 # MEMORY.md - PilotSuite Research Tasks & Learnings
+| **C-029** | P2-002: OR-Tools Scheduling Optimizer | 2026-04-07 00:20 | Full CP-SAT implementation with soft constraints |
 
 **Created:** 2026-04-01 03:47 Europe/Berlin
 **Owner:** openclaw-main
 **Purpose:** Persistent storage of all research-derived tasks for systematic execution
-
 ---
-
 ## 📚 RESEARCH SOURCES
-
 | Source | Date | Topics |
 |--------|------|--------|
 | `AI_HOME_COPILOT_DEEP_RESEARCH_REPORT.md` | 2026-02-15 | Module Analysis, Neurons, Dashboard, Tests |
@@ -16,24 +14,15 @@
 | `DEEP_RESEARCH_PARALLEL.md` | 2026-03-xx | 5 Parallel Tracks (Architecture, Vector, Bayesian, Integration, UX) |
 | `research_integration_map.md` | 2026-03-26 | Integration Status |
 | `orakel.md` (Pull-Loop Logs) | 2026-03-24-29 | P0-103 Recovery (80h+ Blockade) |
-
----
-
 ## 🎯 MASTER TASK LIST (All Research-Derived Tasks)
-
 ### P0 - KRITISCH (Security/Stability)
-
 | ID | Task | Source | Status | Priority |
 |----|------|--------|--------|----------|
 | **P0-001** | Security Fix: Token Auth prüfen/fixen | research_2026-02-17.md | ❌ Offen | 1 |
 | **P0-002** | Vector Store Tests fixen (19 failures) | DEEP_RESEARCH_REPORT | ✅ Fixed (Blueprint registriert) | 2 |
 | **P0-003** | Manifest-Drift fixen (15.2.21 synchronisiert) | Orakel Pull-Loop | ✅ Fixed | 3 |
 | **P0-004** | Dev Surface Tests fixen (10 failures) | DEEP_RESEARCH_REPORT | ✅ Fixed (Import/Registry behoben) | 4 |
-
 ### P1 - HOCH (Core-Features)
-
-| ID | Task | Source | Status | Priority |
-|----|------|--------|--------|----------|
 | **P1-001** | Bayesian Presence Detection | perplexity_2026-02-16 | ❌ Offen | 5 |
 | **P1-002** | LSTM Energy Forecasting | perplexity_2026-02-16 | ❌ Offen | 6 |
 | **P1-003** | Multi-User Preference Learning | perplexity_2026-02-16 | ❌ Offen | 7 |
@@ -42,11 +31,7 @@
 | **P1-006** | Voice: Whisper/Piper Integration | research_2026-02-17 | ⚠️ Teilweise | 10 |
 | **P1-007** | Brain Graph Store Tests fixen (4 failures) | DEEP_RESEARCH_REPORT | ❌ Offen | 11 |
 | **P1-008** | Tag System Tests fixen (6 failures) | DEEP_RESEARCH_REPORT | ❌ Offen | 12 |
-
 ### P2 - MITTEL (Optimization)
-
-| ID | Task | Source | Status | Priority |
-|----|------|--------|--------|----------|
 | **P2-001** | Multi-Sensor Fusion (3+ Typen) | perplexity_2026-02-16 | ❌ Offen | 13 |
 | **P2-002** | OR-Tools Scheduling Optimizer | perplexity_2026-02-16 | ❌ Offen | 14 |
 | **P2-003** | HNSW Vector Optimization | DEEP_RESEARCH_PARALLEL | ❌ Offen | 15 |
@@ -58,11 +43,7 @@
 | **P2-009** | Knowledge Transfer API Contract | DEEP_RESEARCH_REPORT | ❌ Offen | 21 |
 | **P2-010** | Real-Time Pricing API | perplexity_2026-02-16 | ❌ Offen | 22 |
 | **P2-011** | Battery Management Predictive | perplexity_2026-02-16 | ❌ Offen | 23 |
-
 ### P3 - NIEDRIG (UX/Dashboard)
-
-| ID | Task | Source | Status | Priority |
-|----|------|--------|--------|----------|
 | **P3-001** | ReactBoard Integration (404 Fix) | DEEP_RESEARCH_REPORT | ❌ Offen | 24 |
 | **P3-002** | WebSocket für Echtzeit-Updates | DEEP_RESEARCH_REPORT | ❌ Offen | 25 |
 | **P3-003** | Interaktive Graph-Visualisierung | DEEP_RESEARCH_REPORT | ❌ Offen | 26 |
@@ -74,11 +55,7 @@
 | **P3-009** | mmWave Radar Integration (60GHz) | perplexity_2026-02-16 | ❌ Offen | 32 |
 | **P3-010** | CQRS + Event Sourcing | DEEP_RESEARCH_PARALLEL | ❌ Offen | 33 |
 | **P3-011** | Hexagonal Architecture Refactor | DEEP_RESEARCH_PARALLEL | ❌ Offen | 34 |
-
----
-
 ## ✅ COMPLETED TASKS
-
 | ID | Task | Completed | Notes |
 |----|------|-----------|-------|
 | **C-001** | LLM-Integration: qwen3.5:9b Default | 2026-04-01 | Version API + Update-Button |
@@ -102,68 +79,48 @@
 | **C-019** | Pattern Detection | 2026-04-01 | presence/pattern_detection.py (ML-based) |
 | **C-020** | API Analytics | 2026-04-01 | /api/v1/presence/analytics/{patterns,predict,anomaly} |
 | **C-021** | Symbiose HA-Core Stack | 2026-04-06 | HA habitus_zone_sync + Brain Graph + Lovelace Cards + Core API + Dashboard |
-
----
-
 ## 📋 EXECUTION STRATEGY
-
 ### Phase 1: Foundation (Week 1)
 - P0-001: Security Fix (Token Auth)
 - P0-002: Vector Store Tests
 - P0-003: Manifest-Drift
 - P0-004: Dev Surface Tests
-
 ### Phase 2: Core Features (Week 2-3)
 - P1-001: Bayesian Presence
 - P1-002: LSTM Energy
 - P1-004: TFLite Integration
 - P1-005: Knowledge Graph
-
 ### Phase 3: Optimization (Week 4)
 - P2-001 to P2-11: Various optimizations
-
 ### Phase 4: UX Polish (Week 5)
 - P3-001 to P3-011: Dashboard/UX improvements
-
----
-
 ## 🔬 KEY LEARNINGS FROM RESEARCH
-
 ### Architecture Patterns
 - **Local-First AI**: Privacy + Latency (Ollama bestätigt)
 - **Hybrid Approach**: ML für Predictions, Rules für Actions
 - **Event-Driven Microservices**: PilotSuite Core Architektur
 - **CQRS + Event Sourcing**: Für State Consistency
-
 ### Presence Detection
 - **Multi-Sensor Fusion**: 3+ Sensortypen kombinieren
 - **Bayesian Approach**: P(present|sensor_data) mit Priors
 - **Wi-Fi/BLE/mmWave**: Komplementäre Technologien
-
 ### Energy Optimization
 - **LSTM Forecasting**: Zeitreihen-Vorhersage
 - **OR-Tools Scheduling**: Optimizer für Last-Shift
 - **Real-Time Pricing**: Dynamische Tarife nutzen
-
 ### Knowledge Graphs
 - **Entity-Relation-Entity**: Devices, States, Relationships
 - **Temporal Reasoning**: Time-based queries
 - **SPARQL/GraphQL**: Query interfaces
-
 ### Multi-User Learning
 - **Federated Learning**: Privacy-preserving
 - **Per-User Profiles**: Individual settings
 - **Context-Aware**: Temperature + time + occupancy
-
 ### Testing
 - **52 Failed Tests** (Stand 2026-02-15): Hauptsächlich Mock/Import
 - **Vector Endpoints**: 19 failures (API Response Format)
 - **Dev Surface**: 10 failures (Mock Dependencies)
-
----
-
 ## 📊 METRICS & TARGETS
-
 | Metric | Current | Target |
 |--------|---------|--------|
 | Test Pass Rate | ~90% (geschätzt) | 95%+ |
@@ -172,19 +129,11 @@
 | Research Tasks Total | 34 | 0 (alle abgearbeitet) |
 | Manifest Drift | 15.2.2 vs 14.9.0 | Synchronized |
 | Security Issues | 1 (Token Auth) | 0 |
-
----
-
 ## 🔄 CONTINUOUS IMPROVEMENT
-
 - **Nightly**: Test suite runs, report failures
 - **Weekly**: Research task progress review
 - **Monthly**: Architecture review, tech debt assessment
-
----
-
 ## 🧷 DURABLE EXECUTION DECISIONS (2026-04-02)
-
 - **Gemeinsame Arbeitsgrundlage für alle Agenten festgezogen:**
   - `/config/clawd/team/PILOTSUITE_EXECUTION_FOUNDATION.md`
   - `/config/clawd/team/PILOTSUITE_PROGRESS_LEDGER.md`
@@ -202,16 +151,9 @@
 - **H4 aus H2 abgeleitet:** `docs/analysis/H4_FIX_BACKLOG_FROM_H2.md` priorisiert die nächsten echten Fixbatches: zuerst `media_ui`-NameError, dann fehlende Modulpfade, dann Importbrüche und Attribut-Mismatches aus `blueprints_config.py`.
 - **P0-1 bereits erledigt:** `copilot_core/api/v1/media_ui.py` nutzt wieder konsistent `media_ui_bp`; `tests/test_media_ui_contract.py` ergänzt; Reconciliation verbessert sich auf 58 OK / 43 Driftfälle bei insgesamt `10 passed` Testbasis.
 - **P0-2/P1 erster großer Registry-Driftbatch erledigt:** `copilot_core/blueprints_config.py` wurde gegen reale Runtime-Module/Blueprint-Exporte geschärft (u. a. `automation_api`, `module_router_api`, `multihome`, `knowledge_graph.api`, `dashboard.api.v1.widget_positions` plus viele `bp`-Attr-Fixes). Zusätzlich erhielten `copilot_core/rootfs/usr/src/app/copilot_core/homeassistant/__init__.py` und `.../habitus/__init__.py` Subpackage-Bridges zurück ins Repo. Ergebnis: H2-Reconciliation sprang auf **89 OK / 12 Driftfälle**, Importfehler sanken auf **9**, Testbasis blieb grün mit `10 passed`.
-
----
-
 *Last Updated: 2026-04-06 Europe/Berlin*
 *Next Review: 2026-04-07 00:00 Europe/Berlin (cron)*
-
----
-
 ## 🔧 SYMBIOSIS LANE — COMPLETE (2026-04-06)
-
 | VS | Entität | Sync Layer | Admin API | Lovelace | Status |
 |----|----------|------------|-----------|----------|--------|
 | VS-1 | Habitus Zone | ✅ | ✅ | ✅ | **DONE** |
@@ -223,26 +165,122 @@
 | VS-7 | State Bridge | ✅ | ✅ | ✅ | **DONE** |
 | VS-8 | Event Bus | ✅ | ✅ | ✅ | **DONE** |
 | VS-9 | Learning Memory | ✅ | ✅ | ✅ | **DONE** |
-
 ### SOTA Backend UI (2026-04-06)
 - Core: `/admin` Backend UI mit allen 9 Tabs
 - Core: Rule Engine (register, evaluate, enable/disable)
 - Core: Context Manager (transition, history, revert)
 - HA: PilotSuite SOTA Theme for Lovelace
 - HA: 9 Custom Lovelace Cards
-
 ### Commits
 - Core: `takeover/main` (Symbiosis + SOTA UI)
 - HA: `takeover/ha4-main-truth` (Sensors + Cards + Theme)
-
----
-
 ## 📊 CURRENT SESSION STATUS
-
 - **Symbiosis Lane:** ✅ 9/9 Vertical Slices Complete
 - **Backend UI:** ✅ SOTA Reiter-UI mit allen Tabs
 - **Rule Engine:** ✅ Deep Logic implementiert
 - **Theme:** ✅ PilotSuite Theme für Lovelace
 - **Cards:** ✅ 9 Custom Lovelace Cards
-
----
+## ✅ COMPLETED TASKS (2026-04-06 23:15)
+| **C-029** | HA-155: Unified Anomaly Framework | 2026-04-06 23:05 | `anomaly_framework.py` — σ-Abweichung, 7-day rolling baseline, 48h failure prediction |
+| **C-030** | HA-155: predictive_maintenance_sensor upgrade | 2026-04-06 23:05 | σ-Detection + confidence score + failure_48h |
+| **C-031** | HA-155: gas_meter_sensor upgrade | 2026-04-06 23:08 | GasAnomalySensor, daily consumption tracking |
+| **C-032** | HA-155: media_sensors upgrade | 2026-04-06 23:10 | MediaAnomalySensor, MediaStateCache |
+| **C-033** | HA-155: habit_learning_v2 upgrade | 2026-04-06 23:12 | HabitAnomalySensor, HabitEfficiencySensor, Time-Aware Patterns |
+| **C-034** | Voice Pipeline (STT→Intent→TTS) | 2026-04-06 23:15 | `voice_pipeline.py` — WhisperSTT, PiperTTS, VoicePipeline, Push-to-Talk |
+| **C-035** | Voice Feedback Lovelace Cards | 2026-04-06 23:18 | `voice_cards.py` — VoiceWaveformCard, VoiceCommandHistoryCard, VoiceStatusCard, VoicePipelineDashboard |
+| **C-036** | Voice API + Voice Sensors | 2026-04-06 23:20 | `voice_api.py` + `voice_sensors.py` — STT/TTS endpoints, history sensor |
+| **C-037** | MCP-Server erweitert | 2026-04-06 23:25 | 25 Tools (von 11 auf 25): zones, lights, climate, presence, habits, energy, rag, voice, automation, media, events, brain, anomaly, system_status |
+| **C-038** | 168h Massive Plan erstellt | 2026-04-06 23:00 | 7-Tage-Plan mit 40+ Slices, 4 Agenten-Rollen |
+| **C-039** | sensors/__init__.py HA | 2026-04-06 23:22 | VoiceSensor, GasAnomaly, HabitAnomaly, MaintenanceConfidence, MediaAnomaly exportiert |
+| **C-040** | Cards-Registry HA | 2026-04-06 23:24 | voice_cards.py in register_cards() integriert |
+## 🔧 Offene Backlog-Items (168h Slice 180/181)
+**PilotClaw (Tag 2):**
+- Slice 150: Ollama-Client Library (`ollama/client.py`)
+- Slice 151: Model-Registry (5 Models)
+- Slice 152: RAG Hybrid Search API
+- Slice 153: RAG Ingestion Pipeline
+- Slice 155: RAG Analytics
+**HomeClaw:**
+- Slice 143: Circuit-Breaker HA-Client
+- Slice 161: Piper TTS Integration (falls nicht schon in voice_pipeline.py)
+- Slice 163: HA Sprachbefehl-Router
+**DesignClaw:**
+- Slice 154: RAG Search UI (React)
+- Slice 164: Voice-UI Waveform (in voice_cards.py bereits)
+- Slice 190-194: 4 Dashboards
+**HomeClaw (HA-155 Rest):**
+- Restliche Sensoren: comfort_index, energy_insights, weather_warning, etc.
+*Last Updated: 2026-04-06 23:25 Europe/Berlin*
+## ✅ COMPLETED TASKS (2026-04-06 23:45)
+| **C-041** | Ollama RAG Client | 2026-04-06 23:35 | `rag/ollama_client.py` — Hybrid Search: BM25 + Semantic (Ollama Embeddings) + RRF |
+| **C-042** | Model Registry | 2026-04-06 23:40 | `rag/model_registry.py` — 16 Model-Profile, Health-Checks, Recommendations by Use-Case |
+| **C-043** | RAG Analytics API | 2026-04-06 23:45 | Bereits vorhanden: `/api/rag/search/analytics`, `/api/rag/feedback` |
+| **C-044** | Syntax-Checks | 2026-04-06 23:45 | `ollama_client.py` + `model_registry.py` ✅ |
+## 📊 MCP TOOLS STATUS (25/25)
+| Tool | Status | Implementation |
+|------|--------|----------------|
+| pilotsuite.get_mood | ✅ | mood_service |
+| pilotsuite.get_brain_graph | ✅ | brain_graph_service |
+| pilotsuite.get_habitus_patterns | ✅ | habitus_service |
+| pilotsuite.get_neuron_summary | ✅ | neuron_manager |
+| pilotsuite.get_preferences | ✅ | conversation_memory |
+| pilotsuite.get_household | ✅ | household_profile |
+| pilotsuite.search_memory | ✅ | conversation_memory |
+| pilotsuite.get_energy_stats | ✅ | energy_service |
+| pilotsuite.get_zone_health | ✅ | zone_health store |
+| pilotsuite.zones_list | ✅ | habitus_service |
+| pilotsuite.lights_control | ✅ | habitus_service |
+| pilotsuite.climate_control | ✅ | habitus_service |
+| pilotsuite.presence_status | ✅ | presence_service |
+| pilotsuite.habits_get | ✅ | habitus_service |
+| pilotsuite.energy_detailed | ✅ | energy_service |
+| pilotsuite.rag_search | ✅ | OllamaRAGClient |
+| pilotsuite.voice_command | ✅ | VoiceIntentHandler |
+| pilotsuite.automation_rules | ✅ | automation_service |
+| pilotsuite.media_control | ✅ | music_wolke_engine |
+| pilotsuite.events_query | ✅ | WALReader |
+| pilotsuite.brain_query | ✅ | brain_graph_service |
+| pilotsuite.anomaly_status | ✅ | AnomalyDetectionEngine |
+| pilotsuite.system_status | ✅ | psutil |
+| pilotsuite_context | ✅ | prompt |
+## 🎯 168H PROGRESS (Stand 23:45)
+**Tag 1 (Foundation & Security):**
+- ✅ Slice 135: Neuron-Auth Contract
+- ✅ Slice 142: Security-Overview (Spec vorhanden)
+- ⏳ Slice 143: Circuit-Breaker HA-Client
+- ⏳ Slice 144: Error-Digest
+- ⏳ Slice 145: Token-Rotation
+- ⏳ Slice 146: Security-UI
+**Tag 2 (Ollama + RAG):**
+- ✅ Slice 150: Ollama-Client Library
+- ✅ Slice 151: Model-Registry (16 Profile)
+- ✅ Slice 152: RAG Hybrid Search API (bereits in rag.py)
+- ✅ Slice 153: RAG Ingestion (bereits in rag.py)
+- ✅ Slice 155: RAG Analytics (bereits in rag.py)
+**Tag 3 (Voice):**
+- ✅ Slice 160: Whisper STT Integration
+- ✅ Slice 161: Piper TTS Integration
+- ✅ Slice 162: Voice Intent Parser
+- ⏳ Slice 163: HA Sprachbefehl-Router
+- ✅ Slice 164: Voice-UI (Waveform Cards)
+- ✅ Slice 165: Voice-Analytics (via voice_sensors.py)
+**Tag 5 (MCP):**
+- ✅ Slice 180: MCP-Server V2 (25 Tools)
+- ⏳ Slice 181: MCP-Tool-Registry (Auto-Discovery)
+- ⏳ Slice 182: OpenAPI 3.0 Generierung
+- ⏳ Slice 183: API-Versioning
+- ⏳ Slice 184: API-Rate-Limiting
+- ⏳ Slice 185: API-Analytics
+- ⏳ Slice 186: API-Docs UI
+## 🔧 OFFENE TASKS (Priorisiert)
+**P0 — Blocker:**
+- Keine
+**P1 — Hoch:**
+- Slice 143: Circuit-Breaker für HA-Client (HomeClaw)
+- Slice 163: HA Sprachbefehl-Router (HomeClaw)
+- Slice 154: RAG Search UI (DesignClaw)
+- Slice 190: Security Dashboard (DesignClaw)
+**P2 — Mittel:**
+- Slice 181-186: MCP/API Expansion
+- HA-155 Rest-Sensoren (comfort_index, energy_insights, etc.)
+*Last Updated: 2026-04-06 23:45 Europe/Berlin*
