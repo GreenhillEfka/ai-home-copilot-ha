@@ -59,7 +59,9 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
         if active == 0:
             return "Keine Wiedergabe"
         sessions = self._data.get("sessions", [])
-        playing = [s for s in sessions if s.get("state") == "playing"]
+        if not isinstance(sessions, list):
+            sessions = []
+        playing = [s for s in sessions if isinstance(s, dict) and s.get("state") == "playing"]
         if len(playing) == 1:
             title = playing[0].get("title", "")
             artist = playing[0].get("artist", "")
@@ -71,7 +73,9 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
     @property
     def icon(self) -> str:
         sessions = self._data.get("sessions", [])
-        playing = [s for s in sessions if s.get("state") == "playing"]
+        if not isinstance(sessions, list):
+            return "mdi:music-off"
+        playing = [s for s in sessions if isinstance(s, dict) and s.get("state") == "playing"]
         if not playing:
             return "mdi:music-off"
         if len(playing) == 1:
@@ -89,7 +93,7 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
         }
 
         sessions = self._data.get("sessions", [])
-        if sessions:
+        if isinstance(sessions, list) and sessions:
             attrs["sessions"] = [
                 {
                     "zone": s.get("zone_id"),
@@ -100,6 +104,7 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
                     "follow": s.get("follow_enabled"),
                 }
                 for s in sessions
+                if isinstance(s, dict)
             ]
 
         zones = self._data.get("zone_states", [])
