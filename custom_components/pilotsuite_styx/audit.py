@@ -1,4 +1,4 @@
-"""PilotSuite Styx Audit — HA-248.
+"""PilotSuite Styx Audit Log — HA-270.
 
 Sync mit Core API: /api/v1/audit/*
 """
@@ -31,8 +31,8 @@ class CoreAuditSensor(SensorEntity):
         self._attr_native_value = 0
     
     def update(self):
-        """Update audit count from Core."""
-        resp = requests.get(f"{self._core_url}/api/v1/audit/list", timeout=5)
+        """Update audit log count from Core."""
+        resp = requests.get(f"{self._core_url}/api/v1/audit/summary", timeout=5)
         if resp.status_code == 200:
             data = resp.json()
-            self._attr_native_value = len(data.get("entries", []))
+            self._attr_native_value = data.get("total", 0)
