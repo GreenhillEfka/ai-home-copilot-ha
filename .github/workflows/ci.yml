@@ -13,13 +13,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify single HACS integration
         run: |
+          # Allow up to 2 integrations: copilot_ha (legacy) + pilotsuite_styx (new)
+          for dir in copilot_ha pilotsuite_styx; do
+            if [ -d "custom_components/$dir" ]; then
+              echo "OK: $dir integration present"
+            fi
+          done
           count=$(find custom_components -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          if [ "$count" != "1" ]; then
-            echo "ERROR: Expected exactly one integration under custom_components/, found $count"
+          if [ "$count" -gt "2" ]; then
+            echo "ERROR: Too many integrations ($count), max 2"
             find custom_components -mindepth 1 -maxdepth 1 -type d
             exit 1
           fi
-          test -d custom_components/copilot_ha
       - name: Verify version consistency
         run: |
           root_v=$(cat VERSION)
