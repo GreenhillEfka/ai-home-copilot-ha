@@ -17,6 +17,7 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, CONF_CORE_URL, CONF_API_TOKEN
 from .hacs_status_panel import async_register_services as _register_hacs_services, async_publish_hacs_status_panel
+from .security_overview_panel import async_publish_security_overview_panel
 from .zone_automation_client import get_zone_automation_client
 from .zone_automation_events import setup_zone_automation_events
 from .cards.zone_automation_cards import register_cards
@@ -67,6 +68,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register HACS status panel service + publish initial panel
     await _register_hacs_services(hass)
     await async_publish_hacs_status_panel(hass)
+    
+    # Publish Security Overview panel (Slice 142)
+    core_url = config.data.get("core_url", "http://localhost:8909")
+    api_token = config.data.get("api_token", "")
+    await async_publish_security_overview_panel(hass, core_url, api_token)
     
     return True
 
