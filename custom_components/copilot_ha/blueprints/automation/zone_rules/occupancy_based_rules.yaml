@@ -1,0 +1,88 @@
+# Zone-spezifische Occupancy-based Rules
+# Anwesenheitserkennung pro Zone
+# PilotSuite v15.3.x
+
+blueprint:
+  name: "PilotSuite: Zonen-Anwesenheit (Auto-Licht)"
+  description: >
+    Schaltet Licht in einer Zone automatisch ein/aus basierend auf 
+    Anwesenheitserkennung (Bewegungsmelder, Präsenzsensor).
+  domain: automation
+  source: https://github.com/pilotsuite/clawd
+  author: PilotSuite Team
+
+  input:
+    zone:
+      name: "Zone"
+      description: "Zone für diese Automatisierung"
+      selector:
+        select:
+          options:
+            - label: "Wohnbereich"
+              value: "zone:wohnbereich"
+            - label: "Kochbereich"
+              value: "zone:kochbereich"
+            - label: "Gangbereich"
+              value: "zone:gangbereich"
+            - label: "Badbereich"
+              value: "zone:badbereich"
+            - label: "Schlafbereich"
+              value: "zone:schlafbereich"
+            - label: "Terrassenbereich"
+              value: "zone:terassenbereich"
+    occupancy_sensor:
+      name: "Anwesenheitssensor"
+      description: "Bewegungsmelder oder Präsenzsensor"
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: motion
+    lights:
+      name: "Lichter"
+      selector:
+        entity:
+          domain: light
+          multiple: true
+    delay_off:
+      name: "Ausschalt-Verzögerung"
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit: "Minuten"
+    brightness:
+      name: "Helligkeit"
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit: "%"
+
+trigger:
+  - platform: state
+    entity_id: !input occupancy_sensor
+    to: "on"
+  - platform: state
+    entity_id: !input occupancy_sensor
+    to: "off"
+    for:
+      minutes: !input delay_off
+
+action:
+  - choose:
+      - conditions: "{{ trigger.to_state == 'on' }}"
+        sequence:
+          - action: light.turn_on
+            target:
+              entity_id: !input lights
+            data:
+              brightness_pct: !input brightness
+      - conditions: "{{ trigger.to_state == 'off' }}"
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: !input lights
+
+mode: restart

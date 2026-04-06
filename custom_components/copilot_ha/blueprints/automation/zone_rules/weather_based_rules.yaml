@@ -1,0 +1,241 @@
+# Zone-spezifische Weather-based Rules
+# Sonne, Regen, Temperatur Automationen
+# PilotSuite v15.3.x
+
+---
+# =============================================================================
+# RULE 1: SONNENSCHUTZ (Beschattung)
+# =============================================================================
+blueprint:
+  name: "PilotSuite: Sonnenschutz (Temperatur/Sonne)"
+  description: >
+    Schließt Jalousien/Rollos in betroffenen Zonen bei starker Sonneneinstrahlung 
+    und hoher Außentemperatur zur Vermeidung von Überhitzung.
+  domain: automation
+  source: https://github.com/pilotsuite/clawd
+  author: PilotSuite Team
+
+  input:
+    sun_sensor:
+      name: "Sonnensensor/Helligkeit"
+      description: "Sensor für Sonneneinstrahlung (Lux oder Einstrahlung)"
+      selector:
+        entity:
+          domain: sensor
+          device_class: illuminance
+    temp_sensor:
+      name: "Außentemperatur"
+      description: "Sensor für die Außentemperatur"
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    temp_threshold:
+      name: "Temperatur-Schwellenwert"
+      description: "Ab welcher Temperatur wird beschattet?"
+      default: 23
+      selector:
+        number:
+          min: 15
+          max: 35
+          unit: "°C"
+    lux_threshold:
+      name: "Helligkeits-Schwellenwert"
+      description: "Ab welcher Helligkeit (Lux) wird beschattet?"
+      default: 30000
+      selector:
+        number:
+          min: 5000
+          max: 100000
+          unit: "lux"
+    zones:
+      name: "Betroffene Zonen"
+      description: "Zonen in denen beschattet werden soll (z.B. Südseite)"
+      default: ["zone:wohnbereich", "zone:schlafbereich"]
+      selector:
+        select:
+          options:
+            - label: "Wohnbereich"
+              value: "zone:wohnbereich"
+            - label: "Kochbereich"
+              value: "zone:kochbereich"
+            - label: "Schlafbereich"
+              value: "zone:schlafbereich"
+          multiple: true
+    blind_position:
+      name: "Jalousie-Position"
+      description: "Position auf die die Jalousien gefahren werden (0=zu, 100=auf)"
+      default: 20
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit: "%"
+
+trigger:
+  - trigger: numeric_state
+    entity_id: !input sun_sensor
+    above: !input lux_threshold
+    for:
+      minutes: 10
+  - trigger: numeric_state
+    entity_id: !input temp_sensor
+    above: !input temp_threshold
+
+condition:
+  - condition: numeric_state
+    entity_id: !input sun_sensor
+    above: !input lux_threshold
+  - condition: numeric_state
+    entity_id: !input temp_sensor
+    above: !input temp_threshold
+  - condition: state
+    entity_id: sun.sun
+    state: "above_horizon"
+
+action:
+  - action: cover.set_cover_position
+    target:
+      entity_id: "{{ states.cover | selectattr('attributes.zone', 'in', zones) | map(attribute='entity_id') | list }}"
+    data:
+      position: !input blind_position
+  - action: notify.persistent_notification
+    data:
+      title: "☀️ Sonnenschutz aktiv"
+      message: "Zonen {{ zones | join(', ') }} wurden auf {{ blind_position }}% beschattet."
+
+mode: single
+
+
+---
+# =============================================================================
+# RULE 2: REGEN-SCHUTZ (Terrasse/Fenster)
+# =============================================================================
+blueprint:
+  name: "PilotSuite: Regenschutz (Fenster/Markise)"
+  description: >
+    Schließt Fenster oder fährt Markisen ein, wenn Regen erkannt wird.
+    Nur für Zonen mit Außenkontakt (z.B. Terrasse).
+  domain: automation
+  source: https://github.com/pilotsuite/clawd
+  author: PilotSuite Team
+
+  input:
+    rain_sensor:
+      name: "Regensensor"
+      description: "Binary sensor oder Sensor der Regen erkennt"
+      selector:
+        entity: {}
+    zones:
+      name: "Betroffene Zonen"
+      description: "Zonen mit Außenkomponenten"
+      default: ["zone:terassenbereich"]
+      selector:
+        select:
+          options:
+            - label: "Terrassenbereich"
+              value: "zone:terassenbereich"
+            - label: "Dachfenster"
+              value: "zone:dach"
+          multiple: true
+    action_type:
+      name: "Aktionstyp"
+      description: "Was soll bei Regen passieren?"
+      default: "close"
+      selector:
+        select:
+          options:
+            - label: "Schließen (Cover)"
+              value: "close"
+            - label: "Einfahren (Awnings)"
+              value: "retract"
+
+trigger:
+  - trigger: state
+    entity_id: !input rain_sensor
+    from: "off"
+    to: "on"
+  - trigger: state
+    entity_id: !input rain_sensor
+    to: "rainy" # Für Wetter-Entitäten
+
+action:
+  - if:
+      - condition: template
+        value_template: "{{ action_type == 'close' }}"
+    then:
+      - action: cover.close_cover
+        target:
+          entity_id: "{{ states.cover | selectattr('attributes.zone', 'in', zones) | map(attribute='entity_id') | list }}"
+    else:
+      - action: cover.set_cover_position
+        target:
+          entity_id: "{{ states.cover | selectattr('attributes.zone', 'in', zones) | map(attribute='entity_id') | list }}"
+        data:
+          position: 0
+  - action: notify.persistent_notification
+    data:
+      title: "🌧️ Regenschutz aktiv"
+      message: "Regen erkannt. Komponenten in {{ zones | join(', ') }} wurden gesichert."
+
+mode: restart
+
+
+---
+# =============================================================================
+# RULE 3: FROSTSCHUTZ (Temperatur)
+# =============================================================================
+blueprint:
+  name: "PilotSuite: Frostschutz (Heizung/Leitungen)"
+  description: >
+    Aktiviert Frostschutz-Modus für kritische Zonen bei fallenden Temperaturen.
+  domain: automation
+  source: https://github.com/pilotsuite/clawd
+  author: PilotSuite Team
+
+  input:
+    temp_sensor:
+      name: "Außentemperatur"
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    frost_threshold:
+      name: "Frost-Schwellenwert"
+      default: 3
+      selector:
+        number:
+          min: -5
+          max: 10
+          unit: "°C"
+    critical_zones:
+      name: "Kritische Zonen"
+      default: ["zone:terassenbereich", "zone:gangbereich"]
+      selector:
+        select:
+          options:
+            - label: "Terrassenbereich"
+              value: "zone:terassenbereich"
+            - label: "Gangbereich"
+              value: "zone:gangbereich"
+            - label: "Keller"
+              value: "zone:keller"
+          multiple: true
+
+trigger:
+  - trigger: numeric_state
+    entity_id: !input temp_sensor
+    below: !input frost_threshold
+
+action:
+  - action: climate.set_temperature
+    target:
+      entity_id: "{{ states.climate | selectattr('attributes.zone', 'in', critical_zones) | map(attribute='entity_id') | list }}"
+    data:
+      temperature: 7
+  - action: notify.persistent_notification
+    data:
+      title: "❄️ Frostschutz aktiv"
+      message: "Außentemperatur unter {{ frost_threshold }}°C. Frostschutz in {{ critical_zones | join(', ') }} aktiviert."
+
+mode: single

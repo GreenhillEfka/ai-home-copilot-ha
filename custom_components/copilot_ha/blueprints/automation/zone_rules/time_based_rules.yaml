@@ -1,0 +1,379 @@
+# Zone-spezifische Time-based Rules
+# Nachtmodus, Away, Home Automationen
+# PilotSuite v15.3.x
+
+---
+# =============================================================================
+# RULE 1: NACHTMODUS - Alle Zonen
+# =============================================================================
+blueprint:
+  name: "PilotSuite: Nachtmodus (Time-based)"
+  description: >
+    Aktiviert Nachtmodus für alle Zonen basierend auf Uhrzeit.
+    Dimmt Lichter, reduziert Heizung, deaktiviert nicht-essenzielle Automationen.
+  domain: automation
+  source: https://github.com/pilotsuite/clawd
+  author: PilotSuite Team
+
+  input:
+    night_start_time:
+      name: "Nachtstart"
+      description: "Uhrzeit für Nachtmodus Beginn"
+      default: "22:00:00"
+      selector:
+        time: {}
+    night_end_time:
+      name: "Nachtende"
+      description: "Uhrzeit für Nachtmodus Ende"
+      default: "06:00:00"
+      selector:
+        time: {}
+    zones:
+      name: "Betroffene Zonen"
+      description: "Zonen im Nachtmodus einbeziehen"
+      default: ["zone:wohnbereich", "zone:kochbereich", "zone:gangbereich", "zone:badbereich"]
+      selector:
+        select:
+          options:
+            - label: "Wohnbereich"
+              value: "zone:wohnbereich"
+            - label: "Kochbereich"
+              value: "zone:kochbereich"
+            - label: "Gangbereich"
+              value: "zone:gangbereich"
+            - label: "Badbereich"
+              value: "zone:badbereich"
+            - label: "Schlafbereich"
+              value: "zone:schlafbereich"
+            - label: "Terrassenbereich"
+              value: "zone:terassenbereich"
+          multiple: true
+    night_brightness:
+      name: "Lichthelligkeit Nacht"
+      description: "Prozentuale Helligkeit im Nachtmodus"
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit: "%"
+    exclude_entities:
+      name: "Ausgeschlossene Entitäten"
+      description: "Lichter die NICHT gedimmt werden (z.B. Sicherheitsbeleuchtung)"
+      default: []
+      selector:
+        entity:
+          domain: light
+          multiple: true
+
+trigger:
+  - trigger: time
+    at: !input night_start_time
+
+condition:
+  - condition: time
+    after: !input night_start_time
+    before: !input night_end_time
+
+action:
+  - repeat:
+      count: "{{ zones | length }}"
+      sequence:
+        - set_conversation_response: >
+            Nachtmodus aktiviert für Zone {{ zones[repeat.index-1] }}
+        - if:
+            - condition: not
+              conditions:
+                - condition: state
+                  entity_id: !input exclude_entities
+                  state: "on"
+          then:
+            - action: light.turn_on
+              target:
+                entity_id: "{{ states.light | selectattr('attributes.zone', 'eq', zones[repeat.index-1]) | map(attribute='entity_id') | list }}"
+              data:
+                brightness_pct: !input night_brightness
+  - action: notify.persistent_notification
+    data:
+      title: "🌙 Nachtmodus aktiv"
+      message: "Nachtmodus wurde um {{ now().strftime('%H:%M') }} aktiviert. Helligkeit: {{ night_brightness }}%"
+
+mode: single
+
+
+---
+# =============================================================================
+# RULE 2: HOME MODE - Anwesenheit erkannt
+# =============================================================================
+blueprint:
+  name: "PilotSuite: Home Mode (Anwesenheit)"
+  description: >
+    Aktiviert Home-Modus wenn erste Person zuhause ankommt.
+    Stellt Komfort-Einstellungen wieder her, aktiviert Zonen-Automationen.
+  domain: automation
+  source: https://github.com/pilotsuite/clawd
+  author: PilotSuite Team
+
+  input:
+    presence_sensor:
+      name: "Anwesenheitssensor"
+      description: "Binary sensor der Anwesenheit erkennt"
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: presence
+    arrival_zone:
+      name: "Ankunftszone"
+      description: "Zone die bei Ankunft priorisiert wird"
+      default: "zone:wohnbereich"
+      selector:
+        select:
+          options:
+            - label: "Wohnbereich"
+              value: "zone:wohnbereich"
+            - label: "Kochbereich"
+              value: "zone:kochbereich"
+            - label: "Gangbereich"
+              value: "zone:gangbereich"
+    comfort_brightness:
+      name: "Komfort-Helligkeit"
+      description: "Standard-Helligkeit im Home-Modus"
+      default: 80
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit: "%"
+    welcome_message:
+      name: "Willkommensnachricht"
+      description: "Optionale Begrüßungsnachricht"
+      default: "Willkommen zuhause!"
+      selector:
+        text: {}
+
+trigger:
+  - trigger: state
+    entity_id: !input presence_sensor
+    to: "on"
+
+condition:
+  - condition: numeric_state
+    entity_id: !input presence_sensor
+    above: 0
+
+action:
+  - action: homeassistant.turn_on
+    target:
+      area_id: "{{ area_id(arrival_zone) }}"
+  - action: light.turn_on
+    target:
+      entity_id: "{{ states.light | selectattr('attributes.zone', 'eq', arrival_zone) | map(attribute='entity_id') | list }}"
+    data:
+      brightness_pct: !input comfort_brightness
+      color_temp_kelvin: 3000
+  - action: notify.persistent_notification
+    data:
+      title: "🏠 Home-Modus aktiv"
+      message: "{{ welcome_message }} | Zone: {{ arrival_zone }}"
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.home_mode_active
+
+mode: restart
+
+
+---
+# =============================================================================
+# RULE 3: AWAY MODE - Alle abwesend
+# =============================================================================
+blueprint:
+  name: "PilotSuite: Away Mode (Abwesenheit)"
+  description: >
+    Aktiviert Away-Modus wenn letzte Person das Haus verlässt.
+    Schaltet nicht-essenzielle Verbraucher aus, aktiviert Sicherheitsmodus.
+  domain: automation
+  source: https://github.com/pilotsuite/clawd
+  author: PilotSuite Team
+
+  input:
+    presence_sensor:
+      name: "Anwesenheitssensor"
+      description: "Binary sensor der Abwesenheit erkennt"
+      selector:
+        entity:
+          domain: binary_sensor
+          device_class: presence
+    delay_minutes:
+      name: "Verzögerung (Minuten)"
+      description: "Wartezeit bevor Away-Modus aktiv wird"
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit: "Minuten"
+    essential_lights:
+      name: "Essenzielle Lichter"
+      description: "Lichter die AN bleiben (Sicherheit)"
+      default: []
+      selector:
+        entity:
+          domain: light
+          multiple: true
+    security_cameras:
+      name: "Sicherheitskameras"
+      description: "Kameras die im Away-Modus aktiv bleiben"
+      default: []
+      selector:
+        entity:
+          domain: camera
+          multiple: true
+
+trigger:
+  - trigger: state
+    entity_id: !input presence_sensor
+    to: "off"
+    for:
+      minutes: !input delay_minutes
+
+action:
+  # Alle nicht-essenziellen Lichter ausschalten
+  - action: light.turn_off
+    target:
+      entity_id: >
+        {{ states.light 
+           | map(attribute='entity_id') 
+           | reject('in', essential_lights) 
+           | list }}
+  
+  # Nicht-essenzielle Verbraucher ausschalten
+  - action: switch.turn_off
+    target:
+      entity_id: >
+        {{ states.switch 
+           | map(attribute='entity_id')
+           | reject('in', security_cameras)
+           | list }}
+  
+  # Heizung auf Eco-Modus
+  - action: climate.set_preset_mode
+    target:
+      entity_id: "{{ states.climate | map(attribute='entity_id') | list }}"
+    data:
+      preset_mode: "eco"
+  
+  # Sicherheitsmodus aktivieren
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.away_mode_active
+  
+  # Benachrichtigung
+  - action: notify.persistent_notification
+    data:
+      title: "🔒 Away-Modus aktiv"
+      message: >
+        Away-Modus wurde um {{ now().strftime('%H:%M') }} aktiviert.
+        {{ (states.light | map(attribute='entity_id') | reject('in', essential_lights) | list | length) }} Lichter ausgeschaltet.
+
+mode: single
+
+
+---
+# =============================================================================
+# RULE 4: MORGENROUTINE - Tagesstart
+# =============================================================================
+blueprint:
+  name: "PilotSuite: Morgenroutine (Time-based)"
+  description: >
+    Startet Morgenroutine zu definierter Uhrzeit an Werktagen.
+    Sanftes Licht, Heizung hochfahren, Jalousien öffnen.
+  domain: automation
+  source: https://github.com/pilotsuite/clawd
+  author: PilotSuite Team
+
+  input:
+    wake_time:
+      name: "Aufwachzeit"
+      description: "Uhrzeit für Morgenroutine"
+      default: "06:30:00"
+      selector:
+        time: {}
+    wake_zones:
+      name: "Aktive Zonen"
+      description: "Zonen die in Morgenroutine einbezogen werden"
+      default: ["zone:schlafbereich", "zone:badbereich", "zone:kochbereich"]
+      selector:
+        select:
+          options:
+            - label: "Schlafbereich"
+              value: "zone:schlafbereich"
+            - label: "Badbereich"
+              value: "zone:badbereich"
+            - label: "Kochbereich"
+              value: "zone:kochbereich"
+            - label: "Wohnbereich"
+              value: "zone:wohnbereich"
+          multiple: true
+    weekdays_only:
+      name: "Nur Werktage"
+      description: "Routine nur Mo-Fr ausführen"
+      default: true
+      selector:
+        boolean: {}
+    gradual_wake_duration:
+      name: "Sanftes Aufwachen (Minuten)"
+      description: "Dauer für langsames Licht-Hochdimmen"
+      default: 15
+      selector:
+        number:
+          min: 5
+          max: 60
+          unit: "Minuten"
+
+trigger:
+  - trigger: time
+    at: !input wake_time
+
+condition:
+  - condition: time
+    weekday:
+      - mon
+      - tue
+      - wed
+      - thu
+      - fri
+    enabled: !input weekdays_only
+
+action:
+  # Sanftes Licht hochdimmen
+  - repeat:
+      count: !input gradual_wake_duration
+      sequence:
+        - action: light.turn_on
+          target:
+            entity_id: "{{ states.light | selectattr('attributes.zone', 'in', wake_zones) | map(attribute='entity_id') | list }}"
+          data:
+            brightness_pct: "{{ (repeat.index / gradual_wake_duration) * 100 | int }}"
+            color_temp_kelvin: "{{ 4000 - ((repeat.index / gradual_wake_duration) * 1000) | int }}"
+        - delay:
+            minutes: 1
+  
+  # Heizung auf Komfort
+  - action: climate.set_preset_mode
+    target:
+      entity_id: "{{ states.climate | map(attribute='entity_id') | list }}"
+    data:
+      preset_mode: "comfort"
+  
+  # Jalousien öffnen (wenn vorhanden)
+  - action: cover.open_cover
+    target:
+      entity_id: "{{ states.cover | selectattr('attributes.zone', 'in', wake_zones) | map(attribute='entity_id') | list }}"
+  
+  # Benachrichtigung
+  - action: notify.persistent_notification
+    data:
+      title: "☀️ Guten Morgen"
+      message: "Morgenroutine gestartet um {{ now().strftime('%H:%M') }}"
+
+mode: single
