@@ -230,7 +230,7 @@
 | **C-042** | Model Registry | 2026-04-06 23:40 | `rag/model_registry.py` — 16 Model-Profile, Health-Checks, Recommendations by Use-Case |
 | **C-043** | RAG Analytics API | 2026-04-06 23:45 | Bereits vorhanden: `/api/rag/search/analytics`, `/api/rag/feedback` |
 | **C-044** | Syntax-Checks | 2026-04-06 23:45 | `ollama_client.py` + `model_registry.py` ✅ |
-| **C-045** | P3-001: ReactBoard 404 Investigation | 2026-04-07 00:10 | N/A — ReactBoard ist OpenClaw-extern, nicht im Core Add-on. React TSX-files (SOTA_*.tsx) sind unbuildbar ohne npm packages. Flask static assets funktionieren korrekt. |
+| **C-046** | E2: Hash-Based Blueprint Registry | 2026-04-07 01:31 | `registry/hash_calculator.py` (SHA-256 fingerprints), `registry/blueprint_registry.py` (SQLite store), `registry/drift_detector.py` (CLEAN/DRIFTED/NEW/MISSING), `notifications/drift_alert_notifications.py` (PilotSuite notifications), `api/v1/registry_blueprints.py` (REST API `/api/v1/registry/blueprints`), `admin/blueprints_panel.py` (admin UI), Blueprint registrations in `api/v1/blueprint.py`. Drift-Alert integrates with NotificationEngine (URGENT→critical, HIGH→warning). Hash excludes version/source/metadata to avoid false positives.
 ## 📊 MCP TOOLS STATUS (25/25)
 | Tool | Status | Implementation |
 |------|--------|----------------|
