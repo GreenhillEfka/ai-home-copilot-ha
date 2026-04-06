@@ -28,6 +28,7 @@ from homeassistant.const import (
 )
 
 from .const import DOMAIN
+from .conflict_retry_mixin import ConflictAwareClient
 from .core.error_helpers import log_error_with_context
 from .core.performance import get_entity_cache, DomainFilter
 
@@ -98,7 +99,7 @@ def sanitize_node_id(node_type: str, identifier: str) -> str:
     return f"{safe_type}:{safe_id}"
 
 
-class BrainGraphSync:
+class BrainGraphSync(ConflictAwareClient):
     """Manages syncing HA state and relationships to Core Brain Graph."""
 
     def __init__(self, hass: HomeAssistant, core_url: str, access_token: str):
@@ -107,6 +108,9 @@ class BrainGraphSync:
         self.core_url = core_url.rstrip('/')
         self.access_token = access_token
         self._session: Optional[aiohttp.ClientSession] = None
+        self._running = False
+        self._core_url = self.core_url
+        ConflictAwareClient.__init__(self)
         self._running = False
         
         # Registries for relationships

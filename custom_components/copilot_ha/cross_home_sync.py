@@ -22,6 +22,7 @@ from homeassistant.helpers import entity_registry
 from homeassistant.const import EVENT_STATE_CHANGED, EVENT_CALL_SERVICE
 
 from .const import DOMAIN
+from .conflict_retry_mixin import ConflictAwareClient
 from .core.error_helpers import log_error_with_context
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class SharedEntity:
     sync_status: str  # "synced", "pending", "conflict", "error"
 
 
-class CrossHomeClient:
+class CrossHomeClient(ConflictAwareClient):
     """
     Client for Cross-Home Sharing via Core Add-on API.
     
@@ -74,8 +75,9 @@ class CrossHomeClient:
         self.home_name = home_name
         self.api_base = api_base.rstrip("/")
         self.api_token = api_token
-        
+        self._core_url = api_base
         self._session: aiohttp.ClientSession | None = None
+        ConflictAwareClient.__init__(self)
         self._is_initialized = False
         
         # Shared entities registry
@@ -151,14 +153,10 @@ class CrossHomeClient:
             return await resp.json()
             
     async def _api_put(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Make PUT request to Core Add-on API."""
+        """Make PUT request with 409-conflict retry."""
         if not self._session:
             raise RuntimeError("Client not initialized")
-            
-        url = f"{self.api_base}{endpoint}"
-        async with self._session.put(url, json=data) as resp:
-            resp.raise_for_status()
-            return await resp.json()
+        return await self._put_json_retry(endpoint, data, fresh_fetch_endpoint=endpoint)
             
     @callback
     def _on_state_changed(self, event: Event) -> None:
