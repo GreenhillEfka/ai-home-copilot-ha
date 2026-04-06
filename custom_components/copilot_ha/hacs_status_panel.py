@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 from homeassistant.core import HomeAssistant
+import aiohttp
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN, DATA_CORE
