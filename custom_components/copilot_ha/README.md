@@ -1,6 +1,6 @@
 # PilotSuite Home Assistant Integration
 
-**Version:** 1.0.0-rc2  
+**Version:** 15.4.0  
 **Home Assistant:** 2024.4.0+  
 **Integration Type:** Hub (local_push)
 
