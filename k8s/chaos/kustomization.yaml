@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: chaos-mesh
+
+resources:
+  - namespace.yaml
+  - pod-kill-experiment.yaml
+  - network-latency-experiment.yaml
+  - stress-test-experiment.yaml
+  - resilience-validation.yaml
+
+commonLabels:
+  app.kubernetes.io/component: chaos-engineering
+  app.kubernetes.io/managed-by: chaos-mesh

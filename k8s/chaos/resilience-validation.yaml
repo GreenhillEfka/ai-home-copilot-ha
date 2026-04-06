@@ -1,0 +1,205 @@
+# Resilience Validation Workflow
+# Ziel: Automatisierte Validierung der System-Resilienz nach Chaos-Experiments
+# Anwendung: kubectl apply -f resilience-validation.yaml -n chaos-mesh
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: resilience-validator
+  namespace: chaos-mesh
+  labels:
+    app.kubernetes.io/component: chaos-engineering
+spec:
+  schedule: "0 6 * * *"  # Täglich um 6:00 Uhr (nach Chaos-Experiments)
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: validator
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "=== Resilience Validation Report ==="
+                  echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                  echo ""
+                  
+                  # Check PilotClaw Health
+                  echo "Checking PilotClaw..."
+                  curl -sf http://pilotclaw.pilotsuite.svc/health || echo "FAILED: PilotClaw"
+                  
+                  # Check OpenClaw Gateway
+                  echo "Checking OpenClaw Gateway..."
+                  curl -sf http://openclaw-gateway.pilotsuite.svc:8080/health || echo "FAILED: OpenClaw Gateway"
+                  
+                  # Check Symbiosis
+                  echo "Checking Symbiosis..."
+                  curl -sf http://symbiosis.pilotsuite.svc/health || echo "FAILED: Symbiosis"
+                  
+                  # Check Home Assistant API
+                  echo "Checking Home Assistant..."
+                  curl -sf http://home-assistant.pilotsuite.svc:8123/api/config \
+                    -H "Authorization: Bearer ${HA_TOKEN}" || echo "FAILED: Home Assistant"
+                  
+                  echo ""
+                  echo "=== Validation Complete ==="
+              env:
+                - name: HA_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: home-assistant-token
+                      key: token
+                      optional: true
+          restartPolicy: OnFailure
+      backoffLimit: 2
+
+---
+# Chaos Mesh Workflow - Orchestriert mehrere Experiments
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: resilience-test-workflow
+  namespace: chaos-mesh
+  labels:
+    app.kubernetes.io/component: chaos-engineering
+spec:
+  entry: entry
+  templates:
+    - name: entry
+      templateType: Serial
+      deadline: 3600
+      children:
+        - pod-kill-phase
+        - wait-30s
+        - network-latency-phase
+        - wait-30s
+        - stress-phase
+        - wait-60s
+        - validation-phase
+
+    - name: pod-kill-phase
+      templateType: Serial
+      deadline: 600
+      children:
+        - pilotclaw-pod-kill
+
+    - name: pilotclaw-pod-kill
+      templateType: Task
+      task:
+        container:
+          name: chaos
+          image: pingcap/chaos-mesh:v2.6.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting Pod Kill Experiment..."
+              kubectl apply -f /experiments/pod-kill-experiment.yaml
+              sleep 60
+              echo "Pod Kill Experiment Complete"
+
+    - name: wait-30s
+      templateType: Task
+      task:
+        container:
+          name: wait
+          image: alpine:latest
+          command: ['sleep', '30']
+
+    - name: network-latency-phase
+      templateType: Serial
+      deadline: 900
+      children:
+        - gateway-latency
+
+    - name: gateway-latency
+      templateType: Task
+      task:
+        container:
+          name: chaos
+          image: pingcap/chaos-mesh:v2.6.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting Network Latency Experiment..."
+              kubectl apply -f /experiments/network-latency-experiment.yaml
+              sleep 120
+              echo "Network Latency Experiment Complete"
+
+    - name: stress-phase
+      templateType: Serial
+      deadline: 600
+      children:
+        - cpu-stress
+
+    - name: cpu-stress
+      templateType: Task
+      task:
+        container:
+          name: chaos
+          image: pingcap/chaos-mesh:v2.6.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting CPU Stress Experiment..."
+              kubectl apply -f /experiments/stress-test-experiment.yaml
+              sleep 90
+              echo "CPU Stress Experiment Complete"
+
+    - name: wait-60s
+      templateType: Task
+      task:
+        container:
+          name: wait
+          image: alpine:latest
+          command: ['sleep', '60']
+
+    - name: validation-phase
+      templateType: Task
+      task:
+        container:
+          name: validator
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "=== Final Validation ==="
+              echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              
+              # Health checks
+              FAILED=0
+              
+              curl -sf http://pilotclaw.pilotsuite.svc/health && echo "✓ PilotClaw OK" || { echo "✗ PilotClaw FAILED"; FAILED=1; }
+              curl -sf http://openclaw-gateway.pilotsuite.svc:8080/health && echo "✓ OpenClaw Gateway OK" || { echo "✗ OpenClaw Gateway FAILED"; FAILED=1; }
+              curl -sf http://symbiosis.pilotsuite.svc/health && echo "✓ Symbiosis OK" || { echo "✗ Symbiosis FAILED"; FAILED=1; }
+              
+              echo ""
+              if [ $FAILED -eq 0 ]; then
+                echo "=== ALL VALIDATIONS PASSED ==="
+                exit 0
+              else
+                echo "=== VALIDATION FAILED ==="
+                exit 1
+              fi
+
+---
+# Chaos Mesh Schedule - Zentrale Steuerung aller Experiments
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: daily-chaos-schedule
+  namespace: chaos-mesh
+  labels:
+    app.kubernetes.io/component: chaos-engineering
+spec:
+  schedule: "0 0 * * *"  # Täglich um Mitternacht
+  historyLimit: 10
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  workflow:
+    name: resilience-test-workflow

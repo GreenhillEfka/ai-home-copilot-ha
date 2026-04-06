@@ -1,0 +1,131 @@
+# Chaos Mesh Network Latency Experiment
+# Ziel: Simuliert Netzwerklatenz zwischen Diensten zur Validierung von Timeout-Handling
+# Anwendung: kubectl apply -f network-latency-experiment.yaml -n chaos-mesh
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: pilotclaw-network-latency
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  action: latency
+  mode: all
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: pilotclaw
+    namespaces:
+      - pilotsuite
+  target:
+    mode: all
+    selector:
+      labelSelectors:
+        app.kubernetes.io/name: home-assistant
+      namespaces:
+        - pilotsuite
+  delay:
+    latency: "100ms"
+    correlation: "25"
+    jitter: "50ms"
+  duration: "300s"
+  direction: both
+  scheduler:
+    cron: "0 3 * * *"  # Täglich um 3:00 Uhr (Low-Traffic)
+
+---
+# Chaos Mesh Network Latency - API Gateway zu Backend
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: gateway-backend-latency
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  action: latency
+  mode: all
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: openclaw
+      component: gateway
+    namespaces:
+      - pilotsuite
+  target:
+    mode: all
+    selector:
+      labelSelectors:
+        app.kubernetes.io/name: openclaw
+        component: agent
+      namespaces:
+        - pilotsuite
+  delay:
+    latency: "250ms"
+    correlation: "50"
+    jitter: "100ms"
+  duration: "600s"
+  direction: both
+  scheduler:
+    cron: "0 4 * * *"  # Täglich um 4:00 Uhr
+
+---
+# Chaos Mesh Network Latency - Symbiosis zu Prometheus
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: symbiosis-metrics-latency
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  action: latency
+  mode: all
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: symbiosis
+    namespaces:
+      - pilotsuite
+  target:
+    mode: all
+    selector:
+      labelSelectors:
+        app.kubernetes.io/name: prometheus
+      namespaces:
+        - monitoring
+  delay:
+    latency: "500ms"
+    correlation: "75"
+    jitter: "200ms"
+  duration: "900s"
+  direction: to-target
+  scheduler:
+    cron: "0 5 * * *"  # Täglich um 5:00 Uhr
+
+---
+# Chaos Mesh Network Partition - Simuliert kompletten Netzwerkausfall
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-partition-test
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  action: partition
+  mode: one
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: pilotclaw
+    namespaces:
+      - pilotsuite
+  target:
+    mode: all
+    selector:
+      labelSelectors:
+        app.kubernetes.io/name: home-assistant
+      namespaces:
+        - pilotsuite
+  direction: both
+  duration: "60s"
+  scheduler:
+    cron: "0 2 * * 0"  # Sonntags um 2:00 Uhr (wöchentlich)

@@ -1,0 +1,90 @@
+# Chaos Mesh Pod Kill Experiment
+# Ziel: Testet die Resilienz der PilotSuite-Dienste beim zufälligen Absturz von Pods
+# Anwendung: kubectl apply -f pod-kill-experiment.yaml -n chaos-mesh
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pilotclaw-pod-kill
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  action: pod-kill
+  mode: one
+  duration: "0s"
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: pilotclaw
+    namespaces:
+      - pilotsuite
+  scheduler:
+    cron: "0 */30 * * * *"  # Alle 30 Minuten
+  value: "1"
+
+---
+# Chaos Mesh Pod Kill Experiment - Home Assistant Copilot
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: copilot-pod-kill
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  action: pod-kill
+  mode: random-max-percent
+  duration: "30s"
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: copilot-ha
+    namespaces:
+      - pilotsuite
+  scheduler:
+    cron: "0 */60 * * * *"  # Alle 60 Minuten
+  value: "50"
+
+---
+# Chaos Mesh Pod Kill Experiment - OpenClaw Gateway
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: openclaw-gateway-pod-kill
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  action: pod-kill
+  mode: one
+  duration: "15s"
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: openclaw
+      component: gateway
+    namespaces:
+      - pilotsuite
+  scheduler:
+    cron: "30 */45 * * * *"  # Alle 45 Minuten zur halben Stunde
+  value: "1"
+
+---
+# Chaos Mesh Pod Kill Experiment - Symbiosis Core
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: symbiosis-pod-kill
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  action: pod-kill
+  mode: random-max-percent
+  duration: "60s"
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: symbiosis
+    namespaces:
+      - pilotsuite
+  scheduler:
+    cron: "0 0-23/2 * * * *"  # Alle 2 Stunden
+  value: "33"

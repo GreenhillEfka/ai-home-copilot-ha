@@ -1,0 +1,103 @@
+# Chaos Mesh Stress Test Experiment
+# Ziel: Testet Systemverhalten unter CPU/Memory/IO-Stress
+# Anwendung: kubectl apply -f stress-test-experiment.yaml -n chaos-mesh
+
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: pilotclaw-cpu-stress
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: pilotclaw
+    namespaces:
+      - pilotsuite
+  mode: one
+  duration: "120s"
+  stressors:
+    cpu:
+      workers: 2
+      load: 80
+  scheduler:
+    cron: "0 1 * * *"  # Täglich um 1:00 Uhr
+
+---
+# Chaos Mesh Memory Stress - OpenClaw Agents
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: openclaw-memory-stress
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: openclaw
+      component: agent
+    namespaces:
+      - pilotsuite
+  mode: random-max-percent
+  value: "50"
+  duration: "180s"
+  stressors:
+    memory:
+      workers: 1
+      size: "256MB"
+  scheduler:
+    cron: "30 1 * * *"  # Täglich um 1:30 Uhr
+
+---
+# Chaos Mesh IO Stress - Home Assistant Database
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: home-assistant-io-stress
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: home-assistant
+    namespaces:
+      - pilotsuite
+  mode: one
+  duration: "300s"
+  stressors:
+    io:
+      workers: 2
+      size: "128MB"
+      path: "/config"
+  scheduler:
+    cron: "0 3 * * 6"  # Samstags um 3:00 Uhr
+
+---
+# Chaos Mesh Combined Stress - Symbiosis
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: symbiosis-combined-stress
+  namespace: chaos-mesh
+  labels:
+    chaos-mesh-inject: enabled
+spec:
+  selector:
+    labelSelectors:
+      app.kubernetes.io/name: symbiosis
+    namespaces:
+      - pilotsuite
+  mode: all
+  duration: "240s"
+  stressors:
+    cpu:
+      workers: 1
+      load: 60
+    memory:
+      workers: 1
+      size: "512MB"
+  scheduler:
+    cron: "0 2 * * *"  # Täglich um 2:00 Uhr
