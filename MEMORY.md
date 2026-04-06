@@ -333,3 +333,17 @@
 3. Configure via UI
 
 **STATUS: PRODUCTION READY 🚀**
+
+
+---
+
+## 🚀 WORKER MODE SWITCH (2026-04-07 01:15)
+
+**HA Integration: LANDED ✅**
+- Tag: v1.0.0-rc2-hacs-test
+- Branch: releases/v1.0.0-hacs-alpha
+- Commit: 5d7b761b
+
+**Mode: CORE EXPLORATION 🔍**
+- New branch: exploration/next-features
+- Focus: New features, optimizations, bug fixes
