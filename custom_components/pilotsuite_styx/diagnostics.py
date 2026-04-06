@@ -1,28 +1,38 @@
-"""PilotSuite Styx Diagnostics — HA-193.
+"""PilotSuite Styx Diagnostics — HA-240.
 
-Sync mit Core API: /api/v1/cache/*, /api/v1/system/*
+Sync mit Core API: /api/v1/health/*, /api/v1/diagnostics/*
 """
 from __future__ import annotations
 import logging
-from homeassistant.components.diagnostics import async_redact_data
-from .const import DOMAIN, CONF_CORE_URL, VERSION
+import requests
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from .const import CONF_CORE_URL
 
 _LOGGER = logging.getLogger(__name__)
 
-TO_REDACT = {"api_key", "token", "password"}
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry,
+    async_add_entities: AddEntitiesCallback,
+):
+    """Setup diagnostics sensor from config entry."""
+    core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
+    entities = [CoreHealthSensor(core_url)]
+    async_add_entities(entities)
 
-async def async_get_config_entry_diagnostics(hass, config_entry):
-    """Return diagnostics for config entry."""
-    return {
-        "domain": DOMAIN,
-        "version": VERSION,
-        "config": async_redact_data(dict(config_entry.data), TO_REDACT),
-        "core_url": config_entry.data.get(CONF_CORE_URL, "http://localhost:8909"),
-    }
-
-async def async_get_device_diagnostics(hass, config_entry, device):
-    """Return diagnostics for device."""
-    return {
-        "device": device.name,
-        "core_url": config_entry.data.get(CONF_CORE_URL),
-    }
+class CoreHealthSensor(SensorEntity):
+    """Sensor for Core health status."""
+    def __init__(self, core_url: str):
+        self._core_url = core_url
+        self._attr_name = "PilotSuite Health"
+        self._attr_unique_id = "pilotsuite_health"
+        self._attr_native_value = "unknown"
+    
+    def update(self):
+        """Update health status from Core."""
+        resp = requests.get(f"{self._core_url}/api/v1/health/status", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            self._attr_native_value = data.get("status", "unknown")
