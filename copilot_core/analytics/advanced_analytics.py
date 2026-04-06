@@ -1,331 +1,539 @@
-"""Advanced Analytics — Insights, Trends, Predictions, Reports."""
+"""PilotSuite Advanced Analytics — Metrics, Dashboards, and Insights."""
 from __future__ import annotations
 
 import logging
+import json
+from datetime import datetime, timedelta
+from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from enum import Enum
 from collections import defaultdict
-import time
-import math
 
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# METRIC TYPES
+# =============================================================================
+
+class MetricType(Enum):
+    """Types of metrics."""
+    GAUGE = "gauge"  # Current value (e.g., temperature)
+    COUNTER = "counter"  # Cumulative count (e.g., requests)
+    HISTOGRAM = "histogram"  # Distribution (e.g., response times)
+    SUMMARY = "summary"  # Aggregated stats
+
+
 @dataclass
-class Insight:
-    """Analytics insight."""
-    id: str
-    title: str
+class MetricPoint:
+    """Single metric data point."""
+    timestamp: datetime
+    value: float
+    labels: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class Metric:
+    """Metric definition."""
+    name: str
+    type: MetricType
     description: str
-    category: str  # usage, efficiency, anomaly, suggestion
-    confidence: float
-    data_points: int
-    generated_at: float = field(default_factory=lambda: time.time())
-    action_items: List[str] = field(default_factory=list)
+    unit: str = ""
+    points: List[MetricPoint] = field(default_factory=list)
 
 
-@dataclass
-class Trend:
-    """Trend analysis result."""
-    metric: str
-    direction: str  # increasing, decreasing, stable
-    change_percent: float
-    period_days: int
-    start_value: float
-    end_value: float
-    forecast_7d: Optional[float] = None
+# =============================================================================
+# ANALYTICS ENGINE
+# =============================================================================
 
+class AnalyticsEngine:
+    """
+    Advanced Analytics Engine
+    
+    Features:
+    - Multi-metric collection
+    - Time-series storage
+    - Aggregation functions
+    - Trend analysis
+    - Anomaly detection
+    """
 
-@dataclass
-class Report:
-    """Analytics report."""
-    id: str
-    title: str
-    period_start: float
-    period_end: float
-    sections: List[Dict] = field(default_factory=list)
-    generated_at: float = field(default_factory=lambda: time.time())
+    def __init__(self, retention_days: int = 30):
+        self._metrics: Dict[str, Metric] = {}
+        self._retention_days = retention_days
+        self._aggregations_cache: Dict[str, Any] = {}
 
+    def register_metric(self, name: str, type: MetricType, description: str, unit: str = ""):
+        """Register a new metric."""
+        self._metrics[name] = Metric(
+            name=name,
+            type=type,
+            description=description,
+            unit=unit,
+        )
+        logger.info(f"Registered metric: {name} ({type.value})")
 
-class AdvancedAnalytics:
-    """Advanced analytics engine for PilotSuite."""
-
-    def __init__(self):
-        self._metrics: Dict[str, List[Tuple[float, float]]] = defaultdict(list)
-        self._insights: List[Insight] = []
-        self._reports: List[Report] = []
-        self._baseline_metrics: Dict[str, float] = {}
-
-    def record_metric(self, metric_name: str, value: float, timestamp: Optional[float] = None):
-        """Record a metric data point."""
-        ts = timestamp or time.time()
-        self._metrics[metric_name].append((ts, value))
-        
-        # Keep only last 90 days
-        cutoff = time.time() - (90 * 24 * 3600)
-        self._metrics[metric_name] = [
-            (t, v) for t, v in self._metrics[metric_name] if t >= cutoff
-        ]
-
-    def set_baseline(self, metric_name: str, value: float):
-        """Set baseline for a metric."""
-        self._baseline_metrics[metric_name] = value
-
-    def analyze_trends(self, metric_name: str, period_days: int = 30) -> Optional[Trend]:
-        """Analyze trends for a metric."""
+    def record(self, metric_name: str, value: float, labels: Dict[str, str] = None):
+        """Record a metric value."""
         if metric_name not in self._metrics:
-            return None
+            logger.warning(f"Unregistered metric: {metric_name}")
+            return
         
-        data = self._metrics[metric_name]
-        if len(data) < 2:
-            return None
+        metric = self._metrics[metric_name]
+        point = MetricPoint(
+            timestamp=datetime.now(),
+            value=value,
+            labels=labels or {},
+        )
         
-        cutoff = time.time() - (period_days * 24 * 3600)
-        recent = [(t, v) for t, v in data if t >= cutoff]
+        metric.points.append(point)
         
-        if len(recent) < 2:
-            return None
+        # Cleanup old data
+        self._cleanup_old_data(metric)
+
+    def _cleanup_old_data(self, metric: Metric):
+        """Remove data older than retention period."""
+        cutoff = datetime.now() - timedelta(days=self._retention_days)
+        metric.points = [p for p in metric.points if p.timestamp > cutoff]
+
+    def get_metric(self, name: str) -> Optional[Metric]:
+        """Get metric by name."""
+        return self._metrics.get(name)
+
+    def get_metrics(self) -> List[Metric]:
+        """Get all metrics."""
+        return list(self._metrics.values())
+
+
+# =============================================================================
+# AGGREGATION FUNCTIONS
+# =============================================================================
+
+class AggregationFunctions:
+    """Statistical aggregation functions."""
+
+    @staticmethod
+    def average(points: List[MetricPoint]) -> float:
+        """Calculate average."""
+        if not points:
+            return 0.0
+        return sum(p.value for p in points) / len(points)
+
+    @staticmethod
+    def min(points: List[MetricPoint]) -> float:
+        """Calculate minimum."""
+        if not points:
+            return 0.0
+        return min(p.value for p in points)
+
+    @staticmethod
+    def max(points: List[MetricPoint]) -> float:
+        """Calculate maximum."""
+        if not points:
+            return 0.0
+        return max(p.value for p in points)
+
+    @staticmethod
+    def sum(points: List[MetricPoint]) -> float:
+        """Calculate sum."""
+        return sum(p.value for p in points)
+
+    @staticmethod
+    def count(points: List[MetricPoint]) -> int:
+        """Calculate count."""
+        return len(points)
+
+    @staticmethod
+    def percentile(points: List[MetricPoint], percentile: float) -> float:
+        """Calculate percentile (0-100)."""
+        if not points:
+            return 0.0
         
-        # Calculate trend
-        start_value = recent[0][1]
-        end_value = recent[-1][1]
-        change = end_value - start_value
-        change_percent = (change / max(0.001, abs(start_value))) * 100
+        values = sorted(p.value for p in points)
+        k = (len(values) - 1) * (percentile / 100)
+        f = int(k)
+        c = f + 1 if f + 1 < len(values) else f
+        
+        if f == c:
+            return values[f]
+        
+        return values[f] * (c - k) + values[c] * (k - f)
+
+    @staticmethod
+    def std_dev(points: List[MetricPoint]) -> float:
+        """Calculate standard deviation."""
+        if len(points) < 2:
+            return 0.0
+        
+        avg = AggregationFunctions.average(points)
+        variance = sum((p.value - avg) ** 2 for p in points) / len(points)
+        return variance ** 0.5
+
+
+# =============================================================================
+# TREND ANALYSIS
+# =============================================================================
+
+class TrendAnalysis:
+    """Analyze trends in metric data."""
+
+    @staticmethod
+    def calculate_trend(points: List[MetricPoint], window_hours: int = 24) -> Dict[str, Any]:
+        """
+        Calculate trend over time window.
+        
+        Returns:
+            Dict with trend direction, slope, and confidence
+        """
+        if len(points) < 2:
+            return {"direction": "stable", "slope": 0, "confidence": 0}
+        
+        # Filter to window
+        cutoff = datetime.now() - timedelta(hours=window_hours)
+        recent_points = [p for p in points if p.timestamp > cutoff]
+        
+        if len(recent_points) < 2:
+            return {"direction": "stable", "slope": 0, "confidence": 0}
+        
+        # Simple linear regression
+        n = len(recent_points)
+        sum_x = sum(i for i in range(n))
+        sum_y = sum(p.value for p in recent_points)
+        sum_xy = sum(i * p.value for i, p in enumerate(recent_points))
+        sum_x2 = sum(i ** 2 for i in range(n))
+        
+        slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2) if (n * sum_x2 - sum_x ** 2) != 0 else 0
         
         # Determine direction
-        if change_percent > 5:
+        if slope > 0.01:
             direction = "increasing"
-        elif change_percent < -5:
+        elif slope < -0.01:
             direction = "decreasing"
         else:
             direction = "stable"
         
-        # Simple linear forecast
-        if len(recent) > 7:
-            slope = (end_value - start_value) / len(recent)
-            forecast_7d = end_value + (slope * 7)
-        else:
-            forecast_7d = None
+        # Calculate R-squared (confidence)
+        y_pred = [sum_y / n + slope * i for i in range(n)]
+        ss_res = sum((p.value - yp) ** 2 for p, yp in zip(recent_points, y_pred))
+        ss_tot = sum((p.value - sum_y / n) ** 2 for p in recent_points)
+        r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
         
-        return Trend(
-            metric=metric_name,
-            direction=direction,
-            change_percent=change_percent,
-            period_days=period_days,
-            start_value=start_value,
-            end_value=end_value,
-            forecast_7d=forecast_7d,
-        )
+        return {
+            "direction": direction,
+            "slope": slope,
+            "confidence": max(0, r_squared),
+            "window_hours": window_hours,
+        }
 
-    def detect_anomalies(self, metric_name: str, std_threshold: float = 2.0) -> List[Dict]:
-        """Detect anomalies in metric data."""
-        if metric_name not in self._metrics:
+    @staticmethod
+    def detect_anomalies(points: List[MetricPoint], std_threshold: float = 2.0) -> List[MetricPoint]:
+        """
+        Detect anomalous data points.
+        
+        Args:
+            points: Data points
+            std_threshold: Number of standard deviations for anomaly
+        
+        Returns:
+            List of anomalous points
+        """
+        if len(points) < 10:
             return []
         
-        data = [v for _, v in self._metrics[metric_name][-100:]]  # Last 100 points
-        if len(data) < 10:
-            return []
+        avg = AggregationFunctions.average(points)
+        std = AggregationFunctions.std_dev(points)
         
-        # Calculate statistics
-        mean = sum(data) / len(data)
-        variance = sum((x - mean) ** 2 for x in data) / len(data)
-        std = math.sqrt(variance)
+        if std == 0:
+            return []
         
         anomalies = []
-        for i, (ts, value) in enumerate(self._metrics[metric_name][-100:]):
-            z_score = (value - mean) / max(0.001, std)
-            if abs(z_score) > std_threshold:
-                anomalies.append({
-                    "timestamp": ts,
-                    "value": value,
-                    "z_score": z_score,
-                    "deviation": "high" if abs(z_score) > 3 else "medium",
-                })
+        for point in points:
+            z_score = abs(point.value - avg) / std
+            if z_score > std_threshold:
+                anomalies.append(point)
         
         return anomalies
 
-    def generate_insights(self) -> List[Insight]:
-        """Generate analytics insights."""
-        insights = []
+
+# =============================================================================
+# DASHBOARD GENERATOR
+# =============================================================================
+
+class DashboardGenerator:
+    """Generate analytics dashboards."""
+
+    def __init__(self, engine: AnalyticsEngine):
+        self.engine = engine
+
+    def generate_dashboard(self, dashboard_type: str) -> Dict[str, Any]:
+        """Generate dashboard configuration."""
+        if dashboard_type == "system_overview":
+            return self._generate_system_overview()
+        elif dashboard_type == "energy_analytics":
+            return self._generate_energy_analytics()
+        elif dashboard_type == "presence_analytics":
+            return self._generate_presence_analytics()
+        elif dashboard_type == "automation_performance":
+            return self._generate_automation_performance()
+        else:
+            return {"error": f"Unknown dashboard type: {dashboard_type}"}
+
+    def _generate_system_overview(self) -> Dict[str, Any]:
+        """Generate system overview dashboard."""
+        return {
+            "title": "System Overview",
+            "refresh_interval": 30,
+            "panels": [
+                {
+                    "type": "gauge",
+                    "title": "CPU Usage",
+                    "metric": "system_cpu_percent",
+                    "min": 0,
+                    "max": 100,
+                    "unit": "%",
+                },
+                {
+                    "type": "gauge",
+                    "title": "Memory Usage",
+                    "metric": "system_memory_percent",
+                    "min": 0,
+                    "max": 100,
+                    "unit": "%",
+                },
+                {
+                    "type": "timeseries",
+                    "title": "Request Rate",
+                    "metric": "api_requests_total",
+                    "aggregation": "rate",
+                    "interval": "1m",
+                },
+                {
+                    "type": "stat",
+                    "title": "Uptime",
+                    "metric": "system_uptime_seconds",
+                    "format": "duration",
+                },
+            ]
+        }
+
+    def _generate_energy_analytics(self) -> Dict[str, Any]:
+        """Generate energy analytics dashboard."""
+        return {
+            "title": "Energy Analytics",
+            "refresh_interval": 300,
+            "panels": [
+                {
+                    "type": "timeseries",
+                    "title": "Power Consumption",
+                    "metric": "energy_power_kw",
+                    "aggregation": "average",
+                    "interval": "1h",
+                },
+                {
+                    "type": "timeseries",
+                    "title": "Solar Production",
+                    "metric": "energy_solar_kw",
+                    "aggregation": "average",
+                    "interval": "1h",
+                },
+                {
+                    "type": "stat",
+                    "title": "Today's Savings",
+                    "metric": "energy_savings_ct",
+                    "format": "currency",
+                    "currency": "EUR",
+                },
+                {
+                    "type": "pie",
+                    "title": "Device Distribution",
+                    "metric": "energy_device_percent",
+                },
+            ]
+        }
+
+    def _generate_presence_analytics(self) -> Dict[str, Any]:
+        """Generate presence analytics dashboard."""
+        return {
+            "title": "Presence Analytics",
+            "refresh_interval": 60,
+            "panels": [
+                {
+                    "type": "stat",
+                    "title": "Current State",
+                    "metric": "presence_state",
+                    "mapping": {"0": "Away", "1": "Home"},
+                },
+                {
+                    "type": "gauge",
+                    "title": "Confidence",
+                    "metric": "presence_confidence",
+                    "min": 0,
+                    "max": 1,
+                    "unit": "%",
+                },
+                {
+                    "type": "timeseries",
+                    "title": "Presence History",
+                    "metric": "presence_state",
+                    "aggregation": "last",
+                    "interval": "1h",
+                },
+                {
+                    "type": "table",
+                    "title": "Sensor Status",
+                    "metrics": ["sensor_pir_active", "sensor_radar_active", "sensor_wifi_active"],
+                },
+            ]
+        }
+
+    def _generate_automation_performance(self) -> Dict[str, Any]:
+        """Generate automation performance dashboard."""
+        return {
+            "title": "Automation Performance",
+            "refresh_interval": 300,
+            "panels": [
+                {
+                    "type": "stat",
+                    "title": "Total Automations",
+                    "metric": "automation_count",
+                },
+                {
+                    "type": "stat",
+                    "title": "Executions Today",
+                    "metric": "automation_executions_total",
+                    "aggregation": "sum",
+                    "interval": "1d",
+                },
+                {
+                    "type": "timeseries",
+                    "title": "Execution Time",
+                    "metric": "automation_execution_seconds",
+                    "aggregation": "average",
+                    "interval": "1h",
+                },
+                {
+                    "type": "table",
+                    "title": "Top Automations",
+                    "metric": "automation_execution_count",
+                    "sort": "desc",
+                    "limit": 10,
+                },
+            ]
+        }
+
+
+# =============================================================================
+# EXPORT FUNCTIONS
+# =============================================================================
+
+class DataExporter:
+    """Export analytics data."""
+
+    @staticmethod
+    def to_csv(metrics: List[Metric], filename: str):
+        """Export metrics to CSV."""
+        import csv
         
-        # Analyze all metrics
-        for metric_name in self._metrics:
-            trend = self.analyze_trends(metric_name)
-            if trend and trend.direction != "stable":
-                insights.append(Insight(
-                    id=f"insight_{metric_name}_{int(time.time())}",
-                    title=f"{metric_name.replace('_', ' ').title()} Trend",
-                    description=f"{metric_name} is {trend.direction} by {abs(trend.change_percent):.1f}% over {trend.period_days} days",
-                    category="trend",
-                    confidence=0.8,
-                    data_points=len(self._metrics[metric_name]),
-                    action_items=[
-                        f"Review {metric_name} configuration",
-                        "Consider adjusting thresholds" if trend.direction == "increasing" else "Monitor for further changes",
-                    ],
-                ))
+        with open(filename, "w", newline="") as f:
+            writer = csv.writer(f)
             
-            # Check for anomalies
-            anomalies = self.detect_anomalies(metric_name)
-            if anomalies:
-                insights.append(Insight(
-                    id=f"anomaly_{metric_name}_{int(time.time())}",
-                    title=f"Anomalies Detected in {metric_name.replace('_', ' ').title()}",
-                    description=f"{len(anomalies)} anomalies detected in recent data",
-                    category="anomaly",
-                    confidence=0.9,
-                    data_points=len(anomalies),
-                    action_items=[
-                        "Investigate root cause",
-                        "Review system logs",
-                        "Consider alert threshold adjustment",
-                    ],
-                ))
+            for metric in metrics:
+                writer.writerow([f"Metric: {metric.name}", f"Type: {metric.type.value}", f"Unit: {metric.unit}"])
+                writer.writerow(["Timestamp", "Value"] + list(metric.points[0].labels.keys() if metric.points else []))
+                
+                for point in metric.points:
+                    writer.writerow([
+                        point.timestamp.isoformat(),
+                        point.value,
+                    ] + list(point.labels.values()))
+                
+                writer.writerow([])  # Empty line between metrics
         
-        # Energy efficiency insights
-        if "energy_consumption" in self._metrics and "presence" in self._metrics:
-            insights.append(Insight(
-                id=f"efficiency_{int(time.time())}",
-                title="Energy Efficiency Opportunity",
-                description="Potential energy savings detected through presence-based optimization",
-                category="efficiency",
-                confidence=0.75,
-                data_points=100,
-                action_items=[
-                    "Enable presence-based lighting control",
-                    "Review HVAC scheduling",
-                    "Consider smart plugs for standby devices",
-                ],
-            ))
-        
-        self._insights.extend(insights)
-        return insights
+        logger.info(f"Exported {len(metrics)} metrics to {filename}")
 
-    def generate_report(self, title: str, period_days: int = 7) -> Report:
-        """Generate analytics report."""
-        period_end = time.time()
-        period_start = period_end - (period_days * 24 * 3600)
-        
-        sections = []
-        
-        # Usage summary
-        usage_data = {}
-        for metric_name in self._metrics:
-            trend = self.analyze_trends(metric_name, period_days)
-            if trend:
-                usage_data[metric_name] = {
-                    "trend": trend.direction,
-                    "change": trend.change_percent,
-                    "current": trend.end_value,
+    @staticmethod
+    def to_json(metrics: List[Metric], filename: str):
+        """Export metrics to JSON."""
+        data = {
+            "exported_at": datetime.now().isoformat(),
+            "metrics": [
+                {
+                    "name": m.name,
+                    "type": m.type.value,
+                    "description": m.description,
+                    "unit": m.unit,
+                    "points": [
+                        {
+                            "timestamp": p.timestamp.isoformat(),
+                            "value": p.value,
+                            "labels": p.labels,
+                        }
+                        for p in m.points
+                    ]
                 }
-        
-        sections.append({
-            "title": "Usage Summary",
-            "type": "summary",
-            "data": usage_data,
-        })
-        
-        # Top insights
-        recent_insights = [i for i in self._insights if i.generated_at >= period_start][:5]
-        sections.append({
-            "title": "Key Insights",
-            "type": "insights",
-            "data": [{"title": i.title, "description": i.description} for i in recent_insights],
-        })
-        
-        # Anomalies
-        all_anomalies = []
-        for metric_name in self._metrics:
-            anomalies = self.detect_anomalies(metric_name)
-            all_anomalies.extend(anomalies)
-        
-        sections.append({
-            "title": "Anomalies",
-            "type": "anomalies",
-            "data": {"count": len(all_anomalies), "recent": all_anomalies[:10]},
-        })
-        
-        # Forecasts
-        forecasts = {}
-        for metric_name in self._metrics:
-            trend = self.analyze_trends(metric_name, period_days)
-            if trend and trend.forecast_7d:
-                forecasts[metric_name] = {
-                    "current": trend.end_value,
-                    "forecast_7d": trend.forecast_7d,
-                }
-        
-        sections.append({
-            "title": "7-Day Forecast",
-            "type": "forecast",
-            "data": forecasts,
-        })
-        
-        report = Report(
-            id=f"report_{int(time.time())}",
-            title=title,
-            period_start=period_start,
-            period_end=period_end,
-            sections=sections,
-        )
-        
-        self._reports.append(report)
-        logger.info(f"Report generated: {title} ({period_days} days)")
-        
-        return report
-
-    def get_usage_stats(self, metric_name: str, period_days: int = 7) -> Dict[str, Any]:
-        """Get usage statistics for a metric."""
-        if metric_name not in self._metrics:
-            return {}
-        
-        cutoff = time.time() - (period_days * 24 * 3600)
-        data = [v for t, v in self._metrics[metric_name] if t >= cutoff]
-        
-        if not data:
-            return {"count": 0}
-        
-        return {
-            "count": len(data),
-            "min": min(data),
-            "max": max(data),
-            "avg": sum(data) / len(data),
-            "current": data[-1] if data else 0,
+                for m in metrics
+            ]
         }
+        
+        with open(filename, "w") as f:
+            json.dump(data, f, indent=2)
+        
+        logger.info(f"Exported {len(metrics)} metrics to {filename}")
 
-    def get_insights(self, limit: int = 20, category: Optional[str] = None) -> List[Insight]:
-        """Get generated insights."""
-        insights = self._insights
-        if category:
-            insights = [i for i in insights if i.category == category]
-        return sorted(insights, key=lambda i: i.generated_at, reverse=True)[:limit]
-
-    def get_reports(self, limit: int = 10) -> List[Report]:
-        """Get generated reports."""
-        return sorted(self._reports, key=lambda r: r.generated_at, reverse=True)[:limit]
-
-    def export_data(self, metric_names: Optional[List[str]] = None) -> Dict[str, List]:
-        """Export metric data for external analysis."""
-        if metric_names:
-            return {name: self._metrics.get(name, []) for name in metric_names}
-        return dict(self._metrics)
-
-    def get_stats(self) -> Dict[str, Any]:
-        """Get analytics statistics."""
-        return {
-            "metrics_tracked": len(self._metrics),
-            "total_data_points": sum(len(v) for v in self._metrics.values()),
-            "insights_generated": len(self._insights),
-            "reports_generated": len(self._reports),
-        }
+    @staticmethod
+    def to_prometheus(metrics: List[Metric], filename: str):
+        """Export metrics to Prometheus format."""
+        lines = []
+        
+        for metric in metrics:
+            # HELP line
+            lines.append(f"# HELP {metric.name} {metric.description}")
+            # TYPE line
+            lines.append(f"# TYPE {metric.name} {metric.type.value}")
+            
+            # Data points
+            for point in metric.points:
+                labels = ",".join(f'{k}="{v}"' for k, v in point.labels.items())
+                if labels:
+                    lines.append(f"{metric.name}{{{labels}}} {point.value} {int(point.timestamp.timestamp() * 1000)}")
+                else:
+                    lines.append(f"{metric.name} {point.value} {int(point.timestamp.timestamp() * 1000)}")
+        
+        with open(filename, "w") as f:
+            f.write("\n".join(lines))
+        
+        logger.info(f"Exported {len(metrics)} metrics to Prometheus format")
 
 
-# Global default advanced analytics
-default_analytics: Optional[AdvancedAnalytics] = None
+# =============================================================================
+# HOME ASSISTANT INTEGRATION
+# =============================================================================
 
-
-def init_advanced_analytics() -> AdvancedAnalytics:
-    """Initialize global advanced analytics."""
-    global default_analytics
-    default_analytics = AdvancedAnalytics()
-    return default_analytics
+async def async_setup_analytics(hass, config: Dict[str, Any]):
+    """Set up analytics in Home Assistant."""
+    engine = AnalyticsEngine(retention_days=config.get("retention_days", 30))
+    dashboard_gen = DashboardGenerator(engine)
+    
+    # Register default metrics
+    engine.register_metric("system_cpu_percent", MetricType.GAUGE, "CPU usage percent", "%")
+    engine.register_metric("system_memory_percent", MetricType.GAUGE, "Memory usage percent", "%")
+    engine.register_metric("api_requests_total", MetricType.COUNTER, "Total API requests")
+    engine.register_metric("presence_confidence", MetricType.GAUGE, "Presence detection confidence", "")
+    
+    # Store in hass.data
+    hass.data["pilotsuite_analytics_engine"] = engine
+    hass.data["pilotsuite_dashboard_generator"] = dashboard_gen
+    
+    # Set up periodic data collection
+    from homeassistant.helpers.event import async_track_time_interval
+    
+    async def collect_system_metrics():
+        """Collect system metrics."""
+        # Would collect actual metrics here
+        pass
+    
+    async_track_time_interval(hass, lambda now: collect_system_metrics(), timedelta(minutes=1))
+    
+    logger.info("Analytics set up successfully")
+    
+    return engine, dashboard_gen
