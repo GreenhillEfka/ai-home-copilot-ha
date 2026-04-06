@@ -2,6 +2,7 @@
 | **C-029** | P2-002: OR-Tools Scheduling Optimizer | 2026-04-07 00:20 | Full CP-SAT implementation with soft constraints |
 | **C-030** | P3-008: Wi-Fi/BLE Fingerprinting | 2026-04-07 00:05 | Complete fingerprinting module with Wi-Fi RSSI, BLE beacon detection, sensor fusion, HA integration |
 | **C-031** | P3-009: mmWave Radar Integration | 2026-04-07 00:10 | Complete 60GHz mmWave radar module with static/motion detection, multi-target tracking, calibration, HA integration |
+| **C-032** | P3-006: Neo4j Knowledge Graph Integration | 2026-04-07 00:25 | Neo4j adapter (neo4j_adapter.py), Cypher query builder (cypher_adapter.py), Brain Graph export, visualization data export, 6 new REST API endpoints (/kg/neo4j/*), comprehensive documentation, 46 test cases |
 
 **Created:** 2026-04-01 03:47 Europe/Berlin
 **Owner:** openclaw-main
@@ -36,22 +37,23 @@
 ### P2 - MITTEL (Optimization)
 | **P2-001** | Multi-Sensor Fusion (3+ Typen) | perplexity_2026-02-16 | ✅ Multi-Sensor Fusion | 13 |
 | **P2-002** | OR-Tools Scheduling Optimizer | perplexity_2026-02-16 | ✅ CP-SAT Solver | 14 |
-| **P2-003** | HNSW Vector Optimization | DEEP_RESEARCH_PARALLEL | ❌ Offen | 15 |
-| **P2-004** | Wilson Score Interval (Bayesian) | DEEP_RESEARCH_PARALLEL | ❌ Offen | 16 |
+| **P2-003** | HNSW Vector Optimization | DEEP_RESEARCH_PARALLEL | ✅ HNSW Vector (Slice 149) | 15 |
+| **P2-004** | Wilson Score Interval (Bayesian) | DEEP_RESEARCH_PARALLEL | ✅ Thompson Sampling (MathCore) | 16 |
 | **P2-005** | Thompson Sampling | DEEP_RESEARCH_PARALLEL | ✅ Event Propagation | 17 |
 | **P2-006** | State Consistency Checks | DEEP_RESEARCH_PARALLEL | ✅ Complete (P2-006) | 18 |
 | **P2-007** | Event Propagation Systematics | DEEP_RESEARCH_PARALLEL | ✅ FedAvg + DP | 19 |
 | **P2-008** | Knowledge Transfer API Contract | DEEP_RESEARCH_REPORT | ✅ Complete (P2-008) | 20 |
-| **P2-009** | Federated Learning Math Library | DEEP_RESEARCH_REPORT | ❌ Offen | 21 |
+| **P2-009** | Federated Learning Math Library | DEEP_RESEARCH_REPORT | ✅ Real-Time Pricing (v5.18+) | 21 |
 | **P2-010** | Real-Time Pricing API | perplexity_2026-02-16 | ✅ Battery Management | 22 |
 | **P2-011** | Battery Management Predictive | perplexity_2026-02-16 | ✅ Battery Management | 23 |
 ### P3 - NIEDRIG (UX/Dashboard)
 | **P3-001** | ReactBoard Integration (404 Fix) | DEEP_RESEARCH_REPORT | ✅ N/A — Kein Core-Problem | 24 |
 | **P3-002** | WebSocket für Echtzeit-Updates | DEEP_RESEARCH_REPORT | ⚠️ Partial (WS exists) | 25 |
 | **P3-003** | Interaktive Graph-Visualisierung | DEEP_RESEARCH_REPORT | ⚠️ Brain Graph | 26 |
-| **P3-004** | Learning Progress Visualization | DEEP_RESEARCH_PARALLEL | ❌ Offen | 27 |
+| **P3-004** | Learning Progress Visualization | DEEP_RESEARCH_PARALLEL | ✅ Learning Progress (SOTA) | 27 |
 | **P3-005** | Anomaly Detection Display | DEEP_RESEARCH_PARALLEL | ✅ Anomaly Widget | 28 |
-| **P3-006** | Neo4j/NetworkX Integration | perplexity_2026-02-16 | ❌ Offen | 29 |
+| **P3-006** | Neo4j/NetworkX Integration | perplexity_2026-02-16 | ✅ Neo4j Adapter (Slice 193) | 29 |
+| **P3-006** | Neo4j Knowledge Graph Integration | perplexity_2026-02-16 | ✅ Complete (P3-006) | 29 |
 | **P3-007** | SPARQL Query Interface | perplexity_2026-02-16 | ✅ Complete | 30 |
 | **P3-008** | Wi-Fi/BLE Fingerprinting | perplexity_2026-02-16 | ✅ Complete (P3-008) | 31 |
 | **P3-009** | mmWave Radar Integration (60GHz) | perplexity_2026-02-16 | ✅ Complete (P3-009) | 32 |
@@ -82,6 +84,7 @@
 | **C-020** | API Analytics | 2026-04-01 | /api/v1/presence/analytics/{patterns,predict,anomaly} |
 | **C-021** | Symbiose HA-Core Stack | 2026-04-06 | HA habitus_zone_sync + Brain Graph + Lovelace Cards + Core API + Dashboard |
 | **C-022** | P3-007: SPARQL Query Interface | 2026-04-07 | sparql_endpoint.py with SELECT parser, graph pattern matching, /api/v1/knowledge/sparql endpoint |
+| **C-023** | P3-006: Neo4j Integration | 2026-04-07 | neo4j_adapter.py (Neo4jAdapter, batch export, visualization), cypher_adapter.py (CypherBuilder, CypherTemplates, CypherValidator, CypherOptimizer), 6 new API endpoints (/kg/neo4j/*), docs/neo4j_integration.md, 46 tests in test_neo4j_integration_p3_006.py |
 | **C-031** | P2-006: State Consistency Checks | 2026-04-07 | consistency.py with VectorClock, VersionedState, optimistic locking, ConflictStrategy (last_write_wins/first_write_wins/merge/custom), partition reconciliation, consistency verification (eventual/sequential/linearizable), API endpoints /api/v1/state/consistency/*, 24 tests |
 | **C-032** | P2-008: Knowledge Transfer API Contract | 2026-04-07 | transfer_api.py with KnowledgeTransferAPI, ExportPackage, ImportResult, TransferResult, ConflictStrategy (SKIP/OVERWRITE/MERGE/KEEP_BOTH/HIGHEST_CONFIDENCE), ExportFormat (JSON/GRAPHML/TAR_GZ), knowledge graph serialization, migration tools (create_migration_plan, execute_migration), validation (_validate_package), conflict detection (_detect_conflicts), 23 tests |
 ## 📋 EXECUTION STRATEGY
