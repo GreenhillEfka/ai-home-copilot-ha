@@ -651,6 +651,7 @@ def generate_styx_dashboard(
     views: list[dict[str, Any]] = [
         generate_styx_view(host, port),
         generate_haushalt_view(host, port),
+        generate_habitus_zone_live_view(zones=zones),
         generate_energy_view(host, port, zones=zones),
         generate_presence_view(zones=zones),
         generate_music_view(host, port),
@@ -1032,6 +1033,7 @@ def generate_styx_dashboard_extended(
     views: list[dict[str, Any]] = [
         generate_styx_view(host, port),
         generate_haushalt_view(host, port),
+        generate_habitus_zone_live_view(zones=zones),
         generate_energy_view(host, port, zones=zones),
         generate_presence_view(zones=zones),
         generate_music_view(host, port),
