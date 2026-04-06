@@ -1,0 +1,20 @@
+[Unit]
+Description=PilotSuite Celery Beat Scheduler
+After=network.target redis.service
+
+[Service]
+Type=forking
+User=homeassistant
+Group=homeassistant
+WorkingDirectory=/config/clawd
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="REDIS_URL=redis://localhost:6379/0"
+ExecStart=/usr/bin/celery -A copilot_core.celery_app beat --loglevel info --detach --pidfile=/config/pilotsuite/pids/beat.pid
+ExecStop=/bin/kill -TERM $MAINPID
+ExecReload=/bin/kill -HUP $MAINPID
+PIDFile=/config/pilotsuite/pids/beat.pid
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
