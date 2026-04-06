@@ -1,0 +1,417 @@
+# Prometheus Alert Rules — PilotSuite
+# Version: 1.0.0
+# Last Updated: 2026-04-06
+# Owner: PilotSuite Operations Team
+
+groups:
+  - name: pilotsuite-sla-alerts
+    interval: 30s
+    rules:
+      # =====================
+      # CRITICAL ALERTS (P1)
+      # =====================
+
+      # Service Down - No metrics received
+      - alert: PilotSuiteServiceDown
+        expr: absent(up{job="symbiosis"} == 1)
+        for: 1m
+        labels:
+          severity: critical
+          priority: P1
+          team: platform
+        annotations:
+          summary: "PilotSuite service is down"
+          description: "No metrics received from symbiosis service for more than 1 minute"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/service-down"
+          slo_impact: "99.99% availability at risk"
+
+      # High Error Rate (> 1% 5xx errors)
+      - alert: PilotSuiteHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="symbiosis",status=~"5.."}[5m])) 
+            / 
+            sum(rate(http_requests_total{job="symbiosis"}[5m]))
+          ) * 100 > 1
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          team: platform
+        annotations:
+          summary: "High HTTP 5xx error rate: {{ $value | printf \"%.2f\" }}%"
+          description: "Error rate exceeded 1% threshold for 5 minutes"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/high-error-rate"
+          slo_impact: "99.9% availability SLO at risk"
+
+      # High Latency (p95 > 2s)
+      - alert: PilotSuiteHighLatency
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{job="symbiosis"}[5m])) by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          team: platform
+        annotations:
+          summary: "High p95 latency: {{ $value | printf \"%.2f\" }}s"
+          description: "95th percentile latency exceeded 2 seconds for 5 minutes"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/high-latency"
+          slo_impact: "Latency SLO (p95 < 1s) violated"
+
+      # Session Spawn Failures
+      - alert: PilotSuiteSessionSpawnFailures
+        expr: |
+          sum(rate(sessions_spawn_errors_total[5m])) 
+          / 
+          sum(rate(sessions_spawn_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          team: platform
+        annotations:
+          summary: "High session spawn failure rate: {{ $value | printf \"%.2f\" }}%"
+          description: "More than 5% of session spawn attempts are failing"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/session-spawn-failures"
+          slo_impact: "99.5% session spawn success SLO at risk"
+
+      # Memory Write Failures
+      - alert: PilotSuiteMemoryWriteFailures
+        expr: |
+          sum(rate(memory_write_errors_total[5m])) 
+          / 
+          sum(rate(memory_write_total[5m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          team: platform
+        annotations:
+          summary: "Memory write failure rate: {{ $value | printf \"%.2f\" }}%"
+          description: "More than 1% of memory write operations are failing"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/memory-write-failures"
+          slo_impact: "99.9% memory write success SLO violated"
+
+      # WebSocket Connection Failures
+      - alert: PilotSuiteWebSocketConnectionFailures
+        expr: |
+          sum(rate(websocket_connection_errors_total[5m])) 
+          / 
+          sum(rate(websocket_connection_attempts_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          team: platform
+        annotations:
+          summary: "WebSocket connection failure rate: {{ $value | printf \"%.2f\" }}%"
+          description: "More than 5% of WebSocket connection attempts are failing"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/websocket-failures"
+          slo_impact: "99.5% WebSocket connection SLO at risk"
+
+      # Ollama API Failures
+      - alert: PilotSuiteOllamaAPIFailures
+        expr: |
+          sum(rate(ollama_api_errors_total[5m])) 
+          / 
+          sum(rate(ollama_api_requests_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          priority: P1
+          team: ai-platform
+        annotations:
+          summary: "Ollama API failure rate: {{ $value | printf \"%.2f\" }}%"
+          description: "More than 10% of Ollama API requests are failing"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/ollama-api-failures"
+          slo_impact: "99.0% Ollama API success SLO violated"
+
+      # =====================
+      # WARNING ALERTS (P2)
+      # =====================
+
+      # Elevated Error Rate (> 0.5% 5xx errors)
+      - alert: PilotSuiteElevatedErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="symbiosis",status=~"5.."}[5m])) 
+            / 
+            sum(rate(http_requests_total{job="symbiosis"}[5m]))
+          ) * 100 > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          priority: P2
+          team: platform
+        annotations:
+          summary: "Elevated HTTP 5xx error rate: {{ $value | printf \"%.2f\" }}%"
+          description: "Error rate exceeded 0.5% threshold for 10 minutes"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/elevated-error-rate"
+          slo_impact: "Approaching 99.9% availability SLO limit"
+
+      # Elevated Latency (p95 > 1s)
+      - alert: PilotSuiteElevatedLatency
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{job="symbiosis"}[5m])) by (le)
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          priority: P2
+          team: platform
+        annotations:
+          summary: "Elevated p95 latency: {{ $value | printf \"%.2f\" }}s"
+          description: "95th percentile latency exceeded 1 second for 10 minutes"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/elevated-latency"
+          slo_impact: "Approaching latency SLO (p95 < 1s) limit"
+
+      # High Memory Usage
+      - alert: PilotSuiteHighMemoryUsage
+        expr: |
+          (
+            container_memory_working_set_bytes{container="symbiosis"} 
+            / 
+            container_spec_memory_limit_bytes{container="symbiosis"}
+          ) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          priority: P2
+          team: platform
+        annotations:
+          summary: "High memory usage: {{ $value | printf \"%.1f\" }}%"
+          description: "Container memory usage exceeded 80% of limit"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/high-memory"
+          slo_impact: "Potential OOM risk affecting availability"
+
+      # High CPU Usage
+      - alert: PilotSuiteHighCPUUsage
+        expr: |
+          (
+            rate(container_cpu_usage_seconds_total{container="symbiosis"}[5m]) 
+            / 
+            container_spec_cpu_quota{container="symbiosis"} * 100000
+          ) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          priority: P2
+          team: platform
+        annotations:
+          summary: "High CPU usage: {{ $value | printf \"%.1f\" }}%"
+          description: "Container CPU usage exceeded 80% of quota"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/high-cpu"
+          slo_impact: "Potential throttling affecting latency"
+
+      # Pod Restart Loop
+      - alert: PilotSuitePodRestartLoop
+        expr: |
+          increase(kube_pod_container_status_restarts_total{pod=~"symbiosis.*"}[1h]) > 3
+        for: 5m
+        labels:
+          severity: warning
+          priority: P2
+          team: platform
+        annotations:
+          summary: "Pod restart loop detected"
+          description: "Symbiosis pod has restarted {{ $value }} times in the last hour"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/pod-restart-loop"
+          slo_impact: "Service stability at risk"
+
+      # Tool Execution Timeout
+      - alert: PilotSuiteToolExecutionTimeouts
+        expr: |
+          sum(rate(tool_execution_timeouts_total[5m])) 
+          / 
+          sum(rate(tool_execution_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          priority: P2
+          team: platform
+        annotations:
+          summary: "Tool execution timeout rate: {{ $value | printf \"%.2f\" }}%"
+          description: "More than 5% of tool executions are timing out"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/tool-timeouts"
+          slo_impact: "60s p95 completion SLO at risk"
+
+      # Telegram Message Delivery Failures
+      - alert: PilotSuiteTelegramDeliveryFailures
+        expr: |
+          sum(rate(telegram_message_errors_total[5m])) 
+          / 
+          sum(rate(telegram_messages_sent_total[5m])) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+          priority: P2
+          team: integrations
+        annotations:
+          summary: "Telegram message delivery failure rate: {{ $value | printf \"%.2f\" }}%"
+          description: "More than 2% of Telegram messages are failing to deliver"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/telegram-failures"
+          slo_impact: "99.5% message delivery SLO at risk"
+
+      # =====================
+      # INFO ALERTS (P3)
+      # =====================
+
+      # Error Budget Burn Rate > 50%
+      - alert: PilotSuiteErrorBudgetWarning
+        expr: |
+          (
+            (1 - (
+              sum(rate(http_requests_total{job="symbiosis",status!~"5.."}[30d])) 
+              / 
+              sum(rate(http_requests_total{job="symbiosis"}[30d]))
+            )) 
+            / 
+            0.001  # 99.9% availability = 0.1% error budget
+          ) * 100 > 50
+        for: 1h
+        labels:
+          severity: info
+          priority: P3
+          team: platform
+        annotations:
+          summary: "Error budget consumption: {{ $value | printf \"%.1f\" }}%"
+          description: "More than 50% of monthly error budget consumed"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/error-budget-warning"
+          slo_impact: "Review trends and consider change freeze"
+
+      # Error Budget Burn Rate > 75%
+      - alert: PilotSuiteErrorBudgetCritical
+        expr: |
+          (
+            (1 - (
+              sum(rate(http_requests_total{job="symbiosis",status!~"5.."}[30d])) 
+              / 
+              sum(rate(http_requests_total{job="symbiosis"}[30d]))
+            )) 
+            / 
+            0.001  # 99.9% availability = 0.1% error budget
+          ) * 100 > 75
+        for: 1h
+        labels:
+          severity: warning
+          priority: P2
+          team: platform
+        annotations:
+          summary: "Error budget consumption: {{ $value | printf \"%.1f\" }}%"
+          description: "More than 75% of monthly error budget consumed - change freeze recommended"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/error-budget-critical"
+          slo_impact: "Change freeze recommended to protect SLO"
+
+      # Replica Count Below Desired
+      - alert: PilotSuiteLowReplicaCount
+        expr: |
+          kube_deployment_status_replicas_available{deployment="symbiosis"} 
+          < 
+          kube_deployment_spec_replicas{deployment="symbiosis"}
+        for: 5m
+        labels:
+          severity: info
+          priority: P3
+          team: platform
+        annotations:
+          summary: "Deployment has fewer replicas than desired"
+          description: "Available: {{ $value }}, Desired: {{ $labels.kube_deployment_spec_replicas }}"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/low-replicas"
+          slo_impact: "Reduced redundancy may affect availability"
+
+      # Certificate Expiry Warning (30 days)
+      - alert: PilotSuiteCertExpiryWarning
+        expr: |
+          (
+            probe_ssl_earliest_cert_expiry 
+            - 
+            time()
+          ) / 86400 < 30
+        for: 1h
+        labels:
+          severity: info
+          priority: P3
+          team: platform
+        annotations:
+          summary: "SSL certificate expires in {{ $value | printf \"%.0f\" }} days"
+          description: "Certificate renewal required within 30 days"
+          runbook_url: "https://runbooks.pilotsuite.io/alerts/cert-expiry"
+          slo_impact: "Service outage risk if not renewed"
+
+  # =====================
+  # RECORDING RULES
+  # =====================
+  - name: pilotsuite-slo-recording
+    interval: 30s
+    rules:
+      # Availability recording
+      - record: slo:availability:ratio_rate1h
+        expr: |
+          sum(rate(http_requests_total{job="symbiosis",status!~"5.."}[1h])) 
+          / 
+          sum(rate(http_requests_total{job="symbiosis"}[1h]))
+
+      - record: slo:availability:ratio_rate6h
+        expr: |
+          sum(rate(http_requests_total{job="symbiosis",status!~"5.."}[6h])) 
+          / 
+          sum(rate(http_requests_total{job="symbiosis"}[1h]))
+
+      - record: slo:availability:ratio_rate30d
+        expr: |
+          sum(rate(http_requests_total{job="symbiosis",status!~"5.."}[30d])) 
+          / 
+          sum(rate(http_requests_total{job="symbiosis"}[30d]))
+
+      # Latency recording
+      - record: slo:latency:p50:rate5m
+        expr: |
+          histogram_quantile(0.50, 
+            sum(rate(http_request_duration_seconds_bucket{job="symbiosis"}[5m])) by (le)
+          )
+
+      - record: slo:latency:p90:rate5m
+        expr: |
+          histogram_quantile(0.90, 
+            sum(rate(http_request_duration_seconds_bucket{job="symbiosis"}[5m])) by (le)
+          )
+
+      - record: slo:latency:p95:rate5m
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket{job="symbiosis"}[5m])) by (le)
+          )
+
+      - record: slo:latency:p99:rate5m
+        expr: |
+          histogram_quantile(0.99, 
+            sum(rate(http_request_duration_seconds_bucket{job="symbiosis"}[5m])) by (le)
+          )
+
+      # Error rate recording
+      - record: slo:error_rate:ratio_rate5m
+        expr: |
+          sum(rate(http_requests_total{job="symbiosis",status=~"5.."}[5m])) 
+          / 
+          sum(rate(http_requests_total{job="symbiosis"}[5m]))
+
+      - record: slo:error_rate:ratio_rate1h
+        expr: |
+          sum(rate(http_requests_total{job="symbiosis",status=~"5.."}[1h])) 
+          / 
+          sum(rate(http_requests_total{job="symbiosis"}[1h]))
+
+      # Error budget recording
+      - record: slo:error_budget:remaining
+        expr: |
+          (
+            0.001  # 99.9% availability target = 0.1% error budget
+            - 
+            (
+              1 - slo:availability:ratio_rate30d
+            )
+          ) / 0.001 * 100
