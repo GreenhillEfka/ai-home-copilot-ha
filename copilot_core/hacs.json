@@ -1,0 +1,8 @@
+# HACS Repository Configuration
+
+name: PilotSuite Core
+content_in_root: false
+zip_release: false
+filename: copilot_ha.zip
+render_readme: true
+homeassistant: 2024.1.0
