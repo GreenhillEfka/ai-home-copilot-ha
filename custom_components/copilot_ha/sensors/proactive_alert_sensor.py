@@ -55,17 +55,20 @@ class ProactiveAlertSensor(CopilotBaseEntity, SensorEntity):
         by_category = self._data.get("by_category", {})
         alerts = self._data.get("alerts", [])
 
-        # Compact alert list
-        alert_list = []
-        for a in alerts[:10]:
-            alert_list.append({
-                "title": a.get("title_de", ""),
-                "priority": a.get("priority_label", ""),
-                "category": a.get("category", ""),
-                "action": a.get("action", ""),
-                "message": a.get("message_de", ""),
-                "icon": a.get("icon", ""),
-            })
+        # Compact alert list (guards against non-list input)
+        alert_list: list[dict] = []
+        raw_alerts = self._data.get("alerts", [])
+        if isinstance(raw_alerts, list):
+            for a in raw_alerts[:10]:
+                if isinstance(a, dict):
+                    alert_list.append({
+                        "title": a.get("title_de", ""),
+                        "priority": a.get("priority_label", ""),
+                        "category": a.get("category", ""),
+                        "action": a.get("action", ""),
+                        "message": a.get("message_de", ""),
+                        "icon": a.get("icon", ""),
+                    })
 
         return {
             "total_alerts": self._data.get("total", 0),
