@@ -1,4 +1,4 @@
-"""PilotSuite Styx Trace — HA-338.
+"""PilotSuite Styx Trace — HA-412.
 Auto-Sync Core: /api/v1/traces/*
 """
 from __future__ import annotations
