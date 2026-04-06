@@ -1,7 +1,7 @@
-# MEMORY.md — PilotSuite Research Tasks & Learnings
+# MEMORY.md - PilotSuite Research Tasks & Learnings
 
-**Created:** 2026-04-01 03:47 Europe/Berlin  
-**Owner:** openclaw-main  
+**Created:** 2026-04-01 03:47 Europe/Berlin
+**Owner:** openclaw-main
 **Purpose:** Persistent storage of all research-derived tasks for systematic execution
 
 ---
@@ -15,13 +15,13 @@
 | `research_2026-02-17.md` | 2026-02-17 | SOTA Research (5 Prioritäten) |
 | `DEEP_RESEARCH_PARALLEL.md` | 2026-03-xx | 5 Parallel Tracks (Architecture, Vector, Bayesian, Integration, UX) |
 | `research_integration_map.md` | 2026-03-26 | Integration Status |
-| `orakel.md` (Pull-Loop Logs) | 2026-03-24–29 | P0-103 Recovery (80h+ Blockade) |
+| `orakel.md` (Pull-Loop Logs) | 2026-03-24-29 | P0-103 Recovery (80h+ Blockade) |
 
 ---
 
 ## 🎯 MASTER TASK LIST (All Research-Derived Tasks)
 
-### P0 — KRITISCH (Security/Stability)
+### P0 - KRITISCH (Security/Stability)
 
 | ID | Task | Source | Status | Priority |
 |----|------|--------|--------|----------|
@@ -30,7 +30,7 @@
 | **P0-003** | Manifest-Drift fixen (15.2.21 synchronisiert) | Orakel Pull-Loop | ✅ Fixed | 3 |
 | **P0-004** | Dev Surface Tests fixen (10 failures) | DEEP_RESEARCH_REPORT | ✅ Fixed (Import/Registry behoben) | 4 |
 
-### P1 — HOCH (Core-Features)
+### P1 - HOCH (Core-Features)
 
 | ID | Task | Source | Status | Priority |
 |----|------|--------|--------|----------|
@@ -43,7 +43,7 @@
 | **P1-007** | Brain Graph Store Tests fixen (4 failures) | DEEP_RESEARCH_REPORT | ❌ Offen | 11 |
 | **P1-008** | Tag System Tests fixen (6 failures) | DEEP_RESEARCH_REPORT | ❌ Offen | 12 |
 
-### P2 — MITTEL (Optimization)
+### P2 - MITTEL (Optimization)
 
 | ID | Task | Source | Status | Priority |
 |----|------|--------|--------|----------|
@@ -59,7 +59,7 @@
 | **P2-010** | Real-Time Pricing API | perplexity_2026-02-16 | ❌ Offen | 22 |
 | **P2-011** | Battery Management Predictive | perplexity_2026-02-16 | ❌ Offen | 23 |
 
-### P3 — NIEDRIG (UX/Dashboard)
+### P3 - NIEDRIG (UX/Dashboard)
 
 | ID | Task | Source | Status | Priority |
 |----|------|--------|--------|----------|
@@ -101,6 +101,7 @@
 | **C-018** | WebSocket Server | 2026-04-01 | presence/websocket_server.py (real-time updates) |
 | **C-019** | Pattern Detection | 2026-04-01 | presence/pattern_detection.py (ML-based) |
 | **C-020** | API Analytics | 2026-04-01 | /api/v1/presence/analytics/{patterns,predict,anomaly} |
+| **C-021** | Symbiose HA-Core Stack | 2026-04-06 | HA habitus_zone_sync + Brain Graph + Lovelace Cards + Core API + Dashboard |
 
 ---
 
@@ -204,5 +205,44 @@
 
 ---
 
-*Last Updated: 2026-04-02 Europe/Berlin*  
-*Next Review: 2026-04-03 00:00 Europe/Berlin (cron)*
+*Last Updated: 2026-04-06 Europe/Berlin*
+*Next Review: 2026-04-07 00:00 Europe/Berlin (cron)*
+
+---
+
+## 🔧 SYMBIOSIS LANE — COMPLETE (2026-04-06)
+
+| VS | Entität | Sync Layer | Admin API | Lovelace | Status |
+|----|----------|------------|-----------|----------|--------|
+| VS-1 | Habitus Zone | ✅ | ✅ | ✅ | **DONE** |
+| VS-2 | Room Context | ✅ | ✅ | ✅ | **DONE** |
+| VS-3 | Device Link | ✅ | ✅ | ✅ | **DONE** |
+| VS-4 | Presence Entity | ✅ | ✅ | ✅ | **DONE** |
+| VS-5 | Intent Manager | ✅ | ✅ | ✅ | **DONE** |
+| VS-6 | Action Executor | ✅ | ✅ | ✅ | **DONE** |
+| VS-7 | State Bridge | ✅ | ✅ | ✅ | **DONE** |
+| VS-8 | Event Bus | ✅ | ✅ | ✅ | **DONE** |
+| VS-9 | Learning Memory | ✅ | ✅ | ✅ | **DONE** |
+
+### SOTA Backend UI (2026-04-06)
+- Core: `/admin` Backend UI mit allen 9 Tabs
+- Core: Rule Engine (register, evaluate, enable/disable)
+- Core: Context Manager (transition, history, revert)
+- HA: PilotSuite SOTA Theme for Lovelace
+- HA: 9 Custom Lovelace Cards
+
+### Commits
+- Core: `takeover/main` (Symbiosis + SOTA UI)
+- HA: `takeover/ha4-main-truth` (Sensors + Cards + Theme)
+
+---
+
+## 📊 CURRENT SESSION STATUS
+
+- **Symbiosis Lane:** ✅ 9/9 Vertical Slices Complete
+- **Backend UI:** ✅ SOTA Reiter-UI mit allen Tabs
+- **Rule Engine:** ✅ Deep Logic implementiert
+- **Theme:** ✅ PilotSuite Theme für Lovelace
+- **Cards:** ✅ 9 Custom Lovelace Cards
+
+---
