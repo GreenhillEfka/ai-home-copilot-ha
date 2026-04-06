@@ -1061,3 +1061,181 @@ def dashboard_to_yaml(
     """Generate full dashboard as YAML string for Lovelace import."""
     dashboard = generate_styx_dashboard(host, port, zones=zones)
     return _yaml_dump(dashboard)
+
+
+# ── Habitus Zone Live Overview (2026-04-06) ─────────────────────────────────
+def generate_habitus_zone_live_view(
+    zones: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Generate a live Habitus Zone overview tab with real-time entity states.
+    
+    Shows all configured Habitus zones with live state cards pulled from HA entities.
+    Each zone card shows: presence, temperature, lights, climate, energy.
+    Uses Glance card for compact multi-entity overview.
+    """
+    all_zones = zones or []
+    
+    cards: list[dict[str, Any]] = []
+    
+    # ── Zone grid cards ────────────────────────────────────────────────────
+    for zone in all_zones:
+        zone_id = zone.get("zone_id", zone.get("zone_type", "unknown"))
+        zone_name = zone.get("zone_name", zone.get("name_de", zone_id))
+        entities = zone.get("entities", {})
+        zone_type = zone.get("zone_type", "room")
+        
+        # Determine icon by zone type
+        icon_map = {
+            "living": "mdi:sofa",
+            "kitchen": "mdi:silverware-fork-knife",
+            "bath": "mdi:shower",
+            "bedroom": "mdi:bed",
+            "office": "mdi:desk",
+            "hallway": "mdi:door",
+            "room_mira": "mdi:account",
+            "room_paul": "mdi:account",
+            "terrace": "mdi:tree",
+            "outside": "mdi:leaf",
+        }
+        zone_icon = icon_map.get(zone_type, "mdi:floor-plan")
+        
+        zone_cards: list[dict[str, Any]] = []
+        
+        # Presence binary sensor
+        presence_entity = f"binary_sensor.pilotsuite_zone_presence_{zone_id}"
+        zone_cards.append({
+            "type": "entity",
+            "entity": presence_entity,
+            "name": "Präsenz",
+            "icon": zone_icon,
+        })
+        
+        # Temperature
+        temp_entities = entities.get("temperature", [])[:2]
+        for te in temp_entities:
+            zone_cards.append({
+                "type": "entity",
+                "entity": te,
+                "name": "Temperatur",
+            })
+        
+        # Humidity
+        hum_entities = entities.get("humidity", [])[:1]
+        for he in hum_entities:
+            zone_cards.append({
+                "type": "entity",
+                "entity": he,
+                "name": "Feuchte",
+            })
+        
+        # Active lights
+        light_entities = entities.get("lights", [])[:4]
+        if light_entities:
+            zone_cards.extend([{"type": "entity", "entity": e, "name": "Licht"} for e in light_entities])
+        
+        # Climate / heating
+        climate_entities = entities.get("heating", [])[:2]
+        for ce in climate_entities:
+            zone_cards.append({
+                "type": "entity",
+                "entity": ce,
+                "name": "Heizung",
+            })
+        
+        # Media player
+        media_entities = entities.get("media", [])[:1]
+        for me in media_entities:
+            zone_cards.append({
+                "type": "entity",
+                "entity": me,
+                "name": "Medien",
+            })
+        
+        # Fallback: use any available entity_ids
+        if not zone_cards:
+            fallback_ids = zone.get("entity_ids", [])[:6]
+            zone_cards = [{"type": "entity", "entity": eid, "name": ""} for eid in fallback_ids]
+        
+        # Wrap in glance card for compact view
+        glance_entities = [e["entity"] for e in zone_cards if "entity" in e]
+        if glance_entities:
+            cards.append({
+                "type": "horizontal-stack",
+                "cards": [
+                    {
+                        "type": "entities",
+                        "title": f"{zone_icon} {zone_name}",
+                        "entities": [{"entity": e} for e in glance_entities[:8]],
+                    }
+                ],
+            })
+    
+    # ── Summary footer ─────────────────────────────────────────────────────
+    cards.append({
+        "type": "horizontal-stack",
+        "cards": [
+            {
+                "type": "stat",
+                "entity": "sensor.copilot_ha_pilotsuite_zones_active",
+                "name": "Aktive Zonen",
+                "icon": zone_icon,
+            },
+            {
+                "type": "sensor",
+                "entity": "sensor.copilot_ha_pilotsuite_zones_total",
+                "name": "Zonen Gesamt",
+            },
+        ],
+    })
+    
+    return {
+        "title": "Zonen Overview",
+        "path": "habitus-zones-live",
+        "icon": "mdi:floor-plan",
+        "badges": [],
+        "cards": cards,
+    }
+
+
+def generate_zone_quick_control_card(
+    zone_id: str,
+    zone_name: str,
+    zone_type: str = "room",
+) -> dict[str, Any]:
+    """Generate a compact quick-control card for a Habitus zone.
+    
+    Use in a grid layout for fast zone switching.
+    """
+    icon_map = {
+        "living": "mdi:sofa", "kitchen": "mdi:silverware-fork-knife",
+        "bath": "mdi:shower", "bedroom": "mdi:bed", "office": "mdi:desk",
+        "hallway": "mdi:door", "room_mira": "mdi:account-girl",
+        "room_paul": "mdi:account", "terrace": "mdi:tree", "outside": "mdi:leaf",
+    }
+    presence_entity = f"binary_sensor.pilotsuite_zone_presence_{zone_id}"
+    light_group = f"light.group_{zone_id}_lights"
+    climate_entity = f"climate.zone_{zone_id}_climate"
+    
+    return {
+        "type": "vertical-stack",
+        "cards": [
+            {
+                "type": "entity",
+                "entity": presence_entity,
+                "name": zone_name,
+                "icon": icon_map.get(zone_type, "mdi:floor-plan"),
+                "hold_action": {"action": "more-info"},
+                "tap_action": {"action": "navigate", "navigation_path": f"/ui-more-info/{presence_entity}"},
+            },
+            {
+                "type": "light",
+                "entity": light_group,
+                "name": "Licht",
+            } if light_group else {"type": "noop"},
+            {
+                "type": "climate",
+                "entity": climate_entity,
+                "name": "Klima",
+            } if climate_entity else {"type": "noop"},
+        ],
+    }
