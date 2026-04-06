@@ -1,0 +1,190 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, takeover/main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r copilot_core/requirements.txt
+          pip install pytest pytest-asyncio pytest-cov httpx
+      
+      - name: Run tests
+        run: |
+          pytest copilot_core/ -v --cov=copilot_core --cov-report=xml --cov-report=html
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+      
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html-${{ matrix.python-version }}
+          path: htmlcov/
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install linting tools
+        run: |
+          pip install flake8 black mypy isort pylint
+      
+      - name: Run flake8
+        run: flake8 copilot_core/ --count --select=E9,F63,F7,F82 --show-source --statistics
+      
+      - name: Run black
+        run: black --check copilot_core/
+      
+      - name: Run isort
+        run: isort --check-only copilot_core/
+      
+      - name: Run mypy
+        run: mypy copilot_core/ --ignore-missing-imports
+      
+      - name: Run pylint
+        run: pylint copilot_core/ --disable=C0114,C0115,C0116 --fail-under=7.0
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install security tools
+        run: |
+          pip install bandit safety pip-audit
+      
+      - name: Run bandit
+        run: bandit -r copilot_core/ -f json -o bandit-report.json
+      
+      - name: Run safety
+        run: safety check -r copilot_core/requirements.txt --json > safety-report.json
+      
+      - name: Run pip-audit
+        run: pip-audit -r copilot_core/requirements.txt -o pip-audit-report.json
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+            pip-audit-report.json
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, lint, security]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      
+      - name: Install dependencies
+        run: |
+          pip install -r copilot_core/requirements.txt
+      
+      - name: Validate HACS manifest
+        run: |
+          python -c "import json; json.load(open('copilot_core/hacs.json'))"
+      
+      - name: Validate JSON files
+        run: |
+          for f in copilot_core/*.json; do python -c "import json; json.load(open('$f'))"; done
+      
+      - name: Check file structure
+        run: |
+          test -f copilot_core/__init__.py
+          test -f copilot_core/manifest.json
+          test -f copilot_core/hacs.json
+          test -f copilot_core/README.md
+      
+      - name: Create package
+        run: |
+          mkdir -p package
+          cp -r copilot_core package/
+          cp LICENSE package/ 2>/dev/null || true
+          cp README.md package/ 2>/dev/null || true
+      
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilotsuite-core-package
+          path: package/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download package
+        uses: actions/download-artifact@v4
+        with:
+          name: pilotsuite-core-package
+          path: package/
+      
+      - name: Create ZIP release
+        run: |
+          cd package
+          zip -r ../pilotsuite-core.zip .
+      
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: pilotsuite-core.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always()
+    steps:
+      - name: Notify success/failure
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ CI/CD Pipeline completed successfully!"
+          else
+            echo "❌ CI/CD Pipeline failed!"
+            exit 1
+          fi
