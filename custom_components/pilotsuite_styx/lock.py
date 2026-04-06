@@ -1,6 +1,6 @@
-"""PilotSuite Styx Lock Entities — HA-206.
+"""PilotSuite Styx Lock Entity — HA-224.
 
-Sync mit Core API: /api/v1/lock/*
+Sync mit Core API: /api/v1/locks/*
 """
 from __future__ import annotations
 import logging
@@ -17,25 +17,34 @@ async def async_setup_entry(
     config_entry,
     async_add_entities: AddEntitiesCallback,
 ):
-    """Setup lock entities from config entry."""
+    """Setup lock entity from config entry."""
     core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
     entities = [CoreLockEntity(core_url)]
     async_add_entities(entities)
 
 class CoreLockEntity(LockEntity):
-    """Lock entity for Core door lock."""
+    """Lock entity for Core door control."""
     def __init__(self, core_url: str):
         self._core_url = core_url
-        self._attr_name = "PilotSuite Door Lock"
-        self._attr_unique_id = "pilotsuite_door_lock"
-        self._attr_is_locked = True
+        self._attr_name = "PilotSuite Lock"
+        self._attr_unique_id = "pilotsuite_lock"
+        self._attr_is_locked = False
     
     def lock(self, **kwargs):
         """Lock the door."""
+        requests.post(f"{self._core_url}/api/v1/locks/lock", timeout=5)
         self._attr_is_locked = True
-        requests.post(f"{self._core_url}/api/v1/lock/set", json={"state": "locked"}, timeout=5)
     
     def unlock(self, **kwargs):
         """Unlock the door."""
+        requests.post(f"{self._core_url}/api/v1/locks/unlock", timeout=5)
         self._attr_is_locked = False
-        requests.post(f"{self._core_url}/api/v1/lock/set", json={"state": "unlocked"}, timeout=5)
+    
+    def update(self):
+        """Update lock state from Core."""
+        resp = requests.get(f"{self._core_url}/api/v1/locks/list", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            locks = data.get("locks", [])
+            if locks:
+                self._attr_is_locked = locks[0].get("locked", False)
