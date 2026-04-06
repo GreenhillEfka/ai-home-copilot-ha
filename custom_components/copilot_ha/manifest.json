@@ -24,8 +24,8 @@
   "iot_class": "local_push",
   "homeassistant": "2024.4.0",
   "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",
-  "requirements": [],
-  "version": "1.0.0-rc1",
+  "requirements": ["httpx>=0.25.0", "pydantic>=2.0.0", "python-dateutil>=2.8.0"],
+  "version": "1.0.0-rc2",
   "code": [
     "copilot_core>=1.0.0"
   ]
