@@ -1,30 +1,23 @@
-"""PilotSuite Styx Event Entities — HA-187.
-
-Sync mit Core API: /api/v1/events/*
+"""PilotSuite Styx Event — HA-353.
+Auto-Sync Core: /api/v1/events/*
 """
 from __future__ import annotations
-import logging
-from homeassistant.components.event import EventEntity
+import logging, requests
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from .const import DOMAIN, CONF_CORE_URL
-
+from .const import CONF_CORE_URL
 _LOGGER = logging.getLogger(__name__)
-
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry,
-    async_add_entities: AddEntitiesCallback,
-):
-    """Setup event entities from config entry."""
+async def async_setup_entry(hass, config_entry, async_add_entities):
     core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
-    entities = [CoreEventEntity(core_url)]
-    async_add_entities(entities)
-
-class CoreEventEntity(EventEntity):
-    """Entity for Core API events."""
+    async_add_entities([CoreEventSensor(core_url)])
+class CoreEventSensor(SensorEntity):
     def __init__(self, core_url: str):
         self._core_url = core_url
-        self._attr_name = "PilotSuite Core Events"
-        self._attr_unique_id = "pilotsuite_core_events"
-        self._attr_event_types = ["state_changed", "service_executed", "automation_triggered"]
+        self._attr_name = "PilotSuite Events"
+        self._attr_unique_id = "pilotsuite_events"
+        self._attr_native_value = 0
+    def update(self):
+        resp = requests.get(f"{self._core_url}/api/v1/events/recent", timeout=5)
+        if resp.status_code == 200:
+            self._attr_native_value = len(resp.json().get("events", []))
