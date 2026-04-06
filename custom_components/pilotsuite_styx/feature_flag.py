@@ -1,38 +1,23 @@
-"""PilotSuite Styx Feature Flag — HA-290.
-
-Sync mit Core API: /api/v1/flags/*
+"""PilotSuite Styx Feature Flag — HA-428.
+Auto-Sync Core: /api/v1/feature_flags/*
 """
 from __future__ import annotations
-import logging
-import requests
+import logging, requests
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import CONF_CORE_URL
-
 _LOGGER = logging.getLogger(__name__)
-
-async def async_setup_entry(
-    hass: HomeAssistant,
-    config_entry,
-    async_add_entities: AddEntitiesCallback,
-):
-    """Setup feature flag sensor from config entry."""
+async def async_setup_entry(hass, config_entry, async_add_entities):
     core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
-    entities = [CoreFeatureFlagSensor(core_url)]
-    async_add_entities(entities)
-
+    async_add_entities([CoreFeatureFlagSensor(core_url)])
 class CoreFeatureFlagSensor(SensorEntity):
-    """Sensor for Core feature flag count."""
     def __init__(self, core_url: str):
         self._core_url = core_url
         self._attr_name = "PilotSuite Feature Flags"
         self._attr_unique_id = "pilotsuite_feature_flags"
         self._attr_native_value = 0
-    
     def update(self):
-        """Update feature flag count from Core."""
-        resp = requests.get(f"{self._core_url}/api/v1/flags/status", timeout=5)
+        resp = requests.get(f"{self._core_url}/api/v1/feature_flags/list", timeout=5)
         if resp.status_code == 200:
-            data = resp.json()
-            self._attr_native_value = data.get("enabled", 0)
+            self._attr_native_value = len(resp.json().get("flags", []))

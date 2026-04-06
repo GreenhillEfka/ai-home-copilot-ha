@@ -1,4 +1,4 @@
-"""PilotSuite Styx Workspace — HA-310.
+"""PilotSuite Styx Workspace — HA-400.
 Auto-Sync Core: /api/v1/workspaces/*
 """
 from __future__ import annotations
