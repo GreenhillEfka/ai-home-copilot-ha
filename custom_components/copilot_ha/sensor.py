@@ -665,6 +665,22 @@ class CopilotVersionSensor(CopilotBaseEntity, SensorEntity):
         return self.coordinator.data.get("version", "unknown")
 
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if not self.coordinator.data:
+            return {}
+        data = self.coordinator.data
+        if not isinstance(data, dict):
+            return {}
+        return {
+            "core_url": data.get("core_url"),
+            "ha_addon_version": data.get("version"),
+            "upstream_latency_ms": data.get("latency_ms"),
+            "last_successful_poll": data.get("last_success"),
+        }
+
+
+class ZoneOccupancySensor(SensorEntity):
 class ZoneOccupancySensor(SensorEntity):
     """Sensor for zone occupancy tracking."""
     
