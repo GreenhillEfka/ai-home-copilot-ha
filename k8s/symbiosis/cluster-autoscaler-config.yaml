@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-autoscaler-config
+  namespace: kube-system
+  labels:
+    app: cluster-autoscaler
+data:
+  # Cluster Autoscaler configuration for Symbiosis workloads
+  # Optimized for mixed CPU/memory workloads with predictable scaling patterns
+  
+  # Scale-up configuration
+  scale-up-delay: "10s"
+  scale-down-delay: "10m"
+  scale-down-unneeded-time: "10m"
+  
+  # Utilization thresholds for scale-down decisions
+  scale-down-utilization-threshold: "0.5"
+  
+  # Exponential backoff for failed scale attempts
+  expander: "least-waste"
+  
+  # Balance similar node groups
+  balance-similar-node-groups: "true"
+  
+  # Skip nodes with local storage
+  skip-nodes-with-local-storage: "true"
+  
+  # DaemonSet overhead consideration
+  daemonset-eviction-for-empty-nodes: "true"
+  daemonset-eviction-for-occupied-nodes: "false"
+  
+  # Max node termination time
+  max-node-termination-time: "30s"
+  
+  # Grace period for pod eviction
+  pod-scale-down-delay: "5m"
+  
+  # CPU/memory optimization for Symbiosis workloads
+  # Prioritize memory-intensive nodes for better HPA/VPA coordination
+  node-autoscaling-billing-weight-cpu: "0.3"
+  node-autoscaling-billing-weight-memory: "0.7"

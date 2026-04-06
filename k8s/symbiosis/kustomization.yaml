@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: symbiosis
+
+resources:
+- configmap.yaml
+- deployment.yaml
+- service.yaml
+- hpa.yaml
+- vpa.yaml
+- cluster-autoscaler-config.yaml
+- cluster-autoscaler.yaml
+- servicemonitor.yaml
+
+commonLabels:
+  app: symbiosis
+  managed-by: kustomize
