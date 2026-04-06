@@ -1783,6 +1783,142 @@ def async_register_all_services(hass: HomeAssistant) -> None:
     _register_zone_crud_services(hass)
     _register_entity_centric_services(hass)
     _register_zone_presence_hold_service(hass)
+    _register_diagnostics_service(hass)
+
+# ---------------------------------------------------------------------------
+# Diagnostic Service — pilotsuite.diagnostics
+# Fires a rich event with real-time system info for HA automations.
+# ---------------------------------------------------------------------------
+
+def _register_diagnostics_service(hass: HomeAssistant) -> None:
+    """Register pilotsuite.diagnostics service.
+
+    Fires event: pilot_suite_diagnostics
+    Returns: {ok, mode, core_reachable, core_version, ha_addon_version,
+              integration_version, entity_counts, zone_counts,
+              upstream_latency_ms, errors_total, warnings_total,
+              uptime_summary}
+    """
+    if not hass.services.has_service(DOMAIN, "diagnostics"):
+
+        async def _handle_diagnostics(call: ServiceCall) -> None:
+            from homeassistant.helpers import entity_registry
+            er = entity_registry.async_get(hass)
+
+            # Collect integration entity counts
+            integration_entities = [
+                e for e in er.entities.values()
+                if e.platform == DOMAIN
+            ]
+            entity_counts = {
+                "total": len(integration_entities),
+                "sensor": sum(1 for e in integration_entities if e.domain == "sensor"),
+                "binary_sensor": sum(1 for e in integration_entities if e.domain == "binary_sensor"),
+                "button": sum(1 for e in integration_entities if e.domain == "button"),
+                "select": sum(1 for e in integration_entities if e.domain == "select"),
+            }
+
+            # Zone counts from v2 store
+            zone_count = 0
+            zone_names: list[str] = []
+            try:
+                from .habitus_zones_store_v2 import async_get_zones_v2
+                entries = hass.config_entries.async_entries(DOMAIN)
+                if entries:
+                    zones = await async_get_zones_v2(hass, entries[0].entry_id)
+                    zone_count = len(zones)
+                    zone_names = [z.name for z in zones]
+            except Exception:  # noqa: BLE001
+                pass
+
+            # Core reachability and version
+            core_reachable = False
+            core_version = None
+            upstream_latency_ms: float | None = None
+            try:
+                for entry_id, data in hass.data.get(DOMAIN, {}).items():
+                    if not isinstance(data, dict):
+                        continue
+                    coordinator = data.get("coordinator")
+                    if coordinator is None:
+                        continue
+                    t0 = time.time()
+                    st = await coordinator.api.async_get_status()
+                    upstream_latency_ms = (time.time() - t0) * 1000
+                    core_reachable = st.ok
+                    core_version = st.version
+                    break
+            except Exception:  # noqa: BLE001
+                pass
+
+            # Error digest summary
+            errors_total = 0
+            warnings_total = 0
+            try:
+                for entry_id, data in hass.data.get(DOMAIN, {}).items():
+                    if not isinstance(data, dict):
+                        continue
+                    digest = data.get("error_digest")
+                    if digest and hasattr(digest, "as_dict"):
+                        d = digest.as_dict()
+                        errors_total += d.get("errors_total", 0)
+                        warnings_total += d.get("warnings_total", 0)
+            except Exception:  # noqa: BLE001
+                pass
+
+            # HA addon + integration version
+            try:
+                import importlib.metadata
+                integration_version = importlib.metadata.version("pilotsuite_styx_ha")
+            except Exception:  # noqa: BLE001
+                integration_version = None
+            ha_addon_version = None
+            for entry in hass.config_entries.async_entries(DOMAIN):
+                ha_addon_version = entry.version
+                break
+
+            # Events forwarder state
+            mode = "standby"
+            try:
+                for entry_id, data in hass.data.get(DOMAIN, {}).items():
+                    if not isinstance(data, dict):
+                        continue
+                    if data.get("events_forwarder_state"):
+                        mode = "forwarding"
+                        break
+            except Exception:  # noqa: BLE001
+                pass
+
+            # Uptime
+            try:
+                start_time = hass.loop.time()
+                # Not easily available without patching — use 0 as placeholder
+                uptime_summary = None
+            except Exception:  # noqa: BLE001
+                uptime_summary = None
+
+            result = {
+                "ok": core_reachable,
+                "mode": mode,
+                "core_reachable": core_reachable,
+                "core_version": core_version,
+                "ha_addon_version": ha_addon_version,
+                "integration_version": integration_version,
+                "entity_counts": entity_counts,
+                "zone_counts": {"total": zone_count, "names": zone_names},
+                "upstream_latency_ms": round(upstream_latency_ms, 1) if upstream_latency_ms else None,
+                "errors_total": errors_total,
+                "warnings_total": warnings_total,
+                "uptime_summary": uptime_summary,
+            }
+            hass.bus.async_fire(f"{DOMAIN}_diagnostics", result)
+
+        hass.services.async_register(
+            DOMAIN,
+            "diagnostics",
+            _handle_diagnostics,
+            schema=vol.Schema({}),
+        )
 
 # ---------------------------------------------------------------------------
 # Zone Presence Hold Service
