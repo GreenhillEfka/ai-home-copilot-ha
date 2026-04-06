@@ -348,12 +348,15 @@ class LearningStatusCard:
 
 def register_cards() -> Dict[str, Any]:
     """Cards registrieren (für Lovelace resources)."""
+    from .voice_cards import register_voice_cards
+    voice_cards = register_voice_cards()
     return {
         "zone-automation-card": ZoneAutomationCard,
         "neuron-mode-card": NeuronModeCard,
         "light-automation-card": LightAutomationCard,
         "rules-card": RulesCard,
         "learning-status-card": LearningStatusCard,
+        **voice_cards,
     }
 
 

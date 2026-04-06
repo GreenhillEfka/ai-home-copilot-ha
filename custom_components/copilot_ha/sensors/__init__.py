@@ -1,123 +1,169 @@
-"""Sensor entities for PilotSuite.
+"""Sensor registration for Copilot HA.
 
-This module provides lazy loading of sensor modules for better performance.
+All public sensors are imported here for discovery.
+UnifiedAnomalyFramework is shared across: predictive_maintenance,
+habit_learning, media_sensors, gas_meter.
 """
-from __future__ import annotations
 
-# Lazy loading pattern - import from submodules only when needed
-# This reduces startup time by deferring imports of large modules
+from .anomaly_detection_sensor import AnomalyDetectionSensor
+from .anomaly_alert import AnomalyAlertSensor
+from .appliance_fingerprint_sensor import ApplianceFingerprintSensor
+from .area_presence_sensor import AreaPresenceSensor
+from .area_presence_sensor_factory import create_area_presence_sensors
+from .automation_suggestion_sensor import AutomationSuggestionSensor
+from .automation_template_sensor import AutomationTemplateSensor
+from .autonomy_status_sensor import AutonomyStatusSensor
+from .battery_optimizer_sensor import BatteryOptimizerSensor
+from .brain_activity_sensor import BrainActivitySensor
+from .brain_architecture_sensor import BrainArchitectureSensor
+from .comfort_index_sensor import ComfortIndexSensor
+from .cross_dependency_sensor import CrossDependencySensor
+from .demand_response_sensor import DemandResponseSensor
+from .energy_advisor_sensor import EnergyAdvisorSensor
+from .energy_cost_sensor import EnergyCostSensor
+from .energy_forecast_sensor import EnergyForecastSensor
+from .energy_insights import EnergyInsightsSensor
+from .energy_report_sensor import EnergyReportSensor
+from .energy_sankey_sensor import EnergySankeySensor
+from .energy_schedule_sensor import EnergyScheduleSensor
+from .energy_sensors import EnergyProxySensor
+from .environment_sensors import (
+    LightLevelSensor,
+    NoiseLevelSensor,
+    WeatherContextSensor,
+)
+from .ev_charging_sensor import EVChargingSensor
+from .fuel_price_sensor import FuelPriceSensor
+from .gas_meter_sensor import GasMeterSensor, GasAnomalySensor
+from .habit_learning_v2 import (
+    HabitLearningSensor,
+    HabitPredictionSensor,
+    HabitAnomalySensor,
+    HabitEfficiencySensor,
+)
+from .habitus_zone_sensor import HabitusZoneSensor
+from .heat_pump_sensor import HeatPumpSensor
+from .hub_dashboard_sensor import HubDashboardSensor
+from .inspector_sensor import InspectorSensor
+from .light_intelligence_sensor import LightIntelligenceSensor
+from .media_follow_sensor import MediaFollowSensor
+from .media_sensors import (
+    MediaActivitySensor,
+    MediaIntensitySensor,
+    MediaAnomalySensor,
+)
+from .module_integration import ModuleIntegrationSensor
+from .mood_sensor import MoodSensor
+from .neuron_dashboard import NeuronDashboardSensor
+from .neurons_14 import (
+    PresenceRoomSensor,
+    PresencePersonSensor,
+    ActivityLevelSensor,
+    ActivityStillnessSensor,
+    TimeOfDaySensor,
+    DayTypeSensor,
+    RoutineStabilitySensor,
+    CalendarLoadSensor,
+    AttentionLoadSensor,
+    StressProxySensor,
+)
+from .notification_intelligence_sensor import NotificationIntelligenceSensor
+from .notification_sensor import NotificationSensor
+from .onboarding_sensor import OnboardingSensor
+from .predictive_automation import PredictiveAutomationSensor
+from .predictive_maintenance_sensor import (
+    PredictiveMaintenanceSensor,
+    MaintenanceConfidenceSensor,
+)
+from .presence_intelligence_sensor import PresenceIntelligenceSensor
+from .presence_sensors import PresenceRoomSensor, PresencePersonSensor
+from .proactive_alert_sensor import ProactiveAlertSensor
+from .regional_context_sensor import RegionalContextSensor
+from .scene_intelligence_sensor import SceneIntelligenceSensor
+from .system_integration_sensor import SystemIntegrationSensor
+from .tariff_sensor import TariffSensor
+from .time_sensors import TimeOfDaySensor, DayTypeSensor, RoutineStabilitySensor
+from .voice_context import VoiceContextSensor
+from .weather_optimizer_sensor import WeatherOptimizerSensor
+from .weather_warning_sensor import WeatherWarningSensor
+from .zone_mode_sensor import ZoneModeSensor
+from .zone_presence_trigger import ZonePresenceTriggerSensor
+from .voice_sensors import (
+    VoiceCommandHistorySensor,
+    VoiceSTTStatusSensor,
+    VoiceCommandsTodaySensor,
+    VoiceLastCommandSensor,
+)
+from .agent_status_sensor import AgentStatusSensor
+from .brain_activity_sensor import BrainActivitySensor
 
-def __getattr__(name: str):
-    """Lazy import sensor classes."""
-    
-    # Presence sensors
-    if name == "PresenceRoomSensor":
-        from .presence_sensors import PresenceRoomSensor
-        return PresenceRoomSensor
-    if name == "PresencePersonSensor":
-        from .presence_sensors import PresencePersonSensor
-        return PresencePersonSensor
-    
-    # Activity sensors
-    if name == "ActivityLevelSensor":
-        from .activity_sensors import ActivityLevelSensor
-        return ActivityLevelSensor
-    if name == "ActivityStillnessSensor":
-        from .activity_sensors import ActivityStillnessSensor
-        return ActivityStillnessSensor
-    
-    # Time sensors
-    if name == "TimeOfDaySensor":
-        from .time_sensors import TimeOfDaySensor
-        return TimeOfDaySensor
-    if name == "DayTypeSensor":
-        from .time_sensors import DayTypeSensor
-        return DayTypeSensor
-    if name == "RoutineStabilitySensor":
-        from .time_sensors import RoutineStabilitySensor
-        return RoutineStabilitySensor
-    
-    # Environment sensors
-    if name == "LightLevelSensor":
-        from .environment_sensors import LightLevelSensor
-        return LightLevelSensor
-    if name == "NoiseLevelSensor":
-        from .environment_sensors import NoiseLevelSensor
-        return NoiseLevelSensor
-    if name == "WeatherContextSensor":
-        from .environment_sensors import WeatherContextSensor
-        return WeatherContextSensor
-    
-    # Calendar sensors
-    if name == "CalendarLoadSensor":
-        from .calendar_sensors import CalendarLoadSensor
-        return CalendarLoadSensor
-    
-    # Cognitive sensors
-    if name == "AttentionLoadSensor":
-        from .cognitive_sensors import AttentionLoadSensor
-        return AttentionLoadSensor
-    if name == "StressProxySensor":
-        from .cognitive_sensors import StressProxySensor
-        return StressProxySensor
-    
-    # Energy sensors
-    if name == "EnergyProxySensor":
-        from .energy_sensors import EnergyProxySensor
-        return EnergyProxySensor
-    
-    # Media sensors
-    if name == "MediaActivitySensor":
-        from .media_sensors import MediaActivitySensor
-        return MediaActivitySensor
-    if name == "MediaIntensitySensor":
-        from .media_sensors import MediaIntensitySensor
-        return MediaIntensitySensor
-    
-    # Legacy imports (for backward compatibility)
-    if name == "MoodSensor":
-        from .mood_sensor import MoodSensor
-        return MoodSensor
-    if name == "MoodConfidenceSensor":
-        from .mood_sensor import MoodConfidenceSensor
-        return MoodConfidenceSensor
-    if name == "NeuronActivitySensor":
-        from .mood_sensor import NeuronActivitySensor
-        return NeuronActivitySensor
-    if name == "PredictiveAutomationSensor":
-        from .predictive_automation import PredictiveAutomationSensor
-        return PredictiveAutomationSensor
-    if name == "PredictiveAutomationDetailsSensor":
-        from .predictive_automation import PredictiveAutomationDetailsSensor
-        return PredictiveAutomationDetailsSensor
-    if name == "AnomalyAlertSensor":
-        from .anomaly_alert import AnomalyAlertSensor
-        return AnomalyAlertSensor
-    if name == "AlertHistorySensor":
-        from .anomaly_alert import AlertHistorySensor
-        return AlertHistorySensor
-    if name == "EnergyInsightSensor":
-        from .energy_insights import EnergyInsightSensor
-        return EnergyInsightSensor
-    if name == "EnergyRecommendationSensor":
-        from .energy_insights import EnergyRecommendationSensor
-        return EnergyRecommendationSensor
-    if name == "HabitLearningSensor":
-        from .habit_learning_v2 import HabitLearningSensor
-        return HabitLearningSensor
-    if name == "HabitPredictionSensor":
-        from .habit_learning_v2 import HabitPredictionSensor
-        return HabitPredictionSensor
-    if name == "SequencePredictionSensor":
-        from .habit_learning_v2 import SequencePredictionSensor
-        return SequencePredictionSensor
-    
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-# Explicit exports for static analysis and IDE support
 __all__ = [
-    # New neuron sensors (split modules)
+    # Anomaly Framework
+    "AnomalyDetectionSensor",
+    "AnomalyAlertSensor",
+    "AnomalyDetectionSensor",
+    # Appliance
+    "ApplianceFingerprintSensor",
+    # Area Presence
+    "AreaPresenceSensor",
+    "create_area_presence_sensors",
+    # Automation
+    "AutomationSuggestionSensor",
+    "AutomationTemplateSensor",
+    "AutonomyStatusSensor",
+    # Battery / Energy
+    "BatteryOptimizerSensor",
+    "EnergyAdvisorSensor",
+    "EnergyCostSensor",
+    "EnergyForecastSensor",
+    "EnergyInsightsSensor",
+    "EnergyProxySensor",
+    "EnergyReportSensor",
+    "EnergySankeySensor",
+    "EnergyScheduleSensor",
+    # Brain
+    "BrainActivitySensor",
+    "BrainArchitectureSensor",
+    # Comfort / Environment
+    "ComfortIndexSensor",
+    "LightLevelSensor",
+    "NoiseLevelSensor",
+    "WeatherContextSensor",
+    # Cross-cutting
+    "CrossDependencySensor",
+    "DemandResponseSensor",
+    "ProactiveAlertSensor",
+    # EV / Fuel
+    "EVChargingSensor",
+    "FuelPriceSensor",
+    # Gas
+    "GasMeterSensor",
+    "GasAnomalySensor",
+    # Habits
+    "HabitLearningSensor",
+    "HabitPredictionSensor",
+    "HabitAnomalySensor",
+    "HabitEfficiencySensor",
+    # Habitus
+    "HabitusZoneSensor",
+    # Heat Pump
+    "HeatPumpSensor",
+    # Hub
+    "HubDashboardSensor",
+    # Inspector
+    "InspectorSensor",
+    # Light Intelligence
+    "LightIntelligenceSensor",
+    # Media
+    "MediaActivitySensor",
+    "MediaIntensitySensor",
+    "MediaAnomalySensor",
+    "MediaFollowSensor",
+    # Module
+    "ModuleIntegrationSensor",
+    # Mood
+    "MoodSensor",
+    # Neurons (14)
     "PresenceRoomSensor",
     "PresencePersonSensor",
     "ActivityLevelSensor",
@@ -125,26 +171,44 @@ __all__ = [
     "TimeOfDaySensor",
     "DayTypeSensor",
     "RoutineStabilitySensor",
-    "LightLevelSensor",
-    "NoiseLevelSensor",
-    "WeatherContextSensor",
     "CalendarLoadSensor",
     "AttentionLoadSensor",
     "StressProxySensor",
     "EnergyProxySensor",
-    "MediaActivitySensor",
-    "MediaIntensitySensor",
-    # Legacy sensors
-    "MoodSensor",
-    "MoodConfidenceSensor",
-    "NeuronActivitySensor",
+    # Neuron Dashboard
+    "NeuronDashboardSensor",
+    # Notifications
+    "NotificationIntelligenceSensor",
+    "NotificationSensor",
+    # Onboarding
+    "OnboardingSensor",
+    # Predictive
     "PredictiveAutomationSensor",
-    "PredictiveAutomationDetailsSensor",
-    "AnomalyAlertSensor",
-    "AlertHistorySensor",
-    "EnergyInsightSensor",
-    "EnergyRecommendationSensor",
-    "HabitLearningSensor",
-    "HabitPredictionSensor",
-    "SequencePredictionSensor",
+    "PredictiveMaintenanceSensor",
+    "MaintenanceConfidenceSensor",
+    # Presence
+    "PresenceIntelligenceSensor",
+    # Regional
+    "RegionalContextSensor",
+    # Scene
+    "SceneIntelligenceSensor",
+    # System
+    "SystemIntegrationSensor",
+    # Tariff
+    "TariffSensor",
+    # Voice
+    "VoiceContextSensor",
+    # Weather
+    "WeatherOptimizerSensor",
+    "WeatherWarningSensor",
+    # Zone
+    "ZoneModeSensor",
+    "ZonePresenceTriggerSensor",
+    # Agent
+    "AgentStatusSensor",
+    # Voice
+    "VoiceCommandHistorySensor",
+    "VoiceSTTStatusSensor",
+    "VoiceCommandsTodaySensor",
+    "VoiceLastCommandSensor",
 ]
