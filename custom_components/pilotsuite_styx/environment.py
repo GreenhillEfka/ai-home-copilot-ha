@@ -1,5 +1,5 @@
-"""PilotSuite Styx Workspace — HA-400.
-Auto-Sync Core: /api/v1/workspaces/*
+"""PilotSuite Styx Environment — HA-401.
+Auto-Sync Core: /api/v1/environments/*
 """
 from __future__ import annotations
 import logging, requests
@@ -10,14 +10,14 @@ from .const import CONF_CORE_URL
 _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     core_url = config_entry.data.get(CONF_CORE_URL, "http://localhost:8909")
-    async_add_entities([CoreWorkspaceSensor(core_url)])
-class CoreWorkspaceSensor(SensorEntity):
+    async_add_entities([CoreEnvironmentSensor(core_url)])
+class CoreEnvironmentSensor(SensorEntity):
     def __init__(self, core_url: str):
         self._core_url = core_url
-        self._attr_name = "PilotSuite Workspaces"
-        self._attr_unique_id = "pilotsuite_workspaces"
+        self._attr_name = "PilotSuite Environments"
+        self._attr_unique_id = "pilotsuite_environments"
         self._attr_native_value = 0
     def update(self):
-        resp = requests.get(f"{self._core_url}/api/v1/workspaces/list", timeout=5)
+        resp = requests.get(f"{self._core_url}/api/v1/environments/list", timeout=5)
         if resp.status_code == 200:
-            self._attr_native_value = len(resp.json().get("workspaces", []))
+            self._attr_native_value = len(resp.json().get("environments", []))
