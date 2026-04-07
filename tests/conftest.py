@@ -412,7 +412,6 @@ def coordinator():
 # Skip at collection time to prevent ModuleNotFoundError from breaking the suite.
 _IMPORT_SKIP_PATTERNS = (
     "environment_sensors",  # test/sensor mismatch — needs update
-    "media_follow_sensor",
     "predictive_automation",
     "presence_sensors",
     "regional_context_sensor",
