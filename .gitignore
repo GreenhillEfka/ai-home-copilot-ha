@@ -43,3 +43,4 @@ docs/*
 !docs/RECOVERY_RESTORE_STATUS.md
 !docs/HA_RESTORE_HANDOFF.md
 *.zip
+archive_disabled_tests/
