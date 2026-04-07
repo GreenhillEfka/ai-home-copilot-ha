@@ -1,26 +1,60 @@
-# PilotSuite Home Assistant Integration v1.0.0
+# PilotSuite — Home Assistant Integration
 
-Die offizielle Integration zur Anbindung des PilotSuite Core an Home Assistant.
+**Version:** 20.0.0  
+**License:** MIT  
+**Author:** GreenhillEfka
+
+## Overview
+
+PilotSuite is an AI-powered home automation copilot that brings brain architecture, neural sensors, and local LLM conversation to Home Assistant.
 
 ## Features
-- **UI-Konfiguration:** Host und Token bequem über den HA Config Flow einrichten.
-- **Auto-Discovery (Core-Level):** Findet automatisch alle aktiven Module und Zonen.
-- **Echtzeit-Sensoren:**
-  - `sensor.pilotsuite_module_*`: Status (active/learning/off)
-  - `sensor.pilotsuite_zone_*`: Zonen-Status & Modul-Belegung
-  - `sensor.pilotsuite_system_health`: CPU, RAM, Disk, Uptime
-- **Auth-Support:** Sicherer Zugriff via Bearer-Token.
 
-## Installation via HACS
-1. HACS öffnen → Integrationen.
-2. Drei Punkte oben rechts → Benutzerdefinierte Repositories.
-3. URL: `https://github.com/pilotsuite/homeassistant` hinzufügen.
-4. "PilotSuite" suchen und installieren.
+- 🧠 **Brain Architecture** — Neural network-based home state understanding
+- 🎯 **Presence Detection** — Multi-sensor fusion (Wi-Fi, BLE, mmWave)
+- ⚡ **Energy Forecasting** — LSTM-based energy prediction & optimization
+- 🗣️ **Voice Assistant** — Local STT/TTS with Whisper & Piper
+- 📊 **Analytics Dashboard** — Real-time insights & recommendations
+- 🔔 **Smart Notifications** — Context-aware alerts via Pushover & Telegram
 
-## Konfiguration
-Nach der Installation unter **Einstellungen → Geräte & Dienste → Integration hinzufügen** nach "PilotSuite" suchen und die URL deines Cores (Standard: `http://localhost:5000`) sowie optional den Token eingeben.
+## Installation
+
+### Via HACS (Recommended)
+
+1. Open HACS → Integrations
+2. Search for "PilotSuite"
+3. Click "Download"
+4. Restart Home Assistant
+5. Go to Settings → Devices & Services → Add Integration → PilotSuite
+
+### Manual Installation
+
+1. Copy `custom_components/pilotsuite/` to `/config/custom_components/`
+2. Restart Home Assistant
+3. Go to Settings → Devices & Services → Add Integration → PilotSuite
+
+## Requirements
+
+- Home Assistant ≥ 2024.1.0
+- [PilotSuite Core Add-on](https://github.com/GreenhillEfka/pilotsuite-styx-core) (for full functionality)
+
+## Documentation
+
+- [Installation Guide](docs/INSTALLATION.md)
+- [User Guide](docs/USER_GUIDE.md)
+- [API Reference](docs/API_REFERENCE.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+
+## Support
+
+- Issues: https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues
+- Discord: PilotSuite Community
+- Documentation: https://docs.pilotsuite.ai
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ---
-**Status:** ✅ Production Ready
-**API-Version:** v1
-**HACS-Ready:** Yes
+
+**Built with ❤️ by the PilotSuite Team**
