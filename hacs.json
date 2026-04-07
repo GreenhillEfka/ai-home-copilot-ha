@@ -1,19 +1,5 @@
 {
   "name": "PilotSuite",
-  "description": "Local AI Assistant for Home Assistant — Zone Management, Module-per-Zone, Brain View",
   "content_in_root": false,
-  "render_readme": true,
-  "homeassistant": "2024.4.0",
-  "country": [
-    "DE",
-    "AT",
-    "CH"
-  ],
-  "domains": [
-    "button",
-    "sensor",
-    "switch",
-    "binary_sensor",
-    "conversation"
-  ]
+  "homeassistant": "2024.1.0"
 }
