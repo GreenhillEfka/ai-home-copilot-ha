@@ -30,7 +30,42 @@ def leaf(name: str) -> types.ModuleType:
     return mod
 
 
-# ─── package tree ────────────────────────────────────────────────────────────────
+# ─── custom_components.copilot_ha stubs ─────────────────────────────────────────
+stub("custom_components")
+stub("custom_components.copilot_ha")
+stub("custom_components.copilot_ha.const")
+_const = sys.modules["custom_components.copilot_ha.const"]
+_const.DOMAIN = "copilot_ha"
+_const.INTEGRATION_UNIQUE_ID = "pilotsuite_styx"
+_const.MAIN_DEVICE_IDENTIFIER = "styx_hub"
+_const.DATA_CORE = "_core"
+_const.DATA_RUNTIME = "runtime"
+_const.CONF_HOST = "host"
+_const.CONF_PORT = "port"
+_const.CONF_TOKEN = "token"
+_const.DEFAULT_PORT = 8080
+
+# Stub entity base class so sensor modules can import CopilotBaseEntity
+stub("custom_components.copilot_ha.entity")
+_entity_mod = sys.modules["custom_components.copilot_ha.entity"]
+_entity_mod.CopilotBaseEntity = type("CopilotBaseEntity", (object,), {
+    "__init__": lambda self, coordinator=None, *a, **k: setattr(self, "coordinator", coordinator),
+    "_core_base_url": lambda self: "http://core:8765",
+    "_fetch": lambda self, path, *a, **k: None,
+})
+
+# Stub anomaly_framework so media_sensors can import
+stub("custom_components.copilot_ha.anomaly_framework")
+_af = sys.modules["custom_components.copilot_ha.anomaly_framework"]
+_af.get_framework = lambda hass: None
+_af.AnomalyLevel = type("AnomalyLevel", (object,), {"value": "normal"})
+
+# Stub coordinator
+stub("custom_components.copilot_ha.coordinator")
+_coord = sys.modules["custom_components.copilot_ha.coordinator"]
+_coord.CopilotDataUpdateCoordinator = type("CopilotDataUpdateCoordinator", (object,), {"__init__": lambda self, *a, **k: None})
+
+# ─── package tree (homeassistant + all submodules) ────────────────────────────────
 stub("homeassistant")
 stub("homeassistant.core")
 stub("homeassistant.config_entries")
