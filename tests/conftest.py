@@ -5,6 +5,8 @@ Uses types.ModuleType with __path__ for proper package treatment.
 """
 from __future__ import annotations
 
+import importlib.util
+import os
 import sys
 import types
 from datetime import datetime, timezone
@@ -32,24 +34,6 @@ def leaf(name: str) -> types.ModuleType:
 stub("custom_components")
 stub("custom_components.copilot_ha")
 stub("custom_components.copilot_ha.const")
-# SENSORS subpackage — point to real filesystem so sensor modules are discoverable
-sensors_pkg = stub("custom_components.copilot_ha.sensors")
-# real_path must be a list for pkgutil.iter_modules
-real_path = __import__('os').path.join(
-    __import__('os').path.dirname(__import__('os').path.dirname(__import__('os').path.abspath(__file__))),
-    'custom_components', 'copilot_ha', 'sensors'
-)
-sensors_pkg.__path__ = [real_path]  # type: ignore[assignment]
-sensors_pkg.__file__ = __import__('os').path.join(real_path, '__init__.py')
-
-# Register every sensor .py file as a stub module so individual imports work
-_imported_sensors = {}  # noqa: F841 (used by tests via conftest fixture)
-for _sf in __import__('os').listdir(real_path):
-    if _sf.endswith('.py') and _sf not in ('__init__.py', '__pycache__'):
-        _sname = _sf[:-3]
-        _fakemod = types.ModuleType(f'custom_components.copilot_ha.sensors.{_sname}')
-        sys.modules[_fakemod.__name__] = _fakemod
-        _imported_sensors[_sname] = _fakemod  # noqa: F841
 _const = sys.modules["custom_components.copilot_ha.const"]
 _const.DOMAIN = "copilot_ha"
 _const.INTEGRATION_UNIQUE_ID = "pilotsuite_styx"
@@ -60,6 +44,14 @@ _const.CONF_HOST = "host"
 _const.CONF_PORT = "port"
 _const.CONF_TOKEN = "token"
 _const.DEFAULT_PORT = 8080
+
+# Stub entity base class so sensor modules can import CopilotBaseEntity
+stub("custom_components.copilot_ha.entity")
+_entity_mod = sys.modules["custom_components.copilot_ha.entity"]
+_entity_mod.CopilotBaseEntity = type("CopilotBaseEntity", (object,), {
+    "__init__": lambda self, coordinator=None, *a, **k: setattr(self, "coordinator", coordinator),
+    "_core_base_url": lambda self: "http://core:8765",
+})
 
 # Stub anomaly_framework so media_sensors can import
 stub("custom_components.copilot_ha.anomaly_framework")
@@ -72,8 +64,7 @@ stub("custom_components.copilot_ha.coordinator")
 _coord = sys.modules["custom_components.copilot_ha.coordinator"]
 _coord.CopilotDataUpdateCoordinator = type("CopilotDataUpdateCoordinator", (object,), {"__init__": lambda self, *a, **k: None})
 
-
-# ─── package tree ────────────────────────────────────────────────────────────────
+# ─── package tree (homeassistant + all submodules) ────────────────────────────────
 stub("homeassistant")
 stub("homeassistant.core")
 stub("homeassistant.config_entries")
@@ -123,8 +114,8 @@ hup.UpdateFailed = type("UpdateFailed", (Exception, object), {})
 
 class _CoordinatorEntity(Generic[_T], object):
     __class_getitem__ = classmethod(lambda cls, item: _CoordinatorEntity)
-    def __init__(self, *args, **kwargs):
-        pass
+    def __init__(self, coordinator=None, *args, **kwargs):
+        self.coordinator = coordinator
 hup.CoordinatorEntity = _CoordinatorEntity
 
 # ─── homeassistant.helpers.entity ───────────────────────────────────────────────
@@ -327,3 +318,38 @@ sys.modules["homeassistant.const"] = _const
 
 # ─── config_validation = voluptuous ──────────────────────────────────────────────
 sys.modules["homeassistant.helpers.config_validation"] = vol
+
+# ─── SENSORS subpackage — load real sensor files AFTER all stubs are ready ───────
+# Point sensors package to real filesystem so sensor modules are discoverable.
+sensors_pkg = stub("custom_components.copilot_ha.sensors")
+real_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    'custom_components', 'copilot_ha', 'sensors'
+)
+sensors_pkg.__path__ = [real_path]  # type: ignore[assignment]
+sensors_pkg.__file__ = os.path.join(real_path, '__init__.py')
+
+# Register every sensor .py file as a real module (loaded from disk)
+# so individual imports work and base classes are resolved from stubs above.
+# IMPORTANT: use each sensor's own loader, not conftest's loader.
+# Log failures for debugging.
+_imported_sensors = {}  # noqa: F841 (used by tests via conftest fixture)
+_load_errors = []  # track which sensors failed to load
+for _sf in os.listdir(real_path):
+    if _sf.endswith('.py') and _sf not in ('__init__.py', '__pycache__'):
+        _sname = _sf[:-3]
+        _fullname = f'custom_components.copilot_ha.sensors.{_sname}'
+        _filepath = os.path.join(real_path, _sf)
+        _spec = importlib.util.spec_from_file_location(_fullname, _filepath)
+        _mod = importlib.util.module_from_spec(_spec)
+        sys.modules[_fullname] = _mod
+        try:
+            _spec.loader.exec_module(_mod)  # use sensor's own loader
+        except Exception as _e:  # noqa: BLE
+            # Sensor file failed to load (e.g. real homeassistant not present);
+            # track the error for debugging, keep the bare stub
+            _load_errors.append((_sname, f"{type(_e).__name__}: {_e}"))
+        _imported_sensors[_sname] = sys.modules.get(_fullname)  # noqa: F841
+
+# Expose load errors as a module-level variable for debugging
+sys.modules[__name__]._sensor_load_errors = _load_errors  # noqa: F821
