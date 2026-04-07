@@ -51,6 +51,7 @@ _entity_mod = sys.modules["custom_components.copilot_ha.entity"]
 _entity_mod.CopilotBaseEntity = type("CopilotBaseEntity", (object,), {
     "__init__": lambda self, coordinator=None, *a, **k: setattr(self, "coordinator", coordinator),
     "_core_base_url": lambda self: "http://core:8765",
+    "_fetch": lambda self, path, *a, **k: None,
 })
 
 # Stub anomaly_framework so media_sensors can import
