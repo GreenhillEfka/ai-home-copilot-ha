@@ -174,7 +174,7 @@ class TestPINativeValue:
         sensor._data = mock_data
         assert sensor.native_value == expected
 
-    async def test_pi1_unknown_fallback(self, sensor, mock_data_unknown):
+    def test_pi1_unknown_fallback(self, sensor, mock_data_unknown):
         sensor._data = mock_data_unknown
         assert sensor.native_value == "Unbekannt"
 
@@ -191,7 +191,7 @@ class TestPIIcon:
         ("partial", "mdi:home-clock"),
         ("unknown", "mdi:account-group"),
     ])
-    async def test_pi2_icon_by_status(self, sensor, status, expected_icon):
+    def test_pi2_icon_by_status(self, sensor, status, expected_icon):
         sensor._data = {"household_status": status}
         assert sensor.icon == expected_icon
 
