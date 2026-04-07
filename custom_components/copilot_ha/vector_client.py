@@ -37,7 +37,7 @@ DEFAULT_SYNC_INTERVAL = timedelta(hours=6)
 class VectorStoreConfig:
     """Configuration for vector store client."""
     
-    api_url: str = "http://localhost:8909"
+    api_url: str = "http://core_host:core_port"
     api_token: str | None = None
     sync_interval: timedelta = DEFAULT_SYNC_INTERVAL
     enabled: bool = True

@@ -9,7 +9,7 @@ from .anomaly_detection_sensor import AnomalyDetectionSensor
 from .anomaly_alert import AnomalyAlertSensor
 from .appliance_fingerprint_sensor import ApplianceFingerprintSensor
 from .area_presence_sensor import AreaPresenceSensor
-from .area_presence_sensor_factory import create_area_presence_sensors
+from .area_presence_sensor_factory import async_build_area_presence_sensors
 from .automation_suggestion_sensor import AutomationSuggestionSensor
 from .automation_template_sensor import AutomationTemplateSensor
 from .autonomy_status_sensor import AutonomyStatusSensor
@@ -22,7 +22,7 @@ from .demand_response_sensor import DemandResponseSensor
 from .energy_advisor_sensor import EnergyAdvisorSensor
 from .energy_cost_sensor import EnergyCostSensor
 from .energy_forecast_sensor import EnergyForecastSensor
-from .energy_insights import EnergyInsightsSensor
+from .energy_insights import EnergyInsightSensor
 from .energy_report_sensor import EnergyReportSensor
 from .energy_sankey_sensor import EnergySankeySensor
 from .energy_schedule_sensor import EnergyScheduleSensor

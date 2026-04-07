@@ -42,7 +42,9 @@ async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Config Entry setupen."""
-    core_url = entry.data.get(CONF_CORE_URL, "http://homeassistant.local:8909")
+    host = entry.data.get(CONF_HOST, "homeassistant.local")
+    port = entry.data.get(CONF_PORT, 8909)
+    core_url = f"http://{host}:{port}"
     api_token = entry.data.get(CONF_API_TOKEN, "")
     
     # Create client
