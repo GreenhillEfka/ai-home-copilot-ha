@@ -411,7 +411,6 @@ def coordinator():
 # feat/conflict-retry-q2 or were removed in the v16 restructure).
 # Skip at collection time to prevent ModuleNotFoundError from breaking the suite.
 _IMPORT_SKIP_PATTERNS = (
-    "anomaly_detection_sensor",
     "appliance_fingerprint_sensor",
     "brain_architecture_sensor",
     "comfort_index_sensor",
