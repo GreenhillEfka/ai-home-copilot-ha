@@ -1,0 +1,1 @@
+/config/clawd/team/worktrees/pilotsuite-styx-ha-current/custom_components/pilotsuite/sensors/scene_intelligence_sensor.py

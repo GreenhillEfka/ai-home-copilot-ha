@@ -373,7 +373,7 @@ sys.modules["homeassistant.const"] = _const
 sys.modules["homeassistant.helpers.config_validation"] = vol
 
 # ─── custom_components stub (for sensor unit tests) ─────────────────────────────
-_copilot_ha_root = os.path.join(os.path.dirname(__file__), "..", "custom_components", "copilot_ha")
+_copilot_ha_root = os.path.join(os.path.dirname(__file__), "..", "custom_components", "pilotsuite")
 _copilot_ha = stub("custom_components.copilot_ha")
 _copilot_ha.__path__ = [_copilot_ha_root]
 # Stub child packages so relative imports resolve
