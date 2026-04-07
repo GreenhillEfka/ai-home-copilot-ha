@@ -32,7 +32,24 @@ def leaf(name: str) -> types.ModuleType:
 stub("custom_components")
 stub("custom_components.copilot_ha")
 stub("custom_components.copilot_ha.const")
-stub("custom_components.copilot_ha.sensors")
+# SENSORS subpackage — point to real filesystem so sensor modules are discoverable
+sensors_pkg = stub("custom_components.copilot_ha.sensors")
+# real_path must be a list for pkgutil.iter_modules
+real_path = __import__('os').path.join(
+    __import__('os').path.dirname(__import__('os').path.dirname(__import__('os').path.abspath(__file__))),
+    'custom_components', 'copilot_ha', 'sensors'
+)
+sensors_pkg.__path__ = [real_path]  # type: ignore[assignment]
+sensors_pkg.__file__ = __import__('os').path.join(real_path, '__init__.py')
+
+# Register every sensor .py file as a stub module so individual imports work
+_imported_sensors = {}  # noqa: F841 (used by tests via conftest fixture)
+for _sf in __import__('os').listdir(real_path):
+    if _sf.endswith('.py') and _sf not in ('__init__.py', '__pycache__'):
+        _sname = _sf[:-3]
+        _fakemod = types.ModuleType(f'custom_components.copilot_ha.sensors.{_sname}')
+        sys.modules[_fakemod.__name__] = _fakemod
+        _imported_sensors[_sname] = _fakemod  # noqa: F841
 _const = sys.modules["custom_components.copilot_ha.const"]
 _const.DOMAIN = "copilot_ha"
 _const.INTEGRATION_UNIQUE_ID = "pilotsuite_styx"
