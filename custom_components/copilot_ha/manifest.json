@@ -1,5 +1,5 @@
 {
-  "domain": "pilotsuite",
+  "domain": "copilot_ha",
   "name": "PilotSuite",
   "codeowners": ["@GreenhillEfka"],
   "config_flow": true,
