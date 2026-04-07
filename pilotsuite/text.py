@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+import logging
+
+from homeassistant.components.text import TextEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+
+_LOGGER = logging.getLogger(__name__)
+
+from .const import (
+    CONF_SEED_ALLOWED_DOMAINS,
+    CONF_SEED_BLOCKED_DOMAINS,
+    DOMAIN,
+)
+from .entity import CopilotBaseEntity
+from .habitus_zones_entities_v2 import HabitusZonesV2JsonText
+# Habitus zones bulk editing is provided via OptionsFlow (no state-length limits).
+
+
+def _as_csv(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return ",".join([v for v in value if isinstance(v, str)])
+    return str(value)
+
+
+class _BaseConfigText(CopilotBaseEntity, TextEntity):
+    _attr_has_entity_name = False
+    _attr_mode = "text"
+    # Advanced config surface: keep available but hidden by default to reduce entity clutter.
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator, entry: ConfigEntry, *, key: str, name: str, unique_id: str):
+        super().__init__(coordinator)
+        self._entry = entry
+        self._key = key
+        self._attr_name = name
+        self._attr_unique_id = unique_id
+
+    @property
+    def native_value(self) -> str | None:
+        cfg = self._entry.data | self._entry.options
+        return _as_csv(cfg.get(self._key, ""))
+
+    async def async_set_value(self, value: str) -> None:
+        # Persist in entry.options so it survives restarts.
+        new_options = {**self._entry.options, self._key: value}
+        self.hass.config_entries.async_update_entry(self._entry, options=new_options)
+        self.async_write_ha_state()
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
+    data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if not isinstance(data, dict):
+        _LOGGER.error("Entry data not available for %s, skipping text setup", entry.entry_id)
+        return
+    coordinator = data.get("coordinator")
+    if coordinator is None:
+        _LOGGER.error("Coordinator not available for %s, skipping text setup", entry.entry_id)
+        return
+
+    async_add_entities(
+        [
+            _BaseConfigText(
+                coordinator,
+                entry,
+                key=CONF_SEED_ALLOWED_DOMAINS,
+                name="PilotSuite seed allow domains (csv)",
+                unique_id="copilot_ha_seed_allow_domains_csv",
+            ),
+            _BaseConfigText(
+                coordinator,
+                entry,
+                key=CONF_SEED_BLOCKED_DOMAINS,
+                name="PilotSuite seed block domains (csv)",
+                unique_id="copilot_ha_seed_block_domains_csv",
+            ),
+            # v2 Entities
+            HabitusZonesV2JsonText(coordinator, entry),
+        ],
+        True,
+    )

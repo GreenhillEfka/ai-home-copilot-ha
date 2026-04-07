@@ -1,0 +1,16 @@
+PilotSuite HACS Integration v15.4.11 (Platinum)
+
+This release contains the corrected folder structure for HACS installation.
+The integration is now properly named "pilotsuite" instead of "copilot_ha".
+
+Fixed Issues:
+- Correct manifest.json path
+- Proper domain name registration
+- ZIP structure compliant with HACS requirements
+
+Installation:
+1. Download this ZIP file
+2. In HACS: Settings → Custom repositories
+3. Add: https://github.com/GreenhillEfka/pilotsuite-styx-ha
+4. Category: Integration
+5. Install PilotSuite from HACS

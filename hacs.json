@@ -1,7 +1,8 @@
 {
   "name": "PilotSuite",
-  "description": "Local AI Assistant for Home Assistant \u2014 Zone Management, Module-per-Zone, Brain View",
+  "description": "Local AI Assistant for Home Assistant — Zone Management, Module-per-Zone, Brain View",
   "content_in_root": false,
+  "render_readme": true,
   "homeassistant": "2024.4.0",
   "country": [
     "DE",
@@ -14,7 +15,5 @@
     "switch",
     "binary_sensor",
     "conversation"
-  ],
-  "zip_release": true,
-  "filename": "pilotsuite-styx-ha.zip"
+  ]
 }

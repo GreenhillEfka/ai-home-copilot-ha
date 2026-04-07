@@ -1,0 +1,270 @@
+# PilotSuite Dashboard v14 - Restructured 3-Type Tab Layout
+# Tabs:
+#   1. Styx (Neural Brain, Chat, Suggestions, Automations, Error Log)
+#   2. Haushalt (Household Overview, Zones, Weather, Prices, Alerts)
+#   3+ Per-Zone Tabs (one per Habitus zone)
+#
+# Import: Home Assistant > Dashboard > RAW Config Editor > Einfuegen
+
+views:
+  # ────────────────────────────────────────────────────────────────────────
+  # TAB 1: STYX — Brain, Chat, Suggestions, Errors
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Styx"
+    path: styx
+    icon: mdi:brain
+    cards:
+      # Brain Graph Panel (iframe from Core)
+      - type: iframe
+        url: http://homeassistant.local:8909/api/v1/styx/dashboard
+        title: "Neuronales Netzwerk"
+        aspect_ratio: "16:9"
+
+      # Mood + Brain side by side
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: custom:styx-mood-card
+            entity: sensor.copilot_ha_mood
+            title: "Stimmung"
+            show_emotions: 5
+          - type: custom:styx-brain-card
+            entity: sensor.copilot_ha_brain_graph_nodes
+            title: "Brain Graph"
+
+      # Styx Chat Interface
+      - type: custom:styx-chat-card
+        title: "Styx Chat"
+        core_url: "http://homeassistant.local:8909"
+        max_messages: 50
+        show_history: true
+
+      # AI Suggestions with Governance Actions
+      - type: custom:styx-suggestions-card
+        title: "KI-Vorschlaege"
+        core_url: "http://homeassistant.local:8909"
+        max_suggestions: 10
+        show_actions: true
+
+      # Error Log + Repair Suggestions
+      - type: custom:styx-error-card
+        title: "Fehler & Reparatur"
+        core_url: "http://homeassistant.local:8909"
+        hours: 24
+        max_errors: 20
+
+      # Automation Status
+      - type: entities
+        title: "Automatisierungen"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.copilot_ha_predictive_automation
+            name: "Vorhergesagte Automatisierung"
+          - entity: sensor.copilot_ha_zone_scenes
+            name: "Zonen-Szenen"
+
+      # v14.2.0: Autonomy System Status
+      - type: entities
+        title: "🤖 Autonomie-System"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.pilotsuite_autonomie_status
+            name: "Status"
+          - entity: sensor.pilotsuite_autonomie_verlauf
+            name: "Aktionen"
+          - entity: sensor.pilotsuite_zonen_gesundheit
+            name: "Zonen-Gesundheit"
+
+  # ────────────────────────────────────────────────────────────────────────
+  # TAB 2: HAUSHALT — Household Overview
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Haushalt"
+    path: haushalt
+    icon: mdi:home-city
+    cards:
+      # Household Overview Card (Health, Weather, Prices, Alerts, Zones)
+      - type: custom:styx-household-card
+        title: "Haushaltsuebersicht"
+        show_weather: true
+        show_prices: true
+        show_alerts: true
+        show_zones: true
+
+      # System Status
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: entities
+            title: "Status"
+            show_header_toggle: false
+            entities:
+              - entity: binary_sensor.copilot_ha_online
+                name: "Online"
+              - entity: sensor.copilot_ha_version
+                name: "Version"
+              - entity: sensor.copilot_ha_habitus_zones_count
+                name: "Zonen"
+          - type: entities
+            title: "Betrieb"
+            show_header_toggle: false
+            entities:
+              - entity: button.copilot_ha_reload_config_entry
+                name: "Config neu laden"
+              - entity: button.copilot_ha_forwarder_status
+                name: "Forwarder Status"
+              - entity: button.copilot_ha_fetch_ha_errors
+                name: "HA-Fehler holen"
+
+      # Zone Overview
+      - type: custom:styx-zone-card
+        entity: sensor.copilot_ha_habitus_zones
+        title: "Habitus-Zonen"
+        show_mood: true
+        show_neuron_activity: true
+        show_quick_actions: true
+        show_module_states: true
+
+      # Zone Controls
+      - type: entities
+        title: "Zonen-Steuerung"
+        show_header_toggle: false
+        entities:
+          - entity: button.copilot_ha_validate_habitus_zones
+            name: "Zonen validieren"
+          - entity: input_button.ai_copilot_reset_mood
+            name: "Mood zuruecksetzen"
+          - entity: input_button.ai_copilot_sync_graph
+            name: "Graph synchronisieren"
+
+      # v14.2.0: Zone Health Overview
+      - type: entities
+        title: "🏥 Zonen-Gesundheit"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.pilotsuite_zonen_gesundheit
+            name: "Durchschnitt"
+
+      # Media Overview
+      - type: entities
+        title: "Medien"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.copilot_ha_music_now_playing
+            name: "Aktueller Song"
+          - entity: sensor.copilot_ha_music_primary_area
+            name: "Musik-Zone"
+          - entity: sensor.copilot_ha_music_active_count
+            name: "Aktive Player"
+
+      # Energy Overview
+      - type: entities
+        title: "Energie"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.copilot_ha_energy_insight
+            name: "Energie-Einblick"
+          - entity: sensor.copilot_ha_energy_recommendation
+            name: "Empfehlung"
+
+      # System Resources
+      - type: entities
+        title: "Systemressourcen"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.processor_use
+            name: "CPU"
+          - entity: sensor.memory_use_percent
+            name: "RAM"
+          - entity: sensor.disk_use_percent
+            name: "Festplatte"
+
+      # Dashboard Generation Buttons
+      - type: entities
+        title: "Dashboard-Verwaltung"
+        show_header_toggle: false
+        entities:
+          - entity: button.copilot_ha_generate_pilotsuite_dashboard
+            name: "Dashboard generieren"
+          - entity: button.copilot_ha_generate_habitus_dashboard
+            name: "Zonen-Dashboard generieren"
+
+      # Dev Surface
+      - type: entities
+        title: "Entwicklung"
+        show_header_toggle: false
+        entities:
+          - entity: button.copilot_ha_fetch_ha_errors
+            name: "HA-Fehler"
+          - entity: button.copilot_ha_devlogs_fetch
+            name: "Dev-Logs"
+          - entity: button.copilot_ha_fetch_core_events
+            name: "Core Events"
+
+      # Core Links
+      - type: markdown
+        title: "Quicklinks"
+        content: |
+          **Core:**
+          [Health](http://homeassistant.local:8909/health) |
+          [Version](http://homeassistant.local:8909/version) |
+          [Events](http://homeassistant.local:8909/api/v1/events)
+
+  # ────────────────────────────────────────────────────────────────────────
+  # TAB 3+: ZONE TABS — One per Habitus Zone
+  # Generated by habitus_dashboard.py, here are examples:
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Wohnbereich"
+    path: hz-living
+    icon: mdi:sofa
+    cards:
+      - type: entities
+        title: "Licht"
+        show_header_toggle: true
+        entities:
+          - entity: light.wohnzimmer_decke
+          - entity: light.wohnzimmer_stehlampe
+      - type: entities
+        title: "Media"
+        show_header_toggle: false
+        entities:
+          - entity: media_player.wohnzimmer
+      - type: entities
+        title: "Klima"
+        show_header_toggle: false
+        entities:
+          - entity: climate.wohnzimmer
+      - type: markdown
+        title: "PilotSuite Styx"
+        content: >
+          Erweiterte Ansicht im [Styx Dashboard](/styx)
+          mit Chat, Vorschlaege und KI-Steuerung.
+
+  - title: "Kochbereich"
+    path: hz-kitchen
+    icon: mdi:chef-hat
+    cards:
+      - type: entities
+        title: "Licht"
+        show_header_toggle: true
+        entities:
+          - entity: light.kueche_decke
+      - type: markdown
+        title: "PilotSuite Styx"
+        content: >
+          Erweiterte Ansicht im [Styx Dashboard](/styx).
+
+  - title: "Badbereich"
+    path: hz-bath
+    icon: mdi:shower
+    cards:
+      - type: entities
+        title: "Licht"
+        show_header_toggle: true
+        entities:
+          - entity: light.bad_decke
+      - type: markdown
+        title: "PilotSuite Styx"
+        content: >
+          Erweiterte Ansicht im [Styx Dashboard](/styx).
