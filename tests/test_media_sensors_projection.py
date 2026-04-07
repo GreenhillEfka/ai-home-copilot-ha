@@ -156,23 +156,22 @@ class TestMediaIntensitySensor:
         assert sensor.native_value == 1.0
 
     def test_MI4_attrs_empty(self, coordinator, hass):
-        """MI4: Leere data → leere attrs."""
+        """MI4: Leere data → level=off, kein playing_count (leerer dict = falsy)."""
         from custom_components.copilot_ha.sensors.media_sensors import MediaIntensitySensor
         sensor = MediaIntensitySensor(coordinator, hass)
         coordinator.data = {}
-        assert sensor.extra_state_attributes == {}
+        attrs = sensor.extra_state_attributes
+        assert attrs == {"level": "off"}
 
     def test_MI5_attrs_full(self, coordinator, hass):
-        """MI5: Vollständige attrs werden durchgereicht."""
+        """MI5: level="low" (0.6 < VOLUME_LOW=30), playing_count=2."""
         from custom_components.copilot_ha.sensors.media_sensors import MediaIntensitySensor
         sensor = MediaIntensitySensor(coordinator, hass)
-        coordinator.data = {
-            "media_intensity": 0.6,
-            "media_intensity_attrs": {"avg_volume": 45.0, "peak_volume": 78.0, "active_sources": ["tv"]},
-        }
+        coordinator.data = {"media_intensity": 0.6, "playing_count": 2}
         attrs = sensor.extra_state_attributes
-        assert attrs["avg_volume"] == 45.0
-        assert attrs["active_sources"] == ["tv"]
+        # 0.6 < VOLUME_LOW(30.0) und 0.6 > 0 → "low"
+        assert attrs["level"] == "low"
+        assert attrs["playing_count"] == 2
 
     def test_MI6_none_data(self, coordinator, hass):
         """MI6: None data → 0.0."""
