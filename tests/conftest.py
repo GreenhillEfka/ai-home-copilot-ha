@@ -411,7 +411,7 @@ def coordinator():
 # feat/conflict-retry-q2 or were removed in the v16 restructure).
 # Skip at collection time to prevent ModuleNotFoundError from breaking the suite.
 _IMPORT_SKIP_PATTERNS = (
-    "environment_sensors",
+    "environment_sensors",  # test/sensor mismatch — needs update
     "hub_dashboard_sensor",
     "media_follow_sensor",
     "predictive_automation",
