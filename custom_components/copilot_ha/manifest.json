@@ -1,8 +1,0 @@
-{
-  "domain": "copilot_ha",
-  "name": "PilotSuite",
-  "codeowners": ["@GreenhillEfka"],
-  "config_flow": true,
-  "iot_class": "local_push",
-  "version": "16.0.0"
-}
