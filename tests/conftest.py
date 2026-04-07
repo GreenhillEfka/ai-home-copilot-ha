@@ -412,7 +412,6 @@ def coordinator():
 # Skip at collection time to prevent ModuleNotFoundError from breaking the suite.
 _IMPORT_SKIP_PATTERNS = (
     "environment_sensors",  # test/sensor mismatch — needs update
-    "regional_context_sensor",
     "calendar_sensors",
 )
 
