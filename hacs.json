@@ -1,5 +1,5 @@
 {
   "name": "PilotSuite",
-  "content_in_root": false,
-  "homeassistant": "2024.1.0"
+  "filename": "custom_components/copilot_ha",
+  "homeassistant": "2024.4.0"
 }
