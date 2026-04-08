@@ -13,6 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 VERSION_FILE = REPO_ROOT / "VERSION"
 ROOT_MANIFEST = REPO_ROOT / "manifest.json"
 COMPONENT_MANIFEST = REPO_ROOT / "custom_components" / "pilotsuite" / "manifest.json"
+COMPONENT_VERSION_STUB = REPO_ROOT / "custom_components" / "pilotsuite" / "VERSION"
 HACS_FILE = REPO_ROOT / "hacs.json"
 
 
@@ -51,6 +52,11 @@ def test_manifest_contract_matches_hacs_release_metadata() -> None:
     assert hacs["render_readme"] is True
     assert hacs["zip_release"] is False
     assert hacs["homeassistant"] == "2024.1.0"
+
+
+def test_component_version_stub_is_absent() -> None:
+    assert COMPONENT_VERSION_STUB.exists() is False
+
 
 
 def test_metadata_source_guard_blocks_stale_values() -> None:
