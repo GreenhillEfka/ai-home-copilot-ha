@@ -381,6 +381,16 @@ for _sub in ("sensors", "core", "api"):
     _submod = stub(f"custom_components.copilot_ha.{_sub}")
     _submod.__path__ = [os.path.join(_copilot_ha_root, _sub)]
 
+# Also alias for pilotsuite domain so sensor imports resolve
+sys.modules["custom_components.pilotsuite.entity"] = sys.modules["custom_components.copilot_ha.entity"]
+
+# Also alias pilotsuite so test imports that use the new domain name resolve
+_pilotsuite = stub("custom_components.pilotsuite")
+_pilotsuite.__path__ = [_copilot_ha_root]
+for _sub in ("sensors", "core", "api"):
+    _submod = stub(f"custom_components.pilotsuite.{_sub}")
+    _submod.__path__ = [os.path.join(_copilot_ha_root, _sub)]
+
 # ─── Sensor module availability check ─────────────────────────────────────────────
 # Some sensor files are not present on this branch (they exist on
 # feat/conflict-retry-q2 or were removed in v16 restructure). Mark tests
