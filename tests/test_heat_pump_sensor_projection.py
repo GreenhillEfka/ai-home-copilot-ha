@@ -335,7 +335,7 @@ class TestGCHeatPump:
         # GET /api/v1/regional/heatpump/schedule
         # Verify via direct source read (avoids import issues)
         import os
-        src_path = os.path.join(os.path.dirname(__file__), "..", "custom_components", "copilot_ha", "sensors", "heat_pump_sensor.py")
+        src_path = os.path.join(os.path.dirname(__file__), "..", "custom_components", "pilotsuite", "sensors", "heat_pump_sensor.py")
         with open(src_path) as fh:
             source = fh.read()
         assert "/heatpump/status" in source

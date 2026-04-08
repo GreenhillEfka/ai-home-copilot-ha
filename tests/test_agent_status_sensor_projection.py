@@ -191,7 +191,7 @@ def test_gc1_no_local_semantic_invention():
     """
     import ast
 
-    import_path = "custom_components.copilot_ha.sensors.agent_status_sensor"
+    import_path = "custom_components.pilotsuite.sensors.agent_status_sensor"
     with open(f"{import_path.replace('.', '/')}.py") as f:
         source = f.read()
 
@@ -215,7 +215,7 @@ def test_gc1_no_local_semantic_invention():
 # GC2 — Global Contract: API endpoint is /api/v1/agent/status
 def test_gc2_api_endpoint():
     """GC2: AgentStatusSensor hits /api/v1/agent/status for its data."""
-    with open("custom_components/copilot_ha/sensors/agent_status_sensor.py") as f:
+    with open("custom_components/pilotsuite/sensors/agent_status_sensor.py") as f:
         source = f.read()
 
     # Sensor builds URL as base + "/status" where base = _core_base_url() + "/api/v1/agent"

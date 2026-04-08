@@ -278,7 +278,7 @@ class TestOnboardingSensorEndpoint:
         import sys, os
         sensor_path = os.path.join(
             os.path.dirname(__file__), "..",
-            "custom_components", "copilot_ha", "sensors", "onboarding_sensor.py"
+            "custom_components", "pilotsuite", "sensors", "onboarding_sensor.py"
         )
         with open(sensor_path) as f:
             source = f.read()
@@ -329,7 +329,7 @@ class TestOnboardingSensorGlobalContract:
         import os
         sensor_path = os.path.join(
             os.path.dirname(__file__), "..",
-            "custom_components", "copilot_ha", "sensors", "onboarding_sensor.py"
+            "custom_components", "pilotsuite", "sensors", "onboarding_sensor.py"
         )
         with open(sensor_path) as f:
             source = f.read()

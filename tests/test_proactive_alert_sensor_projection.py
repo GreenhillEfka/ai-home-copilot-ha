@@ -274,7 +274,7 @@ class TestProactiveAlertSensorGlobalContract:
         import os
         sensor_path = os.path.join(
             os.path.dirname(__file__),
-            "../custom_components/copilot_ha/sensors/proactive_alert_sensor.py"
+            "../custom_components/pilotsuite/sensors/proactive_alert_sensor.py"
         )
         with open(sensor_path) as f:
             source = f.read()

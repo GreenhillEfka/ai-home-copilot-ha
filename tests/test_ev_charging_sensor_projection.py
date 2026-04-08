@@ -336,7 +336,7 @@ class TestEVChargingSensorGlobalContract:
         """GC1: sensor hits /api/v1/regional/ev/status and /api/v1/regional/ev/schedule."""
         # Read source file directly to avoid import issues
         import os
-        sensor_path = os.path.join(os.path.dirname(__file__), "..", "custom_components", "copilot_ha", "sensors", "ev_charging_sensor.py")
+        sensor_path = os.path.join(os.path.dirname(__file__), "..", "custom_components", "pilotsuite", "sensors", "ev_charging_sensor.py")
         with open(sensor_path, "r") as f:
             source = f.read()
         # Endpoints are constructed dynamically: f"{base}/ev/status" where base = self._core_base_url() + "/api/v1/regional"
@@ -347,7 +347,7 @@ class TestEVChargingSensorGlobalContract:
     def test_gc2_no_local_semantic_invention(self):
         """GC2: sensor is pure projection shell — no local threshold logic or semantic invention."""
         import os
-        sensor_path = os.path.join(os.path.dirname(__file__), "..", "custom_components", "copilot_ha", "sensors", "ev_charging_sensor.py")
+        sensor_path = os.path.join(os.path.dirname(__file__), "..", "custom_components", "pilotsuite", "sensors", "ev_charging_sensor.py")
         with open(sensor_path, "r") as f:
             source = f.read()
         # Should only have: dict lookups, static icon map, pass-through

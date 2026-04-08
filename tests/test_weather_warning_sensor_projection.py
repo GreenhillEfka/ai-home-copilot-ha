@@ -308,7 +308,7 @@ class TestWeatherWarningSensorGlobalContract:
         """GC1.1: async_update fetches from /api/v1/regional/warnings."""
         # Verify the contract path in source (built as base + /warnings)
         import pathlib
-        sensor_path = pathlib.Path(__file__).parent.parent / "custom_components" / "copilot_ha" / "sensors" / "weather_warning_sensor.py"
+        sensor_path = pathlib.Path(__file__).parent.parent / "custom_components" / "pilotsuite" / "sensors" / "weather_warning_sensor.py"
         content = sensor_path.read_text()
 
         # Endpoint is built as f"{base}/warnings" where base = /api/v1/regional
@@ -319,7 +319,7 @@ class TestWeatherWarningSensorGlobalContract:
     def test_gc1_no_local_semantic_invention(self):
         """GC1.2: No local classification or heuristic logic."""
         import pathlib
-        sensor_path = pathlib.Path(__file__).parent.parent / "custom_components" / "copilot_ha" / "sensors" / "weather_warning_sensor.py"
+        sensor_path = pathlib.Path(__file__).parent.parent / "custom_components" / "pilotsuite" / "sensors" / "weather_warning_sensor.py"
         content = sensor_path.read_text()
 
         # Should NOT contain local ML/heuristic keywords
@@ -345,7 +345,7 @@ class TestWeatherWarningSensorProjectionOnly:
     def test_gc2_readonly_projection(self):
         """GC2.1: Sensor only reads from coordinator/API, never writes."""
         import pathlib
-        sensor_path = pathlib.Path(__file__).parent.parent / "custom_components" / "copilot_ha" / "sensors" / "weather_warning_sensor.py"
+        sensor_path = pathlib.Path(__file__).parent.parent / "custom_components" / "pilotsuite" / "sensors" / "weather_warning_sensor.py"
         content = sensor_path.read_text()
 
         # Should NOT contain write operations
