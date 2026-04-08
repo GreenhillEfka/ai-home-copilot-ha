@@ -47,8 +47,10 @@ class NotificationIntelligenceSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
-        total = self._data.get("total_notifications", 0)
-        unread = self._data.get("unread_count", 0)
+        if self._data is None:
+            return "Keine Benachrichtigungen"
+        total = self._data.get("total_notifications", 0) or 0
+        unread = self._data.get("unread_count", 0) or 0
         if total == 0:
             return "Keine Benachrichtigungen"
         if unread == 0:
@@ -77,13 +79,13 @@ class NotificationIntelligenceSensor(CopilotBaseEntity, SensorEntity):
         }
 
         stats = self._data.get("stats", {})
-        if stats:
+        if isinstance(stats, dict) and stats:
             attrs["total_sent"] = stats.get("total_sent", 0)
             attrs["total_suppressed"] = stats.get("total_suppressed", 0)
             attrs["by_priority"] = stats.get("by_priority", {})
 
         recent = self._data.get("recent", [])
-        if recent:
+        if isinstance(recent, list) and recent:
             attrs["recent"] = [
                 {
                     "title": n.get("title"),
