@@ -48,7 +48,7 @@ def _motion_history_card_yaml(sensors: List[str]) -> str:
     lines = [
         "      - type: gauge",
         "        title: Bewegungserkennung (24h)",
-        "        entity: sensor.copilot_ha_camera_motion_history",
+        "        entity: sensor.pilotsuite_camera_motion_history",
         "        min: 0",
         "        max: 100",
         "        severity:",
@@ -64,7 +64,7 @@ def _presence_history_card_yaml() -> str:
     lines = [
         "      - type: gauge",
         "        title: Präsenz-Erkennungen (24h)",
-        "        entity: sensor.copilot_ha_camera_presence_history",
+        "        entity: sensor.pilotsuite_camera_presence_history",
         "        min: 0",
         "        max: 50",
         "        severity:",
@@ -80,7 +80,7 @@ def _activity_history_card_yaml() -> str:
     lines = [
         "      - type: gauge",
         "        title: Aktivitäten (24h)",
-        "        entity: sensor.copilot_ha_camera_activity_history",
+        "        entity: sensor.pilotsuite_camera_activity_history",
         "        min: 0",
         "        max: 100",
         "        severity:",
@@ -96,7 +96,7 @@ def _zone_activity_card_yaml() -> str:
     lines = [
         "      - type: gauge",
         "        title: Zonen-Aktivität (24h)",
-        "        entity: sensor.copilot_ha_camera_zone_activity",
+        "        entity: sensor.pilotsuite_camera_zone_activity",
         "        min: 0",
         "        max: 50",
         "        severity:",
@@ -122,9 +122,9 @@ def _camera_entities_yaml(cameras: List[str]) -> str:
     for cam in cameras[:8]:
         cam_id = cam.split(".")[-1]
         lines.extend([
-            f"          - entity: binary_sensor.copilot_ha_motion_{cam_id}",
+            f"          - entity: binary_sensor.pilotsuite_motion_{cam_id}",
             f"            name: Bewegung {cam.split('.')[-1].replace('_', ' ').title()}",
-            f"          - entity: binary_sensor.copilot_ha_presence_{cam_id}",
+            f"          - entity: binary_sensor.pilotsuite_presence_{cam_id}",
             f"            name: Präsenz {cam.split('.')[-1].replace('_', ' ').title()}",
         ])
     
@@ -155,10 +155,10 @@ async def generate_camera_dashboard_yaml(
     
     # Get camera sensors
     camera_sensors = [
-        "sensor.copilot_ha_camera_motion_history",
-        "sensor.copilot_ha_camera_presence_history", 
-        "sensor.copilot_ha_camera_activity_history",
-        "sensor.copilot_ha_camera_zone_activity",
+        "sensor.pilotsuite_camera_motion_history",
+        "sensor.pilotsuite_camera_presence_history", 
+        "sensor.pilotsuite_camera_activity_history",
+        "sensor.pilotsuite_camera_zone_activity",
     ]
     
     # Get motion cameras
@@ -178,19 +178,19 @@ async def generate_camera_dashboard_yaml(
     activity_count = 0
     zone_count = 0
     
-    motion_state = hass.states.get("sensor.copilot_ha_camera_motion_history")
+    motion_state = hass.states.get("sensor.pilotsuite_camera_motion_history")
     if motion_state and motion_state.state.isdigit():
         motion_count = int(motion_state.state)
     
-    presence_state = hass.states.get("sensor.copilot_ha_camera_presence_history")
+    presence_state = hass.states.get("sensor.pilotsuite_camera_presence_history")
     if presence_state and presence_state.state.isdigit():
         presence_count = int(presence_state.state)
         
-    activity_state = hass.states.get("sensor.copilot_ha_camera_activity_history")
+    activity_state = hass.states.get("sensor.pilotsuite_camera_activity_history")
     if activity_state and activity_state.state.isdigit():
         activity_count = int(activity_state.state)
         
-    zone_state = hass.states.get("sensor.copilot_ha_camera_zone_activity")
+    zone_state = hass.states.get("sensor.pilotsuite_camera_zone_activity")
     if zone_state and zone_state.state.isdigit():
         zone_count = int(zone_state.state)
     
@@ -273,10 +273,10 @@ async def generate_camera_dashboard_v2_yaml(
             return int(state.state)
         return 0
     
-    motion_count = get_sensor_count("sensor.copilot_ha_camera_motion_history")
-    presence_count = get_sensor_count("sensor.copilot_ha_camera_presence_history")
-    activity_count = get_sensor_count("sensor.copilot_ha_camera_activity_history")
-    zone_count = get_sensor_count("sensor.copilot_ha_camera_zone_activity")
+    motion_count = get_sensor_count("sensor.pilotsuite_camera_motion_history")
+    presence_count = get_sensor_count("sensor.pilotsuite_camera_presence_history")
+    activity_count = get_sensor_count("sensor.pilotsuite_camera_activity_history")
+    zone_count = get_sensor_count("sensor.pilotsuite_camera_zone_activity")
     
     yaml_content = f"""title: PilotSuite Kamera
 path: pilotsuite-camera
@@ -297,7 +297,7 @@ cards:
     cards:
       - type: gauge
         title: Bewegung (24h)
-        entity: sensor.copilot_ha_camera_motion_history
+        entity: sensor.pilotsuite_camera_motion_history
         min: 0
         max: 100
         severity:
@@ -307,7 +307,7 @@ cards:
 
       - type: gauge
         title: Präsenz (24h)
-        entity: sensor.copilot_ha_camera_presence_history
+        entity: sensor.pilotsuite_camera_presence_history
         min: 0
         max: 50
         severity:
@@ -319,7 +319,7 @@ cards:
     cards:
       - type: gauge
         title: Aktivität (24h)
-        entity: sensor.copilot_ha_camera_activity_history
+        entity: sensor.pilotsuite_camera_activity_history
         min: 0
         max: 100
         severity:
@@ -329,7 +329,7 @@ cards:
 
       - type: gauge
         title: Zonen (24h)
-        entity: sensor.copilot_ha_camera_zone_activity
+        entity: sensor.pilotsuite_camera_zone_activity
         min: 0
         max: 50
         severity:
