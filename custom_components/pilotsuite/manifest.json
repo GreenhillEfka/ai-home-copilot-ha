@@ -1,6 +1,6 @@
 {
   "domain": "pilotsuite",
-  "name": "PilotSuite",
+  "name": "PilotSuite HA",
   "after_dependencies": [
     "assist_pipeline"
   ],
@@ -18,12 +18,12 @@
     "tts",
     "webhook"
   ],
-  "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha#readme",
+  "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha",
   "icon": "mdi:brain",
   "integration_type": "hub",
-  "iot_class": "local_push",
+  "iot_class": "local_polling",
   "homeassistant": "2024.4.0",
   "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",
   "requirements": [],
-  "version": "15.0.0"
+  "version": "20.0.0"
 }
