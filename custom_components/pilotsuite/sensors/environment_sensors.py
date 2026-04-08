@@ -34,8 +34,8 @@ class LightLevelSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._hass = hass
     
-    async def async_update(self) -> None:
-        """Calculate average light level from sensors."""
+    def _update_light_level(self) -> None:
+        """Calculate average light level from sensors (synchronous, testable)."""
         # Get illuminance sensors
         illuminance_states = [
             s for s in self._hass.states.async_all("sensor")
@@ -76,6 +76,10 @@ class LightLevelSensor(CoordinatorEntity, SensorEntity):
             "lights_on": lights_on,
             "sensor_count": sensor_count,
         }
+    
+    async def async_update(self) -> None:
+        """Calculate average light level from sensors."""
+        self._update_light_level()
 
 
 class NoiseLevelSensor(CoordinatorEntity, SensorEntity):
@@ -90,16 +94,13 @@ class NoiseLevelSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._hass = hass
     
-    async def async_update(self) -> None:
-        """Calculate noise level from available sensors."""
+    def _update_noise_level(self) -> None:
+        """Calculate noise level from available sensors (synchronous, testable)."""
         # Look for noise/sound sensors
         noise_sensors = [
             s for s in self._hass.states.async_all("sensor")
             if s.attributes.get("device_class") in ["noise", "sound"]
         ]
-        
-        # Also check for microphones that might report noise
-        # This is a simplified version
         
         # Check media players - playing media indicates higher noise
         media_states = self._hass.states.async_all("media_player")
@@ -123,6 +124,10 @@ class NoiseLevelSensor(CoordinatorEntity, SensorEntity):
             "vacuums_active": vacuums_active,
             "noise_sensors": len(noise_sensors),
         }
+    
+    async def async_update(self) -> None:
+        """Calculate noise level from available sensors."""
+        self._update_noise_level()
 
 
 class WeatherContextSensor(CoordinatorEntity, SensorEntity):
@@ -137,12 +142,13 @@ class WeatherContextSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._hass = hass
     
-    async def async_update(self) -> None:
-        """Get weather context."""
+    def _update_weather_context(self) -> None:
+        """Get weather context (synchronous, testable)."""
         weather_states = self._hass.states.async_all("weather")
         
         if not weather_states:
             self._attr_native_value = "unknown"
+            self._attr_extra_state_attributes = {}
             return
         
         # Use first weather entity
@@ -173,3 +179,7 @@ class WeatherContextSensor(CoordinatorEntity, SensorEntity):
             "temperature": temp,
             "entity_id": weather.entity_id,
         }
+    
+    async def async_update(self) -> None:
+        """Get weather context."""
+        self._update_weather_context()
