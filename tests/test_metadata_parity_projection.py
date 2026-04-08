@@ -1,4 +1,4 @@
-"""Metadata parity guard for PilotSuite HA (HA-217).
+"""Metadata parity guard for PilotSuite HA (HA-217, HA-229).
 
 Verifies the HACS / manifest / VERSION files stay aligned on the landed
 v20.0.0 repo contract and do not drift back to stale metadata.
@@ -26,7 +26,7 @@ def test_metadata_versions_and_names_are_aligned() -> None:
     root_manifest = _load_json(ROOT_MANIFEST)
     component_manifest = _load_json(COMPONENT_MANIFEST)
 
-    assert version == "20.0.0"
+    assert version == "20.0.4"
     assert root_manifest["version"] == version
     assert component_manifest["version"] == version
     assert root_manifest["domain"] == "pilotsuite"
