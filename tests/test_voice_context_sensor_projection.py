@@ -387,3 +387,38 @@ def test_gc4_source_does_not_reintroduce_local_voice_semantics():
     assert 'mood_tones' not in source
     assert 'Entspannt' not in source
     assert 'Fokussiert' not in source
+
+
+def test_gc5_source_uses_shared_projection_backbone_for_both_sensors():
+    """GC5: both sensors must share the same projection backbone and prompt builder."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'def _project_voice_context(' in source
+    assert 'def _build_voice_prompt(context: Dict[str, Any]) -> str:' in source
+    assert 'return _project_voice_context(mood_data, neural_data)' in source
+    assert 'context = _project_voice_context(mood_data, neural_data)' in source
+    assert 'return _build_voice_prompt(context)' in source
+
+
+def test_gc6_source_blocks_split_prompt_paths_and_counting_semantics():
+    """GC6: no split greeting keys, local tone field, or suggestion-count prompts."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'mood_data.get("tone", "neutral")' not in source
+    assert 'greeting_de' not in source
+    assert 'greeting_en' not in source
+    assert 'Standort:' not in source
+    assert 'Aktivitäten:' not in source
+    assert 'Vorschläge verfügbar' not in source
