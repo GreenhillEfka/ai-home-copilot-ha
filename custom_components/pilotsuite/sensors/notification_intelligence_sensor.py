@@ -47,8 +47,10 @@ class NotificationIntelligenceSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
-        total = self._data.get("total_notifications", 0)
-        unread = self._data.get("unread_count", 0)
+        if self._data is None:
+            return "Keine Benachrichtigungen"
+        total = self._data.get("total_notifications") or 0
+        unread = self._data.get("unread_count") or 0
         if total == 0:
             return "Keine Benachrichtigungen"
         if unread == 0:
@@ -57,33 +59,38 @@ class NotificationIntelligenceSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def icon(self) -> str:
+        if self._data is None:
+            return "mdi:bell-check"
         dnd = self._data.get("dnd_active", False)
         if dnd:
             return "mdi:bell-off"
-        unread = self._data.get("unread_count", 0)
+        unread = self._data.get("unread_count") or 0
         if unread > 0:
             return "mdi:bell-badge"
         return "mdi:bell-check"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        attrs: dict[str, Any] = {
+        attrs: dict[str, Any] = {}
+        if self._data is None:
+            return attrs
+        attrs.update({
             "total_notifications": self._data.get("total_notifications", 0),
             "unread_count": self._data.get("unread_count", 0),
             "dnd_active": self._data.get("dnd_active", False),
             "batch_pending": self._data.get("batch_pending", 0),
             "rules_count": self._data.get("rules_count", 0),
             "channels_active": self._data.get("channels_active", []),
-        }
+        })
 
         stats = self._data.get("stats", {})
-        if stats:
+        if isinstance(stats, dict) and stats:
             attrs["total_sent"] = stats.get("total_sent", 0)
             attrs["total_suppressed"] = stats.get("total_suppressed", 0)
             attrs["by_priority"] = stats.get("by_priority", {})
 
         recent = self._data.get("recent", [])
-        if recent:
+        if isinstance(recent, list) and recent:
             attrs["recent"] = [
                 {
                     "title": n.get("title"),
