@@ -11,8 +11,9 @@ HA-126 — 2026-04-06
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
-from homeassistant.components.sensor import SensorDeviceClass
 
 
 # =============================================================================
@@ -396,3 +397,37 @@ def test_gc3_mood_tone_mapping_is_exhaustive_and_static():
         assert len(tone) > 0
         # Mood key is a known string
         assert isinstance(mood, str)
+
+
+def test_gc4_source_projects_core_voice_fields_directly():
+    """GC4: voice_context.py projects Core fields directly for the HA-126 contract."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'description_de' in source
+    assert 'description_en' in source
+    assert 'typical_activities' in source
+    assert 'core_zone.get("presence", neural_data.get("presence", []))' in source
+    assert 'f"{act} ist aktuell." for act in zone_activities[:3]' in source
+
+
+def test_gc5_source_does_not_reintroduce_local_voice_semantics():
+    """GC5: voice_context.py does not translate actions or invent local voice heuristics."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert '_action_to_voice' not in source
+    assert 'suggestion_conf' not in source
+    assert 'Licht einschalten' not in source
+    assert 'Temperatur anpassen' not in source
+    assert 'Medien steuern' not in source
