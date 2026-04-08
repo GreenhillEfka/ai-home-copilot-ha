@@ -40,7 +40,7 @@ class ZoneModeSensorContract:
 
     @staticmethod
     def icon_single(data: dict) -> str:
-        from custom_components.copilot_ha.sensors.zone_mode_sensor import _ICON_MAP
+        from custom_components.pilotsuite.sensors.zone_mode_sensor import _ICON_MAP
         active = data.get("active_modes", [])
         if len(active) == 1:
             mode_id = active[0].get("mode_id", "")
@@ -64,7 +64,7 @@ def coordinator():
 
 @pytest.fixture
 def sensor(coordinator):
-    from custom_components.copilot_ha.sensors.zone_mode_sensor import ZoneModeSensor
+    from custom_components.pilotsuite.sensors.zone_mode_sensor import ZoneModeSensor
     return ZoneModeSensor(coordinator)
 
 

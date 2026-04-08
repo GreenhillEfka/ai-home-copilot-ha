@@ -11,7 +11,7 @@ class NotificationIntelligenceSensorContract:
     """Contract-Mirror für NotificationIntelligenceSensor."""
 
     ENDPOINT = "/api/v1/hub/notifications"
-    SENSOR_MODULE = "custom_components.copilot_ha.sensors.notification_intelligence_sensor"
+    SENSOR_MODULE = "custom_components.pilotsuite.sensors.notification_intelligence_sensor"
     SENSOR_CLASS = "NotificationIntelligenceSensor"
 
     @staticmethod
@@ -78,7 +78,7 @@ def hass():
 
 
 def _make_sensor(coordinator, hass):
-    from custom_components.copilot_ha.sensors.notification_intelligence_sensor import NotificationIntelligenceSensor
+    from custom_components.pilotsuite.sensors.notification_intelligence_sensor import NotificationIntelligenceSensor
     sensor = NotificationIntelligenceSensor(coordinator)
     sensor.hass = hass
     return sensor
@@ -256,7 +256,7 @@ def test_NI4_edge_stats_not_dict(coordinator, hass):
 def test_GC1_no_local_semantic_invention():
     """NotificationIntelligenceSensor erfindet keine lokale Semantik."""
     import inspect
-    from custom_components.copilot_ha.sensors.notification_intelligence_sensor import NotificationIntelligenceSensor
+    from custom_components.pilotsuite.sensors.notification_intelligence_sensor import NotificationIntelligenceSensor
 
     source = inspect.getsource(NotificationIntelligenceSensor)
     # Keine ML/Heuristik/Classification im Code
@@ -268,7 +268,7 @@ def test_GC1_no_local_semantic_invention():
 def test_GC2_hits_core_api_endpoint():
     """NotificationIntelligenceSensor nutzt /api/v1/hub/notifications."""
     import inspect
-    from custom_components.copilot_ha.sensors.notification_intelligence_sensor import NotificationIntelligenceSensor
+    from custom_components.pilotsuite.sensors.notification_intelligence_sensor import NotificationIntelligenceSensor
 
     source = inspect.getsource(NotificationIntelligenceSensor)
     assert "/api/v1/hub/notifications" in source
