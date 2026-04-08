@@ -91,37 +91,19 @@ class VoicePromptSensorContract:
     """Mirror of VoicePromptSensor native_value logic.
 
     Contract:
-    - reads: coordinator.data["mood"], ["suggestions"]
+    - reads: coordinator.data["mood"], ["neural"]
     - native_value:
-        mood_tones mapping (relax→Entspannt, focus→Fokussiert, etc.)
-        f"Der Nutzer ist {tone}."
-        if suggestions: + " {len(suggestions)} Vorschläge verfügbar."
-        else: returns "Kein Kontext verfügbar." when coordinator.data empty
+        returns "Kein Kontext verfügbar." when coordinator.data empty
+        otherwise projects the same greeting/presence/activity fields as
+        VoiceContextSensor and returns the identical HA Assist prompt
     """
-
-    MOOD_TONES = {
-        "relax": "Entspannt",
-        "focus": "Fokussiert",
-        "active": "Aktiv",
-        "sleep": "Müde",
-        "away": "Abwesend",
-        "alert": "Aufmerksam",
-        "social": "Gesellig",
-        "recovery": "Erholend",
-    }
 
     @staticmethod
     def native_value(coordinator_data: dict) -> str:
         if not coordinator_data:
             return "Kein Kontext verfügbar."
-        mood = coordinator_data.get("mood", {})
-        suggestions = coordinator_data.get("suggestions", [])
-        dominant_mood = mood.get("mood", "unknown")
-        tone = VoicePromptSensorContract.MOOD_TONES.get(dominant_mood, "Neutral")
-        prompt = f"Der Nutzer ist {tone}."
-        if suggestions:
-            prompt += f" {len(suggestions)} Vorschläge verfügbar."
-        return prompt
+        attrs = VoiceContextSensorContract.extra_state_attributes(coordinator_data)
+        return attrs["voice_prompt"]
 
 
 # =============================================================================
@@ -316,41 +298,25 @@ def test_vc3_native_value_always_ok():
 # =============================================================================
 
 @pytest.mark.parametrize("coordinator_data, expected", [
-    # VP1a: relax → Entspannt
-    ({"mood": {"mood": "relax"}, "suggestions": []}, "Der Nutzer ist Entspannt."),
-    # VP1b: focus + suggestions count
-    ({"mood": {"mood": "focus"}, "suggestions": [{"id": 1}]}, "Der Nutzer ist Fokussiert. 1 Vorschläge verfügbar."),
-    # VP1c: sleep
-    ({"mood": {"mood": "sleep"}, "suggestions": []}, "Der Nutzer ist Müde."),
-    # VP1d: no mood key → Guard: empty data returns 'Kein Kontext verfügbar.'
-    # VP1e: social + 2 suggestions
-    ({"mood": {"mood": "social"}, "suggestions": [{"a": 1}, {"b": 2}]}, "Der Nutzer ist Gesellig. 2 Vorschläge verfügbar."),
-    # VP1f: unmapped mood → Neutral (data present but mood key unknown)
-    ({"mood": {"mood": "unknown_mood"}, "suggestions": []}, "Der Nutzer ist Neutral."),
-    # VP1g: active
-    ({"mood": {"mood": "active"}}, "Der Nutzer ist Aktiv."),
-    # VP1h: recovery
-    ({"mood": {"mood": "recovery"}}, "Der Nutzer ist Erholend."),
-    # VP1i: away
-    ({"mood": {"mood": "away"}}, "Der Nutzer ist Abwesend."),
-    # VP1j: alert
-    ({"mood": {"mood": "alert"}}, "Der Nutzer ist Aufmerksam."),
-    # VP1k: unmapped mood → Neutral
-    ({"mood": {"mood": "alien"}, "suggestions": []}, "Der Nutzer ist Neutral."),
-    # VP1l: empty data → "Kein Kontext verfügbar." (sensor guard: empty dict is falsy)
+    # VP1a: german greeting from neural.time.description_de
+    ({"mood": {"mood": "relax"}, "neural": {"time": {"description_de": "Guten Morgen"}}}, "Der Nutzer ist gerade Guten Morgen."),
+    # VP1b: english fallback from neural.time.description_en
+    ({"mood": {"mood": "focus"}, "neural": {"time": {"description_en": "Good morning"}}}, "Der Nutzer ist gerade Good morning."),
+    # VP1c: presence is projected into the prompt
+    ({"neural": {"time": {"description_de": "Abend"}, "zone": {"presence": ["Wohnzimmer", "Küche"]}}}, "Der Nutzer ist gerade Abend. Anwesend in: Wohnzimmer, Küche."),
+    # VP1d: typical activities become projected suggestions in the prompt
+    ({"neural": {"time": {"description_de": "Tag"}, "zone": {"typical_activities": ["Lesen", "Musik hören", "Kaffee"]}}}, "Der Nutzer ist gerade Tag. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell.."),
+    # VP1e: empty data → sensor guard default
     ({}, "Kein Kontext verfügbar."),
 ])
 def test_vp1_native_value(coordinator_data, expected):
-    """VP1: native_value derives from mood tone + suggestions count via trivial mapping."""
+    """VP1: native_value is the projected HA Assist prompt, not a local tone mapping."""
     assert VoicePromptSensorContract.native_value(coordinator_data) == expected
 
 
 def test_vp2_empty_coordinator_returns_default():
     """VP2: empty coordinator data → sensor guard returns 'Kein Kontext verfügbar.'."""
-    # {} is falsy in Python → sensor guard `if not self.coordinator.data` fires
     assert VoicePromptSensorContract.native_value({}) == "Kein Kontext verfügbar."
-    # mood=unknown_mood but data present → Neutral
-    assert VoicePromptSensorContract.native_value({"mood": {"mood": "alien"}, "suggestions": []}) == "Der Nutzer ist Neutral."
 
 
 # =============================================================================
@@ -366,14 +332,12 @@ def test_gc1_no_local_semantic_invention(full_data):
     - List slicing
     No local mood classification, no heuristic, no semantic interpretation.
     """
-    # VoiceContextSensor contract
     vc_attrs = VoiceContextSensorContract.extra_state_attributes(full_data)
     assert vc_attrs["dominant_mood"] == "relax"
     assert "Guten Morgen" in vc_attrs["voice_greeting"]
 
-    # VoicePromptSensor contract
     vp_value = VoicePromptSensorContract.native_value(full_data)
-    assert "Entspannt" in vp_value
+    assert vp_value == vc_attrs["voice_prompt"]
 
 
 def test_gc2_both_sensors_derive_from_same_coordinator_data(full_data):
@@ -384,23 +348,12 @@ def test_gc2_both_sensors_derive_from_same_coordinator_data(full_data):
     vc_attrs = VoiceContextSensorContract.extra_state_attributes(full_data)
     vp_value = VoicePromptSensorContract.native_value(full_data)
 
-    # Both derive from the same "relax" mood
     assert vc_attrs["voice_tone"] == "relax"
-    assert "Entspannt" in vp_value
+    assert vp_value == vc_attrs["voice_prompt"]
 
 
-def test_gc3_mood_tone_mapping_is_exhaustive_and_static():
-    """GC3: Mood tone mapping covers all known moods — no runtime evaluation."""
-    for mood, tone in VoicePromptSensorContract.MOOD_TONES.items():
-        # Every tone is a non-empty German string
-        assert isinstance(tone, str)
-        assert len(tone) > 0
-        # Mood key is a known string
-        assert isinstance(mood, str)
-
-
-def test_gc4_source_projects_core_voice_fields_directly():
-    """GC4: voice_context.py projects Core fields directly for the HA-126 contract."""
+def test_gc3_source_projects_core_voice_fields_directly():
+    """GC3: voice_context.py projects Core fields directly for the HA-126 contract."""
     source = (
         Path(__file__).parent.parent
         / "custom_components"
@@ -416,8 +369,8 @@ def test_gc4_source_projects_core_voice_fields_directly():
     assert 'f"{act} ist aktuell." for act in zone_activities[:3]' in source
 
 
-def test_gc5_source_does_not_reintroduce_local_voice_semantics():
-    """GC5: voice_context.py does not translate actions or invent local voice heuristics."""
+def test_gc4_source_does_not_reintroduce_local_voice_semantics():
+    """GC4: voice_context.py does not translate actions or invent local voice heuristics."""
     source = (
         Path(__file__).parent.parent
         / "custom_components"
@@ -431,3 +384,6 @@ def test_gc5_source_does_not_reintroduce_local_voice_semantics():
     assert 'Licht einschalten' not in source
     assert 'Temperatur anpassen' not in source
     assert 'Medien steuern' not in source
+    assert 'mood_tones' not in source
+    assert 'Entspannt' not in source
+    assert 'Fokussiert' not in source

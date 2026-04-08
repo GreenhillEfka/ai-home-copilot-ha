@@ -29,6 +29,65 @@ from ..coordinator import CopilotDataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
+def _project_voice_context(
+    mood_data: Dict[str, Any],
+    neural_data: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Project Core-provided voice context fields without local semantics."""
+    dominant_mood = mood_data.get("mood", "unknown")
+    confidence = mood_data.get("confidence", 0.0)
+
+    core_time = neural_data.get("time", {})
+    time_greeting = core_time.get("description_de") or core_time.get(
+        "description_en", "Hallo"
+    )
+
+    core_zone = neural_data.get("zone", {})
+    zone_name = core_zone.get("current", "unknown")
+    zone_activities = core_zone.get("typical_activities", [])
+    voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
+
+    return {
+        "mood": {
+            "dominant": dominant_mood,
+            "confidence": confidence,
+            "contributors": mood_data.get("contributors", []),
+        },
+        "zone": {
+            "current": zone_name,
+            "presence": core_zone.get("presence", neural_data.get("presence", [])),
+        },
+        "voice": {
+            "tone": dominant_mood,
+            "greeting": time_greeting,
+            "suggestions": voice_suggestions,
+        },
+        "metadata": {
+            "last_update": neural_data.get("last_update", ""),
+            "context_version": "1.1",
+        },
+    }
+
+
+def _build_voice_prompt(context: Dict[str, Any]) -> str:
+    """Build a natural-language prompt from already projected Core fields."""
+    voice = context.get("voice", {})
+    zone = context.get("zone", {})
+
+    parts = [f"Der Nutzer ist gerade {voice.get('greeting', 'Neutral')}."]
+
+    presence = zone.get("presence", [])
+    if presence:
+        zones = ", ".join(presence[:3])
+        parts.append(f"Anwesend in: {zones}.")
+
+    suggestions = voice.get("suggestions", [])
+    if suggestions:
+        parts.append(f"Vorschläge: {'; '.join(suggestions[:2])}.")
+
+    return " ".join(parts)
+
+
 class VoiceContextSensor(CoordinatorEntity, SensorEntity):
     """Sensor exposing voice context from neural system."""
     
@@ -77,63 +136,12 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
         neural_data: Dict[str, Any],
         _suggestions: list,
     ) -> Dict[str, Any]:
-        """Build voice context from Core-provided projection data.
+        """Build voice context from Core-provided projection data."""
+        return _project_voice_context(mood_data, neural_data)
 
-        Home Assistant projects the values Core already exports. It must not
-        translate actions, infer tones, or invent extra semantics locally.
-        """
-        dominant_mood = mood_data.get("mood", "unknown")
-        confidence = mood_data.get("confidence", 0.0)
-
-        core_time = neural_data.get("time", {})
-        time_greeting = core_time.get("description_de") or core_time.get(
-            "description_en", "Hallo"
-        )
-
-        core_zone = neural_data.get("zone", {})
-        zone_name = core_zone.get("current", "unknown")
-        zone_activities = core_zone.get("typical_activities", [])
-        voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
-
-        return {
-            "mood": {
-                "dominant": dominant_mood,
-                "confidence": confidence,
-                "contributors": mood_data.get("contributors", []),
-            },
-            "zone": {
-                "current": zone_name,
-                "presence": core_zone.get("presence", neural_data.get("presence", [])),
-            },
-            "voice": {
-                "tone": dominant_mood,
-                "greeting": time_greeting,
-                "suggestions": voice_suggestions,
-            },
-            "metadata": {
-                "last_update": neural_data.get("last_update", ""),
-                "context_version": "1.1",
-            },
-        }
-    
     def _build_voice_prompt(self, context: Dict[str, Any]) -> str:
         """Build a natural language prompt for HA Assist."""
-        voice = context.get("voice", {})
-        mood = context.get("mood", {})
-        zone = context.get("zone", {})
-        
-        parts = [f"Der Nutzer ist gerade {voice.get('greeting', 'Neutral')}."]
-        
-        presence = zone.get("presence", [])
-        if presence:
-            zones = ", ".join(presence[:3])
-            parts.append(f"Anwesend in: {zones}.")
-        
-        suggestions = voice.get("suggestions", [])
-        if suggestions:
-            parts.append(f"Vorschläge: {'; '.join(suggestions[:2])}.")
-        
-        return " ".join(parts)
+        return _build_voice_prompt(context)
     
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -155,34 +163,14 @@ class VoicePromptSensor(CoordinatorEntity, SensorEntity):
     
     @property
     def native_value(self) -> str:
-        """Return the voice prompt."""
+        """Return the projected voice prompt."""
         if not self.coordinator.data:
             return "Kein Kontext verfügbar."
-        
+
         mood_data = self.coordinator.data.get("mood", {})
-        suggestions = self.coordinator.data.get("suggestions", [])
-        
-        # Build prompt
-        dominant_mood = mood_data.get("mood", "unknown")
-        
-        mood_tones = {
-            "relax": "Entspannt",
-            "focus": "Fokussiert",
-            "active": "Aktiv",
-            "sleep": "Müde",
-            "away": "Abwesend",
-            "alert": "Aufmerksam",
-            "social": "Gesellig",
-            "recovery": "Erholend",
-        }
-        
-        tone = mood_tones.get(dominant_mood, "Neutral")
-        prompt = f"Der Nutzer ist {tone}."
-        
-        if suggestions:
-            prompt += f" {len(suggestions)} Vorschläge verfügbar."
-        
-        return prompt
+        neural_data = self.coordinator.data.get("neural", {})
+        context = _project_voice_context(mood_data, neural_data)
+        return _build_voice_prompt(context)
     
     @callback
     def _handle_coordinator_update(self) -> None:
