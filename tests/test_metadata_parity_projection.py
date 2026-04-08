@@ -26,7 +26,7 @@ def test_metadata_versions_and_names_are_aligned() -> None:
     root_manifest = _load_json(ROOT_MANIFEST)
     component_manifest = _load_json(COMPONENT_MANIFEST)
 
-    assert version == "20.0.4"
+    assert version == "20.0.5"
     assert root_manifest["version"] == version
     assert component_manifest["version"] == version
     assert root_manifest["domain"] == "pilotsuite"
