@@ -15,7 +15,7 @@ HA 2025.8+ supports context-based sensor selection for Assist.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -27,65 +27,6 @@ from ..const import DOMAIN
 from ..coordinator import CopilotDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _project_voice_context(
-    mood_data: Dict[str, Any],
-    neural_data: Dict[str, Any],
-) -> Dict[str, Any]:
-    """Project Core-provided voice context fields without local semantics."""
-    dominant_mood = mood_data.get("mood", "unknown")
-    confidence = mood_data.get("confidence", 0.0)
-
-    core_time = neural_data.get("time", {})
-    time_greeting = core_time.get("description_de") or core_time.get(
-        "description_en", "Hallo"
-    )
-
-    core_zone = neural_data.get("zone", {})
-    zone_name = core_zone.get("current", "unknown")
-    zone_activities = core_zone.get("typical_activities", [])
-    voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
-
-    return {
-        "mood": {
-            "dominant": dominant_mood,
-            "confidence": confidence,
-            "contributors": mood_data.get("contributors", []),
-        },
-        "zone": {
-            "current": zone_name,
-            "presence": core_zone.get("presence", neural_data.get("presence", [])),
-        },
-        "voice": {
-            "tone": dominant_mood,
-            "greeting": time_greeting,
-            "suggestions": voice_suggestions,
-        },
-        "metadata": {
-            "last_update": neural_data.get("last_update", ""),
-            "context_version": "1.1",
-        },
-    }
-
-
-def _build_voice_prompt(context: Dict[str, Any]) -> str:
-    """Build a natural-language prompt from already projected Core fields."""
-    voice = context.get("voice", {})
-    zone = context.get("zone", {})
-
-    parts = [f"Der Nutzer ist gerade {voice.get('greeting', 'Neutral')}."]
-
-    presence = zone.get("presence", [])
-    if presence:
-        zones = ", ".join(presence[:3])
-        parts.append(f"Anwesend in: {zones}.")
-
-    suggestions = voice.get("suggestions", [])
-    if suggestions:
-        parts.append(f"Vorschläge: {'; '.join(suggestions[:2])}.")
-
-    return " ".join(parts)
 
 
 class VoiceContextSensor(CoordinatorEntity, SensorEntity):
@@ -123,7 +64,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
             "mood_contributors": context.get("mood", {}).get("contributors", []),
             "current_zone": context.get("zone", {}).get("current", "unknown"),
             "zone_presence": context.get("zone", {}).get("presence", []),
-            "voice_tone": context.get("voice", {}).get("tone", "unknown"),
+            "voice_tone": context.get("voice", {}).get("tone", "calm"),
             "voice_greeting": context.get("voice", {}).get("greeting", ""),
             "voice_suggestions": context.get("voice", {}).get("suggestions", []),
             "voice_prompt": self._build_voice_prompt(context),
@@ -134,14 +75,95 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
         self,
         mood_data: Dict[str, Any],
         neural_data: Dict[str, Any],
-        _suggestions: list,
+        suggestions: list,
     ) -> Dict[str, Any]:
-        """Build voice context from Core-provided projection data."""
-        return _project_voice_context(mood_data, neural_data)
-
+        """Build voice context from neural system data."""
+        # Mood tone mapping
+        mood_tones = {
+            "relax": {"tone": "calm", "greeting": "Entspannt"},
+            "focus": {"tone": "focused", "greeting": "Fokussiert"},
+            "active": {"tone": "energetic", "greeting": "Bereit"},
+            "sleep": {"tone": "quiet", "greeting": "Gute Nacht"},
+            "away": {"tone": "standby", "greeting": "Abwesend"},
+            "alert": {"tone": "urgent", "greeting": "Achtung"},
+            "social": {"tone": "friendly", "greeting": "Gesellig"},
+            "recovery": {"tone": "gentle", "greeting": "Erholung"},
+        }
+        
+        dominant_mood = mood_data.get("mood", "unknown")
+        confidence = mood_data.get("confidence", 0.0)
+        
+        tone_info = mood_tones.get(dominant_mood, mood_tones["relax"])
+        
+        # Generate voice suggestions
+        voice_suggestions = []
+        for suggestion in suggestions[:3]:
+            action = suggestion.get("action", "")
+            suggestion_conf = suggestion.get("confidence", 0.0)
+            
+            if suggestion_conf >= 0.5:
+                voice_suggestions.append(
+                    f"{tone_info['greeting']}: {self._action_to_voice(action)}"
+                )
+        
+        return {
+            "mood": {
+                "dominant": dominant_mood,
+                "confidence": confidence,
+                "contributors": mood_data.get("contributors", []),
+            },
+            "zone": {
+                "current": neural_data.get("zone", "unknown"),
+                "presence": neural_data.get("presence", []),
+            },
+            "voice": {
+                "tone": tone_info["tone"],
+                "greeting": tone_info["greeting"],
+                "suggestions": voice_suggestions,
+            },
+            "metadata": {
+                "last_update": neural_data.get("last_update", ""),
+            },
+        }
+    
+    def _action_to_voice(self, action: str) -> str:
+        """Convert technical action to voice-friendly phrase."""
+        action_lower = action.lower()
+        
+        if "light" in action_lower or "licht" in action_lower:
+            if "on" in action_lower or "an" in action_lower:
+                return "Licht einschalten"
+            elif "off" in action_lower or "aus" in action_lower:
+                return "Licht ausschalten"
+            elif "dim" in action_lower:
+                return "Licht dimmen"
+        
+        if "climate" in action_lower or "temperatur" in action_lower:
+            return "Temperatur anpassen"
+        
+        if "media" in action_lower or "music" in action_lower:
+            return "Medien steuern"
+        
+        return action
+    
     def _build_voice_prompt(self, context: Dict[str, Any]) -> str:
         """Build a natural language prompt for HA Assist."""
-        return _build_voice_prompt(context)
+        voice = context.get("voice", {})
+        mood = context.get("mood", {})
+        zone = context.get("zone", {})
+        
+        parts = [f"Der Nutzer ist gerade {voice.get('greeting', 'Neutral')}."]
+        
+        presence = zone.get("presence", [])
+        if presence:
+            zones = ", ".join(presence[:3])
+            parts.append(f"Anwesend in: {zones}.")
+        
+        suggestions = voice.get("suggestions", [])
+        if suggestions:
+            parts.append(f"Vorschläge: {'; '.join(suggestions[:2])}.")
+        
+        return " ".join(parts)
     
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -163,14 +185,35 @@ class VoicePromptSensor(CoordinatorEntity, SensorEntity):
     
     @property
     def native_value(self) -> str:
-        """Return the projected voice prompt."""
+        """Return the voice prompt."""
         if not self.coordinator.data:
             return "Kein Kontext verfügbar."
-
+        
         mood_data = self.coordinator.data.get("mood", {})
         neural_data = self.coordinator.data.get("neural", {})
-        context = _project_voice_context(mood_data, neural_data)
-        return _build_voice_prompt(context)
+        suggestions = self.coordinator.data.get("suggestions", [])
+        
+        # Build prompt
+        dominant_mood = mood_data.get("mood", "unknown")
+        
+        mood_tones = {
+            "relax": "Entspannt",
+            "focus": "Fokussiert",
+            "active": "Aktiv",
+            "sleep": "Müde",
+            "away": "Abwesend",
+            "alert": "Aufmerksam",
+            "social": "Gesellig",
+            "recovery": "Erholend",
+        }
+        
+        tone = mood_tones.get(dominant_mood, "Neutral")
+        prompt = f"Der Nutzer ist {tone}."
+        
+        if suggestions:
+            prompt += f" {len(suggestions)} Vorschläge verfügbar."
+        
+        return prompt
     
     @callback
     def _handle_coordinator_update(self) -> None:

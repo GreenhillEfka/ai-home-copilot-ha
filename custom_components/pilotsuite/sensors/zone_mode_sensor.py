@@ -58,8 +58,6 @@ class ZoneModeSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
-        if not self._data.get("ok"):
-            return "Keine aktiven Modi"
         active = self._data.get("active_modes", [])
         if not active:
             return "Keine aktiven Modi"

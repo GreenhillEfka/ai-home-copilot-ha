@@ -1,0 +1,493 @@
+# PilotSuite Example Dashboard — 5 Module mit echten Entities
+# Tabs: Licht | Helligkeit | Heizung | Bewegung | Praesenz
+#
+# Dieses Dashboard demonstriert die 5 PilotSuite-Module mit realen
+# Home Assistant Entities. Anpassen: Entity-IDs an eigene Installation.
+#
+# Import: Home Assistant > Dashboard > RAW Config Editor > Einfuegen
+
+views:
+  # ────────────────────────────────────────────────────────────────────────
+  # TAB 1: LICHT — Lichtsteuerung pro Zone
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Licht"
+    path: licht
+    icon: mdi:lightbulb-group
+    cards:
+      # Uebersicht: Alle Lichter
+      - type: entities
+        title: "Licht-Uebersicht"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.pilotsuite_licht_status
+            name: "Lichter an / gesamt"
+          - entity: sensor.pilotsuite_licht_overrides
+            name: "Manuelle Overrides"
+
+      # Wohnzimmer
+      - type: vertical-stack
+        title: "Wohnzimmer"
+        cards:
+          - type: entities
+            show_header_toggle: true
+            entities:
+              - entity: light.wohnzimmer_deckenleuchte
+                name: "Deckenleuchte"
+              - entity: light.wohnzimmer_stehlampe
+                name: "Stehlampe"
+              - entity: light.wohnzimmer_led_strip
+                name: "LED-Streifen"
+          - type: horizontal-stack
+            cards:
+              - type: gauge
+                entity: sensor.pilotsuite_wohnzimmer_brightness
+                name: "Ø Helligkeit"
+                unit: "%"
+                min: 0
+                max: 100
+                severity:
+                  green: 50
+                  yellow: 20
+                  red: 0
+              - type: entity
+                entity: sensor.pilotsuite_wohnzimmer_color_temp
+                name: "Farbtemperatur"
+                icon: mdi:temperature-kelvin
+
+      # Schlafzimmer
+      - type: entities
+        title: "Schlafzimmer"
+        show_header_toggle: true
+        entities:
+          - entity: light.schlafzimmer_deckenleuchte
+            name: "Deckenleuchte"
+          - entity: light.schlafzimmer_nachttisch_links
+            name: "Nachttisch Links"
+          - entity: light.schlafzimmer_nachttisch_rechts
+            name: "Nachttisch Rechts"
+
+      # Kueche
+      - type: entities
+        title: "Kueche"
+        show_header_toggle: true
+        entities:
+          - entity: light.kueche_deckenleuchte
+            name: "Deckenleuchte"
+          - entity: light.kueche_unterschrank
+            name: "Unterschrank-LEDs"
+
+      # Flur
+      - type: entities
+        title: "Flur"
+        show_header_toggle: true
+        entities:
+          - entity: light.flur_deckenleuchte
+            name: "Deckenleuchte"
+          - entity: light.flur_garderobe
+            name: "Garderobe"
+
+      # Badezimmer
+      - type: entities
+        title: "Badezimmer"
+        show_header_toggle: true
+        entities:
+          - entity: light.badezimmer_deckenleuchte
+            name: "Deckenleuchte"
+          - entity: light.badezimmer_spiegel
+            name: "Spiegelleuchte"
+
+      # Tageszeitprofil
+      - type: markdown
+        title: "Tageszeitprofil"
+        content: >
+          | Tageszeit | Helligkeit | Farbtemp |
+          |-----------|-----------|----------|
+          | Nacht (22-06) | 5% | 2200K |
+          | Morgen (06-09) | 60% | 3500K |
+          | Tag (09-17) | 100% | 5000K |
+          | Abend (17-20) | 50% | 2700K |
+          | Spaetabend (20-22) | 30% | 2500K |
+
+  # ────────────────────────────────────────────────────────────────────────
+  # TAB 2: HELLIGKEIT — Lichtsensoren und Lux-Werte
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Helligkeit"
+    path: helligkeit
+    icon: mdi:brightness-6
+    cards:
+      # Globale Helligkeit
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.outdoor_brightness
+            name: "Outdoor Lux"
+            unit: "lx"
+            min: 0
+            max: 100000
+            severity:
+              red: 0
+              yellow: 5000
+              green: 20000
+          - type: gauge
+            entity: sensor.pilotsuite_helligkeit_zones_needing_light
+            name: "Zonen brauchen Licht"
+            min: 0
+            max: 10
+            severity:
+              green: 0
+              yellow: 2
+              red: 5
+
+      # Wohnzimmer Helligkeit
+      - type: vertical-stack
+        title: "Wohnzimmer"
+        cards:
+          - type: sensor
+            entity: sensor.wohnzimmer_helligkeit
+            name: "Indoor Lux"
+            graph: line
+            hours_to_show: 24
+            detail: 2
+          - type: horizontal-stack
+            cards:
+              - type: entity
+                entity: sensor.wohnzimmer_helligkeit
+                name: "Indoor"
+                icon: mdi:brightness-5
+              - type: entity
+                entity: sensor.outdoor_brightness
+                name: "Outdoor"
+                icon: mdi:white-balance-sunny
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.pilotsuite_wohnzimmer_needs_light
+                state: "on"
+            card:
+              type: markdown
+              content: "**Wohnzimmer braucht kuenstliches Licht** — Indoor-Helligkeit unter Schwellwert (100 Lux)"
+
+      # Schlafzimmer Helligkeit
+      - type: sensor
+        entity: sensor.schlafzimmer_helligkeit
+        name: "Schlafzimmer — Indoor Lux"
+        graph: line
+        hours_to_show: 24
+
+      # Kueche Helligkeit
+      - type: sensor
+        entity: sensor.kueche_helligkeit
+        name: "Kueche — Indoor Lux"
+        graph: line
+        hours_to_show: 24
+
+      # Schwellwert-Info
+      - type: markdown
+        title: "Schwellwerte"
+        content: >
+          | Zone | Ziel-Lux | Min-Lux | Empf. Dimming |
+          |------|----------|---------|---------------|
+          | Wohnzimmer | 300 | 100 | automatisch |
+          | Schlafzimmer | 200 | 50 | automatisch |
+          | Kueche | 400 | 150 | automatisch |
+          | Badezimmer | 250 | 80 | automatisch |
+
+  # ────────────────────────────────────────────────────────────────────────
+  # TAB 3: HEIZUNG — Temperatur, Feuchte, Klimasteuerung
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Heizung"
+    path: heizung
+    icon: mdi:thermostat
+    cards:
+      # Haus-Uebersicht
+      - type: horizontal-stack
+        cards:
+          - type: gauge
+            entity: sensor.pilotsuite_avg_indoor_temp
+            name: "Ø Temperatur"
+            unit: "°C"
+            min: 10
+            max: 30
+            severity:
+              blue: 10
+              green: 19
+              yellow: 24
+              red: 27
+          - type: gauge
+            entity: sensor.pilotsuite_avg_humidity
+            name: "Ø Feuchte"
+            unit: "%"
+            min: 0
+            max: 100
+            severity:
+              red: 0
+              yellow: 30
+              green: 40
+
+      # Wohnzimmer Klima
+      - type: vertical-stack
+        title: "Wohnzimmer"
+        cards:
+          - type: thermostat
+            entity: climate.wohnzimmer_heizung
+          - type: horizontal-stack
+            cards:
+              - type: entity
+                entity: sensor.wohnzimmer_temperatur
+                name: "Temperatur"
+              - type: entity
+                entity: sensor.wohnzimmer_luftfeuchtigkeit
+                name: "Feuchte"
+              - type: entity
+                entity: sensor.pilotsuite_wohnzimmer_comfort
+                name: "Komfort"
+                icon: mdi:emoticon-happy
+
+      # Schlafzimmer Klima
+      - type: vertical-stack
+        title: "Schlafzimmer"
+        cards:
+          - type: thermostat
+            entity: climate.schlafzimmer_heizung
+          - type: horizontal-stack
+            cards:
+              - type: entity
+                entity: sensor.schlafzimmer_temperatur
+                name: "Temperatur"
+              - type: entity
+                entity: sensor.schlafzimmer_luftfeuchtigkeit
+                name: "Feuchte"
+
+      # Kueche Klima
+      - type: entities
+        title: "Kueche"
+        entities:
+          - entity: climate.kueche_heizung
+            name: "Heizung"
+          - entity: sensor.kueche_temperatur
+            name: "Temperatur"
+          - entity: sensor.kueche_luftfeuchtigkeit
+            name: "Feuchte"
+
+      # Badezimmer Klima
+      - type: entities
+        title: "Badezimmer"
+        entities:
+          - entity: climate.badezimmer_heizung
+            name: "Heizung"
+          - entity: sensor.badezimmer_temperatur
+            name: "Temperatur"
+          - entity: sensor.badezimmer_luftfeuchtigkeit
+            name: "Feuchte"
+
+      # ECO-Modus
+      - type: entities
+        title: "ECO-Modus"
+        show_header_toggle: false
+        entities:
+          - entity: input_boolean.pilotsuite_eco_wohnzimmer
+            name: "Wohnzimmer ECO"
+          - entity: input_boolean.pilotsuite_eco_schlafzimmer
+            name: "Schlafzimmer ECO"
+          - entity: input_boolean.pilotsuite_eco_kueche
+            name: "Kueche ECO"
+          - entity: input_boolean.pilotsuite_eco_badezimmer
+            name: "Badezimmer ECO"
+
+      # Komfort-Index Erklaerung
+      - type: markdown
+        title: "Komfort-Index"
+        content: >
+          Der Komfort-Index (0-100) basiert auf:
+
+          - **Temperatur**: Optimal 20-22°C (50 Punkte)
+
+          - **Feuchte**: Optimal 40-60% (50 Punkte)
+
+          ECO-Modus senkt Sollwert auf 17°C bei Abwesenheit.
+
+  # ────────────────────────────────────────────────────────────────────────
+  # TAB 4: BEWEGUNG — Bewegungsmelder pro Zone
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Bewegung"
+    path: bewegung
+    icon: mdi:motion-sensor
+    cards:
+      # Uebersicht
+      - type: entities
+        title: "Bewegungs-Uebersicht"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.pilotsuite_bewegung_active
+            name: "Aktive Sensoren"
+          - entity: sensor.pilotsuite_bewegung_last_motion
+            name: "Letzte Bewegung"
+
+      # Wohnzimmer Bewegung
+      - type: vertical-stack
+        title: "Wohnzimmer"
+        cards:
+          - type: entity
+            entity: binary_sensor.wohnzimmer_bewegungsmelder
+            name: "Bewegungsmelder"
+            icon: mdi:motion-sensor
+          - type: sensor
+            entity: binary_sensor.wohnzimmer_bewegungsmelder
+            name: "Bewegungsverlauf"
+            graph: line
+            hours_to_show: 24
+
+      # Flur Bewegung
+      - type: vertical-stack
+        title: "Flur"
+        cards:
+          - type: entity
+            entity: binary_sensor.flur_bewegungsmelder
+            name: "Bewegungsmelder"
+          - type: sensor
+            entity: binary_sensor.flur_bewegungsmelder
+            name: "Verlauf"
+            graph: line
+            hours_to_show: 24
+
+      # Kueche Bewegung
+      - type: entity
+        entity: binary_sensor.kueche_bewegungsmelder
+        name: "Kueche — Bewegungsmelder"
+        icon: mdi:motion-sensor
+
+      # Badezimmer Bewegung
+      - type: entity
+        entity: binary_sensor.badezimmer_bewegungsmelder
+        name: "Badezimmer — Bewegungsmelder"
+        icon: mdi:motion-sensor
+
+      # Garage / Aussen
+      - type: entity
+        entity: binary_sensor.garage_bewegungsmelder
+        name: "Garage — Bewegungsmelder"
+        icon: mdi:motion-sensor
+
+      # Aussen
+      - type: entity
+        entity: binary_sensor.eingang_bewegungsmelder
+        name: "Eingang — Bewegungsmelder"
+        icon: mdi:motion-sensor
+
+      # Tagestrigger
+      - type: markdown
+        title: "Tagesstatistik"
+        content: >
+          {% set motion = state_attr('sensor.pilotsuite_bewegung_dashboard', 'zones') %}
+          {% if motion %}
+          | Zone | Trigger heute |
+          |------|--------------|
+          {% for z in motion %}
+          | {{ z.zone_name }} | {{ z.daily_triggers }} |
+          {% endfor %}
+          {% else %}
+          Keine Bewegungsdaten verfuegbar.
+          {% endif %}
+
+  # ────────────────────────────────────────────────────────────────────────
+  # TAB 5: PRAESENZ — Anwesenheit pro Zone / Person
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Praesenz"
+    path: praesenz
+    icon: mdi:account-group
+    cards:
+      # Personen zu Hause
+      - type: entities
+        title: "Personen zu Hause"
+        show_header_toggle: false
+        entities:
+          - entity: person.papa
+            name: "Papa"
+          - entity: person.mama
+            name: "Mama"
+          - entity: person.kind_1
+            name: "Kind 1"
+          - entity: person.kind_2
+            name: "Kind 2"
+
+      # Zonen-Belegung
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: entities
+            title: "Wohnzimmer"
+            entities:
+              - entity: binary_sensor.pilotsuite_zone_presence_wohnzimmer
+                name: "Belegt"
+              - entity: sensor.pilotsuite_wohnzimmer_person_count
+                name: "Personen"
+          - type: entities
+            title: "Schlafzimmer"
+            entities:
+              - entity: binary_sensor.pilotsuite_zone_presence_schlafzimmer
+                name: "Belegt"
+              - entity: sensor.pilotsuite_schlafzimmer_person_count
+                name: "Personen"
+          - type: entities
+            title: "Kueche"
+            entities:
+              - entity: binary_sensor.pilotsuite_zone_presence_kueche
+                name: "Belegt"
+              - entity: sensor.pilotsuite_kueche_person_count
+                name: "Personen"
+          - type: entities
+            title: "Badezimmer"
+            entities:
+              - entity: binary_sensor.pilotsuite_zone_presence_badezimmer
+                name: "Belegt"
+              - entity: sensor.pilotsuite_badezimmer_person_count
+                name: "Personen"
+
+      # Device Tracker
+      - type: entities
+        title: "Geraete-Tracker"
+        show_header_toggle: false
+        entities:
+          - entity: device_tracker.papa_handy
+            name: "Papa Handy"
+          - entity: device_tracker.mama_handy
+            name: "Mama Handy"
+          - entity: device_tracker.kind_1_tablet
+            name: "Kind 1 Tablet"
+
+      # Tuersensoren (Praesenzquellen)
+      - type: entities
+        title: "Tuer-/Fenstersensoren"
+        show_header_toggle: false
+        entities:
+          - entity: binary_sensor.haustuer_kontakt
+            name: "Haustuer"
+          - entity: binary_sensor.terrassentuer_kontakt
+            name: "Terrassentuer"
+          - entity: binary_sensor.garagentor_kontakt
+            name: "Garagentor"
+
+      # Praesenz-Uebersicht
+      - type: markdown
+        title: "Praesenz-Uebersicht"
+        content: >
+          {% set dashboard = state_attr('sensor.pilotsuite_praesenz_dashboard', 'zones') %}
+          {% if dashboard %}
+          | Zone | Status | Personen |
+          |------|--------|----------|
+          {% for z in dashboard %}
+          | {{ z.zone_name }} | {{ 'belegt' if z.is_occupied else 'leer' }} | {{ z.persons | join(', ') if z.persons else '—' }} |
+          {% endfor %}
+          {% else %}
+          Keine Praesenz-Daten verfuegbar.
+          {% endif %}
+
+      # WiFi-Praesenz (UniFi)
+      - type: entities
+        title: "WiFi-Praesenz (UniFi)"
+        show_header_toggle: false
+        entities:
+          - entity: device_tracker.papa_handy_unifi
+            name: "Papa (WiFi)"
+          - entity: device_tracker.mama_handy_unifi
+            name: "Mama (WiFi)"

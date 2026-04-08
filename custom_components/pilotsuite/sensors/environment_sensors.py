@@ -33,14 +33,9 @@ class LightLevelSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: CopilotDataUpdateCoordinator, hass: HomeAssistant) -> None:
         super().__init__(coordinator)
         self._hass = hass
-        self._attr_extra_state_attributes: dict[str, Any] = {}
     
     async def async_update(self) -> None:
         """Calculate average light level from sensors."""
-        self._update_light_level()
-    
-    def _update_light_level(self) -> None:
-        """Internal method to update light level - exposed for testing."""
         # Get illuminance sensors
         illuminance_states = [
             s for s in self._hass.states.async_all("sensor")
@@ -94,14 +89,9 @@ class NoiseLevelSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: CopilotDataUpdateCoordinator, hass: HomeAssistant) -> None:
         super().__init__(coordinator)
         self._hass = hass
-        self._attr_extra_state_attributes: dict[str, Any] = {}
     
     async def async_update(self) -> None:
         """Calculate noise level from available sensors."""
-        self._update_noise_level()
-    
-    def _update_noise_level(self) -> None:
-        """Internal method to update noise level - exposed for testing."""
         # Look for noise/sound sensors
         noise_sensors = [
             s for s in self._hass.states.async_all("sensor")
@@ -146,14 +136,9 @@ class WeatherContextSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: CopilotDataUpdateCoordinator, hass: HomeAssistant) -> None:
         super().__init__(coordinator)
         self._hass = hass
-        self._attr_extra_state_attributes: dict[str, Any] = {}
     
     async def async_update(self) -> None:
         """Get weather context."""
-        self._update_weather_context()
-    
-    def _update_weather_context(self) -> None:
-        """Internal method to update weather context - exposed for testing."""
         weather_states = self._hass.states.async_all("weather")
         
         if not weather_states:

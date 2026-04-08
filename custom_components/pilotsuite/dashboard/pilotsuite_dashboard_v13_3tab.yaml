@@ -1,0 +1,389 @@
+# PilotSuite Dashboard v13 — 3-Tab Navigation Layout
+# Vollständiges Dashboard mit Tab-Navigation für Lovelace
+# 
+# Dieses Dashboard implementiert die 3-Tab Struktur aus dem Recovery-Code:
+#   Tab 1: Habitus (Mood & Zonen)
+#   Tab 2: Hausverwaltung (Energie, Präsenz, Automationen)  
+#   Tab 3: Styx (Neural Dashboard, Brain Graph)
+#
+# Verwendung:
+#   1. Home Assistant → Einstellungen → Dashboards
+#   2. Dashboard erstellen oder bestehendes bearbeiten
+#   3. RAW Konfigurations-Editor öffnen
+#   4. Diesen Inhalt einfügen und speichern
+#
+# Version: 13.1.0
+# Datum: 2026-03-03
+# Quelle: /recovery/lost_code/ + test_dashboard_tabs.py
+
+title: "PilotSuite Dashboard v13"
+views:
+  # ────────────────────────────────────────────────────────────────────────
+  # VIEW 1: HABITUS — Mood, Zonen & Neuronen
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Habitus"
+    path: habitus
+    icon: mdi:heart-pulse
+    badges: []
+    cards:
+      # Header Card mit Intro
+      - type: markdown
+        title: "🎭 Habitus Dashboard"
+        content: |
+          **Habitus** zeigt den aktuellen Mood, die Zonen-Status und Neuronen-Aktivität.
+          
+          - Mood wird vom PilotSuite Core berechnet
+          - Zonen basieren auf Anwesenheit und Aktivität
+          - Neuronen visualisieren Systemzustände
+
+      # Mood Card (Custom Component)
+      - type: custom:ha-copilot-mood-card
+        entity: sensor.copilot_ha_mood
+        title: "Aktuelle Stimmung"
+        show_emotions: 5
+        show_history: true
+
+      # Neuron Activity Card
+      - type: custom:ha-copilot-neurons-card
+        entity: sensor.copilot_ha_neuron_activity
+        title: "Neuronen-Aktivität"
+        show_graph: true
+
+      # Habitus Zones Grid
+      - type: grid
+        columns: 2
+        square: false
+        title: "🏠 Habitus-Zonen"
+        cards:
+          - type: custom:ha-copilot-habitus-card
+            entity: sensor.copilot_ha_habitus_zones
+            title: "Zonen-Übersicht"
+            show_details: true
+
+      # Zone Actions
+      - type: entities
+        title: "⚡ Zonen-Aktionen"
+        show_header_toggle: false
+        entities:
+          - entity: button.copilot_ha_validate_habitus_zones
+            name: "Zonen validieren"
+            icon: mdi:check-circle
+          - entity: input_button.ai_copilot_reset_mood
+            name: "Mood zurücksetzen"
+            icon: mdi:refresh
+          - entity: input_button.ai_copilot_sync_graph
+            name: "Graph synchronisieren"
+            icon: mdi:sync
+
+      # Mood Distribution Bar
+      - type: custom:bar-card
+        title: "📊 Stimmungsverteilung"
+        min: 0
+        max: 100
+        unit_of_measurement: "%"
+        entities:
+          - entity: sensor.ai_copilot_mood
+            name: "Mood Score"
+            icon: mdi:emoticon-happy
+          - entity: sensor.ai_copilot_energy
+            name: "Energy Level"
+            icon: mdi:lightning-bolt
+          - entity: sensor.ai_copilot_presence
+            name: "Presence"
+            icon: mdi:account-multiple
+
+      # Neuron Status Entities
+      - type: entities
+        title: "🧠 Neuronen-Status"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.ai_copilot_neuron_dashboard
+            name: "Dashboard Neuron"
+            icon: mdi:brain
+          - entity: sensor.neuron_active_count
+            name: "Aktive Neuronen"
+            icon: mdi:flash
+          - entity: sensor.neuron_firing_count
+            name: "Feuernde Neuronen"
+            icon: mdi:fire
+
+  # ────────────────────────────────────────────────────────────────────────
+  # VIEW 2: HAUSVERWALTUNG — Energie, Präsenz, Automationen
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Hausverwaltung"
+    path: hausverwaltung
+    icon: mdi:home-city
+    badges: []
+    cards:
+      # Header Card
+      - type: markdown
+        title: "🏠 Hausverwaltung"
+        content: |
+          **Hausverwaltung** bündelt Energie, Präsenz und Automationen.
+          
+          - Energie: Verbrauch, Produktion, Netz
+          - Präsenz: Personen im Haus
+          - Automationen: Aktive Regeln
+
+      # Energy Overview Grid
+      - type: grid
+        columns: 3
+        square: false
+        title: "⚡ Energie-Übersicht"
+        cards:
+          - type: entity
+            entity: sensor.energy_consumption
+            name: "Verbrauch"
+            icon: mdi:flash
+          - type: entity
+            entity: sensor.energy_production
+            name: "Produktion"
+            icon: mdi:solar-power
+          - type: entity
+            entity: sensor.grid_power
+            name: "Netz"
+            icon: mdi:transmission-tower
+
+      # Energy History Chart
+      - type: history-graph
+        title: "📈 Energie-Verlauf"
+        entities:
+          - entity: sensor.energy_consumption
+            name: "Verbrauch"
+          - entity: sensor.energy_production
+            name: "Produktion"
+        hours_to_show: 24
+        refresh_interval: 300
+
+      # Presence Overview
+      - type: entities
+        title: "👥 Anwesenheit"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.ai_copilot_presence
+            name: "Presence Score"
+            icon: mdi:account-multiple
+          - entity: binary_sensor.presence_living_room
+            name: "Wohnzimmer"
+            icon: mdi:sofa
+          - entity: binary_sensor.presence_kitchen
+            name: "Küche"
+            icon: mdi:silverware-fork-knife
+          - entity: binary_sensor.presence_bedroom
+            name: "Schlafzimmer"
+            icon: mdi:bed
+          - entity: binary_sensor.presence_bathroom
+            name: "Badezimmer"
+            icon: mdi:shower
+
+      # Presence History
+      - type: history-graph
+        title: "📊 Anwesenheits-Verlauf"
+        entities:
+          - entity: binary_sensor.presence_living_room
+          - entity: binary_sensor.presence_kitchen
+        hours_to_show: 12
+        refresh_interval: 60
+
+      # Automation Status
+      - type: entities
+        title: "🤖 Automationen"
+        show_header_toggle: true
+        entities:
+          - entity: automation.licht_einschalten_bewegung
+            name: "Bewegungslicht"
+            icon: mdi:motion-sensor
+          - entity: automation.heizung_nachtabsenkung
+            name: "Nachtabsenkung"
+            icon: mdi:thermometer-chevron-down
+          - entity: automation.fenster_offen_heizung_aus
+            name: "Fenster-Heizung"
+            icon: mdi:window-open
+          - entity: automation.rollos_sonnenschutz
+            name: "Sonnenschutz"
+            icon: mdi:blinds
+
+      # System Resources
+      - type: entities
+        title: "💻 Systemressourcen"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.processor_use
+            name: "CPU Auslastung"
+            icon: mdi:cpu-64-bit
+          - entity: sensor.memory_use_percent
+            name: "RAM Nutzung"
+            icon: mdi:memory
+          - entity: sensor.disk_use_percent
+            name: "Festplatte"
+            icon: mdi:harddisk
+          - entity: sensor.network_throughput
+            name: "Netzwerk"
+            icon: mdi:network
+
+      # Quick Actions Grid
+      - type: grid
+        columns: 2
+        square: false
+        title: "⚡ Schnellaktionen"
+        cards:
+          - type: button
+            name: "Alle Lichter aus"
+            icon: mdi:lightbulb-off
+            tap_action:
+              action: call-service
+              service: light.turn_off
+              target:
+                area_id: all
+          - type: button
+            name: "Nachtmodus"
+            icon: mdi:weather-night
+            tap_action:
+              action: call-service
+              service: scene.turn_on
+              target:
+                entity_id: scene.night_mode
+          - type: button
+            name: "Alle zu"
+            icon: mdi:door-closed
+            tap_action:
+              action: call-service
+              service: cover.close_covers
+              target:
+                area_id: all
+          - type: button
+            name: "Urlaubsmodus"
+            icon: mdi:palmtree
+            tap_action:
+              action: call-service
+              service: scene.turn_on
+              target:
+                entity_id: scene.vacation_mode
+
+  # ────────────────────────────────────────────────────────────────────────
+  # VIEW 3: STYX — Neural Dashboard & Brain Graph
+  # ────────────────────────────────────────────────────────────────────────
+  - title: "Styx"
+    path: styx
+    icon: mdi:brain
+    badges: []
+    cards:
+      # Header Card
+      - type: markdown
+        title: "🧠 Styx Neural Dashboard"
+        content: |
+          **Styx** zeigt das neuronale Netzwerk und Brain Graph Visualisierungen.
+          
+          - Neuronales Netzwerk: 14 Neuronen, 24 Verbindungen
+          - Echtzeit-Visualisierung mit D3.js
+          - WebSocket-Updates für Live-Daten
+
+      # Brain Graph iframe (Canvas-basierte Visualisierung)
+      - type: iframe
+        title: "🧠 Neuronales Netzwerk"
+        url: /local/copilot_ha/brain_graph_panel.html
+        aspect_ratio: "16:9"
+
+      # Neuron Status Grid
+      - type: grid
+        columns: 3
+        square: false
+        title: "📊 Netzwerk-Statistik"
+        cards:
+          - type: stat
+            name: "Neuronen"
+            value: "14"
+            icon: mdi:brain
+          - type: stat
+            name: "Verbindungen"
+            value: "24"
+            icon: mdi:connection
+          - type: stat
+            name: "Input Layer"
+            value: "3"
+            icon: mdi:arrow-left
+          - type: stat
+            name: "Hidden Layer"
+            value: "8"
+            icon: mdi:network
+          - type: stat
+            name: "Output Layer"
+            value: "3"
+            icon: mdi:arrow-right
+          - type: stat
+            name: "Aktiv"
+            value: "0"
+            icon: mdi:flash
+            entity: sensor.neuron_active_count
+
+      # Neuron Status Entities
+      - type: entities
+        title: "🧠 Neuronen-Status"
+        show_header_toggle: false
+        entities:
+          - entity: sensor.ai_copilot_neuron_dashboard
+            name: "Dashboard Neuron"
+            icon: mdi:brain
+          - entity: sensor.ai_copilot_mood
+            name: "Mood Neuron"
+            icon: mdi:emoticon
+          - entity: sensor.ai_copilot_energy
+            name: "Energy Neuron"
+            icon: mdi:lightning-bolt
+          - entity: sensor.ai_copilot_presence
+            name: "Presence Neuron"
+            icon: mdi:account-multiple
+
+      # Neuron Layer Legend
+      - type: markdown
+        title: "🎨 Neuronen-Legende"
+        content: |
+          **Layer-Farben:**
+          - 🟦 Input (Blau): Sensoren, Eingaben
+          - 🟣 Hidden (Lila): Verarbeitung, Logik
+          - 🟠 Output (Orange): Aktionen, Ausgaben
+          
+          **Zustände:**
+          - ⚫ Inaktiv: Kein Signal
+          - 🟢 Aktiv: Signal empfangen
+          - 🟠 Feuernd: Signal gesendet
+          
+          **Verbindungen:**
+          - 🟢 Grün: Positive Gewichtung (+)
+          - 🔴 Rot: Negative Gewichtung (-)
+          - Dicke = Stärke der Verbindung
+
+      # Debug Controls
+      - type: entities
+        title: "🔧 Debug-Steuerung"
+        show_header_toggle: false
+        entities:
+          - entity: input_boolean.ai_copilot_debug_mode
+            name: "Debug Modus"
+            icon: mdi:bug
+          - entity: button.copilot_ha_ping_core
+            name: "Core Ping"
+            icon: mdi:ping
+          - entity: button.copilot_ha_fetch_core_graph_state
+            name: "Graph State holen"
+            icon: mdi:download
+          - entity: button.copilot_ha_enable_debug_30m
+            name: "Debug 30min"
+            icon: mdi:timer-outline
+
+      # Core API Links
+      - type: markdown
+        title: "🔗 Core API Endpoints"
+        content: |
+          **PilotSuite Core API:**
+          
+          | Endpoint | Beschreibung |
+          |----------|--------------|
+          | [Health](http://homeassistant.local:8909/health) | System-Health |
+          | [Version](http://homeassistant.local:8909/version) | Versionsinfo |
+          | [Events](http://homeassistant.local:8909/api/v1/events) | Event-Stream |
+          | [Neuron Graph](http://homeassistant.local:8909/api/v1/neuron_graph) | Graph-State |
+          | [Neurons](http://homeassistant.local:8909/api/v1/neurons) | Neuron-Liste |
+          | [Mood](http://homeassistant.local:8909/api/v1/mood) | Mood-Daten |
+          
+          **WebSocket:** `ws://homeassistant.local:8909/ws/neuron`
