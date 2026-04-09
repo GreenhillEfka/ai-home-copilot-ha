@@ -12,7 +12,7 @@ HA-174: energy_sensors.py Projection-Contract-Tests (22 Cases)
 import pytest
 from typing import Any
 
-from custom_components.copilot_ha.sensors.energy_sensors import (
+from custom_components.pilotsuite.sensors.energy_sensors import (
     EnergyProxySensor,
     EnergyUsageLevel,
     FrugalityScore,
@@ -442,7 +442,7 @@ def test_edge_many_devices_penalty() -> None:
 def test_gc1_no_core_api_dependency() -> None:
     """GC1: EnergyProxySensor uses only hass.states.async_all() — no Core API."""
     import inspect
-    from custom_components.copilot_ha.sensors.energy_sensors import EnergyProxySensor
+    from custom_components.pilotsuite.sensors.energy_sensors import EnergyProxySensor
     
     source = inspect.getsource(EnergyProxySensor)
     
@@ -458,7 +458,7 @@ def test_gc1_no_core_api_dependency() -> None:
 def test_gc2_no_local_semantic_invention() -> None:
     """GC2: No local ML/heuristics — only threshold logic + aggregation."""
     import inspect
-    from custom_components.copilot_ha.sensors.energy_sensors import EnergyProxySensor
+    from custom_components.pilotsuite.sensors.energy_sensors import EnergyProxySensor
     
     source = inspect.getsource(EnergyProxySensor)
     
