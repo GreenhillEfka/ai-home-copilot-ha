@@ -9,11 +9,6 @@ from unittest.mock import MagicMock, AsyncMock, patch
 
 import pytest
 
-# Align pilotsuite test imports with the existing lightweight coordinator stub.
-sys.modules["custom_components.pilotsuite.coordinator"] = sys.modules[
-    "custom_components.copilot_ha.coordinator"
-]
-
 
 # ── Contract Mirror ──────────────────────────────────────────────────────────
 
