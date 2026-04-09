@@ -253,14 +253,14 @@ def mock_failing_module():
 @pytest.fixture
 def module_registry():
     """Return a fresh ModuleRegistry instance."""
-    from custom_components.copilot_ha.core.registry import ModuleRegistry
+    from custom_components.pilotsuite.core.registry import ModuleRegistry
     return ModuleRegistry()
 
 
 @pytest.fixture
 def copilot_runtime(hass: FakeHass):
     """Return a CopilotRuntime singleton for the given hass."""
-    from custom_components.copilot_ha.core.runtime import CopilotRuntime
+    from custom_components.pilotsuite.core.runtime import CopilotRuntime
     return CopilotRuntime.get(hass)
 
 
