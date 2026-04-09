@@ -24,7 +24,7 @@ class PresenceIntelligenceSensorContract:
 @pytest.fixture
 def sensor():
     """Build a PresenceIntelligenceSensor with mocked coordinator."""
-    from custom_components.copilot_ha.sensors.presence_intelligence_sensor import (
+    from custom_components.pilotsuite.sensors.presence_intelligence_sensor import (
         PresenceIntelligenceSensor,
     )
     coordinator = MagicMock()
