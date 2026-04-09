@@ -7,8 +7,8 @@ Verifies:
 
 import pytest
 
-from custom_components.copilot_ha.sensors.energy_cost_sensor import EnergyCostSensor
-from custom_components.copilot_ha.sensors.energy_forecast_sensor import EnergyForecastSensor
+from custom_components.pilotsuite.sensors.energy_cost_sensor import EnergyCostSensor
+from custom_components.pilotsuite.sensors.energy_forecast_sensor import EnergyForecastSensor
 
 
 # =============================================================================
