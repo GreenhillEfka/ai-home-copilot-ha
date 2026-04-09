@@ -1,0 +1,8 @@
+{
+  "name": "PilotSuite HA",
+  "content_in_root": false,
+  "render_readme": true,
+  "homeassistant": "2024.4.0",
+  "zip_release": false,
+  "filename": "pilotsuite-styx-ha.zip"
+}
