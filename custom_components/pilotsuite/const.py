@@ -1,4 +1,4 @@
-DOMAIN = "copilot_ha"
+DOMAIN = "pilotsuite"
 INTEGRATION_UNIQUE_ID = "pilotsuite_styx"
 MAIN_DEVICE_IDENTIFIER = "styx_hub"
 LEGACY_MAIN_DEVICE_IDENTIFIERS = (
