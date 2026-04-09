@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "custom_components"))
 
-from custom_components.copilot_ha.sensors.appliance_fingerprint_sensor import (
+from custom_components.pilotsuite.sensors.appliance_fingerprint_sensor import (
     ApplianceFingerprintSensor,
 )
 
