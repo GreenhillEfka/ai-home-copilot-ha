@@ -53,3 +53,4 @@
 
 ## Recommended publish note
 This release should only be published after the `const.py` domain mismatch is corrected and the public card-count wording is updated from 9 to 11.
+# HA-267
