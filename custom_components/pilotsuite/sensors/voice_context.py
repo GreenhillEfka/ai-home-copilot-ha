@@ -41,6 +41,16 @@ def _as_string_list(value: Any) -> list[str]:
     return [item for item in value if isinstance(item, str)]
 
 
+def _as_string(value: Any, default: str) -> str:
+    """Return string payloads, otherwise a safe default."""
+    return value if isinstance(value, str) else default
+
+
+def _as_float(value: Any, default: float) -> float:
+    """Return numeric payloads, otherwise a safe default."""
+    return float(value) if isinstance(value, (int, float)) else default
+
+
 def _project_voice_context(
     mood_data: Dict[str, Any],
     neural_data: Dict[str, Any],
@@ -49,16 +59,16 @@ def _project_voice_context(
     mood_data = _as_mapping(mood_data)
     neural_data = _as_mapping(neural_data)
 
-    dominant_mood = mood_data.get("mood", "unknown")
-    confidence = mood_data.get("confidence", 0.0)
+    dominant_mood = _as_string(mood_data.get("mood"), "unknown")
+    confidence = _as_float(mood_data.get("confidence"), 0.0)
 
     core_time = _as_mapping(neural_data.get("time"))
-    time_greeting = core_time.get("description_de") or core_time.get(
-        "description_en", "Hallo"
+    time_greeting = _as_string(core_time.get("description_de"), "") or _as_string(
+        core_time.get("description_en"), "Hallo"
     )
 
     core_zone = _as_mapping(neural_data.get("zone"))
-    zone_name = core_zone.get("current", "unknown")
+    zone_name = _as_string(core_zone.get("current"), "unknown")
     zone_activities = _as_string_list(core_zone.get("typical_activities"))
     voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
     zone_presence = _as_string_list(core_zone.get("presence"))
@@ -69,7 +79,7 @@ def _project_voice_context(
         "mood": {
             "dominant": dominant_mood,
             "confidence": confidence,
-            "contributors": mood_data.get("contributors", []),
+            "contributors": _as_string_list(mood_data.get("contributors")),
         },
         "zone": {
             "current": zone_name,
@@ -81,7 +91,7 @@ def _project_voice_context(
             "suggestions": voice_suggestions,
         },
         "metadata": {
-            "last_update": neural_data.get("last_update", ""),
+            "last_update": _as_string(neural_data.get("last_update"), ""),
             "context_version": "1.1",
         },
     }

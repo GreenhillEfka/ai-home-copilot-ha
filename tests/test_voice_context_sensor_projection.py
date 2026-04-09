@@ -56,17 +56,25 @@ class VoiceContextSensorContract:
         return [item for item in value if isinstance(item, str)]
 
     @staticmethod
+    def _as_string(value, default: str) -> str:
+        return value if isinstance(value, str) else default
+
+    @staticmethod
+    def _as_float(value, default: float) -> float:
+        return float(value) if isinstance(value, (int, float)) else default
+
+    @staticmethod
     def extra_state_attributes(coordinator_data: dict) -> dict:
         mood = VoiceContextSensorContract._as_mapping(coordinator_data.get("mood", {}))
         neural = VoiceContextSensorContract._as_mapping(coordinator_data.get("neural", {}))
 
-        dominant_mood = mood.get("mood", "unknown")
-        confidence = mood.get("confidence", 0.0)
+        dominant_mood = VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")
+        confidence = VoiceContextSensorContract._as_float(mood.get("confidence"), 0.0)
         core_time = VoiceContextSensorContract._as_mapping(neural.get("time", {}))
-        time_greeting = core_time.get("description_de") or \
-                        core_time.get("description_en", "Hallo")
+        time_greeting = VoiceContextSensorContract._as_string(core_time.get("description_de"), "") or \
+                        VoiceContextSensorContract._as_string(core_time.get("description_en"), "Hallo")
         core_zone = VoiceContextSensorContract._as_mapping(neural.get("zone", {}))
-        zone_name = core_zone.get("current", "unknown")
+        zone_name = VoiceContextSensorContract._as_string(core_zone.get("current"), "unknown")
         zone_activities = VoiceContextSensorContract._as_string_list(
             core_zone.get("typical_activities", [])
         )
@@ -78,7 +86,7 @@ class VoiceContextSensorContract:
         return {
             "dominant_mood": dominant_mood,
             "mood_confidence": confidence,
-            "mood_contributors": mood.get("contributors", []),
+            "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", [])),
             "current_zone": zone_name,
             "zone_presence": presence,
             "voice_tone": dominant_mood,
@@ -87,7 +95,7 @@ class VoiceContextSensorContract:
             "voice_prompt": VoiceContextSensorContract._build_prompt(
                 time_greeting, presence, voice_suggestions
             ),
-            "last_update": neural.get("last_update", ""),
+            "last_update": VoiceContextSensorContract._as_string(neural.get("last_update", ""), ""),
         }
 
     @staticmethod
@@ -255,6 +263,36 @@ def empty_data():
         {"mood": ["relax"], "neural": "bad-payload"},
         "dominant_mood",
         "unknown",
+    ),
+    # VC1p: malformed scalar mood string payload falls back safely
+    (
+        {"mood": {"mood": ["relax"]}},
+        "dominant_mood",
+        "unknown",
+    ),
+    # VC1q: malformed confidence payload falls back to 0.0
+    (
+        {"mood": {"confidence": {"bad": 1}}},
+        "mood_confidence",
+        0.0,
+    ),
+    # VC1r: malformed contributors payload is filtered to safe empty list
+    (
+        {"mood": {"contributors": "music"}},
+        "mood_contributors",
+        [],
+    ),
+    # VC1s: malformed zone/time scalar payloads stay on safe defaults
+    (
+        {"neural": {"time": {"description_de": ["Hallo"]}, "zone": {"current": {"name": "Wohnzimmer"}}}},
+        "voice_greeting",
+        "Hallo",
+    ),
+    # VC1t: malformed last_update payload falls back to empty string
+    (
+        {"neural": {"last_update": ["2026-04-06T10:00:00Z"]}},
+        "last_update",
+        "",
     ),
 ])
 def test_vc1_extra_state_attributes(coordinator_data, key, expected):
@@ -479,3 +517,22 @@ def test_gc7_source_hardens_projection_against_malformed_list_payloads():
     assert 'def _as_string_list(value: Any) -> list[str]:' in source
     assert 'if not isinstance(value, list):' in source
     assert 'return [item for item in value if isinstance(item, str)]' in source
+
+
+def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
+    """GC8: malformed scalar payloads must not leak dict/list types into HA attrs."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'def _as_string(value: Any, default: str) -> str:' in source
+    assert 'def _as_float(value: Any, default: float) -> float:' in source
+    assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")' in source
+    assert 'confidence = _as_float(mood_data.get("confidence"), 0.0)' in source
+    assert 'zone_name = _as_string(core_zone.get("current"), "unknown")' in source
+    assert '"contributors": _as_string_list(mood_data.get("contributors"))' in source
+    assert '"last_update": _as_string(neural_data.get("last_update"), "")' in source
