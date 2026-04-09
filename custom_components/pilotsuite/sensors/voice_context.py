@@ -102,7 +102,8 @@ def _build_voice_prompt(context: Dict[str, Any]) -> str:
     voice = _as_mapping(context.get("voice"))
     zone = _as_mapping(context.get("zone"))
 
-    parts = [f"Der Nutzer ist gerade {voice.get('greeting', 'Neutral')}."]
+    greeting = _as_string(voice.get("greeting"), "") or "Neutral"
+    parts = [f"Der Nutzer ist gerade {greeting}."]
 
     presence = _as_string_list(zone.get("presence"))
     if presence:

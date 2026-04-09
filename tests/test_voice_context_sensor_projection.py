@@ -100,6 +100,7 @@ class VoiceContextSensorContract:
 
     @staticmethod
     def _build_prompt(greeting: str, presence: list, suggestions: list) -> str:
+        greeting = VoiceContextSensorContract._as_string(greeting, "") or "Neutral"
         parts = [f"Der Nutzer ist gerade {greeting}."]
         presence = VoiceContextSensorContract._as_string_list(presence)
         if presence:
@@ -355,6 +356,20 @@ def test_vc1_extra_state_attributes(coordinator_data, key, expected):
         "Lesen",
         "Der Nutzer ist gerade Hallo.",
     ),
+    # VC2h: malformed greeting payload falls back to Neutral instead of leaking reprs
+    (
+        ["Hallo"],
+        [],
+        [],
+        "Der Nutzer ist gerade Neutral.",
+    ),
+    # VC2i: empty greeting payload also falls back to Neutral
+    (
+        "",
+        [],
+        [],
+        "Der Nutzer ist gerade Neutral.",
+    ),
 ])
 def test_vc2_voice_prompt_construction(greeting, presence, suggestions, expected):
     """VC2: voice_prompt is built from greeting + presence[:3] + suggestions[:2]."""
@@ -520,7 +535,7 @@ def test_gc7_source_hardens_projection_against_malformed_list_payloads():
 
 
 def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
-    """GC8: malformed scalar payloads must not leak dict/list types into HA attrs."""
+    """GC8: malformed scalar payloads must not leak dict/list types into HA attrs/prompt."""
     source = (
         Path(__file__).parent.parent
         / "custom_components"
@@ -534,5 +549,6 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")' in source
     assert 'confidence = _as_float(mood_data.get("confidence"), 0.0)' in source
     assert 'zone_name = _as_string(core_zone.get("current"), "unknown")' in source
+    assert 'greeting = _as_string(voice.get("greeting"), "") or "Neutral"' in source
     assert '"contributors": _as_string_list(mood_data.get("contributors"))' in source
     assert '"last_update": _as_string(neural_data.get("last_update"), "")' in source
