@@ -52,7 +52,7 @@ def coordinator():
 
 @pytest.fixture
 def sensor(coordinator):
-    from custom_components.copilot_ha.sensors.automation_suggestion_sensor import AutomationSuggestionSensor
+    from custom_components.pilotsuite.sensors.automation_suggestion_sensor import AutomationSuggestionSensor
     s = AutomationSuggestionSensor(coordinator)
     return s
 
