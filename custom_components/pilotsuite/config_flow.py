@@ -26,6 +26,7 @@ from .config_helpers import (
     validate_input,
     discover_reachable_core_endpoint,
     fetch_setup_token,
+    merge_config_data,
 )
 from .config_options_flow import OptionsFlowHandler  # noqa: F401 - used by HA via async_get_options_flow
 from .config_schema_builders import build_config_flow_connection_schema
@@ -60,15 +61,12 @@ from .const import (
     INTEGRATION_UNIQUE_ID,
 )
 
-# HA config-flow registration must match manifest.json domain exactly.
-# Keep DOMAIN="copilot_ha" for internal hass.data/storage namespaces only.
-CONFIG_FLOW_DOMAIN = "pilotsuite"
 from .setup_wizard import SetupWizard
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=CONFIG_FLOW_DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     # Shared pending reconfigure data (accumulates across steps before final commit)

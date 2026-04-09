@@ -1,7 +1,7 @@
 {
   "domain": "pilotsuite",
   "name": "PilotSuite HA",
-  "version": "20.0.6",
+  "version": "20.0.7",
   "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha",
   "codeowners": ["@GreenhillEfka"],
   "dependencies": [
