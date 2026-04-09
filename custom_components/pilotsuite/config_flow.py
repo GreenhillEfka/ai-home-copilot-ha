@@ -64,9 +64,10 @@ from .const import (
 from .setup_wizard import SetupWizard
 
 _LOGGER = logging.getLogger(__name__)
+CONFIG_FLOW_DOMAIN = "pilotsuite"
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=CONFIG_FLOW_DOMAIN):
     VERSION = 1
 
     # Shared pending reconfigure data (accumulates across steps before final commit)

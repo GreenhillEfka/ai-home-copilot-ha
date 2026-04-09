@@ -1,0 +1,15 @@
+{
+  "domain": "copilot_ha",
+  "name": "PilotSuite HA Legacy Bridge",
+  "config_flow": true,
+  "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha",
+  "issue_tracker": "https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues",
+  "dependencies": ["conversation", "history", "http", "recorder", "stt", "tag", "tts", "webhook"],
+  "after_dependencies": ["assist_pipeline"],
+  "codeowners": ["@GreenhillEfka"],
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "homeassistant": "2024.4.0",
+  "requirements": [],
+  "version": "20.0.8"
+}
