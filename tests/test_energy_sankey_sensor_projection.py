@@ -2,8 +2,17 @@
 
 Verifies EnergySankeySensor is a pure Projection-Shell on /api/v1/energy/sankey.
 """
-import pytest
+from __future__ import annotations
+
+import sys
 from unittest.mock import MagicMock, AsyncMock, patch
+
+import pytest
+
+# Align pilotsuite test imports with the existing lightweight coordinator stub.
+sys.modules["custom_components.pilotsuite.coordinator"] = sys.modules[
+    "custom_components.copilot_ha.coordinator"
+]
 
 
 # ── Contract Mirror ──────────────────────────────────────────────────────────
@@ -226,7 +235,7 @@ class TestEnergySankeyGlobalContract:
     def test_gc1_hits_correct_api_endpoint(self):
         """GC1: EnergySankeySensor hits /api/v1/energy/sankey."""
         # The sensor fetches from /api/v1/energy/sankey — verified by code inspection
-        from custom_components.copilot_ha.sensors.energy_sankey_sensor import EnergySankeySensor
+        from custom_components.pilotsuite.sensors.energy_sankey_sensor import EnergySankeySensor
         import inspect
         source = inspect.getsource(EnergySankeySensor.async_update)
         assert "/api/v1/energy/sankey" in source
