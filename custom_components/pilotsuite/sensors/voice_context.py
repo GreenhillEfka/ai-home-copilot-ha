@@ -29,23 +29,41 @@ from ..coordinator import CopilotDataUpdateCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
+def _as_mapping(value: Any) -> Dict[str, Any]:
+    """Return dict-like payloads, otherwise a safe empty mapping."""
+    return value if isinstance(value, dict) else {}
+
+
+def _as_string_list(value: Any) -> list[str]:
+    """Return string-only list payloads without inventing fallback semantics."""
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, str)]
+
+
 def _project_voice_context(
     mood_data: Dict[str, Any],
     neural_data: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Project Core-provided voice context fields without local semantics."""
+    mood_data = _as_mapping(mood_data)
+    neural_data = _as_mapping(neural_data)
+
     dominant_mood = mood_data.get("mood", "unknown")
     confidence = mood_data.get("confidence", 0.0)
 
-    core_time = neural_data.get("time", {})
+    core_time = _as_mapping(neural_data.get("time"))
     time_greeting = core_time.get("description_de") or core_time.get(
         "description_en", "Hallo"
     )
 
-    core_zone = neural_data.get("zone", {})
+    core_zone = _as_mapping(neural_data.get("zone"))
     zone_name = core_zone.get("current", "unknown")
-    zone_activities = core_zone.get("typical_activities", [])
+    zone_activities = _as_string_list(core_zone.get("typical_activities"))
     voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
+    zone_presence = _as_string_list(core_zone.get("presence"))
+    if not zone_presence:
+        zone_presence = _as_string_list(neural_data.get("presence"))
 
     return {
         "mood": {
@@ -55,7 +73,7 @@ def _project_voice_context(
         },
         "zone": {
             "current": zone_name,
-            "presence": core_zone.get("presence", neural_data.get("presence", [])),
+            "presence": zone_presence,
         },
         "voice": {
             "tone": dominant_mood,
@@ -71,17 +89,17 @@ def _project_voice_context(
 
 def _build_voice_prompt(context: Dict[str, Any]) -> str:
     """Build a natural-language prompt from already projected Core fields."""
-    voice = context.get("voice", {})
-    zone = context.get("zone", {})
+    voice = _as_mapping(context.get("voice"))
+    zone = _as_mapping(context.get("zone"))
 
     parts = [f"Der Nutzer ist gerade {voice.get('greeting', 'Neutral')}."]
 
-    presence = zone.get("presence", [])
+    presence = _as_string_list(zone.get("presence"))
     if presence:
         zones = ", ".join(presence[:3])
         parts.append(f"Anwesend in: {zones}.")
 
-    suggestions = voice.get("suggestions", [])
+    suggestions = _as_string_list(voice.get("suggestions"))
     if suggestions:
         parts.append(f"Vorschläge: {'; '.join(suggestions[:2])}.")
 

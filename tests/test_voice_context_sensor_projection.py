@@ -46,20 +46,34 @@ class VoiceContextSensorContract:
         return "ok"
 
     @staticmethod
+    def _as_mapping(value) -> dict:
+        return value if isinstance(value, dict) else {}
+
+    @staticmethod
+    def _as_string_list(value) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [item for item in value if isinstance(item, str)]
+
+    @staticmethod
     def extra_state_attributes(coordinator_data: dict) -> dict:
-        mood = coordinator_data.get("mood", {})
-        neural = coordinator_data.get("neural", {})
-        suggestions = coordinator_data.get("suggestions", [])
+        mood = VoiceContextSensorContract._as_mapping(coordinator_data.get("mood", {}))
+        neural = VoiceContextSensorContract._as_mapping(coordinator_data.get("neural", {}))
 
         dominant_mood = mood.get("mood", "unknown")
         confidence = mood.get("confidence", 0.0)
-        time_greeting = neural.get("time", {}).get("description_de") or \
-                        neural.get("time", {}).get("description_en", "Hallo")
-        zone_name = neural.get("zone", {}).get("current", "unknown")
-        zone_activities = neural.get("zone", {}).get("typical_activities", [])
+        core_time = VoiceContextSensorContract._as_mapping(neural.get("time", {}))
+        time_greeting = core_time.get("description_de") or \
+                        core_time.get("description_en", "Hallo")
+        core_zone = VoiceContextSensorContract._as_mapping(neural.get("zone", {}))
+        zone_name = core_zone.get("current", "unknown")
+        zone_activities = VoiceContextSensorContract._as_string_list(
+            core_zone.get("typical_activities", [])
+        )
         voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
-        core_zone = neural.get("zone", {})
-        presence = core_zone.get("presence", neural.get("presence", []))
+        presence = VoiceContextSensorContract._as_string_list(core_zone.get("presence"))
+        if not presence:
+            presence = VoiceContextSensorContract._as_string_list(neural.get("presence", []))
 
         return {
             "dominant_mood": dominant_mood,
@@ -79,9 +93,11 @@ class VoiceContextSensorContract:
     @staticmethod
     def _build_prompt(greeting: str, presence: list, suggestions: list) -> str:
         parts = [f"Der Nutzer ist gerade {greeting}."]
+        presence = VoiceContextSensorContract._as_string_list(presence)
         if presence:
             zones = ", ".join(presence[:3])
             parts.append(f"Anwesend in: {zones}.")
+        suggestions = VoiceContextSensorContract._as_string_list(suggestions)
         if suggestions:
             parts.append(f"Vorschläge: {'; '.join(suggestions[:2])}.")
         return " ".join(parts)
@@ -222,6 +238,24 @@ def empty_data():
         "last_update",
         "2026-04-06T10:00:00Z",
     ),
+    # VC1m: malformed zone.typical_activities string must not be split char-wise
+    (
+        {"neural": {"zone": {"typical_activities": "Lesen"}}},
+        "voice_suggestions",
+        [],
+    ),
+    # VC1n: malformed zone.presence falls back to neural.presence list
+    (
+        {"neural": {"zone": {"presence": "Wohnzimmer"}, "presence": ["Küche"]}},
+        "zone_presence",
+        ["Küche"],
+    ),
+    # VC1o: non-dict mood/neural payloads stay on safe projection defaults
+    (
+        {"mood": ["relax"], "neural": "bad-payload"},
+        "dominant_mood",
+        "unknown",
+    ),
 ])
 def test_vc1_extra_state_attributes(coordinator_data, key, expected):
     """VC1: extra_state_attributes are pure Dict lookups from coordinator.data."""
@@ -275,6 +309,13 @@ def test_vc1_extra_state_attributes(coordinator_data, key, expected):
         [],
         ["S1", "S2", "S3"],
         "Der Nutzer ist gerade Abend. Vorschläge: S1; S2.",
+    ),
+    # VC2g: malformed presence/suggestions strings are ignored instead of split char-wise
+    (
+        "Hallo",
+        "Wohnzimmer",
+        "Lesen",
+        "Der Nutzer ist gerade Hallo.",
     ),
 ])
 def test_vc2_voice_prompt_construction(greeting, presence, suggestions, expected):
@@ -365,7 +406,8 @@ def test_gc3_source_projects_core_voice_fields_directly():
     assert 'description_de' in source
     assert 'description_en' in source
     assert 'typical_activities' in source
-    assert 'core_zone.get("presence", neural_data.get("presence", []))' in source
+    assert 'zone_presence = _as_string_list(core_zone.get("presence"))' in source
+    assert 'zone_presence = _as_string_list(neural_data.get("presence"))' in source
     assert 'f"{act} ist aktuell." for act in zone_activities[:3]' in source
 
 
@@ -422,3 +464,18 @@ def test_gc6_source_blocks_split_prompt_paths_and_counting_semantics():
     assert 'Standort:' not in source
     assert 'Aktivitäten:' not in source
     assert 'Vorschläge verfügbar' not in source
+
+
+def test_gc7_source_hardens_projection_against_malformed_list_payloads():
+    """GC7: malformed strings/dicts must not be treated as presence/activity lists."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'def _as_string_list(value: Any) -> list[str]:' in source
+    assert 'if not isinstance(value, list):' in source
+    assert 'return [item for item in value if isinstance(item, str)]' in source
