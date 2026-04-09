@@ -20,7 +20,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "custom_components"))
 
-from custom_components.copilot_ha.sensors.anomaly_detection_sensor import (
+from custom_components.pilotsuite.sensors.anomaly_detection_sensor import (
     AnomalyDetectionSensor,
 )
 
