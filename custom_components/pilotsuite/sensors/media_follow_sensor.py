@@ -59,7 +59,9 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
         if active == 0:
             return "Keine Wiedergabe"
         sessions = self._data.get("sessions", [])
-        playing = [s for s in sessions if s.get("state") == "playing"]
+        if not isinstance(sessions, list):
+            sessions = []
+        playing = [s for s in sessions if isinstance(s, dict) and s.get("state") == "playing"]
         if len(playing) == 1:
             title = playing[0].get("title", "")
             artist = playing[0].get("artist", "")
@@ -71,7 +73,9 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
     @property
     def icon(self) -> str:
         sessions = self._data.get("sessions", [])
-        playing = [s for s in sessions if s.get("state") == "playing"]
+        if not isinstance(sessions, list):
+            sessions = []
+        playing = [s for s in sessions if isinstance(s, dict) and s.get("state") == "playing"]
         if not playing:
             return "mdi:music-off"
         if len(playing) == 1:
@@ -89,6 +93,8 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
         }
 
         sessions = self._data.get("sessions", [])
+        if not isinstance(sessions, list):
+            sessions = []
         if sessions:
             attrs["sessions"] = [
                 {
@@ -100,9 +106,12 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
                     "follow": s.get("follow_enabled"),
                 }
                 for s in sessions
+                if isinstance(s, dict)
             ]
 
         zones = self._data.get("zone_states", [])
+        if not isinstance(zones, list):
+            zones = []
         if zones:
             attrs["zone_states"] = [
                 {
@@ -113,9 +122,12 @@ class MediaFollowSensor(CopilotBaseEntity, SensorEntity):
                     "follow": z.get("follow_enabled"),
                 }
                 for z in zones
+                if isinstance(z, dict)
             ]
 
         transfers = self._data.get("recent_transfers", [])
+        if not isinstance(transfers, list):
+            transfers = []
         if transfers:
             attrs["recent_transfers"] = transfers[:5]
 

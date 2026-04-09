@@ -2,7 +2,7 @@
 
 import pytest
 
-from custom_components.copilot_ha.sensors.media_follow_sensor import (
+from custom_components.pilotsuite.sensors.media_follow_sensor import (
     MediaFollowSensor,
     _MEDIA_ICONS,
 )
@@ -300,6 +300,28 @@ def test_mf4_sessions_not_list():
     raw = {"ok": True, "active_sessions": 1, "sessions": "not-a-list"}
     c = MediaFollowSensorContract(raw)
     assert c.native_value() == "0 Wiedergaben"
+
+
+def test_mf4_real_sensor_sessions_not_list_is_ignored():
+    sensor = MediaFollowSensor(coordinator=None)
+    sensor._data = {"ok": True, "active_sessions": 1, "sessions": "not-a-list"}
+    assert sensor.native_value == "0 Wiedergaben"
+    assert sensor.icon == "mdi:music-off"
+
+
+def test_mf4_real_sensor_non_list_attrs_are_ignored():
+    sensor = MediaFollowSensor(coordinator=None)
+    sensor._data = {
+        "ok": True,
+        "active_sessions": 0,
+        "sessions": "not-a-list",
+        "zone_states": "not-a-list",
+        "recent_transfers": "not-a-list",
+    }
+    attrs = sensor.extra_state_attributes
+    assert "sessions" not in attrs
+    assert "zone_states" not in attrs
+    assert "recent_transfers" not in attrs
 
 
 def test_mf4_recent_transfers_capped():
