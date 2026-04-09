@@ -11,7 +11,7 @@ HA-206: environment_sensors.py Projection-Contract-Tests (37 Cases) — test/sen
 import pytest
 from typing import Any
 
-from custom_components.copilot_ha.sensors.environment_sensors import (
+from custom_components.pilotsuite.sensors.environment_sensors import (
     LightLevelSensor,
     NoiseLevelSensor,
     WeatherContextSensor,
@@ -616,7 +616,7 @@ class TestGlobalContract:
     def test_gc1_ha_local_only_no_core_api(self):
         """GC1: All sensors use only hass.states.async_all() — no Core API calls."""
         import inspect
-        from custom_components.copilot_ha.sensors import environment_sensors
+        from custom_components.pilotsuite.sensors import environment_sensors
         
         source = inspect.getsource(environment_sensors)
         
@@ -630,7 +630,7 @@ class TestGlobalContract:
     def test_gc2_no_local_semantic_invention(self):
         """GC2: Sensors perform trivial state aggregation + threshold mapping only."""
         import inspect
-        from custom_components.copilot_ha.sensors import environment_sensors
+        from custom_components.pilotsuite.sensors import environment_sensors
         
         source = inspect.getsource(environment_sensors)
         
