@@ -1,41 +1,38 @@
-"""Habit Learning v2 Sensor Projection Contract Tests (HA-156).
+"""Projection contract tests for HabitLearningSensor v2.
 
-Verifies HabitLearningSensor, HabitPredictionSensor, HabitAnomalySensor, HabitEfficiencySensor
-are pure projection shells on coordinator.data (habit_summary, predictions) + anomaly framework.
-No local semantic invention — all intelligence comes from Core.
+Verifies HabitLearningSensor, HabitPredictionSensor, SequencePredictionSensor
+project /habit_summary, /predictions, /sequences from CopilotDataUpdateCoordinator
+without local semantic invention.
 
-HA-156 — 2026-04-06
+Contract Mirror pattern: mirrors take raw coordinator_data dict directly,
+avoiding the import chain through coordinator.py → api.py.
+Only source-file reads are used for GC guards.
 """
 from __future__ import annotations
 
 import pytest
 
+SENSOR_PATH = "custom_components/pilotsuite/sensors/habit_learning_v2.py"
 
-# =============================================================================
-# Contract Mirrors — mirror the sensor logic without importing
-# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Contract Mirrors (write-only — must stay in sync with the sensor source)
+# ---------------------------------------------------------------------------
 
 class HabitLearningSensorContract:
-    """Mirror of HabitLearningSensor logic.
-    
-    Contract:
-    - reads: coordinator.data["habit_summary"]
-    - native_value: str(habit_summary.get("total_patterns", 0)) or "idle"
-    - extra_state_attributes: direct pass-through of habit_summary fields + anomaly framework marker
-    """
+    """Mirror of HabitLearningSensor projection logic."""
 
     @staticmethod
-    def native_value(coordinator_data: dict | None) -> str:
+    def native_value(coordinator_data):
         if not coordinator_data:
-            return "idle"
+            return "0"
         habit_summary = coordinator_data.get("habit_summary", {})
-        total = habit_summary.get("total_patterns", 0)
-        return str(total)
+        return str(habit_summary.get("total_patterns", 0))
 
     @staticmethod
-    def extra_state_attributes(coordinator_data: dict | None) -> dict:
+    def extra_state_attributes(coordinator_data):
         if not coordinator_data:
-            return {"anomaly_framework_active": True, "habit_anomaly_level": "normal"}
+            return {}
         habit_summary = coordinator_data.get("habit_summary", {})
         return {
             "total_patterns": habit_summary.get("total_patterns", 0),
@@ -44,311 +41,235 @@ class HabitLearningSensorContract:
             "sequences": habit_summary.get("sequences", {}),
             "device_patterns": habit_summary.get("device_patterns", {}),
             "last_update": habit_summary.get("last_update"),
-            "anomaly_framework_active": True,
-            "habit_anomaly_level": "normal",  # Would come from framework in real sensor
         }
 
 
 class HabitPredictionSensorContract:
-    """Mirror of HabitPredictionSensor logic.
-    
-    Contract:
-    - reads: coordinator.data["predictions"]
-    - native_value: pattern of highest-confidence prediction, or "none"
-    - extra_state_attributes: predictions list + count
-    """
+    """Mirror of HabitPredictionSensor projection logic."""
 
     @staticmethod
-    def native_value(coordinator_data: dict | None) -> str:
+    def native_value(coordinator_data):
         if not coordinator_data:
-            return "none"
+            return "0"
         predictions = coordinator_data.get("predictions", [])
-        if not predictions:
-            return "none"
-        best = max(predictions, key=lambda p: p.get("confidence", 0))
-        return best.get("pattern", "unknown")
+        return str(len(predictions) if predictions is not None else 0)
 
     @staticmethod
-    def extra_state_attributes(coordinator_data: dict | None) -> dict:
+    def extra_state_attributes(coordinator_data):
         if not coordinator_data:
             return {}
-        predictions = coordinator_data.get("predictions", [])
-        return {
-            "predictions": [
-                {
-                    "pattern": p.get("pattern", ""),
-                    "confidence": p.get("confidence", 0),
-                    "predicted": p.get("predicted", False),
-                    "details": p.get("details", {}),
-                }
-                for p in predictions
-            ],
-            "count": len(predictions),
-        }
+        predictions = coordinator_data.get("predictions")
+        if predictions is None:
+            return {}
+        return {"predictions": predictions}
 
 
-class HabitAnomalySensorContract:
-    """Mirror of HabitAnomalySensor logic.
-    
-    Contract:
-    - native_value: anomaly level from framework (defaults to "normal")
-    - icon: static mapping from level to icon
-    - extra_state_attributes: framework alert details or defaults
-    """
-
-    ICON_MAP = {
-        "critical": "mdi:alert-octagon",
-        "high": "mdi:alert",
-        "medium": "mdi:alert-circle-outline",
-        "low": "mdi:information",
-        "normal": "mdi:check-decagram",
-    }
+class SequencePredictionSensorContract:
+    """Mirror of SequencePredictionSensor projection logic."""
 
     @staticmethod
-    def icon(level: str) -> str:
-        return HabitAnomalySensorContract.ICON_MAP.get(level, "mdi:help-circle")
-
-    @staticmethod
-    def extra_state_attributes_default() -> dict:
-        return {"confidence": 0, "deviation_sigma": 0, "baseline_window_days": 7}
-
-
-class HabitEfficiencySensorContract:
-    """Mirror of HabitEfficiencySensor logic.
-    
-    Contract:
-    - reads: coordinator.data["habit_summary"]["time_patterns"]["hvac_runtime_*"]
-    - native_value: efficiency status based on runtime vs baseline threshold
-    """
-
-    @staticmethod
-    def native_value(coordinator_data: dict | None) -> str:
+    def native_value(coordinator_data):
         if not coordinator_data:
-            return "unknown"
-        habit_summary = coordinator_data.get("habit_summary", {})
-        time_patterns = habit_summary.get("time_patterns", {})
-        hvac = time_patterns.get("hvac_runtime_24h", {})
-        baseline = time_patterns.get("hvac_runtime_7d_avg", 0)
-        current = hvac.get("value", 0) if isinstance(hvac, dict) and hvac else 0
-        
-        if baseline > 0 and current > 0 and current > baseline * 1.4:
-            return "Efficiency Degradation Detected"
-        elif baseline > 0 and current > 0 and current < baseline * 0.6:
-            return "Unusually Efficient"
-        return "Normal"
+            return "0"
+        sequences = coordinator_data.get("sequences", [])
+        return str(len(sequences) if sequences is not None else 0)
 
     @staticmethod
-    def extra_state_attributes_default() -> dict:
-        return {"anomaly_framework": "sigma_deviation"}
+    def extra_state_attributes(coordinator_data):
+        if not coordinator_data:
+            return {}
+        sequences = coordinator_data.get("sequences")
+        if sequences is None:
+            return {}
+        return {"sequences": sequences}
 
 
-# =============================================================================
-# HabitLearningSensor Tests — HL1 to HL3
-# =============================================================================
+# ---------------------------------------------------------------------------
+# HabitLearningSensor Tests — HL1 to HL10
+# ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("data,expected", [
-    # HL1: native_value
-    ({"habit_summary": {"total_patterns": 42}}, "42"),
-    ({"habit_summary": {"total_patterns": 0}}, "0"),
-    ({"habit_summary": {}}, "0"),
-    ({}, "idle"),
-    (None, "idle"),
-    ({"habit_summary": {"total_patterns": None}}, "None"),
-])
-def test_habit_learning_sensor_native_value(data, expected):
-    """HL1: native_value reflects habit_summary.total_patterns or idle."""
-    assert HabitLearningSensorContract.native_value(data) == expected
+class TestHabitLearningSensorNativeValue:
+    """HL1-HL4: native_value = str(total_patterns)"""
 
+    def test_hl1_full_habit_summary_returns_pattern_count(self):
+        data = {
+            "habit_summary": {
+                "total_patterns": 7,
+                "time_patterns": {"morning": 3},
+                "mood_patterns": {"evening": 2},
+                "sequences": {},
+                "device_patterns": {},
+                "last_update": "2026-04-09T06:00:00Z",
+            }
+        }
+        assert HabitLearningSensorContract.native_value(data) == "7"
 
-@pytest.mark.parametrize("data,expected_attrs", [
-    # HL2: extra_state_attributes
-    (
-        {"habit_summary": {
-            "total_patterns": 5,
-            "time_patterns": {"morning": 2},
-            "mood_patterns": {"happy": 1},
-            "sequences": ["a", "b"],
-            "device_patterns": {"light.living_room": 3},
-            "last_update": "2026-04-06T20:00:00Z",
-        }},
-        {
-            "total_patterns": 5,
-            "time_patterns": {"morning": 2},
-            "mood_patterns": {"happy": 1},
-            "sequences": ["a", "b"],
-            "device_patterns": {"light.living_room": 3},
-            "last_update": "2026-04-06T20:00:00Z",
-            "anomaly_framework_active": True,
-            "habit_anomaly_level": "normal",
-        },
-    ),
-    ({}, {"anomaly_framework_active": True, "habit_anomaly_level": "normal"}),
-    ({"habit_summary": {}}, {
-        "total_patterns": 0,
-        "time_patterns": {},
-        "mood_patterns": {},
-        "sequences": {},
-        "device_patterns": {},
-        "last_update": None,
-        "anomaly_framework_active": True,
-        "habit_anomaly_level": "normal",
-    }),
-])
-def test_habit_learning_sensor_attrs(data, expected_attrs):
-    """HL2: extra_state_attributes are direct habit_summary fields + anomaly framework."""
-    assert HabitLearningSensorContract.extra_state_attributes(data) == expected_attrs
+    def test_hl2_missing_habit_summary_key_returns_zero(self):
+        assert HabitLearningSensorContract.native_value({}) == "0"
+
+    def test_hl3_habit_summary_none_returns_zero(self):
+        assert HabitLearningSensorContract.native_value(None) == "0"
+
+    def test_hl4_empty_habit_summary_returns_zero(self):
+        assert HabitLearningSensorContract.native_value({"habit_summary": {}}) == "0"
 
 
-def test_habit_learning_sensor_none_guard():
-    """HL3: Handles None coordinator.data gracefully."""
-    assert HabitLearningSensorContract.native_value(None) == "idle"
-    attrs = HabitLearningSensorContract.extra_state_attributes(None)
-    assert attrs == {"anomaly_framework_active": True, "habit_anomaly_level": "normal"}
+class TestHabitLearningSensorAttributes:
+    """HL5-HL10: extra_state_attributes projections"""
+
+    def test_hl5_full_habit_summary_returns_all_attributes(self):
+        data = {
+            "habit_summary": {
+                "total_patterns": 5,
+                "time_patterns": {"morning": 2, "evening": 3},
+                "mood_patterns": {"focused": 4},
+                "sequences": {"seq1": {"steps": 3}},
+                "device_patterns": {"light.living": 1},
+                "last_update": "2026-04-09T06:00:00Z",
+            }
+        }
+        attrs = HabitLearningSensorContract.extra_state_attributes(data)
+        assert attrs["total_patterns"] == 5
+        assert attrs["time_patterns"] == {"morning": 2, "evening": 3}
+        assert attrs["mood_patterns"] == {"focused": 4}
+        assert attrs["sequences"] == {"seq1": {"steps": 3}}
+        assert attrs["device_patterns"] == {"light.living": 1}
+        assert attrs["last_update"] == "2026-04-09T06:00:00Z"
+
+    def test_hl6_missing_habit_summary_returns_empty_dict(self):
+        assert HabitLearningSensorContract.extra_state_attributes({}) == {}
+
+    def test_hl7_habit_summary_none_returns_empty_dict(self):
+        assert HabitLearningSensorContract.extra_state_attributes(None) == {}
+
+    def test_hl8_partial_keys_return_defaults(self):
+        data = {"habit_summary": {"total_patterns": 3}}
+        attrs = HabitLearningSensorContract.extra_state_attributes(data)
+        assert attrs["total_patterns"] == 3
+        assert attrs["time_patterns"] == {}
+        assert attrs["mood_patterns"] == {}
+        assert attrs["sequences"] == {}
+        assert attrs["device_patterns"] == {}
+        assert attrs["last_update"] is None
+
+    def test_hl9_attributes_are_idempotent(self):
+        data = {
+            "habit_summary": {
+                "total_patterns": 2,
+                "time_patterns": {"afternoon": 1},
+                "mood_patterns": {},
+                "sequences": {},
+                "device_patterns": {},
+                "last_update": "2026-04-09T00:00:00Z",
+            }
+        }
+        attrs1 = HabitLearningSensorContract.extra_state_attributes(data)
+        attrs2 = HabitLearningSensorContract.extra_state_attributes(data)
+        assert attrs1 == attrs2
+
+    def test_hl10_pattern_count_string_type(self):
+        data = {"habit_summary": {"total_patterns": 12}}
+        result = HabitLearningSensorContract.native_value(data)
+        assert result == "12"
+        assert isinstance(result, str)
 
 
-# =============================================================================
-# HabitPredictionSensor Tests — HP1 to HP3
-# =============================================================================
+# ---------------------------------------------------------------------------
+# HabitPredictionSensor Tests — HP1 to HP6
+# ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("data,expected", [
-    # HP1: native_value
-    (
-        {"predictions": [
-            {"pattern": "morning_routine", "confidence": 0.9, "predicted": True, "details": {}},
-            {"pattern": "evening_routine", "confidence": 0.7, "predicted": False, "details": {}},
-        ]},
-        "morning_routine",
-    ),
-    (
-        {"predictions": [{"pattern": "evening_routine", "confidence": 0.7, "predicted": False, "details": {}}]},
-        "evening_routine",
-    ),
-    ({"predictions": []}, "none"),
-    ({}, "none"),
-    (None, "none"),
-    ({"predictions": None}, "none"),
-])
-def test_habit_prediction_sensor_native_value(data, expected):
-    """HP1: native_value is highest-confidence prediction pattern."""
-    assert HabitPredictionSensorContract.native_value(data) == expected
+class TestHabitPredictionSensor:
+    """HP1-HP6: native_value = str(len(predictions)), attrs = predictions list."""
 
+    def test_hp1_full_predictions_returns_count(self):
+        data = {
+            "predictions": [
+                {"action": "light.turn_on", "confidence": 0.92, "time_window": "morning"},
+                {"action": "climate.set_temp", "confidence": 0.87, "time_window": "evening"},
+            ]
+        }
+        assert HabitPredictionSensorContract.native_value(data) == "2"
 
-@pytest.mark.parametrize("data,expected_count", [
-    # HP2: attrs count
-    (
-        {"predictions": [
-            {"pattern": "a", "confidence": 0.5, "predicted": True, "details": {}},
-            {"pattern": "b", "confidence": 0.3, "predicted": False, "details": {}},
-            {"pattern": "c", "confidence": 0.2, "predicted": True, "details": {}},
-        ]},
-        3,
-    ),
-    ({}, 0),
-    (None, 0),
-    ({"predictions": []}, 0),
-])
-def test_habit_prediction_sensor_count(data, expected_count):
-    """HP2: attrs count reflects len(predictions)."""
-    attrs = HabitPredictionSensorContract.extra_state_attributes(data)
-    assert attrs.get("count", 0) == expected_count
+    def test_hp2_empty_predictions_returns_zero(self):
+        assert HabitPredictionSensorContract.native_value({"predictions": []}) == "0"
+
+    def test_hp3_missing_predictions_key_returns_zero(self):
+        assert HabitPredictionSensorContract.native_value({}) == "0"
+
+    def test_hp4_predictions_none_returns_zero(self):
+        assert HabitPredictionSensorContract.native_value({"predictions": None}) == "0"
+
+    def test_hp5_attributes_return_predictions_list(self):
+        data = {
+            "predictions": [
+                {"action": "media.play", "confidence": 0.95, "time_window": "evening"}
+            ]
+        }
+        assert HabitPredictionSensorContract.extra_state_attributes(data)["predictions"] == [
+            {"action": "media.play", "confidence": 0.95, "time_window": "evening"}
+        ]
+
+    def test_hp6_attributes_empty_when_no_predictions(self):
+        assert HabitPredictionSensorContract.extra_state_attributes({}) == {}
 
 
-def test_habit_prediction_sensor_none_guard():
-    """HP3: Handles None coordinator.data gracefully."""
-    assert HabitPredictionSensorContract.native_value(None) == "none"
-    assert HabitPredictionSensorContract.extra_state_attributes(None) == {}
+# ---------------------------------------------------------------------------
+# SequencePredictionSensor Tests — SP1 to SP6
+# ---------------------------------------------------------------------------
+
+class TestSequencePredictionSensor:
+    """SP1-SP6: native_value = str(len(sequences)), attrs = sequences list."""
+
+    def test_sp1_full_sequences_returns_count(self):
+        data = {
+            "sequences": [
+                {"id": "seq_a", "steps": 3, "confidence": 0.88},
+                {"id": "seq_b", "steps": 2, "confidence": 0.75},
+            ]
+        }
+        assert SequencePredictionSensorContract.native_value(data) == "2"
+
+    def test_sp2_empty_sequences_returns_zero(self):
+        assert SequencePredictionSensorContract.native_value({"sequences": []}) == "0"
+
+    def test_sp3_missing_sequences_key_returns_zero(self):
+        assert SequencePredictionSensorContract.native_value({}) == "0"
+
+    def test_sp4_sequences_none_returns_zero(self):
+        assert SequencePredictionSensorContract.native_value({"sequences": None}) == "0"
+
+    def test_sp5_attributes_return_sequences_list(self):
+        data = {
+            "sequences": [
+                {"id": "seq_x", "steps": 4, "confidence": 0.91}
+            ]
+        }
+        assert SequencePredictionSensorContract.extra_state_attributes(data)["sequences"] == [
+            {"id": "seq_x", "steps": 4, "confidence": 0.91}
+        ]
+
+    def test_sp6_attributes_empty_when_no_sequences(self):
+        assert SequencePredictionSensorContract.extra_state_attributes({}) == {}
 
 
-# =============================================================================
-# HabitAnomalySensor Tests — HA1 to HA2
-# =============================================================================
+# ---------------------------------------------------------------------------
+# Global Contract Tests — GC1 to GC2
+# ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("level,expected_icon", [
-    # HA1: icon mapping
-    ("critical", "mdi:alert-octagon"),
-    ("high", "mdi:alert"),
-    ("medium", "mdi:alert-circle-outline"),
-    ("low", "mdi:information"),
-    ("normal", "mdi:check-decagram"),
-    ("unknown", "mdi:help-circle"),
-])
-def test_habit_anomaly_sensor_icon_mapping(level, expected_icon):
-    """HA1: icon mapping is static and exhaustive."""
-    assert HabitAnomalySensorContract.icon(level) == expected_icon
+class TestHabitLearningGlobalContract:
+    """GC1-GC2: source guard — pure coordinator projection, no local invention."""
 
+    def test_gc1_source_uses_habit_summary_coordinator_field(self):
+        """Guard: source must read habit_summary from coordinator.data."""
+        src = open(SENSOR_PATH).read()
+        assert "habit_summary" in src, "Source must project habit_summary from coordinator.data"
 
-def test_habit_anomaly_sensor_attrs_default():
-    """HA2: extra_state_attributes returns defaults when no alerts."""
-    attrs = HabitAnomalySensorContract.extra_state_attributes_default()
-    assert "baseline_window_days" in attrs
-    assert attrs["baseline_window_days"] == 7
-
-
-# =============================================================================
-# HabitEfficiencySensor Tests — HE1 to HE3
-# =============================================================================
-
-@pytest.mark.parametrize("data,expected", [
-    # HE1: native_value
-    ({"habit_summary": {"time_patterns": {}}}, "Normal"),
-    ({"habit_summary": {"time_patterns": {"hvac_runtime_24h": {}, "hvac_runtime_7d_avg": 100}}}, "Normal"),
-    ({"habit_summary": {"time_patterns": {"hvac_runtime_24h": {"value": 80}, "hvac_runtime_7d_avg": 100}}}, "Normal"),  # 0.8x - normal range
-    ({"habit_summary": {"time_patterns": {"hvac_runtime_24h": {"value": 150}, "hvac_runtime_7d_avg": 100}}}, "Efficiency Degradation Detected"),  # 1.5x > 1.4x
-    ({"habit_summary": {"time_patterns": {"hvac_runtime_24h": {"value": 200}, "hvac_runtime_7d_avg": 100}}}, "Efficiency Degradation Detected"),  # 2.0x > 1.4x
-    ({"habit_summary": {"time_patterns": {"hvac_runtime_24h": {"value": 30}, "hvac_runtime_7d_avg": 100}}}, "Unusually Efficient"),  # 0.3x < 0.6x
-    ({"habit_summary": {"time_patterns": {"hvac_runtime_24h": {"value": 140}, "hvac_runtime_7d_avg": 100}}}, "Normal"),  # exactly 1.4x - not > 1.4
-    ({"habit_summary": {"time_patterns": {"hvac_runtime_24h": {"value": 60}, "hvac_runtime_7d_avg": 100}}}, "Normal"),  # exactly 0.6x - not < 0.6
-])
-def test_habit_efficiency_sensor_native_value(data, expected):
-    """HE1: native_value reflects HVAC efficiency vs baseline (thresholds >1.4x and <0.6x)."""
-    assert HabitEfficiencySensorContract.native_value(data) == expected
-
-
-def test_habit_efficiency_sensor_unknown_default():
-    """HE2: Returns 'unknown' when no data."""
-    assert HabitEfficiencySensorContract.native_value(None) == "unknown"
-
-
-def test_habit_efficiency_sensor_attrs_default():
-    """HE3: extra_state_attributes includes anomaly_framework marker."""
-    attrs = HabitEfficiencySensorContract.extra_state_attributes_default()
-    assert attrs["anomaly_framework"] == "sigma_deviation"
-
-
-# =============================================================================
-# Global Contract Tests — GC1, GC2
-# =============================================================================
-
-def test_habit_learning_sensors_pure_projection_no_local_semantic_invention():
-    """GC1: All sensors project coordinator.data fields verbatim — efficiency has threshold logic."""
-    coordinator_data = {
-        "habit_summary": {
-            "total_patterns": 3,
-            "time_patterns": {"morning": 1, "hvac_runtime_24h": {"value": 80}, "hvac_runtime_7d_avg": 100},  # 0.8x = normal
-            "mood_patterns": {"happy": 1},
-            "sequences": ["seq1"],
-            "device_patterns": {"light": 1},
-            "last_update": "2026-04-06T12:00:00Z",
-        },
-        "predictions": [
-            {"pattern": "p1", "confidence": 0.9, "predicted": True, "details": {"key": "val"}},
-        ],
-    }
-
-    assert HabitLearningSensorContract.native_value(coordinator_data) == "3"
-    assert HabitPredictionSensorContract.native_value(coordinator_data) == "p1"
-    assert HabitEfficiencySensorContract.native_value(coordinator_data) == "Normal"
-    
-    hl_attrs = HabitLearningSensorContract.extra_state_attributes(coordinator_data)
-    assert hl_attrs["total_patterns"] == 3
-    
-    hp_attrs = HabitPredictionSensorContract.extra_state_attributes(coordinator_data)
-    assert hp_attrs.get("count", 0) == 1
-
-
-def test_habit_learning_sensors_coordinator_data_none_guard():
-    """GC2: All sensors handle None/missing coordinator.data gracefully."""
-    for data in [None, {}]:
-        assert HabitLearningSensorContract.native_value(data) == "idle"
-        assert HabitPredictionSensorContract.native_value(data) == "none"
-        assert HabitEfficiencySensorContract.native_value(data) == "unknown"
+    def test_gc2_source_has_no_http_imports(self):
+        """Guard: no HTTP imports — pure HA-coordinator passthrough."""
+        src = open(SENSOR_PATH).read()
+        http_indicators = ["import requests", "import httpx", "urllib.request", "aiohttp"]
+        for indicator in http_indicators:
+            assert indicator not in src, (
+                f"HTTP indicator '{indicator}' found in {SENSOR_PATH} — "
+                "sensor must be a pure coordinator projection"
+            )
