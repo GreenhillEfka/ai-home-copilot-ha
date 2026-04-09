@@ -3,7 +3,17 @@
 Verifies AnomalyAlertSensor + AlertHistorySensor are pure Projection-Shells
 on coordinator.data — triviale Dict-Lookups, keine lokale Semantik-Invention.
 """
+from __future__ import annotations
+
+import sys
+from unittest.mock import MagicMock, AsyncMock, patch
+
 import pytest
+
+# Align pilotsuite test imports with the existing lightweight coordinator stub.
+sys.modules["custom_components.pilotsuite.coordinator"] = sys.modules[
+    "custom_components.copilot_ha.coordinator"
+]
 
 
 # ─── AnomalyAlertSensor contract mirrors ─────────────────────────────────────
@@ -266,7 +276,7 @@ class TestGlobalContract:
     def test_gc1_no_local_logic(self):
         """Verify both sensors only read coordinator.data, no computation."""
         import inspect
-        from custom_components.copilot_ha.sensors.anomaly_alert import (
+        from custom_components.pilotsuite.sensors.anomaly_alert import (
             AnomalyAlertSensor,
             AlertHistorySensor,
         )
@@ -283,7 +293,7 @@ class TestGlobalContract:
 
     def test_gc2_coordinator_entity_pattern(self):
         """Both sensors use CoordinatorEntity inheritance."""
-        from custom_components.copilot_ha.sensors.anomaly_alert import (
+        from custom_components.pilotsuite.sensors.anomaly_alert import (
             AnomalyAlertSensor,
             AlertHistorySensor,
         )
