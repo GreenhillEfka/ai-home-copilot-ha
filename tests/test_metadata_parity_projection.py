@@ -1,7 +1,7 @@
-"""Metadata parity guard for PilotSuite HA (HA-217, HA-229).
+"""Metadata parity guard for PilotSuite HA.
 
 Verifies the HACS / manifest / VERSION files stay aligned on the landed
-v20.0.0 repo contract and do not drift back to stale metadata.
+repo contract and do not drift back to stale metadata.
 """
 from __future__ import annotations
 
@@ -46,12 +46,13 @@ def test_manifest_contract_matches_hacs_release_metadata() -> None:
     assert component_manifest["config_flow"] is True
     assert component_manifest["documentation"] == "https://github.com/GreenhillEfka/pilotsuite-styx-ha"
     assert component_manifest["codeowners"] == ["@GreenhillEfka"]
+    assert component_manifest["homeassistant"] == "2024.4.0"
 
     assert hacs["name"] == "PilotSuite"
     assert hacs["content_in_root"] is False
     assert hacs["render_readme"] is True
     assert hacs["zip_release"] is False
-    assert hacs["homeassistant"] == "2024.1.0"
+    assert hacs["homeassistant"] == component_manifest["homeassistant"]
 
 
 def test_component_version_stub_is_absent() -> None:
@@ -73,3 +74,4 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
     assert '"version": "16.0.0"' not in text
     assert '"iot_class": "local_push"' not in text
     assert '"zip_release": true' not in text
+    assert '"homeassistant": "2024.1.0"' not in text
