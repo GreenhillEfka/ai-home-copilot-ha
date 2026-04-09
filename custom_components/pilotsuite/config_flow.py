@@ -59,12 +59,16 @@ from .const import (
     DOMAIN,
     INTEGRATION_UNIQUE_ID,
 )
+
+# HA config-flow registration must match manifest.json domain exactly.
+# Keep DOMAIN="copilot_ha" for internal hass.data/storage namespaces only.
+CONFIG_FLOW_DOMAIN = "pilotsuite"
 from .setup_wizard import SetupWizard
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=CONFIG_FLOW_DOMAIN):
     VERSION = 1
 
     # Shared pending reconfigure data (accumulates across steps before final commit)
