@@ -11,7 +11,7 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from custom_components.copilot_ha.sensors.regional_context_sensor import (
+from custom_components.pilotsuite.sensors.regional_context_sensor import (
     RegionalContextSensor,
 )
 
