@@ -94,7 +94,7 @@ def mock_coordinator():
 
 # Import nach Fixtures, um Mocks aktiv zu haben
 with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession"):
-    from custom_components.copilot_ha.sensors.hub_dashboard_sensor import (
+    from custom_components.pilotsuite.sensors.hub_dashboard_sensor import (
         HubDashboardSensor,
         HubPluginsSensor,
         HubMultiHomeSensor,
