@@ -36,6 +36,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+if False:  # pragma: no cover
+    from .area_presence_sensor_factory import SensorFactoryConfig
+
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
@@ -130,6 +133,8 @@ class AreaPresenceSensor(CopilotBaseEntity, BinarySensorEntity):
         ble_entities: list[str] | None = None,
         person_entities: list[str] | None = None,
         timeouts: dict[str, int] | None = None,
+        factory_config: "SensorFactoryConfig | None" = None,
+        source_summary: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(coordinator)
         self._entry = entry
@@ -156,6 +161,8 @@ class AreaPresenceSensor(CopilotBaseEntity, BinarySensorEntity):
         self._last_core_update: Optional[datetime] = None
         self._last_presence_persist: Optional[datetime] = None
         self._unsub: Optional[Any] = None
+        self._factory_config = factory_config
+        self._source_summary = source_summary or {}
 
         # Throttle: persist presence to Core at most every 30 s
         self._PRESENCE_PERSIST_INTERVAL_S = 30
@@ -200,6 +207,13 @@ class AreaPresenceSensor(CopilotBaseEntity, BinarySensorEntity):
             "motion_entities": self._motion_entities,
             "ble_entities": self._ble_entities,
             "person_entities": self._person_entities,
+            "factory_config": {
+                "resolution_strategy": getattr(self._factory_config, "resolution_strategy", None),
+                "temporal_window_seconds": getattr(self._factory_config, "temporal_window_seconds", None),
+                "min_sources": getattr(self._factory_config, "min_sources", None),
+                "max_sources": getattr(self._factory_config, "max_sources", None),
+            },
+            "source_summary": self._source_summary,
         }
 
     # ── Lifecycle ───────────────────────────────────────────────────

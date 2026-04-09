@@ -164,7 +164,50 @@ def test_apf4_discover_persons_matches_home_persons_by_zone_and_area() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_apf5_build_returns_empty_when_no_zones(monkeypatch) -> None:
+def test_apf5_factory_config_defaults_to_union_and_binary_sensor() -> None:
+    zone = HabitusZoneV2(zone_id="zone:wohnzimmer", name="Wohnzimmer")
+
+    config = factory._build_factory_config(zone)
+
+    assert config.sensor_domain == "binary_sensor"
+    assert config.resolution_strategy == "union"
+    assert config.unique_id_template == "area_presence_{zone_id}"
+    assert config.min_sources == 1
+
+
+def test_apf6_resolve_presence_sources_marks_missing_entities_as_degraded() -> None:
+    zone = HabitusZoneV2(
+        zone_id="zone:wohnzimmer",
+        name="Wohnzimmer",
+        entities={
+            "motion": (
+                "binary_sensor.mmwave_sofa",
+                "binary_sensor.missing_motion",
+            ),
+        },
+        metadata={"ha_area_ids": ["wohnzimmer"]},
+    )
+    hass = SimpleNamespace(
+        states=FakeStates(
+            [
+                MockState("binary_sensor.mmwave_sofa", "on", {"device_class": "presence"}),
+                MockState("person.alice", "home", {"zone": "Wohnzimmer"}),
+            ]
+        )
+    )
+
+    resolved = asyncio.run(
+        factory._resolve_presence_sources(hass, zone, factory._build_factory_config(zone))
+    )
+
+    assert resolved.degraded is True
+    assert resolved.mmwave_entities == ("binary_sensor.mmwave_sofa",)
+    assert resolved.person_entities == ("person.alice",)
+    assert resolved.missing_entities == ("binary_sensor.missing_motion",)
+    assert "binary_sensor.missing_motion" in resolved.candidate_entities
+
+
+def test_apf7_build_returns_empty_when_no_zones(monkeypatch) -> None:
     async def fake_get_zones_v2(hass, entry_id):
         return []
 
@@ -183,7 +226,7 @@ def test_apf5_build_returns_empty_when_no_zones(monkeypatch) -> None:
     assert sensors == []
 
 
-def test_apf6_build_creates_sensor_with_split_ble_and_person_sources(monkeypatch) -> None:
+def test_apf8_build_creates_sensor_with_split_ble_and_person_sources(monkeypatch) -> None:
     zone = HabitusZoneV2(
         zone_id="zone:wohnzimmer",
         name="Wohnzimmer",
@@ -235,9 +278,11 @@ def test_apf6_build_creates_sensor_with_split_ble_and_person_sources(monkeypatch
     assert sensor.motion_entities == ["binary_sensor.motion_hall", "binary_sensor.motion_tv"]
     assert sensor.ble_entities == ["device_tracker.phone_alice"]
     assert sensor.person_entities == ["person.alice"]
+    assert sensor.kwargs["factory_config"].resolution_strategy == "union"
+    assert sensor.kwargs["source_summary"]["resolved_sources"]["ble"] == ["device_tracker.phone_alice"]
 
 
-def test_apf7_build_skips_zone_without_any_sources(monkeypatch) -> None:
+def test_apf9_build_skips_zone_without_any_sources(monkeypatch) -> None:
     zone = HabitusZoneV2(
         zone_id="zone:leer",
         name="Leer",
@@ -282,12 +327,15 @@ def test_gc1_factory_targets_zone_store_and_presence_discovery_pipeline() -> Non
     assert "_split_mmwave_motion" in src
     assert "_discover_ble_trackers" in src
     assert "_discover_persons_for_zone" in src
+    assert "_resolve_presence_sources" in src
+    assert "SensorFactoryConfig" in src
+    assert "ValidatedSourceSet" in src
     assert "zone.zone_id.replace(\"zone:\", \"\")" in src
 
 
 def test_gc2_factory_skips_zones_without_discovered_presence_sources() -> None:
     src = open("custom_components/pilotsuite/sensors/area_presence_sensor_factory.py").read()
-    assert "if not has_sources:" in src
+    assert "sources.total_sources < config.min_sources" in src
     assert "continue" in src
     assert "role == \"motion\"" in src
     assert "elif role in (\"door\", \"window\", \"lock\")" in src
