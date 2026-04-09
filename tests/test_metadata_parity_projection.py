@@ -39,12 +39,15 @@ def test_manifest_contract_matches_hacs_release_metadata() -> None:
     root_manifest = _load_json(ROOT_MANIFEST)
     component_manifest = _load_json(COMPONENT_MANIFEST)
     hacs = _load_json(HACS_FILE)
+    repo_url = component_manifest["documentation"]
+    repo_slug = repo_url.rstrip("/").rsplit("/", 1)[-1]
 
     assert root_manifest["iot_class"] == "local_polling"
     assert component_manifest["iot_class"] == "local_polling"
     assert root_manifest["config_flow"] is True
     assert component_manifest["config_flow"] is True
-    assert component_manifest["documentation"] == "https://github.com/GreenhillEfka/pilotsuite-styx-ha"
+    assert repo_url == "https://github.com/GreenhillEfka/pilotsuite-styx-ha"
+    assert component_manifest["issue_tracker"] == f"{repo_url}/issues"
     assert component_manifest["codeowners"] == ["@GreenhillEfka"]
     assert component_manifest["homeassistant"] == "2024.4.0"
 
@@ -52,6 +55,7 @@ def test_manifest_contract_matches_hacs_release_metadata() -> None:
     assert hacs["content_in_root"] is False
     assert hacs["render_readme"] is True
     assert hacs["zip_release"] is False
+    assert hacs["filename"] == f"{repo_slug}.zip"
     assert hacs["homeassistant"] == component_manifest["homeassistant"]
 
 
@@ -74,4 +78,5 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
     assert '"version": "16.0.0"' not in text
     assert '"iot_class": "local_push"' not in text
     assert '"zip_release": true' not in text
+    assert '"filename": "copilot-ha.zip"' not in text
     assert '"homeassistant": "2024.1.0"' not in text
