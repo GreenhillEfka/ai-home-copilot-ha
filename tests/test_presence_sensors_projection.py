@@ -15,8 +15,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from custom_components.copilot_ha.coordinator import CopilotDataUpdateCoordinator
-from custom_components.copilot_ha.sensors.presence_sensors import (
+from custom_components.pilotsuite.coordinator import CopilotDataUpdateCoordinator
+from custom_components.pilotsuite.sensors.presence_sensors import (
     _MAX_ACTIVE_SOURCES,
     _MAX_SOCIAL_PERSONS,
     _fallback_direct_states,
