@@ -111,7 +111,7 @@ def mock_coordinator(mock_hass):
 
 @pytest.fixture
 def sensor(mock_coordinator):
-    from custom_components.copilot_ha.sensors.weather_optimizer_sensor import (
+    from custom_components.pilotsuite.sensors.weather_optimizer_sensor import (
         WeatherOptimizerSensor,
     )
     sensor = WeatherOptimizerSensor(mock_coordinator)
