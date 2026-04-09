@@ -83,11 +83,11 @@ class FuelCompareContract:
 
 def build_sensor(coordinator):
     """Instantiate FuelPriceSensor with required sys.modules stubs."""
-    _root = os.path.join(os.path.dirname(__file__), "..", "custom_components", "copilot_ha")
+    _root = os.path.join(os.path.dirname(__file__), "..", "custom_components", "pilotsuite")
     for _name, _path in [
         ("custom_components", None),
-        ("custom_components.copilot_ha", _root),
-        ("custom_components.copilot_ha.sensors", os.path.join(_root, "sensors")),
+        ("custom_components.pilotsuite", _root),
+        ("custom_components.pilotsuite.sensors", os.path.join(_root, "sensors")),
     ]:
         if _name not in sys.modules:
             mod = types.ModuleType(_name)
@@ -95,7 +95,7 @@ def build_sensor(coordinator):
                 mod.__path__ = [_path]
             sys.modules[_name] = mod
 
-    from custom_components.copilot_ha.sensors.fuel_price_sensor import FuelPriceSensor
+    from custom_components.pilotsuite.sensors.fuel_price_sensor import FuelPriceSensor
     return FuelPriceSensor(coordinator)
 
 
@@ -260,12 +260,12 @@ def test_fp9_attrs_both_endpoints_fail(coordinator):
 # ─── Global Contract ────────────────────────────────────────────────────────────
 
 def test_gc1_hits_core_api_endpoints(coordinator):
-    """GC1: Sensor fetches from /api/v1/regional/fuel/prices and /api/v1/regional/fuel/compare.
+    """"GC1: Sensor fetches from /api/v1/regional/fuel/prices and /api/v1/regional/fuel/compare.
 
     Verified by code inspection: async_update() makes two aiohttp GET calls to
     f"{base}/fuel/prices" and f"{base}/fuel/compare" in parallel.
     """
-    from custom_components.copilot_ha.sensors.fuel_price_sensor import FuelPriceSensor
+    from custom_components.pilotsuite.sensors.fuel_price_sensor import FuelPriceSensor
     import inspect
     source = inspect.getsource(FuelPriceSensor.async_update)
     assert "/fuel/prices" in source, "Must hit /api/v1/regional/fuel/prices"
