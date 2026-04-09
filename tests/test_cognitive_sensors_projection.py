@@ -10,8 +10,20 @@ Sensors:
 from __future__ import annotations
 
 from datetime import datetime
+import sys
 from typing import Any
 from unittest.mock import MagicMock, AsyncMock, patch
+
+# conftest must be importable
+try:
+    import conftest as _conftest
+except ImportError:
+    import tests.conftest as _conftest  # noqa: F401
+
+# Align pilotsuite test imports with the existing lightweight coordinator stub.
+sys.modules["custom_components.pilotsuite.coordinator"] = sys.modules[
+    "custom_components.copilot_ha.coordinator"
+]
 
 import pytest
 
@@ -335,7 +347,7 @@ class TestGlobalContract:
 
     def test_GC1_no_core_api_dependency(self):
         """GC1: cognitive_sensors use only HA states — no _core_base_url or _core_headers class attributes."""
-        from custom_components.copilot_ha.sensors.cognitive_sensors import AttentionLoadSensor, StressProxySensor
+        from custom_components.pilotsuite.sensors.cognitive_sensors import AttentionLoadSensor, StressProxySensor
         
         # Verify sensor classes don't define Core API attributes
         assert not hasattr(AttentionLoadSensor, '_core_base_url')
@@ -345,7 +357,7 @@ class TestGlobalContract:
 
     def test_GC2_ha_local_only(self):
         """GC2: Both sensors are HA-local projections — use hass.states, no _fetch method."""
-        from custom_components.copilot_ha.sensors.cognitive_sensors import AttentionLoadSensor, StressProxySensor
+        from custom_components.pilotsuite.sensors.cognitive_sensors import AttentionLoadSensor, StressProxySensor
         
         # Verify sensor classes don't have Core API _fetch method
         assert not hasattr(AttentionLoadSensor, '_fetch')
