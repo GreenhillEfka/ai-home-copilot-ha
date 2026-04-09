@@ -300,7 +300,7 @@ class TestCalendarLoadSensorIcon:
         """CL18: icon is static mdi:calendar-clock."""
         # The sensor defines _attr_icon = "mdi:calendar-clock" as class attribute
         # This is verified by importing and checking the class
-        from custom_components.copilot_ha.sensors.calendar_sensors import CalendarLoadSensor
+        from custom_components.pilotsuite.sensors.calendar_sensors import CalendarLoadSensor
         
         # Create a minimal mock coordinator for instantiation
         mock_coordinator = MagicMock()
@@ -326,7 +326,7 @@ class TestGlobalContract:
         - Only hass.states.async_all("calendar") + calendar.get_events service
         """
         import inspect
-        from custom_components.copilot_ha.sensors.calendar_sensors import CalendarLoadSensor
+        from custom_components.pilotsuite.sensors.calendar_sensors import CalendarLoadSensor
         
         source = inspect.getsource(CalendarLoadSensor.async_update)
         
@@ -344,7 +344,7 @@ class TestGlobalContract:
         - Optional module_connector.calendar_context fallback (still HA-local)
         """
         import inspect
-        from custom_components.copilot_ha.sensors.calendar_sensors import CalendarLoadSensor
+        from custom_components.pilotsuite.sensors.calendar_sensors import CalendarLoadSensor
         
         source = inspect.getsource(CalendarLoadSensor.async_update)
         

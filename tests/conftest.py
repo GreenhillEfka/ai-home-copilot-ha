@@ -65,6 +65,13 @@ stub("custom_components.copilot_ha.coordinator")
 _coord = sys.modules["custom_components.copilot_ha.coordinator"]
 _coord.CopilotDataUpdateCoordinator = type("CopilotDataUpdateCoordinator", (object,), {"__init__": lambda self, *a, **k: None})
 
+# Alias pilotsuite.coordinator to copilot_ha.coordinator stub so sensor
+# imports via "from ..coordinator import CopilotDataUpdateCoordinator" resolve
+# in tests that use the real pilotsuite sensor path (HA-281)
+stub("custom_components.pilotsuite.coordinator")
+_pilotsuite_coord = sys.modules["custom_components.pilotsuite.coordinator"]
+_pilotsuite_coord.CopilotDataUpdateCoordinator = _coord.CopilotDataUpdateCoordinator
+
 # ─── package tree (homeassistant + all submodules) ────────────────────────────────
 stub("homeassistant")
 stub("homeassistant.core")
