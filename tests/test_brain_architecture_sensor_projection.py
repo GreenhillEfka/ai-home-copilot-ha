@@ -13,7 +13,7 @@ try:
 except ImportError:
     import tests.conftest as _conftest  # noqa: F401
 
-from custom_components.copilot_ha.sensors.brain_architecture_sensor import BrainArchitectureSensor
+from custom_components.pilotsuite.sensors.brain_architecture_sensor import BrainArchitectureSensor
 
 
 # -- Test helpers ---------------------------------------------------------------
