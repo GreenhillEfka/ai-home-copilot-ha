@@ -8,8 +8,14 @@ Test-Mirror: HA-Local Contract-Mirror bildet exakt das Sensor-Verhalten ab.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from unittest.mock import MagicMock, PropertyMock
+
+
+_SOURCE_PATH = Path(__file__).resolve().parents[1] / "custom_components" / "pilotsuite" / "sensors" / "predictive_automation.py"
+_SOURCE_TEXT = _SOURCE_PATH.read_text(encoding="utf-8")
 
 # Contract-Mirror: Lokale Abbildung des Sensor-Verhaltens
 class PredictiveAutomationSensorContract:
@@ -74,13 +80,6 @@ class PredictiveAutomationDetailsSensorContract:
             ],
             "count": len(suggestions),
         }
-
-
-# Import sensor module for GC checks
-from custom_components.copilot_ha.sensors.predictive_automation import (
-    PredictiveAutomationSensor,
-    PredictiveAutomationDetailsSensor,
-)
 
 
 class TestPredictiveAutomationSensor:
@@ -199,8 +198,9 @@ class TestGlobalContract:
         # - len(suggestions)
         # - max(suggestions, key=lambda s: s.get("confidence", 0))
         # Keine HA-states, keine externen APIs, keine lokale ML/Heuristik
-        import inspect
-        source = inspect.getsource(PredictiveAutomationSensor)
+        source = _SOURCE_TEXT
+        assert "class PredictiveAutomationSensor" in source
+        assert "class PredictiveAutomationDetailsSensor" in source
         assert "hass.states" not in source
         assert "_core_base_url" not in source
         assert "coordinator.data" in source or "self.coordinator.data" in source
