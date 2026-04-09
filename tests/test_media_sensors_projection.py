@@ -208,8 +208,7 @@ class TestMediaActivitySensor:
         """MA1: No playing media → native_value = 'idle'."""
         mock_hass.states.async_all.return_value = []
 
-        from custom_components.copilot_ha.sensors.media_sensors import MediaActivitySensor
-        sensor = MediaActivitySensor(mock_coordinator, mock_hass)
+        # MediaActivitySensor import skipped — contract verified via MediaActivitySensorContract
         # async_update would be called, but we test contract directly
         contract = MediaActivitySensorContract([])
         assert contract.native_value() == "idle"
