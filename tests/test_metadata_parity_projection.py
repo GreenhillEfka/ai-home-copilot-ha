@@ -52,6 +52,8 @@ def test_manifest_contract_matches_hacs_release_metadata() -> None:
     assert component_manifest["homeassistant"] == "2024.4.0"
 
     assert hacs["name"] == "PilotSuite"
+    assert hacs["domain"] == component_manifest["domain"]
+    assert hacs["domain"] == root_manifest["domain"]
     assert hacs["content_in_root"] is False
     assert hacs["render_readme"] is True
     assert hacs["zip_release"] is False
@@ -82,6 +84,7 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
     assert '"zip_release": true' not in text
     assert '"filename": "copilot-ha.zip"' not in text
     assert '"homeassistant": "2024.1.0"' not in text
+    assert '"domain": "copilot_ha"' not in text
     # HA-290 / HA-292: block DOMAIN regression to legacy "copilot_ha" value
     assert 'DOMAIN = "copilot_ha"' not in text
     assert 'CONFIG_FLOW_DOMAIN = "copilot_ha"' not in text
