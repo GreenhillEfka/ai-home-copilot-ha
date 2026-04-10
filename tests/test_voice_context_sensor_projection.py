@@ -61,6 +61,8 @@ class VoiceContextSensorContract:
 
     @staticmethod
     def _as_float(value, default: float) -> float:
+        if isinstance(value, bool):
+            return default
         return float(value) if isinstance(value, (int, float)) else default
 
     @staticmethod
@@ -290,6 +292,12 @@ def empty_data():
         {"mood": {"contributors": "music"}},
         "mood_contributors",
         [],
+    ),
+    # VC1r2: bool confidence payload must not leak Python bool-as-int semantics
+    (
+        {"mood": {"confidence": True}},
+        "mood_confidence",
+        0.0,
     ),
     # VC1s: malformed zone/time scalar payloads stay on safe defaults
     (
@@ -574,6 +582,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'def _as_string(value: Any, default: str) -> str:' in source
     assert 'def _as_float(value: Any, default: float) -> float:' in source
     assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")' in source
+    assert 'if isinstance(value, bool):' in source
     assert 'confidence = _as_float(mood_data.get("confidence"), 0.0)' in source
     assert 'zone_name = _as_string(core_zone.get("current"), "unknown")' in source
     assert 'or _as_string(core_time.get("description_en"), "")' in source

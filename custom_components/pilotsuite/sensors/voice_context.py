@@ -48,6 +48,8 @@ def _as_string(value: Any, default: str) -> str:
 
 def _as_float(value: Any, default: float) -> float:
     """Return numeric payloads, otherwise a safe default."""
+    if isinstance(value, bool):
+        return default
     return float(value) if isinstance(value, (int, float)) else default
 
 
