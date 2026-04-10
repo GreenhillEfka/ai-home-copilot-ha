@@ -27,6 +27,13 @@ _ICON_MAP = {
 }
 
 
+def _as_list(value: Any, default: list[Any] | None = None) -> list[Any]:
+    """Return value as list, falling back to default if not a list."""
+    if isinstance(value, list):
+        return value
+    return default if default is not None else []
+
+
 class ZoneModeSensor(CopilotBaseEntity, SensorEntity):
     """Sensor showing active zone modes overview."""
 
@@ -58,9 +65,9 @@ class ZoneModeSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> str:
-        if not self._data.get("ok", False):
+        if not self._data or not self._data.get("ok"):
             return "Keine aktiven Modi"
-        active = self._data.get("active_modes", [])
+        active = _as_list(self._data.get("active_modes"))
         if not active:
             return "Keine aktiven Modi"
         if len(active) == 1:
@@ -69,7 +76,9 @@ class ZoneModeSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def icon(self) -> str:
-        active = self._data.get("active_modes", [])
+        if not self._data:
+            return "mdi:toggle-switch-off"
+        active = _as_list(self._data.get("active_modes"))
         if not active:
             return "mdi:toggle-switch-off"
         if len(active) == 1:
@@ -79,14 +88,19 @@ class ZoneModeSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        active = self._data.get("active_modes", [])
-        available = self._data.get("available_modes", [])
-        recent = self._data.get("recent_events", [])
+        if not self._data:
+            return {"active_count": 0, "available_count": 0, "total_zones_with_modes": 0}
+        raw_active = _as_list(self._data.get("active_modes"))
+        raw_available = _as_list(self._data.get("available_modes"))
+        recent = _as_list(self._data.get("recent_events"))
+
+        active = [m for m in raw_active if isinstance(m, dict)]
+        available = [m for m in raw_available if isinstance(m, dict)]
 
         attrs: dict[str, Any] = {
             "active_count": len(active),
             "available_count": len(available),
-            "total_zones_with_modes": self._data.get("total_zones_with_modes", 0),
+            "total_zones_with_modes": self._data.get("total_zones_with_modes", 0) or 0,
         }
 
         if active:

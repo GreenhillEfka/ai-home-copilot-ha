@@ -1,9 +1,10 @@
-"""ZoneModeSensor Projection-Contract-Tests (HA-142).
+"""ZoneModeSensor Projection-Contract-Tests (HA-142/HA-293).
 
 Verifiziert: ZoneModeSensor ist reine Projection-Shell auf /api/v1/hub/modes.
 """
 
 import pytest
+from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock
 
 
@@ -207,17 +208,57 @@ class TestZoneModeSensor:
         assert sensor.native_value == "Keine aktiven Modi"
 
     def test_ZM15_edge_none_data(self, sensor, hass):
-        """ZM15: _data=None → safe defaults."""
+        """ZM15: _data=None → safe defaults via _as_list guard."""
         sensor.hass = hass
         sensor._data = None
-        with pytest.raises(AttributeError):
-            _ = sensor.native_value
+        assert sensor.native_value == "Keine aktiven Modi"
+        assert sensor.icon == "mdi:toggle-switch-off"
 
-    def test_ZM16_contract_endpoint(self, sensor, hass):
+    def test_ZM16_edge_malformed_active_string(self, sensor, hass):
+        """ZM16: active_modes as string → treated as empty list, safe default."""
+        sensor.hass = hass
+        sensor._data = {"ok": True, "active_modes": "party-mode"}
+        assert sensor.native_value == "Keine aktiven Modi"
+        assert sensor.icon == "mdi:toggle-switch-off"
+
+    def test_ZM17_edge_malformed_available_int(self, sensor, hass):
+        """ZM17: available_modes as int → treated as empty list."""
+        sensor.hass = hass
+        sensor._data = {"ok": True, "active_modes": [{"mode_id": "party"}], "available_modes": 99}
+        attrs = sensor.extra_state_attributes
+        assert attrs["available_count"] == 0
+        assert "available_modes" not in attrs
+
+    def test_ZM18_edge_malformed_recent_dict(self, sensor, hass):
+        """ZM18: recent_events as dict → treated as empty list."""
+        sensor.hass = hass
+        sensor._data = {"ok": True, "recent_events": {"id": 1}}
+        attrs = sensor.extra_state_attributes
+        assert "recent_events" not in attrs
+
+    def test_ZM19_edge_malformed_active_dict(self, sensor, hass):
+        """ZM19: active_modes as dict (non-list) → safe default."""
+        sensor.hass = hass
+        sensor._data = {"ok": True, "active_modes": {"mode_id": "party"}}
+        assert sensor.native_value == "Keine aktiven Modi"
+        assert sensor.icon == "mdi:toggle-switch-off"
+
+    def test_ZM20_edge_active_items_not_dicts(self, sensor, hass):
+        """ZM20: active_modes list contains non-dict items → skipped in attrs."""
+        sensor.hass = hass
+        sensor._data = {
+            "ok": True,
+            "active_modes": [{"mode_id": "party"}, "not-a-dict", 42, None],
+        }
+        attrs = sensor.extra_state_attributes
+        assert attrs["active_count"] == 1
+        assert len(attrs["active_modes"]) == 1
+
+    def test_ZM21_contract_endpoint(self, sensor, hass):
         """GC1: Verwendet /api/v1/hub/modes."""
         assert ZoneModeSensorContract.ENDPOINT == "/api/v1/hub/modes"
 
-    def test_ZM17_no_local_semantic(self, sensor, hass):
+    def test_ZM22_no_local_semantic(self, sensor, hass):
         """GC2: Keine lokale Semantik-Invention."""
         sensor.hass = hass
         sensor._data = {"ok": True, "active_modes": []}
@@ -225,3 +266,24 @@ class TestZoneModeSensor:
         assert sensor.native_value == "Keine aktiven Modi"
         # Icon ist deterministisch aus data abgeleitet
         assert sensor.icon == "mdi:toggle-switch-off"
+
+
+def test_ZM23_source_guard_as_list_hardening():
+    """GC3: _as_list guard is present and used for all list-typed payload fields."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "zone_mode_sensor.py"
+    ).read_text()
+
+    assert 'def _as_list(value: Any, default: list[Any]' in source
+    assert 'if isinstance(value, list):' in source
+    # active_modes guarded via _as_list and isinstance filter
+    assert 'active = _as_list(self._data.get("active_modes"))' in source
+    assert 'available = _as_list(self._data.get("available_modes"))' in source
+    assert 'recent = _as_list(self._data.get("recent_events"))' in source
+    # isinstance dict filter in attrs projections
+    assert 'if isinstance(m, dict)' in source
+    assert source.count('if isinstance(m, dict)') == 2  # active + available
