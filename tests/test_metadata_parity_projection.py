@@ -51,7 +51,7 @@ def test_manifest_contract_matches_hacs_release_metadata() -> None:
     assert component_manifest["codeowners"] == ["@GreenhillEfka"]
     assert component_manifest["homeassistant"] == "2024.4.0"
 
-    assert hacs["name"] == "PilotSuite"
+    assert hacs["name"] == "PilotSuite HA"
     assert hacs["domain"] == component_manifest["domain"]
     assert hacs["domain"] == root_manifest["domain"]
     assert hacs["content_in_root"] is False

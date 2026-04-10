@@ -82,9 +82,9 @@ class HabitusZoneAverageSensor(CopilotBaseEntity, SensorEntity):
         self._spec = spec
         self._sources = [s for s in sources if isinstance(s, str) and s]
 
-        self._attr_unique_id = f"copilot_ha_hz_{zone_id}_{spec.key}_avg"
+        self._attr_unique_id = f"pilotsuite_hz_{zone_id}_{spec.key}_avg"
         # Stable entity_id for dashboards.
-        self.entity_id = f"sensor.copilot_ha_hz_{zone_id}_{spec.key}_avg"
+        self.entity_id = f"sensor.pilotsuite_hz_{zone_id}_{spec.key}_avg"
         self._attr_name = f"{zone_name} {spec.label}"
 
         self._attr_device_class = spec.device_class

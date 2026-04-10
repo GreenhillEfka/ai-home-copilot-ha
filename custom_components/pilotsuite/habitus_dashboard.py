@@ -200,7 +200,7 @@ def _lovelace_yaml_for_zone(hass: HomeAssistant, z: HabitusZoneV2) -> str:
 
     def _avg_entity_id(metric: str) -> str:
         # Stable entity_id created by the integration (if enabled/available).
-        return f"sensor.copilot_ha_hz_{zone_id}_{metric}_avg"
+        return f"sensor.pilotsuite_hz_{zone_id}_{metric}_avg"
 
     def _maybe_avg_card(metric: str, title: str, sources: list[str]) -> list[str]:
         # Policy: show average if there are >=2 source entities.

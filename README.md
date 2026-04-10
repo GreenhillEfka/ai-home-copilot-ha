@@ -45,6 +45,17 @@ PilotSuite is an AI-powered home automation copilot that brings brain architectu
 - [API Reference](docs/API_REFERENCE.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 
+## Entity Naming Standard
+
+For all new integration-owned Home Assistant entities, the canonical object-id prefix is `pilotsuite_`.
+
+Examples:
+- `sensor.pilotsuite_mood`
+- `button.pilotsuite_backup`
+- `binary_sensor.pilotsuite_online`
+
+Legacy `copilot_ha_` IDs remain migration-only compatibility references and should not be introduced in new code.
+
 ## Support
 
 - Issues: https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues
