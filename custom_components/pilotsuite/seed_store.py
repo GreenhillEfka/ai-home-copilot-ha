@@ -6,8 +6,10 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-DOMAIN = "copilot_ha"
+DOMAIN = "pilotsuite"
+LEGACY_DOMAIN = "copilot_ha"
 STORE_KEY = f"{DOMAIN}.seed_limiter"
+LEGACY_STORE_KEY = f"{LEGACY_DOMAIN}.seed_limiter"
 STORE_VERSION = 1
 
 
@@ -27,7 +29,11 @@ class SeedLimiterState:
 
 async def async_get_seed_limiter_state(hass: HomeAssistant) -> SeedLimiterState:
     store: Store = Store(hass, STORE_VERSION, STORE_KEY)
-    data = await store.async_load() or {}
+    data = await store.async_load()
+    if not data:
+        legacy_store: Store = Store(hass, STORE_VERSION, LEGACY_STORE_KEY)
+        data = await legacy_store.async_load()
+    data = data or {}
     return SeedLimiterState(
         window_start_ts=data.get("window_start_ts"),
         count_in_window=int(data.get("count_in_window") or 0),

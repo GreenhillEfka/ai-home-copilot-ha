@@ -6,8 +6,10 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-DOMAIN = "copilot_ha"
+DOMAIN = "pilotsuite"
+LEGACY_DOMAIN = "copilot_ha"
 STORE_KEY = f"{DOMAIN}.overview"
+LEGACY_STORE_KEY = f"{LEGACY_DOMAIN}.overview"
 STORE_VERSION = 1
 
 
@@ -27,7 +29,11 @@ class OverviewState:
 
 async def async_get_overview_state(hass: HomeAssistant) -> OverviewState:
     store: Store = Store(hass, STORE_VERSION, STORE_KEY)
-    data = await store.async_load() or {}
+    data = await store.async_load()
+    if not data:
+        legacy_store: Store = Store(hass, STORE_VERSION, LEGACY_STORE_KEY)
+        data = await legacy_store.async_load()
+    data = data or {}
     return OverviewState(
         last_path=data.get("last_path"),
         last_shared_path=data.get("last_shared_path"),

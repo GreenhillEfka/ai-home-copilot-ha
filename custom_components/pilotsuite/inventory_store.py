@@ -6,8 +6,10 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-DOMAIN = "copilot_ha"
+DOMAIN = "pilotsuite"
+LEGACY_DOMAIN = "copilot_ha"
 STORE_KEY = f"{DOMAIN}.inventory"
+LEGACY_STORE_KEY = f"{LEGACY_DOMAIN}.inventory"
 STORE_VERSION = 1
 
 
@@ -31,7 +33,11 @@ class InventoryState:
 
 async def async_get_inventory_state(hass: HomeAssistant) -> InventoryState:
     store: Store = Store(hass, STORE_VERSION, STORE_KEY)
-    data = await store.async_load() or {}
+    data = await store.async_load()
+    if not data:
+        legacy_store: Store = Store(hass, STORE_VERSION, LEGACY_STORE_KEY)
+        data = await legacy_store.async_load()
+    data = data or {}
     return InventoryState(
         last_generated_at=data.get("last_generated_at"),
         last_generated_json=data.get("last_generated_json"),
