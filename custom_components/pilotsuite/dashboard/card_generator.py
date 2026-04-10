@@ -411,7 +411,7 @@ def generate_music_view(host: str, port: int) -> dict[str, Any]:
                                 "icon": "mdi:play",
                                 "tap_action": {
                                     "action": "call-service",
-                                    "service": "copilot_ha.musikwolke_play",
+                                    "service": "pilotsuite.musikwolke_play",
                                     "service_data": {"zone_id": "all"},
                                 },
                             },
@@ -421,7 +421,7 @@ def generate_music_view(host: str, port: int) -> dict[str, Any]:
                                 "icon": "mdi:pause",
                                 "tap_action": {
                                     "action": "call-service",
-                                    "service": "copilot_ha.musikwolke_pause",
+                                    "service": "pilotsuite.musikwolke_pause",
                                     "service_data": {"zone_id": "all"},
                                 },
                             },
@@ -431,7 +431,7 @@ def generate_music_view(host: str, port: int) -> dict[str, Any]:
                                 "icon": "mdi:speaker-off",
                                 "tap_action": {
                                     "action": "call-service",
-                                    "service": "copilot_ha.musikwolke_dissolve",
+                                    "service": "pilotsuite.musikwolke_dissolve",
                                     "service_data": {"zone_ids": []},
                                     "confirmation": {
                                         "text": "Alle Musikwolke-Gruppen aufloesen?",
@@ -452,7 +452,7 @@ def generate_music_view(host: str, port: int) -> dict[str, Any]:
                                 "icon": "mdi:account-music",
                                 "tap_action": {
                                     "action": "call-service",
-                                    "service": "copilot_ha.musikwolke_start_follow",
+                                    "service": "pilotsuite.musikwolke_start_follow",
                                     "service_data": {
                                         "person_id": "person.default",
                                         "source_zone": "wohnzimmer",
@@ -465,7 +465,7 @@ def generate_music_view(host: str, port: int) -> dict[str, Any]:
                                 "icon": "mdi:account-music-outline",
                                 "tap_action": {
                                     "action": "call-service",
-                                    "service": "copilot_ha.musikwolke_stop_follow",
+                                    "service": "pilotsuite.musikwolke_stop_follow",
                                     "service_data": {"session_id": "latest"},
                                 },
                             },
@@ -499,7 +499,7 @@ def generate_music_view(host: str, port: int) -> dict[str, Any]:
                     "- **Follow-Modus**: Musik folgt Ihnen automatisch\n"
                     "- **Gruppen**: Mehrere Zonen spielen synchron\n"
                     "- **Steuerung**: Buttons oben, Styx Chat oder HA Automations\n\n"
-                    "Services: `copilot_ha.musikwolke_*`, `copilot_ha.zone_automation_set_mode`"
+                    "Services: `pilotsuite.musikwolke_*`, `pilotsuite.zone_automation_set_mode`"
                 ),
             },
         ],

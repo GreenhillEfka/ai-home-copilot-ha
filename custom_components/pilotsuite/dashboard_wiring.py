@@ -484,7 +484,7 @@ def _build_storage_dashboard_config(
                             "icon": "mdi:brain",
                             "tap_action": {
                                 "action": "call-service",
-                                "service": "copilot_ha.trigger_brain_sync",
+                                "service": "pilotsuite.trigger_brain_sync",
                             },
                         },
                         {
@@ -493,7 +493,7 @@ def _build_storage_dashboard_config(
                             "icon": "mdi:magnify-scan",
                             "tap_action": {
                                 "action": "call-service",
-                                "service": "copilot_ha.trigger_habitus_mining",
+                                "service": "pilotsuite.trigger_habitus_mining",
                             },
                         },
                         {
@@ -502,7 +502,7 @@ def _build_storage_dashboard_config(
                             "icon": "mdi:refresh",
                             "tap_action": {
                                 "action": "call-service",
-                                "service": "copilot_ha.refresh_dashboard",
+                                "service": "pilotsuite.refresh_dashboard",
                             },
                         },
                     ],
@@ -556,7 +556,7 @@ def _build_storage_dashboard_config(
                             "icon": "mdi:play",
                             "tap_action": {
                                 "action": "call-service",
-                                "service": "copilot_ha.musikwolke_play",
+                                "service": "pilotsuite.musikwolke_play",
                                 "service_data": {"zone_id": "all"},
                             },
                         },
@@ -566,7 +566,7 @@ def _build_storage_dashboard_config(
                             "icon": "mdi:pause",
                             "tap_action": {
                                 "action": "call-service",
-                                "service": "copilot_ha.musikwolke_pause",
+                                "service": "pilotsuite.musikwolke_pause",
                                 "service_data": {"zone_id": "all"},
                             },
                         },
@@ -576,7 +576,7 @@ def _build_storage_dashboard_config(
                             "icon": "mdi:account-music",
                             "tap_action": {
                                 "action": "call-service",
-                                "service": "copilot_ha.musikwolke_start_follow",
+                                "service": "pilotsuite.musikwolke_start_follow",
                                 "service_data": {
                                     "person_id": "person.default",
                                     "source_zone": "wohnzimmer",
