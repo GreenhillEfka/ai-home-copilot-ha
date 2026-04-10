@@ -10,6 +10,7 @@ The Add-on NeuronManager evaluates activity and returns structured data.
 from __future__ import annotations
 
 import logging
+import math
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -23,6 +24,36 @@ from ..const import DOMAIN
 from ..coordinator import CopilotDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _as_mapping(val: Any) -> Dict[str, Any]:
+    """Accept only dict payloads."""
+    if isinstance(val, dict):
+        return val
+    return {}
+
+
+def _as_string(val: Any, default: str = "unknown") -> str:
+    """Accept only non-empty strings."""
+    if isinstance(val, str) and val.strip():
+        return val.strip()
+    return default
+
+
+def _as_int(val: Any, default: int = 0) -> int:
+    """Accept only finite numeric values, reject bools."""
+    if isinstance(val, bool):
+        return default
+    if isinstance(val, (int, float)) and math.isfinite(val):
+        return int(val)
+    return default
+
+
+def _as_bool(val: Any, default: bool = False) -> bool:
+    """Accept only bool payloads."""
+    if isinstance(val, bool):
+        return val
+    return default
 
 
 async def _get_activity_from_api(
@@ -57,17 +88,17 @@ async def _get_activity_from_api(
     
     try:
         # Get neuron evaluation from Add-on API (cached data, sync call)
-        neurons_data = coordinator.async_get_neurons()
+        neurons_data = _as_mapping(coordinator.async_get_neurons())
         
         # Extract activity/context data from neurons
-        context = neurons_data.get("context", {})
-        activity_data = context.get("activity", {})
+        context = _as_mapping(neurons_data.get("context", {}))
+        activity_data = _as_mapping(context.get("activity", {}))
         
         if activity_data:
-            result["level"] = activity_data.get("level", "unknown")
-            result["score"] = activity_data.get("value", 0)
-            result["motion_count"] = activity_data.get("motion_count", 0)
-            result["camera_motion"] = activity_data.get("camera_motion", False)
+            result["level"] = _as_string(activity_data.get("level"), "unknown")
+            result["score"] = _as_int(activity_data.get("value"), 0)
+            result["motion_count"] = _as_int(activity_data.get("motion_count"), 0)
+            result["camera_motion"] = _as_bool(activity_data.get("camera_motion"), False)
         else:
             # Fallback to direct HA states
             result = await _fallback_activity_states(hass)

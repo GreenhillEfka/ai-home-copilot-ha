@@ -6,14 +6,43 @@ Verifies:
 
 No Core API calls; uses hass.states.async_all() for HA-local aggregation.
 """
+import inspect
+import math
 import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime
+
+from custom_components.pilotsuite.sensors import activity_sensors as activity_module
 
 
 # ---------------------------------------------------------------------------
 # Contract Mirrors (exact sensor logic replication)
 # ---------------------------------------------------------------------------
+
+def _as_mapping(val):
+    if isinstance(val, dict):
+        return val
+    return {}
+
+
+def _as_string(val, default="unknown"):
+    if isinstance(val, str) and val.strip():
+        return val.strip()
+    return default
+
+
+def _as_int(val, default=0):
+    if isinstance(val, bool):
+        return default
+    if isinstance(val, (int, float)) and math.isfinite(val):
+        return int(val)
+    return default
+
+
+def _as_bool(val, default=False):
+    if isinstance(val, bool):
+        return val
+    return default
 
 class ActivityLevelSensorContract:
     """Mirror of ActivityLevelSensor._get_activity_from_api()."""
@@ -29,8 +58,9 @@ class ActivityLevelSensorContract:
 
     @staticmethod
     def compute_native_value(activity_data: dict, hass_states: dict) -> str:
-        level = activity_data.get("level", "unknown")
-        if not activity_data:
+        activity = _as_mapping(activity_data)
+        level = _as_string(activity.get("level"), "unknown")
+        if not activity:
             # Fallback path — replicate _fallback_activity_states()
             score = 0
             for s in hass_states.get("binary_sensor", []):
@@ -55,20 +85,22 @@ class ActivityLevelSensorContract:
     @staticmethod
     def compute_motion_count(activity_data: dict, hass_states: dict) -> int:
         """Compute motion_count: from activity_data if present, else from hass_states."""
-        if activity_data.get("level") is not None and activity_data:
-            return activity_data.get("motion_count", 0)
+        activity = _as_mapping(activity_data)
+        if activity:
+            return _as_int(activity.get("motion_count"), 0)
         return ActivityLevelSensorContract._motion_count_from_states(hass_states)
 
     @staticmethod
     def compute_attrs(activity_data: dict, hass_states: dict) -> dict:
+        activity = _as_mapping(activity_data)
         motion_count = ActivityLevelSensorContract.compute_motion_count(activity_data, hass_states)
-        camera_motion = activity_data.get("camera_motion", False) if activity_data else False
+        camera_motion = _as_bool(activity.get("camera_motion"), False)
         media_playing = sum(1 for s in hass_states.get("media_player", []) if s.get("state") == "playing")
         lights_on = sum(1 for s in hass_states.get("light", []) if s.get("state") == "on")
-        score = activity_data.get("value", 0) if activity_data else 0
+        score = _as_int(activity.get("value"), 0)
         return {
             "score": score,
-            "motion_active": motion_count > 0,
+            "motion_active": motion_count,
             "camera_motion_active": camera_motion,
             "media_playing": media_playing,
             "lights_on": lights_on,
@@ -82,8 +114,9 @@ class ActivityStillnessSensorContract:
     @staticmethod
     def compute_motion_count(activity_data: dict, hass_states: dict) -> int:
         """Compute motion_count: from activity_data if present, else from hass_states."""
-        if activity_data.get("level") is not None and activity_data:
-            return activity_data.get("motion_count", 0)
+        activity = _as_mapping(activity_data)
+        if activity:
+            return _as_int(activity.get("motion_count"), 0)
         return ActivityLevelSensorContract._motion_count_from_states(hass_states)
 
     @staticmethod
@@ -99,10 +132,11 @@ class ActivityStillnessSensorContract:
 
     @staticmethod
     def compute_attrs(activity_data: dict, hass_states: dict, hour: int) -> dict:
+        activity = _as_mapping(activity_data)
         motion_count = ActivityStillnessSensorContract.compute_motion_count(activity_data, hass_states)
         media_playing = sum(1 for s in hass_states.get("media_player", []) if s.get("state") == "playing")
-        score = activity_data.get("value", 0) if activity_data else 0
-        level = activity_data.get("level", "unknown") if activity_data else "unknown"
+        score = _as_int(activity.get("value"), 0)
+        level = _as_string(activity.get("level"), "unknown") if activity else "unknown"
         return {
             "motion_detected": motion_count > 0,
             "media_active": media_playing > 0,
@@ -201,7 +235,7 @@ def test_al8_activity_level_attrs_full(activity_api_data, hass_states):
     """AL8: attrs include score, motion_active, camera, media, lights, sources."""
     attrs = ActivityLevelSensorContract.compute_attrs(activity_api_data, hass_states)
     assert attrs["score"] == 8
-    assert attrs["motion_active"] is True
+    assert attrs["motion_active"] == 2
     assert attrs["camera_motion_active"] is True
     assert attrs["media_playing"] == 0
     assert attrs["lights_on"] == 0
@@ -224,7 +258,32 @@ def test_al10_activity_level_attrs_motion_active(activity_api_data, hass_states)
     """AL10: motion_active True when motion_count > 0."""
     data = {"level": "high", "value": 10, "motion_count": 3, "camera_motion": False}
     attrs = ActivityLevelSensorContract.compute_attrs(data, hass_states)
-    assert attrs["motion_active"] is True
+    assert attrs["motion_active"] == 3
+
+
+def test_al11_activity_level_malformed_activity_falls_back(hass_states):
+    """AL11: non-dict activity payload uses fallback HA-state aggregation."""
+    states = {
+        "binary_sensor": [{"state": "on", "attributes": {"device_class": "motion"}}],
+        "media_player": [],
+        "light": [],
+    }
+    assert ActivityLevelSensorContract.compute_native_value("bad-payload", states) == "low"
+
+
+def test_al12_activity_level_blank_level_becomes_unknown(hass_states):
+    """AL12: blank string level is guarded to 'unknown'."""
+    data = {"level": "  ", "value": 5, "motion_count": 1, "camera_motion": True}
+    assert ActivityLevelSensorContract.compute_native_value(data, hass_states) == "unknown"
+
+
+def test_al13_activity_level_attrs_guard_non_numeric_fields(hass_states):
+    """AL13: malformed score/motion_count/camera_motion are guarded."""
+    data = {"level": "moderate", "value": "8", "motion_count": True, "camera_motion": "yes"}
+    attrs = ActivityLevelSensorContract.compute_attrs(data, hass_states)
+    assert attrs["score"] == 0
+    assert attrs["motion_active"] == 0
+    assert attrs["camera_motion_active"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -303,6 +362,56 @@ def test_as8_stillness_attrs_daytime(hass_states):
     assert attrs["activity_level"] == "high"
 
 
+def test_as9_stillness_malformed_activity_falls_back_to_sleeping(hass_states):
+    """AS9: non-dict activity payload falls back cleanly."""
+    assert ActivityStillnessSensorContract.compute_native_value(["bad"], hass_states, hour=2) == "sleeping"
+
+
+def test_as10_stillness_attrs_guard_blank_level_and_bad_score(hass_states):
+    """AS10: blank level and malformed score are guarded."""
+    data = {"level": "\t", "value": float("nan"), "motion_count": 0, "camera_motion": False}
+    attrs = ActivityStillnessSensorContract.compute_attrs(data, hass_states, hour=14)
+    assert attrs["activity_level"] == "unknown"
+    assert attrs["activity_score"] == 0
+
+
+@pytest.mark.asyncio
+async def test_prod_al14_async_update_guards_malformed_api_payload():
+    """AL14: production ActivityLevelSensor guards malformed context/activity payloads."""
+    coordinator = MagicMock()
+    coordinator.async_get_neurons.return_value = {
+        "context": {"activity": {"level": "  ", "value": "bad", "motion_count": True, "camera_motion": "yes"}}
+    }
+    hass = MagicMock()
+    hass.states.async_all.side_effect = lambda domain: []
+
+    sensor = activity_module.ActivityLevelSensor(coordinator, hass)
+    await sensor.async_update()
+
+    assert sensor._attr_native_value == "unknown"
+    assert sensor._attr_extra_state_attributes["score"] == 0
+    assert sensor._attr_extra_state_attributes["motion_active"] == 0
+    assert sensor._attr_extra_state_attributes["camera_motion_active"] is False
+
+
+@pytest.mark.asyncio
+async def test_prod_as11_async_update_non_dict_neurons_uses_fallback():
+    """AS11: production ActivityStillnessSensor falls back when neurons payload is non-dict."""
+    coordinator = MagicMock()
+    coordinator.async_get_neurons.return_value = "bad-neurons-payload"
+    hass = MagicMock()
+    hass.states.async_all.side_effect = lambda domain: []
+
+    sensor = activity_module.ActivityStillnessSensor(coordinator, hass)
+    with patch.object(activity_module.dt_util, "now", return_value=datetime(2026, 4, 10, 2, 0, 0)):
+        await sensor.async_update()
+
+    assert sensor._attr_native_value == "sleeping"
+    assert sensor._attr_extra_state_attributes["motion_detected"] is False
+    assert sensor._attr_extra_state_attributes["media_active"] is False
+    assert sensor._attr_extra_state_attributes["is_night"] is True
+
+
 # ---------------------------------------------------------------------------
 # Global Contract
 # ---------------------------------------------------------------------------
@@ -332,3 +441,12 @@ def test_gc2_hass_states_only(hass_states):
     assert level == "moderate"  # 3 + 2 + 1 = 6
     stillness = ActivityStillnessSensorContract.compute_native_value({}, states, hour=20)
     assert stillness == "active"  # motion_count > 0
+
+
+def test_gc3_source_guard_helpers_present():
+    """GC3: production module contains explicit malformed-payload guards."""
+    source = inspect.getsource(activity_module)
+    assert "def _as_mapping" in source
+    assert "def _as_string" in source
+    assert "def _as_int" in source
+    assert "def _as_bool" in source
