@@ -35,18 +35,23 @@ def _as_mapping(value: Any) -> Dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def _normalize_whitespace(value: str) -> str:
+    """Collapse internal whitespace so HA attrs/prompts stay single-line and stable."""
+    return " ".join(value.split())
+
+
 def _as_string_list(value: Any) -> list[str]:
     """Return normalized string-only list payloads without inventing fallback semantics."""
     if not isinstance(value, list):
         return []
-    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+    return [normalized for item in value if isinstance(item, str) if (normalized := _normalize_whitespace(item))]
 
 
 def _as_string(value: Any, default: str) -> str:
     """Return normalized string payloads, otherwise a safe default."""
     if not isinstance(value, str):
         return default
-    normalized = value.strip()
+    normalized = _normalize_whitespace(value)
     return normalized if normalized else default
 
 

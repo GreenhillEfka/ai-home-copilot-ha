@@ -56,16 +56,25 @@ class VoiceContextSensorContract:
         return value if isinstance(value, dict) else {}
 
     @staticmethod
+    def _normalize_whitespace(value: str) -> str:
+        return " ".join(value.split())
+
+    @staticmethod
     def _as_string_list(value) -> list[str]:
         if not isinstance(value, list):
             return []
-        return [item.strip() for item in value if isinstance(item, str) and item.strip()]
+        return [
+            normalized
+            for item in value
+            if isinstance(item, str)
+            if (normalized := VoiceContextSensorContract._normalize_whitespace(item))
+        ]
 
     @staticmethod
     def _as_string(value, default: str) -> str:
         if not isinstance(value, str):
             return default
-        normalized = value.strip()
+        normalized = VoiceContextSensorContract._normalize_whitespace(value)
         return normalized if normalized else default
 
     @staticmethod
@@ -387,6 +396,34 @@ def empty_data():
         "current_zone",
         "unknown",
     ),
+    # VC1u7: embedded newlines/tabs collapse to stable single-space HA attrs and prompt fields
+    (
+        {
+            "mood": {"mood": "\tdeep   focus\n", "contributors": ["  music\n", "\tlate   night\t"]},
+            "neural": {
+                "time": {"description_de": "  Guten\n\tMorgen  "},
+                "zone": {
+                    "current": "  Wohnzimmer\nNord  ",
+                    "presence": ["  Wohnzimmer\nNord  ", "\tKüche\t"],
+                    "typical_activities": ["  Lesen\n", "Musik\t hören  "],
+                },
+                "last_update": " 2026-04-06T10:00:00Z\n",
+            },
+        },
+        None,
+        {
+            "dominant_mood": "deep focus",
+            "mood_confidence": 0.0,
+            "mood_contributors": ["music", "late night"],
+            "current_zone": "Wohnzimmer Nord",
+            "zone_presence": ["Wohnzimmer Nord", "Küche"],
+            "voice_tone": "deep focus",
+            "voice_greeting": "Guten Morgen",
+            "voice_suggestions": ["Lesen ist aktuell.", "Musik hören ist aktuell."],
+            "voice_prompt": "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
+            "last_update": "2026-04-06T10:00:00Z",
+        },
+    ),
     # VC1v: truthy non-dict coordinator payload is rejected at the top-level guard
     (
         ["bad-payload"],
@@ -478,6 +515,13 @@ def test_vc1_extra_state_attributes(coordinator_data, key, expected):
         ["  Lesen ist aktuell.  ", " Musik hören ist aktuell. "],
         "Der Nutzer ist gerade Hallo. Anwesend in: Wohnzimmer, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
     ),
+    # VC2k: embedded newlines/tabs collapse to stable single-line prompt text
+    (
+        "  Guten\n\tMorgen  ",
+        ["  Wohnzimmer\nNord  ", "\tKüche\t"],
+        ["  Lesen\n ist aktuell.  ", " Musik\t hören ist aktuell. "],
+        "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
+    ),
 ])
 def test_vc2_voice_prompt_construction(greeting, presence, suggestions, expected):
     """VC2: voice_prompt is built from greeting + presence[:3] + suggestions[:2]."""
@@ -516,6 +560,8 @@ def test_vc3_native_value_always_ok():
     (["bad-payload"], "Kein Kontext verfügbar."),
     # VP1h: padded scalar/list payloads are normalized before prompt projection
     ({"neural": {"time": {"description_de": "  Abend  "}, "zone": {"presence": ["  Wohnzimmer  "], "typical_activities": ["  Lesen  "]}}}, "Der Nutzer ist gerade Abend. Anwesend in: Wohnzimmer. Vorschläge: Lesen ist aktuell.."),
+    # VP1i: embedded newlines/tabs are collapsed before prompt projection
+    ({"neural": {"time": {"description_de": "  Guten\n\tMorgen  "}, "zone": {"presence": ["  Wohnzimmer\nNord  "], "typical_activities": ["  Musik\t hören  "]}}}, "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord. Vorschläge: Musik hören ist aktuell.."),
 ])
 def test_vp1_native_value(coordinator_data, expected):
     """VP1: native_value is the projected HA Assist prompt, not a local tone mapping."""
@@ -645,7 +691,7 @@ def test_gc7_source_hardens_projection_against_malformed_list_payloads():
 
     assert 'def _as_string_list(value: Any) -> list[str]:' in source
     assert 'if not isinstance(value, list):' in source
-    assert 'return [item.strip() for item in value if isinstance(item, str) and item.strip()]' in source
+    assert 'normalized := _normalize_whitespace(item)' in source
 
 
 def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
@@ -662,7 +708,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'def _as_float(value: Any, default: float) -> float:' in source
     assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")' in source
     assert 'if not isinstance(value, str):' in source
-    assert 'normalized = value.strip()' in source
+    assert 'normalized = _normalize_whitespace(value)' in source
     assert 'return normalized if normalized else default' in source
     assert 'if isinstance(value, bool):' in source
     assert 'math.isfinite' in source
@@ -675,3 +721,17 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'if not coordinator_data:' in source
     assert '"contributors": _as_string_list(mood_data.get("contributors"))' in source
     assert '"last_update": _as_string(neural_data.get("last_update"), "")' in source
+
+
+def test_gc9_source_collapses_embedded_whitespace_in_projection_scalars_and_lists():
+    """GC9: embedded newlines/tabs are normalized before HA attrs/prompt projection."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'def _normalize_whitespace(value: str) -> str:' in source
+    assert 'return " ".join(value.split())' in source
