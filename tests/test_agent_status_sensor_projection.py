@@ -1,29 +1,60 @@
-"""Projection Contract Tests — agent_status_sensor (HA-121).
+"""Projection Contract Tests — agent_status_sensor (HA-121, HA-315).
 
 Verifies AgentStatusSensor is a pure projection shell on /api/v1/agent/status.
 Contract: no local semantic invention — all values derived directly from Core API.
 """
 
+import math
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass
 
 
-
-
 # ─── Contract Mirror ─────────────────────────────────────────────────────────
+
+def _as_mapping(val, default=None):
+    if isinstance(val, dict) and val:
+        return val
+    return default if default is not None else {}
+
+
+def _as_list(val, default=None):
+    if isinstance(val, list):
+        return val
+    return default if default is not None else []
+
+
+def _as_string(val, default=""):
+    if isinstance(val, str):
+        normalized = val.strip()
+        if normalized:
+            return normalized
+    return default
+
+
+def _as_float(val, default=0.0):
+    if isinstance(val, (int, float)) and not isinstance(val, bool) and math.isfinite(val):
+        return float(val)
+    return default
+
+
+def _as_bool(val, default=False):
+    return bool(val) if isinstance(val, bool) else default
+
 
 class AgentStatusSensorContract:
     """Mirror of the sensor's contract for a given API response."""
 
     @staticmethod
-    def native_value(api_response: dict) -> str | None:
-        status = api_response.get("status", "offline")
-        agent_name = api_response.get("agent_name", "Styx")
+    def native_value(api_response) -> str | None:
+        data = _as_mapping(api_response)
+        status = _as_string(data.get("status"), "offline")
+        agent_name = _as_string(data.get("agent_name"), "Styx")
         return f"{agent_name}: {status}"
 
     @staticmethod
-    def icon(api_response: dict) -> str:
-        status = api_response.get("status", "offline")
+    def icon(api_response) -> str:
+        data = _as_mapping(api_response)
+        status = _as_string(data.get("status"), "offline")
         if status == "ready":
             return "mdi:robot-happy"
         elif status == "degraded":
@@ -31,20 +62,37 @@ class AgentStatusSensorContract:
         return "mdi:robot-off"
 
     @staticmethod
-    def extra_state_attributes(api_response: dict) -> dict:
+    def extra_state_attributes(api_response) -> dict:
+        data = _as_mapping(api_response)
+        agent_name = _as_string(data.get("agent_name"), "Styx")
+        agent_version = _as_string(data.get("agent_version"), "")
+        status = _as_string(data.get("status"), "offline")
+        uptime_seconds = _as_float(data.get("uptime_seconds"), 0.0)
+        llm_model = _as_string(data.get("llm_model"), "")
+        llm_backend = _as_string(data.get("llm_backend"), "")
+        character = _as_string(data.get("character"), "")
+        last_health_check = _as_string(data.get("last_health_check"), "")
+        conversation_ready = _as_bool(data.get("conversation_ready"), False)
+        llm_available = _as_bool(data.get("llm_available"), False)
+        features_raw = _as_list(data.get("features"), [])
+        features = [_as_string(f) for f in features_raw]
+        features = [f for f in features if f]
+        supported_languages_raw = _as_list(data.get("supported_languages"), [])
+        supported_languages = [_as_string(l) for l in supported_languages_raw]
+        supported_languages = [l for l in supported_languages if l]
         return {
-            "agent_name": api_response.get("agent_name", "Styx"),
-            "agent_version": api_response.get("agent_version", ""),
-            "status": api_response.get("status", "offline"),
-            "uptime_seconds": api_response.get("uptime_seconds", 0),
-            "conversation_ready": api_response.get("conversation_ready", False),
-            "llm_available": api_response.get("llm_available", False),
-            "llm_model": api_response.get("llm_model", ""),
-            "llm_backend": api_response.get("llm_backend", ""),
-            "character": api_response.get("character", ""),
-            "features": api_response.get("features", []),
-            "supported_languages": api_response.get("supported_languages", []),
-            "last_health_check": api_response.get("last_health_check", ""),
+            "agent_name": agent_name,
+            "agent_version": agent_version,
+            "status": status,
+            "uptime_seconds": uptime_seconds,
+            "conversation_ready": conversation_ready,
+            "llm_available": llm_available,
+            "llm_model": llm_model,
+            "llm_backend": llm_backend,
+            "character": character,
+            "features": features,
+            "supported_languages": supported_languages,
+            "last_health_check": last_health_check,
         }
 
 
@@ -172,7 +220,7 @@ def test_as3_extra_state_attributes(api_response, attr_key, expected):
     ),
     (
         {"status": "ready", "ok": True, "features": None},
-        {"features": None},
+        {"features": []},
     ),
 ])
 def test_as4_edge_defaults(api_response, expected_attrs):
@@ -180,6 +228,85 @@ def test_as4_edge_defaults(api_response, expected_attrs):
     attrs = AgentStatusSensorContract.extra_state_attributes(api_response)
     for key, val in expected_attrs.items():
         assert attrs[key] == val, f"mismatch for {key}: {attrs[key]!r} != {val!r}"
+
+
+# AS5 — malformed payload: non-dict top-level → safe defaults
+@pytest.mark.parametrize("api_response,expected_value", [
+    ([], "Styx: offline"),
+    (None, "Styx: offline"),
+    ("string", "Styx: offline"),
+    (42, "Styx: offline"),
+    (True, "Styx: offline"),
+])
+def test_as5_native_value_non_dict(api_response, expected_value):
+    """AS5: non-dict top-level payload falls back to safe defaults."""
+    assert AgentStatusSensorContract.native_value(api_response) == expected_value
+
+
+# AS6 — malformed payload: non-dict top-level → safe icon
+@pytest.mark.parametrize("api_response,expected_icon", [
+    ([], "mdi:robot-off"),
+    (None, "mdi:robot-off"),
+    ("string", "mdi:robot-off"),
+    (42, "mdi:robot-off"),
+])
+def test_as6_icon_non_dict(api_response, expected_icon):
+    """AS6: non-dict top-level payload falls back to offline icon."""
+    assert AgentStatusSensorContract.icon(api_response) == expected_icon
+
+
+# AS7 — malformed: non-string status/agent_name
+@pytest.mark.parametrize("api_response,expected", [
+    ({"status": 42, "agent_name": "Styx"}, "Styx: offline"),
+    ({"status": "ready", "agent_name": 42}, "Styx: ready"),
+    ({"status": None, "agent_name": None}, "Styx: offline"),
+    ({"status": "", "agent_name": ""}, "Styx: offline"),
+    ({"status": "  ", "agent_name": "  "}, "Styx: offline"),
+])
+def test_as7_native_value_non_string_fields(api_response, expected):
+    """AS7: non-string status/agent_name fall back to defaults."""
+    assert AgentStatusSensorContract.native_value(api_response) == expected
+
+
+# AS8 — malformed uptime_seconds / conversation_ready / llm_available
+@pytest.mark.parametrize("api_response,expected_uptime,expected_conv,expected_llm", [
+    ({"uptime_seconds": "3600"}, 0.0, False, False),
+    ({"uptime_seconds": None}, 0.0, False, False),
+    ({"uptime_seconds": float("inf")}, 0.0, False, False),
+    ({"uptime_seconds": float("nan")}, 0.0, False, False),
+    ({"conversation_ready": "yes"}, 0, False, False),
+    ({"llm_available": 1}, 0, False, False),
+    ({"conversation_ready": None}, 0, False, False),
+    ({"llm_available": None}, 0, False, False),
+    ({"uptime_seconds": True}, 0.0, False, False),
+])
+def test_as8_attrs_malformed_numeric_bool(api_response, expected_uptime, expected_conv, expected_llm):
+    """AS8: malformed numeric/bool attrs fall back to safe defaults."""
+    attrs = AgentStatusSensorContract.extra_state_attributes(api_response)
+    assert attrs["uptime_seconds"] == expected_uptime, f"uptime: {attrs['uptime_seconds']!r}"
+    assert attrs["conversation_ready"] == expected_conv, f"conv: {attrs['conversation_ready']!r}"
+    assert attrs["llm_available"] == expected_llm, f"llm: {attrs['llm_available']!r}"
+
+
+# AS9 — malformed features / supported_languages lists
+@pytest.mark.parametrize("api_response,expected_features,expected_langs", [
+    ({"features": "voice"}, [], []),
+    ({"features": 42}, [], []),
+    ({"features": {}}, [], []),
+    ({"features": ["voice", 42, None, "calendar"]}, ["voice", "calendar"], []),
+    ({"features": [""]}, [], []),
+    ({"features": ["  "]}, [], []),
+    ({"supported_languages": "de"}, [], []),
+    ({"supported_languages": 42}, [], []),
+    ({"supported_languages": ["de", 42, None, "en"]}, [], ["de", "en"]),
+    ({"supported_languages": [""]}, [], []),
+    ({"supported_languages": ["  "]}, [], []),
+])
+def test_as9_attrs_malformed_lists(api_response, expected_features, expected_langs):
+    """AS9: malformed list fields are filtered or replaced with safe defaults."""
+    attrs = AgentStatusSensorContract.extra_state_attributes(api_response)
+    assert attrs["features"] == expected_features, f"features: {attrs['features']!r}"
+    assert attrs["supported_languages"] == expected_langs, f"langs: {attrs['supported_languages']!r}"
 
 
 # GC1 — Global Contract: pure projection, no local semantic invention
@@ -225,3 +352,17 @@ def test_gc2_api_endpoint():
         "contract requires this endpoint"
     )
     assert "_core_base_url()" in source, "Sensor must use _core_base_url() for Core API routing"
+
+
+# GC3 — Source Guard: _as_mapping, _as_list, _as_string, _as_float, _as_bool present in production code
+def test_gc3_guard_helpers_in_source():
+    """GC3: Production sensor contains guard helpers (no bare .get() in attrs/native_value/icon)."""
+    with open("custom_components/pilotsuite/sensors/agent_status_sensor.py") as f:
+        source = f.read()
+
+    assert "def _as_mapping" in source, "_as_mapping guard must be defined"
+    assert "def _as_list" in source, "_as_list guard must be defined"
+    assert "def _as_string" in source, "_as_string guard must be defined"
+    assert "def _as_float" in source, "_as_float guard must be defined"
+    assert "def _as_bool" in source, "_as_bool guard must be defined"
+    assert "math.isfinite" in source, "_as_float must use math.isfinite for finite float guard"
