@@ -7,6 +7,8 @@ HA-135 — 2026-04-06
 """
 from __future__ import annotations
 
+import inspect
+import math
 import pytest
 
 
@@ -38,49 +40,73 @@ class ProactiveAlertSensorContract:
     def __init__(self, alert_data: dict | None):
         self._data = alert_data or {}
 
+    @staticmethod
+    def _as_mapping(value):
+        return value if isinstance(value, dict) else {}
+
+    @staticmethod
+    def _as_list(value):
+        return value if isinstance(value, list) else []
+
+    @staticmethod
+    def _as_string(value, default=""):
+        return value if isinstance(value, str) else default
+
+    @staticmethod
+    def _as_int(value, default=0):
+        if isinstance(value, bool):
+            return default
+        if not isinstance(value, (int, float)):
+            return default
+        numeric_value = float(value)
+        if not math.isfinite(numeric_value):
+            return default
+        return int(numeric_value)
+
     @property
     def native_value(self) -> str:
-        total = self._data.get("total", 0)
+        data = self._as_mapping(self._data)
+        total = self._as_int(data.get("total"), 0)
         if total == 0:
             return "Keine Alerts"
-        highest = self._data.get("highest_priority_label", "Info")
+        highest = self._as_string(data.get("highest_priority_label"), "Info")
         return f"{total}x {highest}"
 
     @property
     def icon(self) -> str:
-        priority = self._data.get("highest_priority", 0)
+        data = self._as_mapping(self._data)
+        priority = self._as_int(data.get("highest_priority"), 0)
         return _PRIORITY_ICONS.get(priority, "mdi:bell-alert")
 
     @property
     def extra_state_attributes(self) -> dict:
-        by_priority = self._data.get("by_priority", {})
-        alerts = self._data.get("alerts", [])
+        data = self._as_mapping(self._data)
+        by_priority = self._as_mapping(data.get("by_priority"))
+        by_category = self._as_mapping(data.get("by_category"))
 
         alert_list: list[dict] = []
-        raw_alerts = self._data.get("alerts", [])
-        if isinstance(raw_alerts, list):
-            for a in raw_alerts[:10]:
-                if isinstance(a, dict):
-                    alert_list.append({
-                        "title": a.get("title_de", ""),
-                        "priority": a.get("priority_label", ""),
-                        "category": a.get("category", ""),
-                        "action": a.get("action", ""),
-                        "message": a.get("message_de", ""),
-                        "icon": a.get("icon", ""),
-                    })
+        for a in self._as_list(data.get("alerts"))[:10]:
+            if isinstance(a, dict):
+                alert_list.append({
+                    "title": self._as_string(a.get("title_de"), ""),
+                    "priority": self._as_string(a.get("priority_label"), ""),
+                    "category": self._as_string(a.get("category"), ""),
+                    "action": self._as_string(a.get("action"), ""),
+                    "message": self._as_string(a.get("message_de"), ""),
+                    "icon": self._as_string(a.get("icon"), ""),
+                })
 
         return {
-            "total_alerts": self._data.get("total", 0),
-            "highest_priority": self._data.get("highest_priority", 0),
-            "highest_priority_label": self._data.get("highest_priority_label", ""),
-            "info_count": by_priority.get("info", 0),
-            "advisory_count": by_priority.get("advisory", 0),
-            "warning_count": by_priority.get("warning", 0),
-            "critical_count": by_priority.get("critical", 0),
-            "categories": self._data.get("by_category", {}),
+            "total_alerts": self._as_int(data.get("total"), 0),
+            "highest_priority": self._as_int(data.get("highest_priority"), 0),
+            "highest_priority_label": self._as_string(data.get("highest_priority_label"), ""),
+            "info_count": self._as_int(by_priority.get("info"), 0),
+            "advisory_count": self._as_int(by_priority.get("advisory"), 0),
+            "warning_count": self._as_int(by_priority.get("warning"), 0),
+            "critical_count": self._as_int(by_priority.get("critical"), 0),
+            "categories": by_category,
             "alerts": alert_list,
-            "last_evaluated": self._data.get("last_evaluated", ""),
+            "last_evaluated": self._as_string(data.get("last_evaluated"), ""),
         }
 
 
@@ -260,6 +286,85 @@ class TestProactiveAlertSensorEdge:
         sensor = ProactiveAlertSensorContract(data)
         assert sensor.icon == "mdi:check-circle"
 
+    def test_pa4_edge_top_level_non_dict(self):
+        """PA4.5: Non-dict top-level payload falls back to safe defaults."""
+        sensor = ProactiveAlertSensorContract("broken")
+        assert sensor.native_value == "Keine Alerts"
+        assert sensor.icon == "mdi:check-circle"
+        assert sensor.extra_state_attributes["alerts"] == []
+
+    def test_pa4_edge_total_non_numeric(self):
+        """PA4.6: Non-numeric total falls back to 0."""
+        sensor = ProactiveAlertSensorContract({"total": "5", "highest_priority_label": "Critical"})
+        assert sensor.native_value == "Keine Alerts"
+
+    def test_pa4_edge_priority_non_numeric(self):
+        """PA4.7: Non-numeric priority falls back to priority 0 icon."""
+        sensor = ProactiveAlertSensorContract({"highest_priority": "3"})
+        assert sensor.icon == "mdi:check-circle"
+
+    def test_pa4_edge_by_priority_non_mapping(self):
+        """PA4.8: Non-dict by_priority falls back to 0 counters."""
+        sensor = ProactiveAlertSensorContract({"by_priority": "broken"})
+        attrs = sensor.extra_state_attributes
+        assert attrs["info_count"] == 0
+        assert attrs["advisory_count"] == 0
+        assert attrs["warning_count"] == 0
+        assert attrs["critical_count"] == 0
+
+    def test_pa4_edge_by_category_non_mapping(self):
+        """PA4.9: Non-dict by_category falls back to empty mapping."""
+        sensor = ProactiveAlertSensorContract({"by_category": ["energy"]})
+        assert sensor.extra_state_attributes["categories"] == {}
+
+    def test_pa4_edge_alert_entry_non_dict_or_malformed_fields(self):
+        """PA4.10: Non-dict alert entries are skipped and malformed fields normalize safely."""
+        sensor = ProactiveAlertSensorContract(
+            {
+                "alerts": [
+                    "broken",
+                    {
+                        "title_de": 123,
+                        "priority_label": None,
+                        "category": False,
+                        "action": 7,
+                        "message_de": object(),
+                        "icon": [],
+                    },
+                ]
+            }
+        )
+        assert sensor.extra_state_attributes["alerts"] == [
+            {
+                "title": "",
+                "priority": "",
+                "category": "",
+                "action": "",
+                "message": "",
+                "icon": "",
+            }
+        ]
+
+    def test_pa4_edge_non_finite_priority_counters(self):
+        """PA4.11: Non-finite and bool counters fall back to 0."""
+        sensor = ProactiveAlertSensorContract(
+            {
+                "highest_priority": float("nan"),
+                "by_priority": {
+                    "info": float("inf"),
+                    "advisory": True,
+                    "warning": float("nan"),
+                    "critical": 2.9,
+                },
+            }
+        )
+        attrs = sensor.extra_state_attributes
+        assert attrs["highest_priority"] == 0
+        assert attrs["info_count"] == 0
+        assert attrs["advisory_count"] == 0
+        assert attrs["warning_count"] == 0
+        assert attrs["critical_count"] == 2
+
 
 # =============================================================================
 # GC1 — global contract: pure projection, no local semantic invention
@@ -299,3 +404,14 @@ class TestProactiveAlertSensorGlobalContract:
         attrs = sensor.extra_state_attributes
         assert attrs["advisory_count"] == 2
         assert attrs["total_alerts"] == 3
+
+    def test_gc3_source_guards_present(self):
+        """GC3.1: Production module keeps malformed-payload guards in place."""
+        from custom_components.pilotsuite.sensors import proactive_alert_sensor
+
+        source = inspect.getsource(proactive_alert_sensor)
+        assert "def _as_mapping" in source
+        assert "def _as_list" in source
+        assert "def _as_string" in source
+        assert "def _as_int" in source
+        assert "math.isfinite" in source
