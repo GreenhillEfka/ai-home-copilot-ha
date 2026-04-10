@@ -71,6 +71,8 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
             ROOT_MANIFEST.read_text(encoding="utf-8"),
             COMPONENT_MANIFEST.read_text(encoding="utf-8"),
             HACS_FILE.read_text(encoding="utf-8"),
+            (REPO_ROOT / "custom_components" / "pilotsuite" / "const.py").read_text(encoding="utf-8"),
+            (REPO_ROOT / "custom_components" / "pilotsuite" / "config_flow.py").read_text(encoding="utf-8"),
         ]
     )
 
@@ -80,3 +82,6 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
     assert '"zip_release": true' not in text
     assert '"filename": "copilot-ha.zip"' not in text
     assert '"homeassistant": "2024.1.0"' not in text
+    # HA-290 / HA-292: block DOMAIN regression to legacy "copilot_ha" value
+    assert 'DOMAIN = "copilot_ha"' not in text
+    assert 'CONFIG_FLOW_DOMAIN = "copilot_ha"' not in text
