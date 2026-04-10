@@ -294,7 +294,100 @@ class TestOnboardingSensorEndpoint:
 
 
 # =============================================================================
-# GC1–GC2: Global Projection Contract
+# OB4b: malformed payload guard cases
+# =============================================================================
+
+class TestOnboardingSensorMalformedPayloads:
+    """OB4b group: malformed payload cases - step items must be dicts."""
+
+    def test_OB4b1_non_dict_step_item(self):
+        """OB4b1: steps contains a non-dict item (None) - skipped silently."""
+        data = {
+            "is_complete": False,
+            "current_step": 1,
+            "total_steps": 3,
+            "steps": [
+                {"id": "s1", "completed": True, "skipped": False},
+                None,
+                {"id": "s3", "completed": False, "skipped": False},
+            ],
+        }
+        attrs = OnboardingSensorContract.extra_state_attributes(data)
+        assert attrs["completed_steps"] == 1
+        assert attrs["skipped_steps"] == 0
+
+    def test_OB4b2_string_step_item(self):
+        """OB4b2: steps contains a string instead of dict - skipped silently."""
+        data = {
+            "is_complete": False,
+            "current_step": 0,
+            "total_steps": 2,
+            "steps": [
+                "not-a-dict",
+                {"id": "s2", "completed": True, "skipped": False},
+            ],
+        }
+        attrs = OnboardingSensorContract.extra_state_attributes(data)
+        assert attrs["completed_steps"] == 1
+        assert attrs["skipped_steps"] == 0
+
+    def test_OB4b3_int_step_item(self):
+        """OB4b3: steps contains an int instead of dict - skipped silently."""
+        data = {
+            "is_complete": False,
+            "current_step": 0,
+            "total_steps": 2,
+            "steps": [42, {"id": "s2", "completed": False, "skipped": True}],
+        }
+        attrs = OnboardingSensorContract.extra_state_attributes(data)
+        assert attrs["completed_steps"] == 0
+        assert attrs["skipped_steps"] == 1
+
+    def test_OB4b4_non_list_steps(self):
+        """OB4b4: steps is a string instead of list - empty list used."""
+        data = {
+            "is_complete": False,
+            "current_step": 0,
+            "total_steps": 0,
+            "steps": "not-a-list",
+        }
+        attrs = OnboardingSensorContract.extra_state_attributes(data)
+        assert attrs["completed_steps"] == 0
+        assert attrs["skipped_steps"] == 0
+
+    def test_OB4b5_non_dict_steps(self):
+        """OB4b5: steps is a dict - empty list used."""
+        data = {
+            "is_complete": False,
+            "current_step": 0,
+            "total_steps": 0,
+            "steps": {"step1": True},
+        }
+        attrs = OnboardingSensorContract.extra_state_attributes(data)
+        assert attrs["completed_steps"] == 0
+        assert attrs["skipped_steps"] == 0
+
+    def test_OB4b6_mixed_malformed_steps(self):
+        """OB4b6: mixed int/None/string/bool items - valid dicts counted."""
+        data = {
+            "is_complete": False,
+            "current_step": 0,
+            "total_steps": 5,
+            "steps": [
+                None,
+                "string",
+                42,
+                {"id": "s4", "completed": True, "skipped": False},
+                False,
+            ],
+        }
+        attrs = OnboardingSensorContract.extra_state_attributes(data)
+        assert attrs["completed_steps"] == 1
+        assert attrs["skipped_steps"] == 0
+
+
+# =============================================================================
+# GC1-GC2: Global Projection Contract
 # =============================================================================
 
 class TestOnboardingSensorGlobalContract:

@@ -46,8 +46,8 @@ class OnboardingSensor(CopilotBaseEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         steps = self._data.get("steps", [])
-        completed = sum(1 for s in steps if s.get("completed"))
-        skipped = sum(1 for s in steps if s.get("skipped"))
+        completed = sum(1 for s in steps if isinstance(s, dict) and s.get("completed"))
+        skipped = sum(1 for s in steps if isinstance(s, dict) and s.get("skipped"))
 
         return {
             "current_step": self._data.get("current_step", 0),
