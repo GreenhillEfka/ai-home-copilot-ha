@@ -9,11 +9,11 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import aiohttp
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from ..entity import CopilotBaseEntity
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import aiohttp
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,23 @@ _STATE_ICONS = {
     "idle": "mdi:brain",
     "sleeping": "mdi:power-sleep",
 }
+
+
+def _as_mapping(value: Any) -> dict[str, Any]:
+    """Return dict-like payloads, otherwise a safe empty mapping."""
+    return value if isinstance(value, dict) else {}
+
+
+
+def _as_list(value: Any) -> list[Any]:
+    """Return list payloads, otherwise a safe empty list."""
+    return value if isinstance(value, list) else []
+
+
+
+def _as_string(value: Any, default: str = "") -> str:
+    """Return string payloads, otherwise a safe default."""
+    return value if isinstance(value, str) else default
 
 
 class BrainActivitySensor(CopilotBaseEntity, SensorEntity):
@@ -70,46 +87,51 @@ class BrainActivitySensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
+        data = _as_mapping(self._data)
         attrs: dict[str, Any] = {
-            "state": self._data.get("state", "idle"),
-            "total_pulses": self._data.get("total_pulses", 0),
-            "total_chat_messages": self._data.get("total_chat_messages", 0),
-            "uptime_seconds": self._data.get("uptime_seconds", 0),
-            "sleep_seconds": self._data.get("sleep_seconds", 0),
-            "idle_timeout_seconds": self._data.get("idle_timeout_seconds", 300),
-            "sleep_timeout_seconds": self._data.get("sleep_timeout_seconds", 1800),
-            "last_active": self._data.get("last_active", ""),
+            "state": data.get("state", "idle"),
+            "total_pulses": data.get("total_pulses", 0),
+            "total_chat_messages": data.get("total_chat_messages", 0),
+            "uptime_seconds": data.get("uptime_seconds", 0),
+            "sleep_seconds": data.get("sleep_seconds", 0),
+            "idle_timeout_seconds": data.get("idle_timeout_seconds", 300),
+            "sleep_timeout_seconds": data.get("sleep_timeout_seconds", 1800),
+            "last_active": data.get("last_active", ""),
         }
 
-        recent_pulses = self._data.get("recent_pulses", [])
+        recent_pulses = _as_list(data.get("recent_pulses", []))
         if recent_pulses:
             attrs["recent_pulses"] = [
-                {"reason": p.get("reason"), "duration_ms": p.get("duration_ms")}
-                for p in recent_pulses[:3]
+                {"reason": pulse.get("reason"), "duration_ms": pulse.get("duration_ms")}
+                for pulse in recent_pulses[:3]
+                if isinstance(pulse, dict)
             ]
 
-        recent_chat = self._data.get("recent_chat", [])
+        recent_chat = _as_list(data.get("recent_chat", []))
         if recent_chat:
             attrs["recent_chat"] = [
-                {"role": m.get("role"), "content": m.get("content", "")[:100]}
-                for m in recent_chat[:3]
+                {"role": message.get("role"), "content": _as_string(message.get("content"))[:100]}
+                for message in recent_chat[:3]
+                if isinstance(message, dict)
             ]
 
         # Webhook-pushed intelligence data from coordinator
-        coord_data = self.coordinator.data if isinstance(self.coordinator.data, dict) else {}
+        coord_data = _as_mapping(self.coordinator.data)
 
-        neurons_fired = coord_data.get("neurons_fired", [])
+        neurons_fired = _as_list(coord_data.get("neurons_fired", []))
         attrs["neurons_fired_count"] = len(neurons_fired)
         if neurons_fired:
-            last = neurons_fired[-1]
+            last = _as_mapping(neurons_fired[-1])
             attrs["last_neuron_fired"] = last.get("neuron_id", last.get("name", "unknown"))
             attrs["last_neuron_fired_at"] = last.get("fired_at", last.get("timestamp", ""))
 
-        brain_insights = coord_data.get("brain_insights", [])
+        brain_insights = _as_list(coord_data.get("brain_insights", []))
         attrs["brain_insights_count"] = len(brain_insights)
         if brain_insights:
-            last_insight = brain_insights[-1]
+            last_insight = _as_mapping(brain_insights[-1])
             attrs["last_brain_insight"] = last_insight.get("insight_type", last_insight.get("type", "unknown"))
-            attrs["last_brain_insight_summary"] = last_insight.get("summary", last_insight.get("description", ""))[:200]
+            attrs["last_brain_insight_summary"] = _as_string(
+                last_insight.get("summary", last_insight.get("description", ""))
+            )[:200]
 
         return attrs
