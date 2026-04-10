@@ -7,6 +7,8 @@ without local semantic invention.
 Contract Mirror pattern: mirrors take raw coordinator_data dict directly,
 avoiding the import chain through coordinator.py → api.py.
 Only source-file reads are used for GC guards.
+
+HA-309 — 2026-04-10
 """
 from __future__ import annotations
 
@@ -19,6 +21,16 @@ SENSOR_PATH = "custom_components/pilotsuite/sensors/habit_learning_v2.py"
 # Contract Mirrors (write-only — must stay in sync with the sensor source)
 # ---------------------------------------------------------------------------
 
+def _as_mapping(value):
+    """Return dict-like payloads, otherwise a safe empty mapping."""
+    return value if isinstance(value, dict) else {}
+
+
+def _is_list(value):
+    """Return True only for list payloads."""
+    return isinstance(value, list)
+
+
 class HabitLearningSensorContract:
     """Mirror of HabitLearningSensor projection logic."""
 
@@ -26,14 +38,14 @@ class HabitLearningSensorContract:
     def native_value(coordinator_data):
         if not coordinator_data:
             return "0"
-        habit_summary = coordinator_data.get("habit_summary", {})
+        habit_summary = _as_mapping(coordinator_data.get("habit_summary"))
         return str(habit_summary.get("total_patterns", 0))
 
     @staticmethod
     def extra_state_attributes(coordinator_data):
         if not coordinator_data:
             return {}
-        habit_summary = coordinator_data.get("habit_summary", {})
+        habit_summary = _as_mapping(coordinator_data.get("habit_summary"))
         return {
             "total_patterns": habit_summary.get("total_patterns", 0),
             "time_patterns": habit_summary.get("time_patterns", {}),
@@ -50,18 +62,34 @@ class HabitPredictionSensorContract:
     @staticmethod
     def native_value(coordinator_data):
         if not coordinator_data:
-            return "0"
-        predictions = coordinator_data.get("predictions", [])
-        return str(len(predictions) if predictions is not None else 0)
+            return "none"
+        predictions = coordinator_data.get("predictions")
+        if not _is_list(predictions):
+            return "none"
+        if not predictions:
+            return "none"
+        best = max(predictions, key=lambda p: _as_mapping(p).get("confidence", 0))
+        return _as_mapping(best).get("pattern", "unknown")
 
     @staticmethod
     def extra_state_attributes(coordinator_data):
         if not coordinator_data:
             return {}
         predictions = coordinator_data.get("predictions")
-        if predictions is None:
+        if not _is_list(predictions):
             return {}
-        return {"predictions": predictions}
+        return {
+            "predictions": [
+                {
+                    "pattern": _as_mapping(p).get("pattern", ""),
+                    "confidence": _as_mapping(p).get("confidence", 0),
+                    "predicted": _as_mapping(p).get("predicted", False),
+                    "details": _as_mapping(p).get("details", {}),
+                }
+                for p in predictions
+            ],
+            "count": len(predictions),
+        }
 
 
 class SequencePredictionSensorContract:
@@ -70,18 +98,34 @@ class SequencePredictionSensorContract:
     @staticmethod
     def native_value(coordinator_data):
         if not coordinator_data:
-            return "0"
-        sequences = coordinator_data.get("sequences", [])
-        return str(len(sequences) if sequences is not None else 0)
+            return "none"
+        sequences = coordinator_data.get("sequences")
+        if not _is_list(sequences):
+            return "none"
+        if not sequences:
+            return "none"
+        best = max(sequences, key=lambda s: _as_mapping(s).get("confidence", 0))
+        return " -> ".join(_as_mapping(best).get("sequence", []))
 
     @staticmethod
     def extra_state_attributes(coordinator_data):
         if not coordinator_data:
             return {}
         sequences = coordinator_data.get("sequences")
-        if sequences is None:
+        if not _is_list(sequences):
             return {}
-        return {"sequences": sequences}
+        return {
+            "sequences": [
+                {
+                    "sequence": " -> ".join(_as_mapping(s).get("sequence", [])),
+                    "confidence": _as_mapping(s).get("confidence", 0),
+                    "occurrences": _as_mapping(s).get("occurrences", 0),
+                    "predicted": _as_mapping(s).get("predicted", False),
+                }
+                for s in sequences
+            ],
+            "count": len(sequences),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -175,38 +219,59 @@ class TestHabitLearningSensorAttributes:
 
 
 # ---------------------------------------------------------------------------
+# HabitLearningSensor Malformed Payload Tests — HLm1 to HLm3
+# ---------------------------------------------------------------------------
+
+class TestHabitLearningSensorMalformed:
+    """HLm1-HLm3: malformed habit_summary payloads must not crash."""
+
+    def test_hlm1_habit_summary_string_returns_zero(self):
+        # String is not dict-like — guard must return safe empty mapping
+        assert HabitLearningSensorContract.native_value({"habit_summary": "invalid"}) == "0"
+
+    def test_hlm2_habit_summary_list_returns_zero(self):
+        # List is not dict-like — guard must return safe empty mapping
+        assert HabitLearningSensorContract.native_value({"habit_summary": [1, 2, 3]}) == "0"
+
+    def test_hlm3_habit_summary_none_returns_zero(self):
+        # Explicit None must not crash
+        assert HabitLearningSensorContract.native_value({"habit_summary": None}) == "0"
+
+
+# ---------------------------------------------------------------------------
 # HabitPredictionSensor Tests — HP1 to HP6
 # ---------------------------------------------------------------------------
 
 class TestHabitPredictionSensor:
-    """HP1-HP6: native_value = str(len(predictions)), attrs = predictions list."""
+    """HP1-HP6: native_value = pattern, attrs = predictions list."""
 
-    def test_hp1_full_predictions_returns_count(self):
+    def test_hp1_full_predictions_returns_pattern(self):
         data = {
             "predictions": [
-                {"action": "light.turn_on", "confidence": 0.92, "time_window": "morning"},
-                {"action": "climate.set_temp", "confidence": 0.87, "time_window": "evening"},
+                {"pattern": "morning_routine", "confidence": 0.92, "time_window": "morning"},
+                {"pattern": "evening_wind_down", "confidence": 0.87, "time_window": "evening"},
             ]
         }
-        assert HabitPredictionSensorContract.native_value(data) == "2"
+        # highest confidence is 0.92 → pattern "morning_routine"
+        assert HabitPredictionSensorContract.native_value(data) == "morning_routine"
 
-    def test_hp2_empty_predictions_returns_zero(self):
-        assert HabitPredictionSensorContract.native_value({"predictions": []}) == "0"
+    def test_hp2_empty_predictions_returns_none(self):
+        assert HabitPredictionSensorContract.native_value({"predictions": []}) == "none"
 
-    def test_hp3_missing_predictions_key_returns_zero(self):
-        assert HabitPredictionSensorContract.native_value({}) == "0"
+    def test_hp3_missing_predictions_key_returns_none(self):
+        assert HabitPredictionSensorContract.native_value({}) == "none"
 
-    def test_hp4_predictions_none_returns_zero(self):
-        assert HabitPredictionSensorContract.native_value({"predictions": None}) == "0"
+    def test_hp4_predictions_none_returns_none(self):
+        assert HabitPredictionSensorContract.native_value({"predictions": None}) == "none"
 
     def test_hp5_attributes_return_predictions_list(self):
         data = {
             "predictions": [
-                {"action": "media.play", "confidence": 0.95, "time_window": "evening"}
+                {"pattern": "media.play", "confidence": 0.95, "time_window": "evening"}
             ]
         }
         assert HabitPredictionSensorContract.extra_state_attributes(data)["predictions"] == [
-            {"action": "media.play", "confidence": 0.95, "time_window": "evening"}
+            {"pattern": "media.play", "confidence": 0.95, "predicted": False, "details": {}}
         ]
 
     def test_hp6_attributes_empty_when_no_predictions(self):
@@ -214,38 +279,66 @@ class TestHabitPredictionSensor:
 
 
 # ---------------------------------------------------------------------------
+# HabitPredictionSensor Malformed Payload Tests — HPm1 to HPm4
+# ---------------------------------------------------------------------------
+
+class TestHabitPredictionSensorMalformed:
+    """HPm1-HPm4: malformed predictions payloads must not crash."""
+
+    def test_hpm1_predictions_string_returns_none(self):
+        # string is not a list — must return "none" not crash
+        assert HabitPredictionSensorContract.native_value({"predictions": "invalid"}) == "none"
+
+    def test_hpm2_predictions_dict_returns_none(self):
+        # dict is not a list — must return "none" not crash
+        assert HabitPredictionSensorContract.native_value({"predictions": {"key": "value"}}) == "none"
+
+    def test_hpm3_predictions_int_returns_none(self):
+        # int is not a list — must return "none" not crash
+        assert HabitPredictionSensorContract.native_value({"predictions": 42}) == "none"
+
+    def test_hpm4_prediction_item_not_dict_falls_back(self):
+        # predictions list contains a non-dict item — must not crash via .get()
+        data = {"predictions": ["not_a_dict", {"pattern": "ok", "confidence": 0.8}]}
+        # first item becomes {} via _as_mapping, second is valid
+        # max key: first -> 0, second -> 0.8 → best is second
+        assert HabitPredictionSensorContract.native_value(data) == "ok"
+
+
+# ---------------------------------------------------------------------------
 # SequencePredictionSensor Tests — SP1 to SP6
 # ---------------------------------------------------------------------------
 
 class TestSequencePredictionSensor:
-    """SP1-SP6: native_value = str(len(sequences)), attrs = sequences list."""
+    """SP1-SP6: native_value = joined sequence, attrs = sequences list."""
 
-    def test_sp1_full_sequences_returns_count(self):
+    def test_sp1_full_sequences_returns_joined(self):
         data = {
             "sequences": [
-                {"id": "seq_a", "steps": 3, "confidence": 0.88},
-                {"id": "seq_b", "steps": 2, "confidence": 0.75},
+                {"sequence": ["light.on", "coffee.brew"], "confidence": 0.88, "occurrences": 5},
+                {"sequence": ["tv.watch"], "confidence": 0.75, "occurrences": 3},
             ]
         }
-        assert SequencePredictionSensorContract.native_value(data) == "2"
+        # highest confidence is 0.88 → sequence ["light.on", "coffee.brew"]
+        assert SequencePredictionSensorContract.native_value(data) == "light.on -> coffee.brew"
 
-    def test_sp2_empty_sequences_returns_zero(self):
-        assert SequencePredictionSensorContract.native_value({"sequences": []}) == "0"
+    def test_sp2_empty_sequences_returns_none(self):
+        assert SequencePredictionSensorContract.native_value({"sequences": []}) == "none"
 
-    def test_sp3_missing_sequences_key_returns_zero(self):
-        assert SequencePredictionSensorContract.native_value({}) == "0"
+    def test_sp3_missing_sequences_key_returns_none(self):
+        assert SequencePredictionSensorContract.native_value({}) == "none"
 
-    def test_sp4_sequences_none_returns_zero(self):
-        assert SequencePredictionSensorContract.native_value({"sequences": None}) == "0"
+    def test_sp4_sequences_none_returns_none(self):
+        assert SequencePredictionSensorContract.native_value({"sequences": None}) == "none"
 
     def test_sp5_attributes_return_sequences_list(self):
         data = {
             "sequences": [
-                {"id": "seq_x", "steps": 4, "confidence": 0.91}
+                {"sequence": ["light.off"], "confidence": 0.91, "occurrences": 2, "predicted": True}
             ]
         }
         assert SequencePredictionSensorContract.extra_state_attributes(data)["sequences"] == [
-            {"id": "seq_x", "steps": 4, "confidence": 0.91}
+            {"sequence": "light.off", "confidence": 0.91, "occurrences": 2, "predicted": True}
         ]
 
     def test_sp6_attributes_empty_when_no_sequences(self):
@@ -253,11 +346,38 @@ class TestSequencePredictionSensor:
 
 
 # ---------------------------------------------------------------------------
-# Global Contract Tests — GC1 to GC2
+# SequencePredictionSensor Malformed Payload Tests — SPm1 to SPm4
+# ---------------------------------------------------------------------------
+
+class TestSequencePredictionSensorMalformed:
+    """SPm1-SPm4: malformed sequences payloads must not crash."""
+
+    def test_spm1_sequences_string_returns_none(self):
+        # string is not a list — must return "none" not crash
+        assert SequencePredictionSensorContract.native_value({"sequences": "invalid"}) == "none"
+
+    def test_spm2_sequences_dict_returns_none(self):
+        # dict is not a list — must return "none" not crash
+        assert SequencePredictionSensorContract.native_value({"sequences": {"key": "value"}}) == "none"
+
+    def test_spm3_sequences_int_returns_none(self):
+        # int is not a list — must return "none" not crash
+        assert SequencePredictionSensorContract.native_value({"sequences": 99}) == "none"
+
+    def test_spm4_sequence_item_not_dict_falls_back(self):
+        # sequences list contains a non-dict item — must not crash via .get()
+        data = {"sequences": ["not_a_dict", {"sequence": ["ok"], "confidence": 0.7}]}
+        # first item becomes {} via _as_mapping, second is valid
+        # max key: first -> 0, second -> 0.7 → best is second
+        assert SequencePredictionSensorContract.native_value(data) == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Global Contract Tests — GC1 to GC4
 # ---------------------------------------------------------------------------
 
 class TestHabitLearningGlobalContract:
-    """GC1-GC2: source guard — pure coordinator projection, no local invention."""
+    """GC1-GC4: source guard — pure coordinator projection, no local invention."""
 
     def test_gc1_source_uses_habit_summary_coordinator_field(self):
         """Guard: source must read habit_summary from coordinator.data."""
@@ -273,3 +393,13 @@ class TestHabitLearningGlobalContract:
                 f"HTTP indicator '{indicator}' found in {SENSOR_PATH} — "
                 "sensor must be a pure coordinator projection"
             )
+
+    def test_gc3_source_has_list_guard(self):
+        """Guard: source must use _is_list guard to prevent non-list crash."""
+        src = open(SENSOR_PATH).read()
+        assert "_is_list" in src, "Source must use _is_list guard for predictions/sequences payloads"
+
+    def test_gc4_source_has_mapping_guard(self):
+        """Guard: source must use _as_mapping guard for habit_summary and sub-payloads."""
+        src = open(SENSOR_PATH).read()
+        assert "_as_mapping" in src, "Source must use _as_mapping guard for dict-like payloads"
