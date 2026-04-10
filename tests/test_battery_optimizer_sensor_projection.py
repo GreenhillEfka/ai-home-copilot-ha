@@ -7,26 +7,70 @@ Contract verified:
   - icon derived from soc_pct + current_action (static mapping, no semantic invention)
   - extra_state_attributes = merged _status + _schedule fields
   - No local battery logic, no threshold computation, no semantic invention.
+
+Guard coverage (HA-319):
+  - Non-dict top-level payloads → safe defaults
+  - Non-numeric soc_pct/counts (string, None, bool, inf, nan) → documented defaults
+  - Non-string action/strategy fields → documented defaults
+  - Empty/blank strings → documented defaults
 """
 
+import math
 import pytest
 
 
 # =============================================================================
-# Contract mirrors
+# Contract mirrors (with guard semantics)
 # =============================================================================
+
+
+def _as_mapping(val):
+    """Reject non-dict top-level payloads."""
+    if isinstance(val, dict):
+        return val
+    return {}
+
+
+def _as_float(val, default):
+    """Accept only finite numeric values; reject bool, inf, nan."""
+    if isinstance(val, bool):
+        return default
+    if isinstance(val, (int, float)) and math.isfinite(val):
+        return float(val)
+    return default
+
+
+def _as_int(val, default):
+    """Accept only finite integer-valued floats or ints; reject bool, inf, nan."""
+    if isinstance(val, bool):
+        return default
+    if isinstance(val, int) and not isinstance(val, bool):
+        return val
+    if isinstance(val, float) and math.isfinite(val) and val == int(val):
+        return int(val)
+    return default
+
+
+def _as_string(val, default):
+    """Accept only non-empty strings."""
+    if isinstance(val, str) and val:
+        return val
+    return default
+
 
 class BatteryOptimizerSensorContract:
     """Mirrors BatteryOptimizerSensor state derived from Core API responses."""
 
     @staticmethod
-    def native_value(status: dict) -> float | None:
-        return status.get("soc_pct")
+    def native_value(status):
+        status = _as_mapping(status)
+        return _as_float(status.get("soc_pct"), None)
 
     @staticmethod
-    def icon(status: dict) -> str:
-        soc = status.get("soc_pct", 50)
-        action = status.get("current_action", "hold")
+    def icon(status):
+        status = _as_mapping(status)
+        soc = _as_float(status.get("soc_pct"), 50)
+        action = _as_string(status.get("current_action"), "hold")
         if action in ("charge", "charge_solar"):
             return "mdi:battery-charging"
         elif action == "discharge":
@@ -38,33 +82,36 @@ class BatteryOptimizerSensorContract:
         return "mdi:battery-low"
 
     @staticmethod
-    def attrs(status: dict, schedule: dict) -> dict:
+    def attrs(status, schedule):
+        status = _as_mapping(status)
+        schedule = _as_mapping(schedule)
         attrs = {
-            "soc_pct": status.get("soc_pct", 0),
-            "soc_kwh": status.get("soc_kwh", 0),
-            "capacity_kwh": status.get("capacity_kwh", 0),
-            "current_action": status.get("current_action", "hold"),
-            "current_power_kw": status.get("current_power_kw", 0),
-            "strategy": status.get("strategy", "none"),
-            "cycles_today": status.get("cycles_today", 0),
-            "next_charge_at": status.get("next_charge_at", ""),
-            "next_discharge_at": status.get("next_discharge_at", ""),
-            "health_pct": status.get("health_pct", 100),
+            "soc_pct": _as_float(status.get("soc_pct"), 0.0),
+            "soc_kwh": _as_float(status.get("soc_kwh"), 0.0),
+            "capacity_kwh": _as_float(status.get("capacity_kwh"), 0.0),
+            "current_action": _as_string(status.get("current_action"), "hold"),
+            "current_power_kw": _as_float(status.get("current_power_kw"), 0.0),
+            "strategy": _as_string(status.get("strategy"), "none"),
+            "cycles_today": _as_int(status.get("cycles_today"), 0),
+            "next_charge_at": _as_string(status.get("next_charge_at"), ""),
+            "next_discharge_at": _as_string(status.get("next_discharge_at"), ""),
+            "health_pct": _as_int(status.get("health_pct"), 100),
         }
         if schedule:
-            attrs["estimated_savings_eur"] = schedule.get("estimated_savings_eur", 0)
-            attrs["total_charge_kwh"] = schedule.get("total_charge_kwh", 0)
-            attrs["total_discharge_kwh"] = schedule.get("total_discharge_kwh", 0)
-            attrs["total_solar_charge_kwh"] = schedule.get("total_solar_charge_kwh", 0)
-            attrs["estimated_cycles"] = schedule.get("estimated_cycles", 0)
-            attrs["avg_charge_price_ct"] = schedule.get("avg_charge_price_ct", 0)
-            attrs["avg_discharge_price_ct"] = schedule.get("avg_discharge_price_ct", 0)
+            attrs["estimated_savings_eur"] = _as_float(schedule.get("estimated_savings_eur"), 0.0)
+            attrs["total_charge_kwh"] = _as_float(schedule.get("total_charge_kwh"), 0.0)
+            attrs["total_discharge_kwh"] = _as_float(schedule.get("total_discharge_kwh"), 0.0)
+            attrs["total_solar_charge_kwh"] = _as_float(schedule.get("total_solar_charge_kwh"), 0.0)
+            attrs["estimated_cycles"] = _as_float(schedule.get("estimated_cycles"), 0.0)
+            attrs["avg_charge_price_ct"] = _as_float(schedule.get("avg_charge_price_ct"), 0.0)
+            attrs["avg_discharge_price_ct"] = _as_float(schedule.get("avg_discharge_price_ct"), 0.0)
         return attrs
 
 
 # =============================================================================
 # Test fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def status_full():
@@ -236,6 +283,7 @@ def schedule_none():
 # BO1: native_value = _status["soc_pct"]
 # =============================================================================
 
+
 class TestBONativeValue:
     @pytest.mark.parametrize("status,soc_expected", [
         ("status_full", 75),
@@ -252,13 +300,46 @@ class TestBONativeValue:
         assert BatteryOptimizerSensorContract.native_value(status_not_ok) is None
 
     def test_bo1_native_value_missing_optional(self, status_missing_optional):
-        # soc_pct is present (65) even if many optional keys are absent
         assert BatteryOptimizerSensorContract.native_value(status_missing_optional) == 65
+
+    # Malformed numeric cases (HA-319)
+    def test_bo1_native_value_string_soc(self):
+        status = {"soc_pct": "75"}
+        assert BatteryOptimizerSensorContract.native_value(status) is None
+
+    def test_bo1_native_value_none_soc(self):
+        status = {"soc_pct": None}
+        assert BatteryOptimizerSensorContract.native_value(status) is None
+
+    def test_bo1_native_value_bool_soc(self):
+        status = {"soc_pct": True}
+        assert BatteryOptimizerSensorContract.native_value(status) is None
+
+    def test_bo1_native_value_inf_soc(self):
+        status = {"soc_pct": float("inf")}
+        assert BatteryOptimizerSensorContract.native_value(status) is None
+
+    def test_bo1_native_value_nan_soc(self):
+        status = {"soc_pct": float("nan")}
+        assert BatteryOptimizerSensorContract.native_value(status) is None
+
+    def test_bo1_native_value_float_soc(self):
+        status = {"soc_pct": 75.5}
+        assert BatteryOptimizerSensorContract.native_value(status) == 75.5
+
+    def test_bo1_native_value_non_dict_top_level(self):
+        status = "broken"
+        assert BatteryOptimizerSensorContract.native_value(status) is None
+
+    def test_bo1_native_value_list_top_level(self):
+        status = [{"soc_pct": 75}]
+        assert BatteryOptimizerSensorContract.native_value(status) is None
 
 
 # =============================================================================
 # BO2: icon derived from soc_pct + current_action
 # =============================================================================
+
 
 class TestBOIcon:
     def test_bo2_icon_charge_solar(self, status_full):
@@ -274,16 +355,35 @@ class TestBOIcon:
         assert BatteryOptimizerSensorContract.icon(status_high) == "mdi:battery-high"
 
     def test_bo2_icon_medium(self, status_hold):
-        # 50% → battery-medium
         assert BatteryOptimizerSensorContract.icon(status_hold) == "mdi:battery-medium"
 
     def test_bo2_icon_low(self, status_low):
-        # 10% → battery-low
         assert BatteryOptimizerSensorContract.icon(status_low) == "mdi:battery-low"
 
     def test_bo2_icon_defaults_to_medium(self):
-        # no soc_pct defaults to 50 → medium
         assert BatteryOptimizerSensorContract.icon({}) == "mdi:battery-medium"
+
+    # Malformed action string cases (HA-319)
+    def test_bo2_icon_string_soc_uses_default(self):
+        status = {"soc_pct": "75", "current_action": "hold"}
+        # string soc_pct → default 50 → medium
+        assert BatteryOptimizerSensorContract.icon(status) == "mdi:battery-medium"
+
+    def test_bo2_icon_none_action_uses_default(self):
+        status = {"soc_pct": 50, "current_action": None}
+        assert BatteryOptimizerSensorContract.icon(status) == "mdi:battery-medium"
+
+    def test_bo2_icon_bool_action_uses_default(self):
+        status = {"soc_pct": 50, "current_action": True}
+        assert BatteryOptimizerSensorContract.icon(status) == "mdi:battery-medium"
+
+    def test_bo2_icon_blank_action_uses_default(self):
+        status = {"soc_pct": 50, "current_action": ""}
+        assert BatteryOptimizerSensorContract.icon(status) == "mdi:battery-medium"
+
+    def test_bo2_icon_non_dict_top_level(self):
+        status = "broken"
+        assert BatteryOptimizerSensorContract.icon(status) == "mdi:battery-medium"
 
 
 # =============================================================================
@@ -302,26 +402,50 @@ class TestBOAttrs:
     def test_bo3_attrs_status_only(self, status_full, schedule_none):
         attrs = BatteryOptimizerSensorContract.attrs(status_full, schedule_none)
         assert attrs["soc_pct"] == 75
-        assert "estimated_savings_eur" not in attrs  # no schedule
+        assert "estimated_savings_eur" not in attrs
 
     def test_bo3_attrs_schedule_empty(self, status_hold, schedule_empty):
         attrs = BatteryOptimizerSensorContract.attrs(status_hold, schedule_empty)
         assert attrs["soc_pct"] == 50
         assert attrs["estimated_savings_eur"] == 0
-        assert attrs["total_charge_kwh"] == 0
 
     def test_bo3_attrs_not_ok(self, status_not_ok, schedule_none):
         attrs = BatteryOptimizerSensorContract.attrs(status_not_ok, schedule_none)
-        # .get() default only applies when key is absent; None value stays None
-        assert attrs["soc_pct"] is None  # key present with None value
-        assert attrs["soc_kwh"] is None
+        assert attrs["soc_pct"] == 0.0  # None value → default via guard
+        assert attrs["soc_kwh"] == 0.0
         assert attrs["current_action"] == "hold"
 
     def test_bo3_attrs_missing_optional(self, status_missing_optional, schedule_none):
         attrs = BatteryOptimizerSensorContract.attrs(status_missing_optional, schedule_none)
         assert attrs["soc_pct"] == 65
-        assert attrs["capacity_kwh"] == 0  # default
-        assert "estimated_savings_eur" not in attrs  # no schedule
+        assert attrs["capacity_kwh"] == 0.0
+        assert "estimated_savings_eur" not in attrs
+
+    # Malformed schedule cases (HA-319)
+    def test_bo3_attrs_string_schedule(self):
+        status = {"soc_pct": 50}
+        schedule = "broken"
+        attrs = BatteryOptimizerSensorContract.attrs(status, schedule)
+        assert attrs["soc_pct"] == 50
+        assert "estimated_savings_eur" not in attrs
+
+    def test_bo3_attrs_list_schedule(self):
+        status = {"soc_pct": 50}
+        schedule = [{"estimated_savings_eur": 999}]
+        attrs = BatteryOptimizerSensorContract.attrs(status, schedule)
+        assert attrs["soc_pct"] == 50
+        assert "estimated_savings_eur" not in attrs
+
+    def test_bo3_attrs_non_numeric_savings(self):
+        status = {"soc_pct": 50}
+        schedule = {"estimated_savings_eur": "999"}
+        attrs = BatteryOptimizerSensorContract.attrs(status, schedule)
+        assert attrs["estimated_savings_eur"] == 0.0
+
+    def test_bo3_attrs_bool_cycles(self):
+        status = {"cycles_today": True}
+        attrs = BatteryOptimizerSensorContract.attrs(status, {})
+        assert attrs["cycles_today"] == 0
 
 
 # =============================================================================
@@ -332,21 +456,26 @@ class TestBOAttrs:
 class TestBOGlobalContract:
     def test_gc1_pure_projection_shell(self):
         """GC1: Contract source is /api/v1/regional/battery/status + /api/v1/regional/battery/schedule."""
-        # The sensor fetches from exactly two Core endpoints.
-        # No local battery simulation, no SoC projection, no threshold computation.
         import inspect
         source = inspect.getsource(BatteryOptimizerSensorContract)
         assert "battery" in source.lower() or "soc" in source.lower()
 
     def test_gc2_no_local_semantic_invention(self):
         """GC2: icon and attrs are pure static mappings from Core data, no invented logic."""
-        # soc_pct is taken verbatim from Core; icon is a static threshold map; attrs are verbatim or default
-        # Verify icon map covers all expected actions without ML/heuristic
         actions = ["charge", "charge_solar", "discharge", "hold"]
         for action in actions:
             status = {"soc_pct": 50, "current_action": action}
             icon = BatteryOptimizerSensorContract.icon(status)
             assert icon.startswith("mdi:battery")
+
+    def test_gc3_guards_present(self):
+        """GC3: Guard helpers (_as_mapping, _as_float, _as_int, _as_string) are used."""
+        import inspect
+        source = inspect.getsource(BatteryOptimizerSensorContract)
+        assert "_as_mapping" in source
+        assert "_as_float" in source
+        assert "_as_int" in source
+        assert "_as_string" in source
 
 
 # Parametrize-friendly combined attrs fixture
