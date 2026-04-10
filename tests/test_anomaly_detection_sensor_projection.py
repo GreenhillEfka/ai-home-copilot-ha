@@ -9,8 +9,10 @@ HC-1 HC-2         — native_value: Normal / Anomalien / kritisch
 HC-3 HC-4 HC-5    — icon mapping: critical / warning / normal
 HC-6 HC-7 HC-8    — attrs: full / minimal / top_anomalies capping
 HC-9 HC-10 HC-11  — edge: missing keys / None data / empty anomaly_types
+ADm1–ADm12       — malformed payloads: non-numeric total_*/critical/warning/info, non-dict anomaly_types, non-list top_anomalies
 GC1                — pure projection (hits /api/v1/hub/anomalies)
 GC2                — no local semantic invention
+ADGC3              — source guard: _as_int / _as_mapping / _as_list in production code
 """
 
 import pytest
@@ -268,6 +270,115 @@ class TestAnomalyDetectionEdge:
 
 
 # ---------------------------------------------------------------------------
+# Malformed Payload Cases: ADm1–ADm12
+# _as_int guards non-numeric total_*/critical/warning/info
+# _as_mapping guards anomaly_types against non-dict
+# _as_list guards top_anomalies against non-list
+# ---------------------------------------------------------------------------
+class TestAnomalyDetectionMalformed:
+    """ADm1–ADm12: malformed payload handling."""
+
+    def test_adm1_string_critical(self):
+        # critical = "3" (string) → _as_int → 0 → Normal
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical="3", warning=0, info=0,
+            anomaly_types={}, top_anomalies=[],
+        ))
+        assert sensor.state == "Normal"
+        assert sensor.icon == "mdi:check-decagram"
+
+    def test_adm2_none_critical(self):
+        # critical = None → _as_int → 0 → Normal
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical=None, warning=0, info=0,
+            anomaly_types={}, top_anomalies=[],
+        ))
+        assert sensor.state == "Normal"
+        assert sensor.icon == "mdi:check-decagram"
+
+    def test_adm3_bool_critical(self):
+        # critical = True (bool) → _as_int → 0 → Normal (bool is not accepted)
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical=True, warning=0, info=0,
+            anomaly_types={}, top_anomalies=[],
+        ))
+        assert sensor.state == "Normal"
+
+    def test_adm4_inf_critical(self):
+        # critical = float("inf") → _as_int → 0 → Normal
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical=float("inf"), warning=0, info=0,
+            anomaly_types={}, top_anomalies=[],
+        ))
+        assert sensor.state == "Normal"
+
+    def test_adm5_string_total_anomalies(self):
+        # total_anomalies = "7" (string) → _as_int → 0 → Normal
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies="7", critical=0, warning=0, info=0,
+            anomaly_types={}, top_anomalies=[],
+        ))
+        assert sensor.state == "Normal"
+
+    def test_adm6_float_total_anomalies(self):
+        # total_anomalies = 3.7 (float) → _as_int → 3 → "3 Anomalien"
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=3.7, critical=0, warning=0, info=0,
+            anomaly_types={}, top_anomalies=[],
+        ))
+        assert sensor.state == "3 Anomalien"
+
+    def test_adm7_list_total_anomalies(self):
+        # total_anomalies = [5] (list) → _as_int → 0 → Normal
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=[5], critical=0, warning=0, info=0,
+            anomaly_types={}, top_anomalies=[],
+        ))
+        assert sensor.state == "Normal"
+
+    def test_adm8_non_dict_anomaly_types(self):
+        # anomaly_types = "temperature" (string) → _as_mapping → {} → empty dict in attrs
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical=0, warning=0, info=0,
+            anomaly_types="temperature", top_anomalies=[],
+        ))
+        assert sensor.extra_state_attributes["anomaly_types"] == {}
+
+    def test_adm9_non_list_top_anomalies(self):
+        # top_anomalies = {"entity": "e1"} (dict) → _as_list → [] → empty list in attrs
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical=0, warning=0, info=0,
+            anomaly_types={}, top_anomalies={"entity": "e1"},
+        ))
+        assert sensor.extra_state_attributes["top_anomalies"] == []
+
+    def test_adm10_none_top_anomalies(self):
+        # top_anomalies = None → _as_list → [] → empty list in attrs
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical=0, warning=0, info=0,
+            anomaly_types={}, top_anomalies=None,
+        ))
+        assert sensor.extra_state_attributes["top_anomalies"] == []
+
+    def test_adm11_string_warning(self):
+        # warning = "2" (string) → _as_int → 0 → icon = normal not mdi:alert
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical=0, warning="2", info=0,
+            anomaly_types={}, top_anomalies=[],
+        ))
+        assert sensor.icon == "mdi:check-decagram"
+
+    def test_adm12_attrs_with_malformed_top_anomalies_list_of_non_dicts(self):
+        # top_anomalies = ["e1", "e2"] (list of strings) → _as_list → ["e1","e2"][:5] preserved
+        sensor = make_sensor(AnomalyDetectionSensorContract(
+            total_entities=0, total_anomalies=0, critical=0, warning=0, info=0,
+            anomaly_types={}, top_anomalies=["e1", "e2"],
+        ))
+        # raw list passes _as_list; attrs receives the slice [:5] unchanged
+        assert sensor.extra_state_attributes["top_anomalies"] == ["e1", "e2"]
+
+
+# ---------------------------------------------------------------------------
 # Global Contract
 # ---------------------------------------------------------------------------
 class TestAnomalyDetectionGlobalContract:
@@ -302,3 +413,18 @@ class TestAnomalyDetectionGlobalContract:
         # critical > 0 → icon = mdi:alert-octagon (critical always wins in sensor)
         assert sensor.icon == "mdi:alert-octagon"  # critical > 0 wins
         assert sensor2.icon == "mdi:alert-octagon"  # critical > 0 wins
+
+    def test_adgc3_source_guard(self):
+        # _as_int, _as_mapping, _as_list are defined at module level and used in the class
+        import inspect
+        import custom_components.pilotsuite.sensors.anomaly_detection_sensor as module
+        module_source = inspect.getsource(module)
+        # Guards must be defined at module level
+        assert "def _as_int" in module_source
+        assert "def _as_mapping" in module_source
+        assert "def _as_list" in module_source
+        # Class source must use the guards
+        class_source = inspect.getsource(AnomalyDetectionSensor)
+        assert "_as_int(self._anomaly_data.get" in class_source
+        assert "_as_mapping" in class_source
+        assert "_as_list" in class_source

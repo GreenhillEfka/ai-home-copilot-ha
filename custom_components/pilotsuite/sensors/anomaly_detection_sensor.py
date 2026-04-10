@@ -12,6 +12,34 @@ logger = logging.getLogger(__name__)
 SCAN_INTERVAL_SECONDS = 120  # 2 minutes
 
 
+def _as_int(value: Any, default: int = 0) -> int:
+    """Return an integer only if the value is a finite numeric type; otherwise return default."""
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        import math
+        if math.isfinite(value):
+            return int(value)
+        return default
+    return default
+
+
+def _as_mapping(value: Any) -> dict:
+    """Return value as a dict, or an empty dict if not a dict."""
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _as_list(value: Any) -> list:
+    """Return value as a list, or an empty list if not a list."""
+    if isinstance(value, list):
+        return value
+    return []
+
+
 class AnomalyDetectionSensor(CopilotBaseEntity):
     """Sensor showing anomaly detection status."""
 
@@ -25,8 +53,8 @@ class AnomalyDetectionSensor(CopilotBaseEntity):
 
     @property
     def state(self) -> str:
-        total = self._anomaly_data.get("total_anomalies", 0)
-        critical = self._anomaly_data.get("critical", 0)
+        total = _as_int(self._anomaly_data.get("total_anomalies"), 0)
+        critical = _as_int(self._anomaly_data.get("critical"), 0)
         if critical > 0:
             return f"{critical} kritisch"
         if total > 0:
@@ -35,8 +63,8 @@ class AnomalyDetectionSensor(CopilotBaseEntity):
 
     @property
     def icon(self) -> str:
-        critical = self._anomaly_data.get("critical", 0)
-        warning = self._anomaly_data.get("warning", 0)
+        critical = _as_int(self._anomaly_data.get("critical"), 0)
+        warning = _as_int(self._anomaly_data.get("warning"), 0)
         if critical > 0:
             return "mdi:alert-octagon"
         if warning > 0:
@@ -45,14 +73,14 @@ class AnomalyDetectionSensor(CopilotBaseEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        types = self._anomaly_data.get("anomaly_types", {})
-        top = self._anomaly_data.get("top_anomalies", [])
+        types = _as_mapping(self._anomaly_data.get("anomaly_types"))
+        top = _as_list(self._anomaly_data.get("top_anomalies"))
         return {
-            "total_entities": self._anomaly_data.get("total_entities", 0),
-            "total_anomalies": self._anomaly_data.get("total_anomalies", 0),
-            "critical": self._anomaly_data.get("critical", 0),
-            "warning": self._anomaly_data.get("warning", 0),
-            "info": self._anomaly_data.get("info", 0),
+            "total_entities": _as_int(self._anomaly_data.get("total_entities"), 0),
+            "total_anomalies": _as_int(self._anomaly_data.get("total_anomalies"), 0),
+            "critical": _as_int(self._anomaly_data.get("critical"), 0),
+            "warning": _as_int(self._anomaly_data.get("warning"), 0),
+            "info": _as_int(self._anomaly_data.get("info"), 0),
             "anomaly_types": types,
             "top_anomalies": top[:5],
         }
