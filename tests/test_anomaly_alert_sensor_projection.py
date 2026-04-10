@@ -11,6 +11,43 @@ from unittest.mock import MagicMock, AsyncMock, patch
 import pytest
 
 
+# =============================================================================
+# Guard helpers — mirror of production code
+# =============================================================================
+
+def _as_mapping(val):
+    if isinstance(val, dict):
+        return val
+    return {}
+
+
+def _as_list(val):
+    if isinstance(val, list):
+        return val
+    return []
+
+
+def _guard_item(a):
+    if not isinstance(a, dict):
+        return {
+            "timestamp": 0,
+            "score": 0,
+            "is_anomaly": True,
+            "device_id": "",
+            "severity": "info",
+            "anomaly_type": "",
+        }
+    ts = a.get("timestamp") if a.get("timestamp") is not None else a.get("detected_at", 0)
+    return {
+        "timestamp": ts if isinstance(ts, (int, float)) else 0,
+        "score": a.get("score", 0) if isinstance(a.get("score"), (int, float)) else 0,
+        "is_anomaly": bool(a.get("is_anomaly")) if a.get("is_anomaly") is not None else True,
+        "device_id": a.get("device_id", a.get("entity_id", "")) if isinstance(a.get("device_id", a.get("entity_id", "")), str) else "",
+        "severity": a.get("severity", "info") if isinstance(a.get("severity", "info"), str) else "info",
+        "anomaly_type": a.get("anomaly_type", "") if isinstance(a.get("anomaly_type", ""), str) else "",
+    }
+
+
 # ─── AnomalyAlertSensor contract mirrors ─────────────────────────────────────
 
 class AnomalyAlertSensorContract:
@@ -18,27 +55,34 @@ class AnomalyAlertSensorContract:
 
     @staticmethod
     def native_value(coordinator_data):
-        if not coordinator_data:
+        data = _as_mapping(coordinator_data)
+        if not data:
             return "idle"
-        anomaly_status = coordinator_data.get("anomaly_status", {})
-        if anomaly_status.get("status") == "active":
-            summary = anomaly_status.get("summary", {})
-            if summary.get("count", 0) > 0:
+        anomaly_status = _as_mapping(data.get("anomaly_status", {}))
+        status = anomaly_status.get("status")
+        if status == "active":
+            summary = _as_mapping(anomaly_status.get("summary", {}))
+            count = summary.get("count", 0)
+            if isinstance(count, (int, float)) and count > 0:
                 return "active"
             return "healthy"
         return "idle"
 
     @staticmethod
     def attrs(coordinator_data):
-        if not coordinator_data:
+        data = _as_mapping(coordinator_data)
+        if not data:
             return {}
-        anomaly_status = coordinator_data.get("anomaly_status", {})
+        anomaly_status = _as_mapping(data.get("anomaly_status", {}))
+        summary = _as_mapping(anomaly_status.get("summary", {}))
+        features_raw = anomaly_status.get("features")
+        features = _as_list(features_raw) if features_raw is not None else []
         return {
             "status": anomaly_status.get("status", "unknown"),
-            "features": anomaly_status.get("features", []),
-            "last_anomaly": anomaly_status.get("summary", {}).get("last_anomaly"),
-            "peak_score": anomaly_status.get("summary", {}).get("peak_score", 0),
-            "anomaly_count": anomaly_status.get("summary", {}).get("count", 0),
+            "features": features,
+            "last_anomaly": summary.get("last_anomaly"),
+            "peak_score": summary.get("peak_score", 0),
+            "anomaly_count": summary.get("count", 0),
         }
 
 
@@ -49,28 +93,20 @@ class AlertHistorySensorContract:
 
     @staticmethod
     def native_value(coordinator_data):
-        if not coordinator_data:
+        data = _as_mapping(coordinator_data)
+        if not data:
             return "0"
-        alert_history = coordinator_data.get("alert_history", [])
+        alert_history = _as_list(data.get("alert_history", []))
         return str(len(alert_history))
 
     @staticmethod
     def attrs(coordinator_data):
-        if not coordinator_data:
+        data = _as_mapping(coordinator_data)
+        if not data:
             return {}
-        alert_history = coordinator_data.get("alert_history", [])
+        alert_history = _as_list(data.get("alert_history", []))
         return {
-            "alerts": [
-                {
-                    "timestamp": a.get("timestamp", a.get("detected_at", 0)),
-                    "score": a.get("score", 0),
-                    "is_anomaly": a.get("is_anomaly", True),
-                    "device_id": a.get("device_id", a.get("entity_id", "")),
-                    "severity": a.get("severity", "info"),
-                    "anomaly_type": a.get("anomaly_type", ""),
-                }
-                for a in alert_history[-50:]
-            ],
+            "alerts": [_guard_item(a) for a in alert_history[-50:]],
             "count": len(alert_history),
             "recent_anomalies": len(alert_history),
         }
@@ -120,7 +156,7 @@ class TestAAXNativeValue:
         assert AnomalyAlertSensorContract.native_value({"anomaly_status": {}}) == "idle"
 
     def test_aa6_missing_summary(self):
-        """status active but summary missing — count defaults to 0, healthy."""
+        """status active but summary missing — healthy."""
         assert AnomalyAlertSensorContract.native_value(
             {"anomaly_status": {"status": "active"}}
         ) == "healthy"
@@ -263,6 +299,152 @@ class TestAHXAttrs:
         assert alert["anomaly_type"] == ""
 
 
+# ─── Malformed Payload Cases ─────────────────────────────────────────────────
+
+class TestAAMalformed:
+    """AAM: AnomalyAlertSensor malformed payload guard cases."""
+
+    def test_aam1_anomaly_status_string(self):
+        """anomaly_status is a string — treated as empty dict, idle."""
+        assert AnomalyAlertSensorContract.native_value(
+            {"anomaly_status": "not_a_dict"}
+        ) == "idle"
+
+    def test_aam2_anomaly_status_list(self):
+        """anomaly_status is a list — treated as empty dict, idle."""
+        assert AnomalyAlertSensorContract.native_value(
+            {"anomaly_status": ["active", "summary"]}
+        ) == "idle"
+
+    def test_aam3_anomaly_status_none(self):
+        """anomaly_status is None — idle."""
+        assert AnomalyAlertSensorContract.native_value(
+            {"anomaly_status": None}
+        ) == "idle"
+
+    def test_aam4_summary_string(self):
+        """summary is a string — treated as empty dict, healthy."""
+        assert AnomalyAlertSensorContract.native_value(
+            {"anomaly_status": {"status": "active", "summary": "bad"}}
+        ) == "healthy"
+
+    def test_aam5_summary_list(self):
+        """summary is a list — treated as empty dict, healthy."""
+        assert AnomalyAlertSensorContract.native_value(
+            {"anomaly_status": {"status": "active", "summary": [1, 2, 3]}}
+        ) == "healthy"
+
+    def test_aam6_count_string(self):
+        """count is a string — not > 0, healthy."""
+        assert AnomalyAlertSensorContract.native_value(
+            {"anomaly_status": {"status": "active", "summary": {"count": "5"}}}
+        ) == "healthy"
+
+    def test_aam7_count_none(self):
+        """count is None — healthy."""
+        assert AnomalyAlertSensorContract.native_value(
+            {"anomaly_status": {"status": "active", "summary": {"count": None}}}
+        ) == "healthy"
+
+    def test_aam8_features_string(self):
+        """features is a string — attrs uses empty list."""
+        attrs = AnomalyAlertSensorContract.attrs(
+            {"anomaly_status": {"status": "active", "features": "temperature"}}
+        )
+        assert attrs["features"] == []
+
+    def test_aam9_features_dict(self):
+        """features is a dict — attrs uses empty list."""
+        attrs = AnomalyAlertSensorContract.attrs(
+            {"anomaly_status": {"status": "active", "features": {"temp": 1}}}
+        )
+        assert attrs["features"] == []
+
+    def test_aam10_attrs_anomaly_status_string(self):
+        """anomaly_status string in attrs — safe defaults."""
+        attrs = AnomalyAlertSensorContract.attrs({"anomaly_status": "broken"})
+        assert attrs["status"] == "unknown"
+        assert attrs["features"] == []
+        assert attrs["peak_score"] == 0
+        assert attrs["anomaly_count"] == 0
+
+
+class TestAHMalformed:
+    """AHM: AlertHistorySensor malformed payload guard cases."""
+
+    def test_ahm1_alert_history_string(self):
+        """alert_history is a string — empty list, '0'."""
+        assert AlertHistorySensorContract.native_value(
+            {"alert_history": "not_a_list"}
+        ) == "0"
+
+    def test_ahm2_alert_history_dict(self):
+        """alert_history is a dict — empty list, '0'."""
+        assert AlertHistorySensorContract.native_value(
+            {"alert_history": {"key": "value"}}
+        ) == "0"
+
+    def test_ahm3_alert_history_int(self):
+        """alert_history is an int — empty list, '0'."""
+        assert AlertHistorySensorContract.native_value(
+            {"alert_history": 42}
+        ) == "0"
+
+    def test_ahm4_alert_entry_non_dict(self):
+        """Alert list entry is a string — guarded to safe defaults."""
+        attrs = AlertHistorySensorContract.attrs(
+            {"alert_history": ["not_a_dict_item"]}
+        )
+        assert attrs["count"] == 1
+        assert attrs["alerts"][0]["timestamp"] == 0
+        assert attrs["alerts"][0]["score"] == 0
+        assert attrs["alerts"][0]["device_id"] == ""
+
+    def test_ahm5_alert_entry_none(self):
+        """Alert list entry is None — guarded to safe defaults."""
+        attrs = AlertHistorySensorContract.attrs(
+            {"alert_history": [None]}
+        )
+        assert attrs["alerts"][0]["timestamp"] == 0
+        assert attrs["alerts"][0]["score"] == 0
+        assert attrs["alerts"][0]["is_anomaly"] is True
+
+    def test_ahm6_timestamp_string(self):
+        """timestamp is a string — guarded to 0."""
+        attrs = AlertHistorySensorContract.attrs(
+            {"alert_history": [{"timestamp": "now", "score": 0.5}]}
+        )
+        assert attrs["alerts"][0]["timestamp"] == 0
+
+    def test_ahm7_score_string(self):
+        """score is a string — guarded to 0."""
+        attrs = AlertHistorySensorContract.attrs(
+            {"alert_history": [{"timestamp": 100, "score": "high"}]}
+        )
+        assert attrs["alerts"][0]["score"] == 0
+
+    def test_ahm8_is_anomaly_string(self):
+        """is_anomaly is a string — guarded to True."""
+        attrs = AlertHistorySensorContract.attrs(
+            {"alert_history": [{"timestamp": 100, "is_anomaly": "yes"}]}
+        )
+        assert attrs["alerts"][0]["is_anomaly"] is True
+
+    def test_ahm9_device_id_int(self):
+        """device_id is an int — guarded to empty string."""
+        attrs = AlertHistorySensorContract.attrs(
+            {"alert_history": [{"timestamp": 100, "device_id": 12345}]}
+        )
+        assert attrs["alerts"][0]["device_id"] == ""
+
+    def test_ahm10_severity_int(self):
+        """severity is an int — guarded to 'info'."""
+        attrs = AlertHistorySensorContract.attrs(
+            {"alert_history": [{"timestamp": 100, "severity": 9}]}
+        )
+        assert attrs["alerts"][0]["severity"] == "info"
+
+
 # ─── Global Contract ──────────────────────────────────────────────────────────
 
 class TestGlobalContract:
@@ -297,3 +479,11 @@ class TestGlobalContract:
             "AnomalyAlertSensor must inherit CoordinatorEntity"
         assert issubclass(AlertHistorySensor, CoordinatorEntity), \
             "AlertHistorySensor must inherit CoordinatorEntity"
+
+    def test_gc3_source_guards(self):
+        """Guard helpers are defined and used in production module."""
+        import inspect
+        from custom_components.pilotsuite.sensors import anomaly_alert as module
+        source = inspect.getsource(module)
+        assert "_as_mapping" in source, "anomaly_alert must define _as_mapping"
+        assert "_as_list" in source, "anomaly_alert must define _as_list"
