@@ -71,8 +71,11 @@ class VoiceContextSensorContract:
         dominant_mood = VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")
         confidence = VoiceContextSensorContract._as_float(mood.get("confidence"), 0.0)
         core_time = VoiceContextSensorContract._as_mapping(neural.get("time", {}))
-        time_greeting = VoiceContextSensorContract._as_string(core_time.get("description_de"), "") or \
-                        VoiceContextSensorContract._as_string(core_time.get("description_en"), "Hallo")
+        time_greeting = (
+            VoiceContextSensorContract._as_string(core_time.get("description_de"), "")
+            or VoiceContextSensorContract._as_string(core_time.get("description_en"), "")
+            or "Hallo"
+        )
         core_zone = VoiceContextSensorContract._as_mapping(neural.get("zone", {}))
         zone_name = VoiceContextSensorContract._as_string(core_zone.get("current"), "unknown")
         zone_activities = VoiceContextSensorContract._as_string_list(
@@ -295,6 +298,12 @@ def empty_data():
         "last_update",
         "",
     ),
+    # VC1u: blank time descriptions fall back to Hallo at projection source
+    (
+        {"neural": {"time": {"description_de": "", "description_en": ""}}},
+        "voice_greeting",
+        "Hallo",
+    ),
 ])
 def test_vc1_extra_state_attributes(coordinator_data, key, expected):
     """VC1: extra_state_attributes are pure Dict lookups from coordinator.data."""
@@ -400,7 +409,9 @@ def test_vc3_native_value_always_ok():
     ({"neural": {"time": {"description_de": "Abend"}, "zone": {"presence": ["Wohnzimmer", "Küche"]}}}, "Der Nutzer ist gerade Abend. Anwesend in: Wohnzimmer, Küche."),
     # VP1d: typical activities become projected suggestions in the prompt
     ({"neural": {"time": {"description_de": "Tag"}, "zone": {"typical_activities": ["Lesen", "Musik hören", "Kaffee"]}}}, "Der Nutzer ist gerade Tag. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell.."),
-    # VP1e: empty data → sensor guard default
+    # VP1e: blank time descriptions fall back to Hallo via shared projection
+    ({"neural": {"time": {"description_de": "", "description_en": ""}}}, "Der Nutzer ist gerade Hallo."),
+    # VP1f: empty data → sensor guard default
     ({}, "Kein Kontext verfügbar."),
 ])
 def test_vp1_native_value(coordinator_data, expected):
@@ -549,6 +560,8 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")' in source
     assert 'confidence = _as_float(mood_data.get("confidence"), 0.0)' in source
     assert 'zone_name = _as_string(core_zone.get("current"), "unknown")' in source
+    assert 'or _as_string(core_time.get("description_en"), "")' in source
+    assert 'or "Hallo"' in source
     assert 'greeting = _as_string(voice.get("greeting"), "") or "Neutral"' in source
     assert '"contributors": _as_string_list(mood_data.get("contributors"))' in source
     assert '"last_update": _as_string(neural_data.get("last_update"), "")' in source

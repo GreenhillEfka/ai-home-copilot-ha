@@ -63,8 +63,10 @@ def _project_voice_context(
     confidence = _as_float(mood_data.get("confidence"), 0.0)
 
     core_time = _as_mapping(neural_data.get("time"))
-    time_greeting = _as_string(core_time.get("description_de"), "") or _as_string(
-        core_time.get("description_en"), "Hallo"
+    time_greeting = (
+        _as_string(core_time.get("description_de"), "")
+        or _as_string(core_time.get("description_en"), "")
+        or "Hallo"
     )
 
     core_zone = _as_mapping(neural_data.get("zone"))
