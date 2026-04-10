@@ -1,9 +1,11 @@
-"""Projection Contract Tests: energy_cost_sensor + energy_forecast_sensor (HA-143).
+"""Projection Contract Tests: energy_cost_sensor + energy_forecast_sensor (HA-326).
 
 Verifies:
 - EnergyCostSensor: pure projection on /api/v1/energy/costs/summary + /api/v1/energy/costs/budget
 - EnergyForecastSensor: pure projection on /api/v1/regional/forecast/dashboard
 """
+
+import math
 
 import pytest
 
@@ -16,34 +18,73 @@ from custom_components.pilotsuite.sensors.energy_forecast_sensor import EnergyFo
 # =============================================================================
 
 
+def _as_mapping(value):
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _as_float(value, default):
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)) and math.isfinite(value):
+        return float(value)
+    return default
+
+
+def _as_int(value, default):
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and math.isfinite(value) and value == int(value):
+        return int(value)
+    return default
+
+
+def _as_string(value, default):
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return default
+
+
+def _as_bool(value, default):
+    if isinstance(value, bool):
+        return value
+    return default
+
+
 class EnergyCostSensorContract:
     """Mirror of EnergyCostSensor state construction (test oracle)."""
 
     @staticmethod
     def native_value(summary_data: dict, budget_data: dict) -> float | None:
-        if summary_data and summary_data.get("ok"):
-            return summary_data.get("total_cost_eur")
+        summary = _as_mapping(summary_data)
+        if summary and summary.get("ok"):
+            return _as_float(summary.get("total_cost_eur"), None)
         return None
 
     @staticmethod
     def extra_state_attributes(summary_data: dict, budget_data: dict) -> dict:
         attrs = {}
-        if summary_data and summary_data.get("ok"):
+        summary = _as_mapping(summary_data)
+        if summary and summary.get("ok"):
             attrs.update({
-                "period": summary_data.get("period"),
-                "avg_daily_cost_eur": summary_data.get("avg_daily_cost_eur"),
-                "total_consumption_kwh": summary_data.get("total_consumption_kwh"),
-                "total_savings_eur": summary_data.get("total_savings_eur"),
-                "days_count": summary_data.get("days_count"),
+                "period": _as_string(summary.get("period"), None),
+                "avg_daily_cost_eur": _as_float(summary.get("avg_daily_cost_eur"), 0.0),
+                "total_consumption_kwh": _as_float(summary.get("total_consumption_kwh"), 0.0),
+                "total_savings_eur": _as_float(summary.get("total_savings_eur"), 0.0),
+                "days_count": _as_int(summary.get("days_count"), 0),
             })
-        if budget_data and budget_data.get("ok"):
+        budget = _as_mapping(budget_data)
+        if budget and budget.get("ok"):
             attrs.update({
-                "budget_eur": budget_data.get("budget_eur"),
-                "budget_spent_eur": budget_data.get("spent_eur"),
-                "budget_remaining_eur": budget_data.get("remaining_eur"),
-                "budget_percent_used": budget_data.get("percent_used"),
-                "budget_on_track": budget_data.get("on_track"),
-                "budget_projected_eur": budget_data.get("projected_total_eur"),
+                "budget_eur": _as_float(budget.get("budget_eur"), 0.0),
+                "budget_spent_eur": _as_float(budget.get("spent_eur"), 0.0),
+                "budget_remaining_eur": _as_float(budget.get("remaining_eur"), 0.0),
+                "budget_percent_used": _as_float(budget.get("percent_used"), 0.0),
+                "budget_on_track": _as_bool(budget.get("on_track"), False),
+                "budget_projected_eur": _as_float(budget.get("projected_total_eur"), 0.0),
             })
         return attrs
 
@@ -61,9 +102,14 @@ class EnergyForecastSensorContract:
     @staticmethod
     def extra_state_attributes(data: dict) -> dict:
         if not data:
-            return {"total_hours": 0, "avg_price_ct_kwh": 0,
-                    "min_price_ct_kwh": 0, "max_price_ct_kwh": 0,
-                    "card_count": 0, "generated_at": ""}
+            return {
+                "total_hours": 0,
+                "avg_price_ct_kwh": 0,
+                "min_price_ct_kwh": 0,
+                "max_price_ct_kwh": 0,
+                "card_count": 0,
+                "generated_at": "",
+            }
         summary = data.get("summary", {})
         cards = data.get("cards", [])
         return {
@@ -88,39 +134,54 @@ class EnergyForecastSensorContract:
 # =============================================================================
 
 @pytest.mark.parametrize("summary_data,budget_data,expected", [
-    # EC1: ok with full data
     ({"ok": True, "total_cost_eur": 42.50}, {"ok": True, "budget_eur": 100}, 42.50),
-    # EC2: ok with zero cost
     ({"ok": True, "total_cost_eur": 0.0}, {"ok": False}, 0.0),
-    # EC3: ok with negative (credit)
     ({"ok": True, "total_cost_eur": -3.20}, {}, -3.20),
-    # EC4: ok false
     ({"ok": False, "total_cost_eur": 99.0}, {}, None),
-    # EC5: none summary
     (None, None, None),
-    # EC6: empty dict
     ({}, {}, None),
-    # EC7: missing ok key
     ({"total_cost_eur": 12.34}, {}, None),
+    ("not-a-dict", None, None),
+    ([{"ok": True}], None, None),
+    (42, None, None),
+    (True, None, None),
+    ({"ok": True, "total_cost_eur": "expensive"}, None, None),
+    ({"ok": True, "total_cost_eur": True}, None, None),
+    ({"ok": True, "total_cost_eur": None}, None, None),
+    ({"ok": True, "total_cost_eur": float("inf")}, None, None),
+    ({"ok": True, "total_cost_eur": float("nan")}, None, None),
 ])
 def test_ec_native_value(summary_data, budget_data, expected):
-    # Contract oracle
     result = EnergyCostSensorContract.native_value(summary_data, budget_data)
-    assert result == expected
+    if isinstance(expected, float) and math.isnan(expected):
+        assert math.isnan(result)
+    else:
+        assert result == expected
 
 
 # =============================================================================
-# EnergyCostSensor — extra_state_attributes (contract-based)
+# EnergyCostSensor — extra_state_attributes
 # =============================================================================
 
 def test_ec_attrs_full():
-    """Full summary + budget data."""
-    summary = {"ok": True, "total_cost_eur": 42.50, "period": "weekly",
-               "avg_daily_cost_eur": 6.07, "total_consumption_kwh": 150.0,
-               "total_savings_eur": 8.50, "days_count": 7}
-    budget = {"ok": True, "budget_eur": 100, "spent_eur": 42.50,
-              "remaining_eur": 57.50, "percent_used": 42.5,
-              "on_track": True, "projected_total_eur": 42.50}
+    summary = {
+        "ok": True,
+        "total_cost_eur": 42.50,
+        "period": "weekly",
+        "avg_daily_cost_eur": 6.07,
+        "total_consumption_kwh": 150.0,
+        "total_savings_eur": 8.50,
+        "days_count": 7,
+    }
+    budget = {
+        "ok": True,
+        "budget_eur": 100,
+        "spent_eur": 42.50,
+        "remaining_eur": 57.50,
+        "percent_used": 42.5,
+        "on_track": True,
+        "projected_total_eur": 42.50,
+    }
     attrs = EnergyCostSensorContract.extra_state_attributes(summary, budget)
     assert attrs["period"] == "weekly"
     assert attrs["avg_daily_cost_eur"] == 6.07
@@ -131,7 +192,6 @@ def test_ec_attrs_full():
 
 
 def test_ec_attrs_partial_summary_only():
-    """Only summary, no budget."""
     summary = {"ok": True, "total_cost_eur": 10.0}
     attrs = EnergyCostSensorContract.extra_state_attributes(summary, None)
     assert attrs.get("period") is None
@@ -139,16 +199,77 @@ def test_ec_attrs_partial_summary_only():
 
 
 def test_ec_attrs_not_ok():
-    """Summary ok=false, no budget."""
     summary = {"ok": False}
     attrs = EnergyCostSensorContract.extra_state_attributes(summary, None)
     assert "period" not in attrs
 
 
 def test_ec_attrs_none():
-    """Both None."""
     attrs = EnergyCostSensorContract.extra_state_attributes(None, None)
     assert attrs == {}
+
+
+def test_ec_attrs_malformed_summary_type():
+    attrs = EnergyCostSensorContract.extra_state_attributes("string-summary", {})
+    assert "period" not in attrs
+
+    attrs = EnergyCostSensorContract.extra_state_attributes([], {})
+    assert "period" not in attrs
+
+    attrs = EnergyCostSensorContract.extra_state_attributes(42, {})
+    assert "period" not in attrs
+
+
+def test_ec_attrs_malformed_budget_type():
+    summary = {
+        "ok": True,
+        "total_cost_eur": 42.50,
+        "period": "weekly",
+        "avg_daily_cost_eur": 6.07,
+        "total_consumption_kwh": 150.0,
+        "total_savings_eur": 8.50,
+        "days_count": 7,
+    }
+    attrs = EnergyCostSensorContract.extra_state_attributes(summary, "not-a-dict")
+    assert attrs["period"] == "weekly"
+    assert "budget_eur" not in attrs
+
+
+def test_ec_attrs_malformed_summary_fields():
+    summary = {
+        "ok": True,
+        "total_cost_eur": 42.50,
+        "period": "   ",
+        "avg_daily_cost_eur": "expensive",
+        "total_consumption_kwh": None,
+        "total_savings_eur": True,
+        "days_count": "seven",
+    }
+    attrs = EnergyCostSensorContract.extra_state_attributes(summary, None)
+    assert attrs["period"] is None
+    assert attrs["avg_daily_cost_eur"] == 0.0
+    assert attrs["total_consumption_kwh"] == 0.0
+    assert attrs["total_savings_eur"] == 0.0
+    assert attrs["days_count"] == 0
+
+
+def test_ec_attrs_malformed_budget_fields():
+    budget = {
+        "ok": True,
+        "budget_eur": "hundred",
+        "spent_eur": None,
+        "remaining_eur": False,
+        "percent_used": [],
+        "on_track": "yes",
+        "projected_total_eur": {},
+    }
+    attrs = EnergyCostSensorContract.extra_state_attributes(None, budget)
+    assert attrs["budget_eur"] == 0.0
+    assert attrs["budget_spent_eur"] == 0.0
+    assert attrs["budget_remaining_eur"] == 0.0
+    assert attrs["budget_percent_used"] == 0.0
+    assert attrs["budget_on_track"] is False
+    assert attrs["budget_projected_eur"] == 0.0
 
 
 # =============================================================================
@@ -156,19 +277,12 @@ def test_ec_attrs_none():
 # =============================================================================
 
 @pytest.mark.parametrize("data,expected", [
-    # EF1: full data with pv estimate
     ({"summary": {"total_pv_kwh_estimated": 18.5}, "cards": []}, 18.5),
-    # EF2: zero pv
     ({"summary": {"total_pv_kwh_estimated": 0.0}}, 0.0),
-    # EF3: missing summary
     ({}, None),
-    # EF4: empty summary
     ({"summary": {}}, None),
-    # EF5: summary none
     ({"summary": None, "cards": []}, None),
-    # EF6: data none
     (None, None),
-    # EF7: summary is not dict
     ({"summary": "not-a-dict"}, None),
 ])
 def test_ef_native_value(data, expected):
@@ -183,10 +297,14 @@ def test_ef_native_value(data, expected):
 def test_ef_attrs_full():
     data = {
         "summary": {
-            "total_hours": 48, "avg_price_ct": 28.5, "min_price_ct": 12.0,
-            "max_price_ct": 45.0, "cheapest_hour": "2026-04-06T03:00",
+            "total_hours": 48,
+            "avg_price_ct": 28.5,
+            "min_price_ct": 12.0,
+            "max_price_ct": 45.0,
+            "cheapest_hour": "2026-04-06T03:00",
             "most_expensive_hour": "2026-04-06T18:00",
-            "daylight_hours": 14, "avg_pv_factor": 0.65,
+            "daylight_hours": 14,
+            "avg_pv_factor": 0.65,
             "best_charge_window": "2026-04-06T14:00",
             "best_consume_window": "2026-04-06T12:00",
             "weather_impacted_hours": 3,
@@ -227,8 +345,8 @@ def test_ef_attrs_none():
 def test_ec_contract_pure_projection():
     """EnergyCostSensor: pure projection shell on /api/v1/energy/costs/*."""
     import inspect
+
     source = inspect.getsource(EnergyCostSensor)
-    # Only URL construction + dict lookups, no local computation
     assert "_core_base_url" in source
     assert "total_cost_eur" in source
     assert "budget_eur" in source
@@ -237,31 +355,50 @@ def test_ec_contract_pure_projection():
 def test_ef_contract_pure_projection():
     """EnergyForecastSensor: pure projection shell on /api/v1/regional/forecast/dashboard."""
     import inspect
+
     source = inspect.getsource(EnergyForecastSensor)
-    # Only summary dict lookups, no local computation
     assert "_core_base_url" in source
     assert "total_pv_kwh_estimated" in source
     assert "summary" in source
 
 
 def test_ec_contract_no_local_semantic_invention():
-    """EnergyCostSensor derives nothing locally — all from Core API."""
-    # ok=False → None, no heuristic fallback
+    """EnergyCostSensor derives nothing locally, all from Core API."""
     assert EnergyCostSensorContract.native_value(
         {"ok": False, "total_cost_eur": 99.0}, {}
     ) is None
-    # ok=True → value directly
     assert EnergyCostSensorContract.native_value(
         {"ok": True, "total_cost_eur": 42.50}, {}
     ) == 42.50
 
 
 def test_ef_contract_no_local_semantic_invention():
-    """EnergyForecastSensor derives nothing locally — all from Core API."""
-    # Missing summary → None, no heuristic fallback
+    """EnergyForecastSensor derives nothing locally, all from Core API."""
     assert EnergyForecastSensorContract.native_value({}) is None
     assert EnergyForecastSensorContract.native_value(None) is None
-    # Valid summary → value directly
     assert EnergyForecastSensorContract.native_value(
         {"summary": {"total_pv_kwh_estimated": 18.5}}
     ) == 18.5
+
+
+# =============================================================================
+# Source Guard — energy_cost hardening present in production
+# =============================================================================
+
+def test_ec_source_guard_helpers_present():
+    import inspect
+
+    source = inspect.getsource(EnergyCostSensor)
+    assert "_as_mapping" in source
+    assert "_as_float" in source
+    assert "_as_int" in source
+    assert "_as_string" in source
+    assert "_as_bool" in source
+
+
+def test_ec_source_guard_async_update_normalizes_payloads():
+    import inspect
+
+    source = inspect.getsource(EnergyCostSensor)
+    assert "self._summary_data = _as_mapping(data)" in source
+    assert "self._budget_data = _as_mapping(data)" in source
