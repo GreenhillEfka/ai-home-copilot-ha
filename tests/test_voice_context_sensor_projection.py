@@ -11,6 +11,7 @@ HA-126 — 2026-04-06
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
@@ -68,7 +69,10 @@ class VoiceContextSensorContract:
     def _as_float(value, default: float) -> float:
         if isinstance(value, bool):
             return default
-        return float(value) if isinstance(value, (int, float)) else default
+        if not isinstance(value, (int, float)):
+            return default
+        numeric_value = float(value)
+        return numeric_value if math.isfinite(numeric_value) else default
 
     @staticmethod
     def extra_state_attributes(coordinator_data: dict) -> dict:
@@ -301,6 +305,12 @@ def empty_data():
     # VC1r2: bool confidence payload must not leak Python bool-as-int semantics
     (
         {"mood": {"confidence": True}},
+        "mood_confidence",
+        0.0,
+    ),
+    # VC1r3: non-finite confidence payload falls back to documented safe default
+    (
+        {"mood": {"confidence": float("inf")}},
         "mood_confidence",
         0.0,
     ),
@@ -600,6 +610,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'def _as_float(value: Any, default: float) -> float:' in source
     assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")' in source
     assert 'if isinstance(value, bool):' in source
+    assert 'math.isfinite' in source
     assert 'confidence = _as_float(mood_data.get("confidence"), 0.0)' in source
     assert 'zone_name = _as_string(core_zone.get("current"), "unknown")' in source
     assert 'or _as_string(core_time.get("description_en"), "")' in source

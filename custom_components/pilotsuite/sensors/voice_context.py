@@ -15,6 +15,7 @@ HA 2025.8+ supports context-based sensor selection for Assist.
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any, Dict
 
 from homeassistant.components.sensor import SensorEntity
@@ -47,10 +48,13 @@ def _as_string(value: Any, default: str) -> str:
 
 
 def _as_float(value: Any, default: float) -> float:
-    """Return numeric payloads, otherwise a safe default."""
+    """Return finite numeric payloads, otherwise a safe default."""
     if isinstance(value, bool):
         return default
-    return float(value) if isinstance(value, (int, float)) else default
+    if not isinstance(value, (int, float)):
+        return default
+    numeric_value = float(value)
+    return numeric_value if math.isfinite(numeric_value) else default
 
 
 def _project_voice_context(
