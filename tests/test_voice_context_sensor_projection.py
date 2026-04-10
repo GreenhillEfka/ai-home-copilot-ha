@@ -24,7 +24,7 @@ class VoiceContextSensorContract:
     """Mirror of VoiceContextSensor extra_state_attributes + native_value logic.
 
     Contract:
-    - reads: coordinator.data["mood"], ["neural"], ["suggestions"]
+    - reads: coordinator.data["mood"], ["neural"]
     - native_value: always "ok" (initialised in __init__)
     - extra_state_attributes:
         dominant_mood       ← mood.get("mood", "unknown")
@@ -37,8 +37,13 @@ class VoiceContextSensorContract:
                                neural.get("time", {}).get("description_en", "Hallo")
         voice_suggestions   ← [f"{act} ist aktuell." for act in
                                neural.get("zone", {}).get("typical_activities", [])[:3]]
+                               (NOT from coordinator.data["suggestions"])
         voice_prompt        ← built from greeting + presence + suggestions
         last_update         ← neural.get("last_update", "")
+
+    Note: coordinator.data["suggestions"] is intentionally not consumed.  Voice suggestions
+    are derived solely from neural.zone.typical_activities to keep the HA Assist prompt
+    grounded in factual zone activity rather than raw Core suggestion payloads.
     """
 
     @staticmethod

@@ -144,9 +144,8 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
 
         neural_data = coordinator_data.get("neural", {})
         mood_data = coordinator_data.get("mood", {})
-        suggestions = coordinator_data.get("suggestions", [])
 
-        context = self._build_voice_context(mood_data, neural_data, suggestions)
+        context = self._build_voice_context(mood_data, neural_data)
         self._context_data = context
 
         return {
@@ -166,9 +165,14 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
         self,
         mood_data: Dict[str, Any],
         neural_data: Dict[str, Any],
-        _suggestions: list,
     ) -> Dict[str, Any]:
-        """Build voice context from Core-provided projection data."""
+        """Build voice context from Core-provided projection data.
+
+        Note: coordinator.data["suggestions"] is intentionally not consumed here.
+        Voice suggestions are derived solely from neural.zone.typical_activities
+        to keep the HA Assist prompt grounded in factual zone activity rather than
+        raw Core suggestion payloads.
+        """
         return _project_voice_context(mood_data, neural_data)
 
     def _build_voice_prompt(self, context: Dict[str, Any]) -> str:
