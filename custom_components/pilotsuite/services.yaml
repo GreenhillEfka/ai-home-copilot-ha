@@ -324,13 +324,21 @@ trigger_mining:
 
 # ─── UniFi Network Module ────────────────────────────────────────────────────
 
-copilot_ha_unifi_run_diagnostics:
+unifi_run_diagnostics:
   name: UniFi – Diagnostik starten
   description: Fuehrt Netzwerk-Diagnostik ueber die UniFi-Integration aus.
 
-copilot_ha_unifi_get_report:
+unifi_get_report:
   name: UniFi – Report abrufen
   description: Ruft den letzten UniFi-Netzwerk-Report ab.
+
+copilot_ha_unifi_run_diagnostics:
+  name: UniFi – Diagnostik starten (Legacy Alias)
+  description: Legacy-Alias fuer pilotsuite.unifi_run_diagnostics waehrend der Migration.
+
+copilot_ha_unifi_get_report:
+  name: UniFi – Report abrufen (Legacy Alias)
+  description: Legacy-Alias fuer pilotsuite.unifi_get_report waehrend der Migration.
 
 # ─── Habitus Miner (Local) ───────────────────────────────────────────────────
 

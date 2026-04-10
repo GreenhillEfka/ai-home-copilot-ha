@@ -859,46 +859,53 @@ def _register_debug_services(hass: HomeAssistant) -> None:
 def _register_unifi_services(hass: HomeAssistant) -> None:
     """Register UniFi network diagnostic services."""
 
+    async def _handle_unifi_diagnostics(_: ServiceCall) -> None:
+        for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
+            if not isinstance(entry_data, dict):
+                continue
+            runtime = entry_data.get("runtime")
+            if runtime and hasattr(runtime, "registry"):
+                mod = runtime.registry.get("network")
+                if mod and hasattr(mod, "run_diagnostics"):
+                    result = await mod.run_diagnostics()
+                    hass.bus.async_fire(
+                        f"{DOMAIN}_unifi_diagnostics",
+                        {"entry_id": entry_id, "result": result},
+                    )
+                    return
+        _LOGGER.warning("UniFi module not available for diagnostics")
+
+    async def _handle_unifi_report(_: ServiceCall) -> None:
+        for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
+            if not isinstance(entry_data, dict):
+                continue
+            runtime = entry_data.get("runtime")
+            if runtime and hasattr(runtime, "registry"):
+                mod = runtime.registry.get("network")
+                if mod and hasattr(mod, "get_report"):
+                    report = await mod.get_report()
+                    hass.bus.async_fire(
+                        f"{DOMAIN}_unifi_report",
+                        {"entry_id": entry_id, "report": report},
+                    )
+                    return
+        _LOGGER.warning("UniFi module not available for report")
+
+    if not hass.services.has_service(DOMAIN, "unifi_run_diagnostics"):
+        hass.services.async_register(
+            DOMAIN, "unifi_run_diagnostics", _handle_unifi_diagnostics
+        )
+    if not hass.services.has_service(DOMAIN, "unifi_get_report"):
+        hass.services.async_register(
+            DOMAIN, "unifi_get_report", _handle_unifi_report
+        )
+
+    # Legacy aliases kept during the pilotsuite migration.
     if not hass.services.has_service(DOMAIN, "copilot_ha_unifi_run_diagnostics"):
-
-        async def _handle_unifi_diagnostics(_: ServiceCall) -> None:
-            for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
-                if not isinstance(entry_data, dict):
-                    continue
-                runtime = entry_data.get("runtime")
-                if runtime and hasattr(runtime, "registry"):
-                    mod = runtime.registry.get("network")
-                    if mod and hasattr(mod, "run_diagnostics"):
-                        result = await mod.run_diagnostics()
-                        hass.bus.async_fire(
-                            f"{DOMAIN}_unifi_diagnostics",
-                            {"entry_id": entry_id, "result": result},
-                        )
-                        return
-            _LOGGER.warning("UniFi module not available for diagnostics")
-
         hass.services.async_register(
             DOMAIN, "copilot_ha_unifi_run_diagnostics", _handle_unifi_diagnostics
         )
-
     if not hass.services.has_service(DOMAIN, "copilot_ha_unifi_get_report"):
-
-        async def _handle_unifi_report(_: ServiceCall) -> None:
-            for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
-                if not isinstance(entry_data, dict):
-                    continue
-                runtime = entry_data.get("runtime")
-                if runtime and hasattr(runtime, "registry"):
-                    mod = runtime.registry.get("network")
-                    if mod and hasattr(mod, "get_report"):
-                        report = await mod.get_report()
-                        hass.bus.async_fire(
-                            f"{DOMAIN}_unifi_report",
-                            {"entry_id": entry_id, "report": report},
-                        )
-                        return
-            _LOGGER.warning("UniFi module not available for report")
-
         hass.services.async_register(
             DOMAIN, "copilot_ha_unifi_get_report", _handle_unifi_report
         )
