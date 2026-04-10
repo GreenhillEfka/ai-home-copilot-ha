@@ -26,6 +26,58 @@ SIGNAL_ICONS = {
 }
 
 
+def _safe_int(value: Any, default: int = 0, upper: int | None = None) -> int:
+    """Guard an integer read against non-numeric or non-finite payloads.
+
+    Args:
+        value: the value to coerce
+        default: fallback when coercion fails or constraints fail
+        upper: optional upper bound (values above are clamped to this)
+    """
+    try:
+        v = float(value)
+        if v != int(v) or v < 0:
+            return default
+        result = int(v)
+        if upper is not None and result > upper:
+            return default
+        return result
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    """Guard a float read against non-numeric payloads."""
+    try:
+        f = float(value)
+        if f < 0:
+            return default
+        return f
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_bool(value: Any, default: bool = False) -> bool:
+    """Guard a bool read against non-bool payloads."""
+    if isinstance(value, bool):
+        return value
+    return default
+
+
+def _safe_signal(value: Any, default: int = 0) -> int:
+    """Guard signal level against non-integer or out-of-range values.
+
+    Valid signal levels are 0–3.
+    """
+    try:
+        v = float(value)
+        if v != int(v) or v < 0 or v > 3:
+            return default
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
 class DemandResponseSensor(CopilotBaseEntity, SensorEntity):
     """Sensor showing demand response status."""
 
@@ -49,11 +101,11 @@ class DemandResponseSensor(CopilotBaseEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         return {
             "signal_level": self._signal_level,
-            "active_signals": self._data.get("active_signals", 0),
-            "managed_devices": self._data.get("managed_devices", 0),
-            "curtailed_devices": self._data.get("curtailed_devices", 0),
-            "total_reduction_watts": self._data.get("total_reduction_watts", 0),
-            "response_active": self._data.get("response_active", False),
+            "active_signals": _safe_int(self._data.get("active_signals")),
+            "managed_devices": _safe_int(self._data.get("managed_devices")),
+            "curtailed_devices": _safe_int(self._data.get("curtailed_devices")),
+            "total_reduction_watts": _safe_float(self._data.get("total_reduction_watts")),
+            "response_active": _safe_bool(self._data.get("response_active")),
         }
 
     async def async_update(self) -> None:
@@ -66,7 +118,7 @@ class DemandResponseSensor(CopilotBaseEntity, SensorEntity):
                     data = await resp.json()
                     if data.get("ok"):
                         self._data = data
-                        self._signal_level = data.get("current_signal", 0)
+                        self._signal_level = _safe_signal(data.get("current_signal"), default=0)
                 else:
                     _LOGGER.warning("Demand response API returned %s", resp.status)
         except Exception as exc:

@@ -24,6 +24,46 @@ SIGNAL_ICONS = {
 }
 
 
+def _safe_int(value, default=0):
+    try:
+        v = float(value)
+        if v != int(v) or v < 0:
+            return default
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_float(value, default=0.0):
+    try:
+        f = float(value)
+        if f < 0:
+            return default
+        return f
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_bool(value, default=False):
+    if isinstance(value, bool):
+        return value
+    return default
+
+
+def _safe_signal(value, default=0):
+    """Guard signal level against non-integer or out-of-range values.
+
+    Valid signal levels are 0–3.
+    """
+    try:
+        v = float(value)
+        if v != int(v) or v < 0 or v > 3:
+            return default
+        return int(v)
+    except (TypeError, ValueError):
+        return default
+
+
 class DemandResponseSensorContract:
     """Mirror of DemandResponseSensor projection logic.
 
@@ -31,12 +71,13 @@ class DemandResponseSensorContract:
     - hits /api/v1/energy/demand-response/status (Core API)
     - native_value: SIGNAL_LABELS.get(signal_level, "Unknown")
     - icon: SIGNAL_ICONS.get(signal_level, "mdi:transmission-tower")
-    - attrs: direct lookups from response dict
+    - attrs: safe lookups from response dict (guards against malformed payloads)
     """
 
-    def __init__(self, api_response: dict | None):
-        self._data = api_response or {}
-        self._signal_level = self._data.get("current_signal", 0) if self._data.get("ok") else 0
+    def __init__(self, api_response):
+        self._data = api_response if isinstance(api_response, dict) else {}
+        raw_signal = self._data.get("current_signal") if self._data.get("ok") else None
+        self._signal_level = _safe_signal(raw_signal, default=0)
 
     @property
     def native_value(self) -> str:
@@ -50,11 +91,11 @@ class DemandResponseSensorContract:
     def extra_state_attributes(self) -> dict:
         return {
             "signal_level": self._signal_level,
-            "active_signals": self._data.get("active_signals", 0),
-            "managed_devices": self._data.get("managed_devices", 0),
-            "curtailed_devices": self._data.get("curtailed_devices", 0),
-            "total_reduction_watts": self._data.get("total_reduction_watts", 0),
-            "response_active": self._data.get("response_active", False),
+            "active_signals": _safe_int(self._data.get("active_signals")),
+            "managed_devices": _safe_int(self._data.get("managed_devices")),
+            "curtailed_devices": _safe_int(self._data.get("curtailed_devices")),
+            "total_reduction_watts": _safe_float(self._data.get("total_reduction_watts")),
+            "response_active": _safe_bool(self._data.get("response_active")),
         }
 
 
@@ -75,10 +116,14 @@ class TestDR1NativeValue:
         resp = {"ok": True, "current_signal": signal_level}
         assert DemandResponseSensorContract(resp).native_value == expected
 
-    def test_dr1_unknown_level(self):
-        """signal_level not in SIGNAL_LABELS → 'Unknown'."""
+    def test_dr1_out_of_range_yields_normal(self):
+        """DR1.5: signal_level > 3 → out-of-range guard → 0 → 'Normal'.
+
+        Valid signal levels are 0–3. Values outside this range are rejected
+        by the _safe_signal range guard and fall back to 0 ('Normal').
+        """
         resp = {"ok": True, "current_signal": 99}
-        assert DemandResponseSensorContract(resp).native_value == "Unknown"
+        assert DemandResponseSensorContract(resp).native_value == "Normal"
 
     def test_dr1_ok_false_yields_zero(self):
         """ok=false → signal_level defaults to 0 → 'Normal'."""
@@ -198,6 +243,96 @@ class TestDR4Edge:
         assert attrs["managed_devices"] == 0
         assert attrs["curtailed_devices"] == 0
         assert attrs["response_active"] is False
+
+
+# =============================================================================
+# DRM: malformed payload guard cases (HA-334)
+# =============================================================================
+
+class TestDRMalformed:
+    """DRM: DemandResponseSensor guards against malformed API payloads."""
+
+    def test_drm1_signal_string(self):
+        """DRM1: current_signal as string → defaults to 0 → 'Normal'."""
+        resp = {"ok": True, "current_signal": "high"}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.native_value == "Normal"
+        assert dr.extra_state_attributes["signal_level"] == 0
+
+    def test_drm2_signal_none(self):
+        """DRM2: current_signal = None → defaults to 0 → 'Normal'."""
+        resp = {"ok": True, "current_signal": None}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.native_value == "Normal"
+
+    def test_drm3_signal_negative(self):
+        """DRM3: current_signal = -1 → non-negative guard → 0 → 'Normal'."""
+        resp = {"ok": True, "current_signal": -1}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.native_value == "Normal"
+
+    def test_drm4_signal_float_non_int(self):
+        """DRM4: current_signal as float (non-integer) → 0 → 'Normal'."""
+        resp = {"ok": True, "current_signal": 2.9}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.native_value == "Normal"
+
+    def test_drm5_active_signals_string(self):
+        """DRM5: active_signals as string → safe default 0."""
+        resp = {"ok": True, "active_signals": "three"}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.extra_state_attributes["active_signals"] == 0
+
+    def test_drm6_managed_devices_negative(self):
+        """DRM6: managed_devices negative → safe default 0."""
+        resp = {"ok": True, "managed_devices": -5}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.extra_state_attributes["managed_devices"] == 0
+
+    def test_drm7_total_reduction_watts_string(self):
+        """DRM7: total_reduction_watts as string → safe default 0.0."""
+        resp = {"ok": True, "total_reduction_watts": "1500w"}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.extra_state_attributes["total_reduction_watts"] == 0.0
+
+    def test_drm8_response_active_string(self):
+        """DRM8: response_active as string → safe default False."""
+        resp = {"ok": True, "response_active": "yes"}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.extra_state_attributes["response_active"] is False
+
+    def test_drm9_response_active_int(self):
+        """DRM9: response_active as non-bool int → safe default False."""
+        resp = {"ok": True, "response_active": 1}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.extra_state_attributes["response_active"] is False
+
+    def test_drm10_top_level_non_dict(self):
+        """DRM10: top-level response is a list (not a dict) → safe defaults.
+
+        When the API returns a list instead of a dict, the sensor's
+        isinstance(api_response, dict) guard catches this and self._data
+        becomes {}. With no valid "ok" key, raw_signal is None and the
+        _safe_signal fallback produces 0 → 'Normal'. The sensor never
+        leaks "Unknown" from a malformed list-shaped response.
+        """
+        resp = [{"ok": True}]
+        dr = DemandResponseSensorContract(resp)
+        assert dr.native_value == "Normal"  # list rejected → safe default 0
+        assert dr.extra_state_attributes["active_signals"] == 0
+        assert dr.extra_state_attributes["response_active"] is False
+
+    def test_drm11_signal_huge_float(self):
+        """DRM11: current_signal as huge float → out-of-range → 0 → 'Normal'."""
+        resp = {"ok": True, "current_signal": 1e15}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.native_value == "Normal"
+
+    def test_drm12_curtailed_devices_float(self):
+        """DRM12: curtailed_devices as float non-integer → safe default 0."""
+        resp = {"ok": True, "curtailed_devices": 1.5}
+        dr = DemandResponseSensorContract(resp)
+        assert dr.extra_state_attributes["curtailed_devices"] == 0
 
 
 # =============================================================================
