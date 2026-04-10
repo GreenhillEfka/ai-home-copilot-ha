@@ -1,5 +1,5 @@
 {
-  "name": "PilotSuite",
+  "name": "PilotSuite HA",
   "domain": "pilotsuite",
   "content_in_root": false,
   "render_readme": true,
