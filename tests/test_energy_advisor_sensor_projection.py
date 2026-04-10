@@ -3,20 +3,28 @@
 Verifies EnergyAdvisorSensor is a pure projection shell on
 `/api/v1/hub/energy` data with only trivial formatting and list trimming.
 
-HA-254
+HA-254 / HA-329
 """
 
 from __future__ import annotations
 
 import asyncio
+import math
 
 import pytest
 
-from custom_components.pilotsuite.sensors.energy_advisor_sensor import EnergyAdvisorSensor
+from custom_components.pilotsuite.sensors.energy_advisor_sensor import (
+    EnergyAdvisorSensor,
+    _as_float,
+    _as_int,
+    _as_list,
+    _as_mapping,
+    _as_string,
+)
 
 
 class EnergyAdvisorSensorContract:
-    """Mirror of EnergyAdvisorSensor projection logic."""
+    """Mirror of EnergyAdvisorSensor projection logic with guard semantics (HA-329)."""
 
     _GRADE_ICONS = {
         "A+": "mdi:leaf",
@@ -30,63 +38,69 @@ class EnergyAdvisorSensorContract:
 
     @staticmethod
     def native_value(data: dict) -> str:
-        eco = (data or {}).get("eco_score", {})
-        grade = eco.get("grade", "?")
-        score = eco.get("score", 0)
+        d = _as_mapping(data)
+        eco = _as_mapping(d.get("eco_score"))
+        grade = _as_string(eco.get("grade"), "?")
+        score = _as_int(eco.get("score"), 0)
         if not eco:
             return "Nicht verfügbar"
         return f"Eco-Score {grade} ({score}/100)"
 
     @staticmethod
     def icon(data: dict) -> str:
-        eco = (data or {}).get("eco_score", {})
-        grade = eco.get("grade", "C")
+        d = _as_mapping(data)
+        eco = _as_mapping(d.get("eco_score"))
+        grade = _as_string(eco.get("grade"), "C")
         return EnergyAdvisorSensorContract._GRADE_ICONS.get(grade, "mdi:flash")
 
     @staticmethod
     def attrs(data: dict) -> dict:
-        eco = (data or {}).get("eco_score", {})
+        d = _as_mapping(data)
+        eco = _as_mapping(d.get("eco_score"))
         attrs = {
-            "eco_score": eco.get("score", 0),
-            "eco_grade": eco.get("grade", "?"),
-            "eco_trend": eco.get("trend", "stabil"),
-            "total_daily_kwh": (data or {}).get("total_daily_kwh", 0),
-            "total_monthly_kwh": (data or {}).get("total_monthly_kwh", 0),
-            "total_monthly_eur": (data or {}).get("total_monthly_eur", 0),
-            "savings_potential_eur": (data or {}).get("savings_potential_eur", 0),
+            "eco_score": _as_int(eco.get("score"), 0),
+            "eco_grade": _as_string(eco.get("grade"), "?"),
+            "eco_trend": _as_string(eco.get("trend"), "stabil"),
+            "total_daily_kwh": _as_float(d.get("total_daily_kwh"), 0.0),
+            "total_monthly_kwh": _as_float(d.get("total_monthly_kwh"), 0.0),
+            "total_monthly_eur": _as_float(d.get("total_monthly_eur"), 0.0),
+            "savings_potential_eur": _as_float(d.get("savings_potential_eur"), 0.0),
         }
 
-        breakdown = (data or {}).get("breakdown", [])
+        breakdown = _as_list(d.get("breakdown"))
         if breakdown:
             attrs["breakdown"] = [
                 {
-                    "category": item.get("name_de"),
-                    "kwh": item.get("kwh"),
-                    "pct": item.get("pct"),
+                    "category": _as_string(_as_mapping(b).get("name_de"), ""),
+                    "kwh": _as_float(_as_mapping(b).get("kwh"), 0.0),
+                    "pct": _as_float(_as_mapping(b).get("pct"), 0.0),
                 }
-                for item in breakdown
+                for b in breakdown
+                if isinstance(b, dict)
             ]
 
-        top = (data or {}).get("top_consumers", [])
+        top = _as_list(d.get("top_consumers"))
         if top:
             attrs["top_consumers"] = [
                 {
-                    "name": item.get("name"),
-                    "monthly_kwh": item.get("monthly_kwh"),
+                    "name": _as_string(_as_mapping(c).get("name"), ""),
+                    "monthly_kwh": _as_float(_as_mapping(c).get("monthly_kwh"), 0.0),
                 }
-                for item in top[:5]
+                for c in top[:5]
+                if isinstance(c, dict)
             ]
 
-        recs = (data or {}).get("recommendations", [])
+        recs = _as_list(d.get("recommendations"))
         if recs:
             attrs["recommendations"] = [
                 {
-                    "title": item.get("title_de"),
-                    "savings_eur": item.get("potential_savings_eur"),
-                    "difficulty": item.get("difficulty"),
-                    "applied": item.get("applied"),
+                    "title": _as_string(_as_mapping(r).get("title_de"), ""),
+                    "savings_eur": _as_float(_as_mapping(r).get("potential_savings_eur"), 0.0),
+                    "difficulty": _as_string(_as_mapping(r).get("difficulty"), ""),
+                    "applied": _as_mapping(r).get("applied"),
                 }
-                for item in recs[:5]
+                for r in recs[:5]
+                if isinstance(r, dict)
             ]
 
         return attrs
@@ -100,9 +114,13 @@ class FakeCoordinator:
 
 def _make_sensor(data: dict | None = None) -> EnergyAdvisorSensor:
     sensor = EnergyAdvisorSensor(FakeCoordinator())
-    sensor._data = data if isinstance(data, dict) else {}
+    sensor._data = _as_mapping(data)
     return sensor
 
+
+# ---------------------------------------------------------------------------
+# Native value
+# ---------------------------------------------------------------------------
 
 class TestEnergyAdvisorNativeValue:
     def test_ea1_native_value_full_projection(self):
@@ -124,6 +142,31 @@ class TestEnergyAdvisorNativeValue:
         sensor = _make_sensor(data)
         assert sensor.native_value == "Eco-Score ? (0/100)"
 
+    # HA-329 malformed cases
+    def test_ea10_native_value_non_dict_eco_score_returns_not_available(self):
+        sensor = _make_sensor({"eco_score": "broken"})
+        assert sensor.native_value == "Nicht verfügbar"
+
+    def test_ea11_native_value_non_numeric_score_defaults_to_zero(self):
+        sensor = _make_sensor({"eco_score": {"grade": "A", "score": "twenty"}})
+        assert sensor.native_value == "Eco-Score A (0/100)"
+
+    def test_ea12_native_value_inf_score_defaults_to_zero(self):
+        sensor = _make_sensor({"eco_score": {"grade": "A", "score": float("inf")}})
+        assert sensor.native_value == "Eco-Score A (0/100)"
+
+    def test_ea13_native_value_nan_score_defaults_to_zero(self):
+        sensor = _make_sensor({"eco_score": {"grade": "A", "score": float("nan")}})
+        assert sensor.native_value == "Eco-Score A (0/100)"
+
+    def test_ea14_native_value_bool_score_defaults_to_zero(self):
+        sensor = _make_sensor({"eco_score": {"grade": "B", "score": True}})
+        assert sensor.native_value == "Eco-Score B (0/100)"
+
+
+# ---------------------------------------------------------------------------
+# Icon
+# ---------------------------------------------------------------------------
 
 class TestEnergyAdvisorIcon:
     @pytest.mark.parametrize(
@@ -147,6 +190,19 @@ class TestEnergyAdvisorIcon:
         sensor = _make_sensor({"eco_score": {}})
         assert sensor.icon == "mdi:flash"
 
+    # HA-329 malformed cases
+    def test_ei10_icon_non_dict_eco_score_defaults_to_c_flash(self):
+        sensor = _make_sensor({"eco_score": ["list", "not", "dict"]})
+        assert sensor.icon == "mdi:flash"
+
+    def test_ei11_icon_blank_grade_defaults_to_c_flash(self):
+        sensor = _make_sensor({"eco_score": {"grade": "   "}})
+        assert sensor.icon == "mdi:flash"
+
+
+# ---------------------------------------------------------------------------
+# Extra state attributes
+# ---------------------------------------------------------------------------
 
 class TestEnergyAdvisorAttrs:
     def test_ea5_attrs_defaults_when_empty(self):
@@ -155,10 +211,10 @@ class TestEnergyAdvisorAttrs:
             "eco_score": 0,
             "eco_grade": "?",
             "eco_trend": "stabil",
-            "total_daily_kwh": 0,
-            "total_monthly_kwh": 0,
-            "total_monthly_eur": 0,
-            "savings_potential_eur": 0,
+            "total_daily_kwh": 0.0,
+            "total_monthly_kwh": 0.0,
+            "total_monthly_eur": 0.0,
+            "savings_potential_eur": 0.0,
         }
 
     def test_ea6_attrs_full_passthrough_and_projection(self):
@@ -202,8 +258,8 @@ class TestEnergyAdvisorAttrs:
             {"category": "Licht", "kwh": 42.5, "pct": 12},
         ]
         assert len(attrs["top_consumers"]) == 5
-        assert attrs["top_consumers"][0] == {"name": "consumer-0", "monthly_kwh": 0}
-        assert attrs["top_consumers"][-1] == {"name": "consumer-4", "monthly_kwh": 40}
+        assert attrs["top_consumers"][0] == {"name": "consumer-0", "monthly_kwh": 0.0}
+        assert attrs["top_consumers"][-1] == {"name": "consumer-4", "monthly_kwh": 40.0}
         assert len(attrs["recommendations"]) == 5
         assert attrs["recommendations"][0] == {
             "title": "Tipp 0",
@@ -232,42 +288,64 @@ class TestEnergyAdvisorAttrs:
         assert "top_consumers" not in attrs
         assert "recommendations" not in attrs
 
-    def test_ea8_attrs_keep_none_values_without_local_cleanup(self):
-        sensor = _make_sensor(
-            {
-                "eco_score": {"grade": None, "score": None, "trend": None},
-                "breakdown": [{"name_de": None, "kwh": None, "pct": None}],
-                "top_consumers": [{"name": None, "monthly_kwh": None}],
-                "recommendations": [
-                    {
-                        "title_de": None,
-                        "potential_savings_eur": None,
-                        "difficulty": None,
-                        "applied": None,
-                    }
-                ],
-            }
-        )
-        assert sensor.extra_state_attributes == {
-            "eco_score": None,
-            "eco_grade": None,
-            "eco_trend": None,
-            "total_daily_kwh": 0,
-            "total_monthly_kwh": 0,
-            "total_monthly_eur": 0,
-            "savings_potential_eur": 0,
-            "breakdown": [{"category": None, "kwh": None, "pct": None}],
-            "top_consumers": [{"name": None, "monthly_kwh": None}],
-            "recommendations": [
-                {
-                    "title": None,
-                    "savings_eur": None,
-                    "difficulty": None,
-                    "applied": None,
-                }
-            ],
-        }
+    # HA-329: malformed payloads now normalised to safe defaults
+    def test_ea15_attrs_non_dict_eco_score_normalised_to_defaults(self):
+        sensor = _make_sensor({"eco_score": "string"})
+        assert sensor.extra_state_attributes["eco_score"] == 0
+        assert sensor.extra_state_attributes["eco_grade"] == "?"
 
+    def test_ea16_attrs_non_numeric_kwh_normalised_to_zero(self):
+        sensor = _make_sensor({"total_daily_kwh": "14.2wh", "total_monthly_kwh": None})
+        attrs = sensor.extra_state_attributes
+        assert attrs["total_daily_kwh"] == 0.0
+        assert attrs["total_monthly_kwh"] == 0.0
+
+    def test_ea17_attrs_inf_kwh_normalised_to_zero(self):
+        sensor = _make_sensor({"total_monthly_kwh": float("inf"), "total_monthly_eur": float("nan")})
+        attrs = sensor.extra_state_attributes
+        assert attrs["total_monthly_kwh"] == 0.0
+        assert attrs["total_monthly_eur"] == 0.0
+
+    def test_ea18_attrs_bool_kwh_normalised_to_zero(self):
+        sensor = _make_sensor({"total_daily_kwh": True})
+        assert sensor.extra_state_attributes["total_daily_kwh"] == 0.0
+
+    def test_ea19_attrs_non_dict_breakdown_items_skipped(self):
+        sensor = _make_sensor({"breakdown": ["not a dict", 42, None, {"name_de": "Valid"}]})
+        attrs = sensor.extra_state_attributes
+        assert attrs["breakdown"] == [{"category": "Valid", "kwh": 0.0, "pct": 0.0}]
+
+    def test_ea20_attrs_non_list_breakdown_normalised_to_empty(self):
+        sensor = _make_sensor({"breakdown": "not a list"})
+        attrs = sensor.extra_state_attributes
+        assert "breakdown" not in attrs
+
+    def test_ea21_attrs_non_dict_top_consumer_items_skipped(self):
+        sensor = _make_sensor({"top_consumers": [None, "string", {"name": "OK"}]})
+        attrs = sensor.extra_state_attributes
+        assert attrs["top_consumers"] == [{"name": "OK", "monthly_kwh": 0.0}]
+
+    def test_ea22_attrs_non_list_top_consumers_normalised_to_empty(self):
+        sensor = _make_sensor({"top_consumers": 123})
+        attrs = sensor.extra_state_attributes
+        assert "top_consumers" not in attrs
+
+    def test_ea23_attrs_non_dict_rec_items_skipped(self):
+        sensor = _make_sensor({"recommendations": [42, "string", None, {"title_de": "Valid"}]})
+        attrs = sensor.extra_state_attributes
+        assert attrs["recommendations"] == [
+            {"title": "Valid", "savings_eur": 0.0, "difficulty": "", "applied": None}
+        ]
+
+    def test_ea24_attrs_non_list_recs_normalised_to_empty(self):
+        sensor = _make_sensor({"recommendations": {"title_de": "should be list"}})
+        attrs = sensor.extra_state_attributes
+        assert "recommendations" not in attrs
+
+
+# ---------------------------------------------------------------------------
+# Update contract
+# ---------------------------------------------------------------------------
 
 class TestEnergyAdvisorUpdateContract:
     def test_ea9_async_update_stores_only_ok_payloads(self):
@@ -290,6 +368,33 @@ class TestEnergyAdvisorUpdateContract:
         asyncio.run(sensor.async_update())
         assert sensor._data == {"ok": True, "eco_score": {"grade": "B", "score": 77}}
 
+    # HA-329: non-dict response keeps previous data (silent ignore), consistent with test_ea10
+    def test_ea25_async_update_keeps_data_on_non_dict_response(self):
+        sensor = _make_sensor({"ok": True, "eco_score": {"grade": "A", "score": 90}})
+
+        async def fake_fetch():
+            return "not a dict"
+
+        sensor._fetch = fake_fetch  # type: ignore[method-assign]
+        asyncio.run(sensor.async_update())
+        # non-dict response is silently ignored, previous data kept
+        assert sensor._data == {"ok": True, "eco_score": {"grade": "A", "score": 90}}
+
+    def test_ea26_async_update_keeps_data_on_none_response(self):
+        sensor = _make_sensor({"ok": True, "eco_score": {"grade": "A", "score": 90}})
+
+        async def fake_fetch():
+            return None
+
+        sensor._fetch = fake_fetch  # type: ignore[method-assign]
+        asyncio.run(sensor.async_update())
+        # None response is silently ignored, previous data kept
+        assert sensor._data == {"ok": True, "eco_score": {"grade": "A", "score": 90}}
+
+
+# ---------------------------------------------------------------------------
+# Global contract
+# ---------------------------------------------------------------------------
 
 class TestEnergyAdvisorGlobalContract:
     def test_gc1_sensor_targets_hub_energy_endpoint_and_caps_lists(self):
@@ -308,3 +413,13 @@ class TestEnergyAdvisorGlobalContract:
         assert 'return "Nicht verfügbar"' in src
         assert "predict" not in src.lower()
         assert "neural" not in src.lower()
+
+    # HA-329 source guards
+    def test_gc3_source_guard_uses_all_type_helpers(self):
+        src = open("custom_components/pilotsuite/sensors/energy_advisor_sensor.py", encoding="utf-8").read()
+        assert "_as_mapping" in src
+        assert "_as_list" in src
+        assert "_as_float" in src
+        assert "_as_int" in src
+        assert "_as_string" in src
+        assert "math.isfinite" in src
