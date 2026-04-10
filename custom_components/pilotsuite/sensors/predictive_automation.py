@@ -38,24 +38,26 @@ class PredictiveAutomationSensor(SensorEntity):
         """Return the current automation suggestion count or status."""
         if not self.coordinator.data:
             return "idle"
-        
-        suggestions = self.coordinator.data.get("suggestions", [])
+
+        data = _as_mapping(self.coordinator.data)
+        suggestions = _as_list(data.get("suggestions"))
         return str(len(suggestions))
-    
+
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         """Return automation suggestions as attributes."""
         if not self.coordinator.data:
             return {}
-        
-        suggestions = self.coordinator.data.get("suggestions", [])
-        
+
+        data = _as_mapping(self.coordinator.data)
+        suggestions = _as_list(data.get("suggestions"))
+
         return {
             "suggestion_count": len(suggestions),
             "suggestions": suggestions,
-            "last_update": self.coordinator.data.get("last_update"),
+            "last_update": data.get("last_update"),
         }
-    
+
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         self.async_write_ha_state()
