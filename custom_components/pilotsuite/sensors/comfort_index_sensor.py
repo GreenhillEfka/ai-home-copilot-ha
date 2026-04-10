@@ -12,6 +12,38 @@ from ..entity import CopilotBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def _as_mapping(value, default=None):
+    """Return value as dict, or default if not a dict-like."""
+    if isinstance(value, dict):
+        return value
+    return default if default is not None else {}
+
+
+def _as_list(value, default=None):
+    """Return value as list, or default if not list-like."""
+    if isinstance(value, list):
+        return value
+    return default if default is not None else []
+
+
+def _as_string(value, default=""):
+    """Return value as string, stripped, or default."""
+    if isinstance(value, str):
+        return value.strip()
+    return default
+
+
+def _as_float(value, default=None):
+    """Return value as float, or default."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        v = float(value)
+        if v != v or v == float("inf") or v == float("-inf"):  # nan or inf
+            return default
+        return v
+    return default
+
+
 GRADE_ICONS = {
     "A": "mdi:emoticon-happy",
     "B": "mdi:emoticon",
@@ -36,17 +68,23 @@ class ComfortIndexSensor(CopilotBaseEntity):
     @property
     def native_value(self) -> float | None:
         """Return comfort score as state."""
-        if self._comfort_data and self._comfort_data.get("ok"):
-            return self._comfort_data.get("score")
-        return None
+        if not self._comfort_data:
+            return None
+        data = _as_mapping(self._comfort_data)
+        if not data.get("ok"):
+            return None
+        return _as_float(data.get("score"))
 
     @property
     def icon(self) -> str:
         """Return icon based on comfort grade."""
-        if self._comfort_data and self._comfort_data.get("ok"):
-            grade = self._comfort_data.get("grade", "C")
-            return GRADE_ICONS.get(grade, "mdi:home-thermometer")
-        return "mdi:home-thermometer"
+        if not self._comfort_data:
+            return "mdi:home-thermometer"
+        data = _as_mapping(self._comfort_data)
+        if not data.get("ok"):
+            return "mdi:home-thermometer"
+        grade = _as_string(data.get("grade"), "")
+        return GRADE_ICONS.get(grade, "mdi:home-thermometer")
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -60,21 +98,39 @@ class ComfortIndexSensor(CopilotBaseEntity):
             ),
         }
 
-        if self._comfort_data and self._comfort_data.get("ok"):
-            if "grade" in self._comfort_data:
-                attrs["grade"] = self._comfort_data.get("grade")
-            if "zone_id" in self._comfort_data:
-                attrs["zone_id"] = self._comfort_data.get("zone_id")
-            if "suggestions" in self._comfort_data:
-                attrs["suggestions"] = self._comfort_data.get("suggestions", [])
+        if not self._comfort_data:
+            return attrs
+        data = _as_mapping(self._comfort_data)
+        if not data.get("ok"):
+            return attrs
 
-            for reading in self._comfort_data.get("readings", []):
-                factor = reading["factor"]
-                attrs[f"{factor}_score"] = reading["score"]
-                if "status" in reading:
-                    attrs[f"{factor}_status"] = reading["status"]
-                if reading.get("raw_value") is not None:
-                    attrs[f"{factor}_value"] = reading["raw_value"]
+        grade = _as_string(data.get("grade"), "")
+        if grade:
+            attrs["grade"] = grade
+        zone_id = _as_string(data.get("zone_id"), "")
+        if zone_id:
+            attrs["zone_id"] = zone_id
+
+        if "suggestions" in data and isinstance(data.get("suggestions"), list):
+            attrs["suggestions"] = _as_list(data.get("suggestions"))
+
+        readings = _as_list(data.get("readings"), [])
+        for reading in readings:
+            r = _as_mapping(reading, None)
+            if r is None:
+                continue
+            factor = _as_string(r.get("factor"), "")
+            if not factor:
+                continue
+            score = _as_float(r.get("score"))
+            if score is not None:
+                attrs[f"{factor}_score"] = score
+            status = _as_string(r.get("status"), "")
+            if status:
+                attrs[f"{factor}_status"] = status
+            raw = r.get("raw_value")
+            if raw is not None and not isinstance(raw, dict):
+                attrs[f"{factor}_value"] = raw
 
         return attrs
 

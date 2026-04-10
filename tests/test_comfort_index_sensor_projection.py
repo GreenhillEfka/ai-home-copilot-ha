@@ -222,3 +222,91 @@ class TestCIGlobalContract:
         s._comfort_data = data
         assert s.native_value == 100.0
         assert s.icon == "mdi:emoticon-happy"
+
+    def test_gc3_source_guards(self):
+        # Guard helpers are used in the source: _as_mapping, _as_list, _as_float, _as_string
+        import inspect
+        from custom_components.pilotsuite.sensors import comfort_index_sensor as src
+        source = inspect.getsource(src)
+        assert "_as_mapping" in source, "_as_mapping guard must be used in source"
+        assert "_as_list" in source, "_as_list guard must be used in source"
+        assert "_as_float" in source, "_as_float guard must be used in source"
+        assert "_as_string" in source, "_as_string guard must be used in source"
+
+
+# ─── CI5: malformed payloads ────────────────────────────────────────────────
+
+class TestCIMalformed:
+    """Malformed payloads must not crash — fall to safe defaults."""
+
+    def test_ci5_truthy_non_dict_comfort_data(self):
+        # truthy but non-dict — Top-Level-Guard
+        for payload in ["string", 42, [], True, None]:
+            s = make_sensor(None)
+            s._comfort_data = payload
+            assert s.native_value is None
+            assert s.icon == "mdi:home-thermometer"
+            attrs = s.extra_state_attributes
+            assert "grade" not in attrs
+            assert "suggestions" not in attrs
+
+    def test_ci5_non_numeric_score(self):
+        # non-numeric score → None
+        for score in ["high", None, True, [], {}]:
+            data = {"ok": True, "score": score, "grade": "A"}
+            s = make_sensor(data)
+            assert s.native_value is None, f"score={score!r} should yield None"
+
+    def test_ci5_non_string_grade(self):
+        # non-string grade → defaults to fallback icon
+        for grade in [42, None, [], {}, True]:
+            data = {"ok": True, "score": 80.0, "grade": grade}
+            s = make_sensor(data)
+            assert s.icon == "mdi:home-thermometer"
+
+    def test_ci5_non_list_suggestions(self):
+        # non-list suggestions → not projected
+        for suggestions in ["string", 42, None, {}, True]:
+            data = {"ok": True, "score": 75.0, "grade": "B", "suggestions": suggestions}
+            s = make_sensor(data)
+            attrs = s.extra_state_attributes
+            assert "suggestions" not in attrs
+
+    def test_ci5_non_list_readings(self):
+        # non-list readings → empty, no crash
+        for readings in ["string", 42, None, {}, True]:
+            data = {"ok": True, "score": 75.0, "grade": "B", "readings": readings}
+            s = make_sensor(data)
+            attrs = s.extra_state_attributes
+            # no reading-score attrs projected
+            assert "temperature_score" not in attrs
+
+    def test_ci5_non_dict_reading_items(self):
+        # non-dict reading items → skipped gracefully
+        for item in ["string", 42, None, True]:
+            data = {
+                "ok": True, "score": 75.0, "grade": "B",
+                "readings": [item, {"factor": "temperature", "score": 80}],
+            }
+            s = make_sensor(data)
+            attrs = s.extra_state_attributes
+            # valid reading still projected
+            assert attrs.get("temperature_score") == 80
+
+    def test_ci5_reading_missing_factor(self):
+        # reading without factor key → skipped
+        data = {
+            "ok": True, "score": 75.0, "grade": "B",
+            "readings": [{"score": 80}, {"factor": "", "score": 70}],
+        }
+        s = make_sensor(data)
+        attrs = s.extra_state_attributes
+        assert "temperature_score" not in attrs
+
+    def test_ci5_non_string_zone_id(self):
+        # non-string zone_id → skipped
+        for zone_id in [42, None, [], {}, True]:
+            data = {"ok": True, "score": 75.0, "zone_id": zone_id}
+            s = make_sensor(data)
+            attrs = s.extra_state_attributes
+            assert "zone_id" not in attrs
