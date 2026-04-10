@@ -59,11 +59,14 @@ class VoiceContextSensorContract:
     def _as_string_list(value) -> list[str]:
         if not isinstance(value, list):
             return []
-        return [item for item in value if isinstance(item, str) and item.strip()]
+        return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
     @staticmethod
     def _as_string(value, default: str) -> str:
-        return value if isinstance(value, str) else default
+        if not isinstance(value, str):
+            return default
+        normalized = value.strip()
+        return normalized if normalized else default
 
     @staticmethod
     def _as_float(value, default: float) -> float:
@@ -344,6 +347,46 @@ def empty_data():
         "voice_suggestions",
         ["Lesen ist aktuell."],
     ),
+    # VC1u4: padded scalar/list payloads are normalized before projection into HA attrs
+    (
+        {
+            "mood": {"mood": "  relax  ", "contributors": ["  music  ", " comfort "]},
+            "neural": {
+                "time": {"description_de": "  Guten Morgen  "},
+                "zone": {
+                    "current": "  Wohnzimmer  ",
+                    "presence": ["  Wohnzimmer  ", " Küche "],
+                    "typical_activities": ["  Lesen  ", " Musik hören "],
+                },
+                "last_update": " 2026-04-06T10:00:00Z ",
+            },
+        },
+        None,
+        {
+            "dominant_mood": "relax",
+            "mood_confidence": 0.0,
+            "mood_contributors": ["music", "comfort"],
+            "current_zone": "Wohnzimmer",
+            "zone_presence": ["Wohnzimmer", "Küche"],
+            "voice_tone": "relax",
+            "voice_greeting": "Guten Morgen",
+            "voice_suggestions": ["Lesen ist aktuell.", "Musik hören ist aktuell."],
+            "voice_prompt": "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
+            "last_update": "2026-04-06T10:00:00Z",
+        },
+    ),
+    # VC1u5: blank mood scalar falls back to documented default instead of leaking empty attrs
+    (
+        {"mood": {"mood": "   "}, "neural": {"zone": {"current": "   "}}},
+        "dominant_mood",
+        "unknown",
+    ),
+    # VC1u6: blank zone current scalar also falls back to documented default
+    (
+        {"neural": {"zone": {"current": "   "}}},
+        "current_zone",
+        "unknown",
+    ),
     # VC1v: truthy non-dict coordinator payload is rejected at the top-level guard
     (
         ["bad-payload"],
@@ -428,6 +471,13 @@ def test_vc1_extra_state_attributes(coordinator_data, key, expected):
         [],
         "Der Nutzer ist gerade Neutral.",
     ),
+    # VC2j: padded presence/suggestions are normalized before prompt construction
+    (
+        "  Hallo  ",
+        ["  Wohnzimmer  ", " Küche "],
+        ["  Lesen ist aktuell.  ", " Musik hören ist aktuell. "],
+        "Der Nutzer ist gerade Hallo. Anwesend in: Wohnzimmer, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
+    ),
 ])
 def test_vc2_voice_prompt_construction(greeting, presence, suggestions, expected):
     """VC2: voice_prompt is built from greeting + presence[:3] + suggestions[:2]."""
@@ -464,6 +514,8 @@ def test_vc3_native_value_always_ok():
     ({}, "Kein Kontext verfügbar."),
     # VP1g: truthy non-dict coordinator payload also returns guard default
     (["bad-payload"], "Kein Kontext verfügbar."),
+    # VP1h: padded scalar/list payloads are normalized before prompt projection
+    ({"neural": {"time": {"description_de": "  Abend  "}, "zone": {"presence": ["  Wohnzimmer  "], "typical_activities": ["  Lesen  "]}}}, "Der Nutzer ist gerade Abend. Anwesend in: Wohnzimmer. Vorschläge: Lesen ist aktuell.."),
 ])
 def test_vp1_native_value(coordinator_data, expected):
     """VP1: native_value is the projected HA Assist prompt, not a local tone mapping."""
@@ -593,7 +645,7 @@ def test_gc7_source_hardens_projection_against_malformed_list_payloads():
 
     assert 'def _as_string_list(value: Any) -> list[str]:' in source
     assert 'if not isinstance(value, list):' in source
-    assert 'return [item for item in value if isinstance(item, str) and item.strip()]' in source
+    assert 'return [item.strip() for item in value if isinstance(item, str) and item.strip()]' in source
 
 
 def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
@@ -609,6 +661,9 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'def _as_string(value: Any, default: str) -> str:' in source
     assert 'def _as_float(value: Any, default: float) -> float:' in source
     assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")' in source
+    assert 'if not isinstance(value, str):' in source
+    assert 'normalized = value.strip()' in source
+    assert 'return normalized if normalized else default' in source
     assert 'if isinstance(value, bool):' in source
     assert 'math.isfinite' in source
     assert 'confidence = _as_float(mood_data.get("confidence"), 0.0)' in source

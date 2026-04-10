@@ -36,15 +36,18 @@ def _as_mapping(value: Any) -> Dict[str, Any]:
 
 
 def _as_string_list(value: Any) -> list[str]:
-    """Return string-only list payloads without inventing fallback semantics."""
+    """Return normalized string-only list payloads without inventing fallback semantics."""
     if not isinstance(value, list):
         return []
-    return [item for item in value if isinstance(item, str) and item.strip()]
+    return [item.strip() for item in value if isinstance(item, str) and item.strip()]
 
 
 def _as_string(value: Any, default: str) -> str:
-    """Return string payloads, otherwise a safe default."""
-    return value if isinstance(value, str) else default
+    """Return normalized string payloads, otherwise a safe default."""
+    if not isinstance(value, str):
+        return default
+    normalized = value.strip()
+    return normalized if normalized else default
 
 
 def _as_float(value: Any, default: float) -> float:
