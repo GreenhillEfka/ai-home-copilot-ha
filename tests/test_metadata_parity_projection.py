@@ -15,6 +15,7 @@ ROOT_MANIFEST = REPO_ROOT / "manifest.json"
 COMPONENT_MANIFEST = REPO_ROOT / "custom_components" / "pilotsuite" / "manifest.json"
 COMPONENT_VERSION_STUB = REPO_ROOT / "custom_components" / "pilotsuite" / "VERSION"
 HACS_FILE = REPO_ROOT / "hacs.json"
+COMPONENT_HACS_FILE = REPO_ROOT / "custom_components" / "pilotsuite" / "hacs.json"
 
 
 def _load_json(path: Path) -> dict:
@@ -39,6 +40,7 @@ def test_manifest_contract_matches_hacs_release_metadata() -> None:
     root_manifest = _load_json(ROOT_MANIFEST)
     component_manifest = _load_json(COMPONENT_MANIFEST)
     hacs = _load_json(HACS_FILE)
+    component_hacs = _load_json(COMPONENT_HACS_FILE)
     repo_url = component_manifest["documentation"]
     repo_slug = repo_url.rstrip("/").rsplit("/", 1)[-1]
 
@@ -51,6 +53,7 @@ def test_manifest_contract_matches_hacs_release_metadata() -> None:
     assert component_manifest["codeowners"] == ["@GreenhillEfka"]
     assert component_manifest["homeassistant"] == "2024.4.0"
 
+    assert hacs == component_hacs
     assert hacs["name"] == "PilotSuite HA"
     assert hacs["domain"] == component_manifest["domain"]
     assert hacs["domain"] == root_manifest["domain"]
@@ -73,6 +76,7 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
             ROOT_MANIFEST.read_text(encoding="utf-8"),
             COMPONENT_MANIFEST.read_text(encoding="utf-8"),
             HACS_FILE.read_text(encoding="utf-8"),
+            COMPONENT_HACS_FILE.read_text(encoding="utf-8"),
             (REPO_ROOT / "custom_components" / "pilotsuite" / "const.py").read_text(encoding="utf-8"),
             (REPO_ROOT / "custom_components" / "pilotsuite" / "config_flow.py").read_text(encoding="utf-8"),
         ]
