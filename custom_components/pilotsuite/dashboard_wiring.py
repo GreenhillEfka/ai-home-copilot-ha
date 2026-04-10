@@ -357,8 +357,8 @@ def _build_storage_dashboard_config(
 
     # ── Resolve key entity IDs for custom cards ──
     mood_entity = _find_entity(
-        entities, "sensor.copilot_ha_mood", "sensor.pilotsuite_mood",
-    ) or "sensor.copilot_ha_mood"
+        entities, "sensor.pilotsuite_mood", "sensor.copilot_ha_mood",
+    ) or "sensor.pilotsuite_mood"
     brain_nodes_entity = _find_entity(
         entities, "sensor.pilotsuite_brain_graph_nodes", "sensor.copilot_ha_brain_graph_nodes",
     ) or "sensor.pilotsuite_brain_graph_nodes"
@@ -369,8 +369,8 @@ def _build_storage_dashboard_config(
         entities, "sensor.pilotsuite_habitus_rules_count", "sensor.copilot_ha_habitus_rules_count",
     ) or "sensor.pilotsuite_habitus_rules_count"
     zones_entity = _find_entity(
-        entities, "sensor.copilot_ha_habitus_zones", "sensor.pilotsuite_habitus_zones",
-    ) or "sensor.copilot_ha_habitus_zones"
+        entities, "sensor.pilotsuite_habitus_zones", "sensor.copilot_ha_habitus_zones",
+    ) or "sensor.pilotsuite_habitus_zones"
 
     views = [
         # ── 1. Styx (Start) ──
