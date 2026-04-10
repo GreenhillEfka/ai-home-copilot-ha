@@ -65,6 +65,10 @@ class VoiceContextSensorContract:
 
     @staticmethod
     def extra_state_attributes(coordinator_data: dict) -> dict:
+        coordinator_data = VoiceContextSensorContract._as_mapping(coordinator_data)
+        if not coordinator_data:
+            return {}
+
         mood = VoiceContextSensorContract._as_mapping(coordinator_data.get("mood", {}))
         neural = VoiceContextSensorContract._as_mapping(coordinator_data.get("neural", {}))
 
@@ -128,6 +132,7 @@ class VoicePromptSensorContract:
 
     @staticmethod
     def native_value(coordinator_data: dict) -> str:
+        coordinator_data = VoiceContextSensorContract._as_mapping(coordinator_data)
         if not coordinator_data:
             return "Kein Kontext verfügbar."
         attrs = VoiceContextSensorContract.extra_state_attributes(coordinator_data)
@@ -304,10 +309,19 @@ def empty_data():
         "voice_greeting",
         "Hallo",
     ),
+    # VC1v: truthy non-dict coordinator payload is rejected at the top-level guard
+    (
+        ["bad-payload"],
+        None,
+        {},
+    ),
 ])
 def test_vc1_extra_state_attributes(coordinator_data, key, expected):
     """VC1: extra_state_attributes are pure Dict lookups from coordinator.data."""
     attrs = VoiceContextSensorContract.extra_state_attributes(coordinator_data)
+    if key is None:
+        assert attrs == expected
+        return
     assert attrs[key] == expected, f"{key}: {attrs[key]!r} != {expected!r}"
 
 
@@ -413,6 +427,8 @@ def test_vc3_native_value_always_ok():
     ({"neural": {"time": {"description_de": "", "description_en": ""}}}, "Der Nutzer ist gerade Hallo."),
     # VP1f: empty data → sensor guard default
     ({}, "Kein Kontext verfügbar."),
+    # VP1g: truthy non-dict coordinator payload also returns guard default
+    (["bad-payload"], "Kein Kontext verfügbar."),
 ])
 def test_vp1_native_value(coordinator_data, expected):
     """VP1: native_value is the projected HA Assist prompt, not a local tone mapping."""
@@ -563,5 +579,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'or _as_string(core_time.get("description_en"), "")' in source
     assert 'or "Hallo"' in source
     assert 'greeting = _as_string(voice.get("greeting"), "") or "Neutral"' in source
+    assert 'coordinator_data = _as_mapping(self.coordinator.data)' in source
+    assert 'if not coordinator_data:' in source
     assert '"contributors": _as_string_list(mood_data.get("contributors"))' in source
     assert '"last_update": _as_string(neural_data.get("last_update"), "")' in source

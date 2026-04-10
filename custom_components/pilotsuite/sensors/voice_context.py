@@ -136,12 +136,13 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         """Return voice context attributes."""
-        if not self.coordinator.data:
+        coordinator_data = _as_mapping(self.coordinator.data)
+        if not coordinator_data:
             return {}
 
-        neural_data = self.coordinator.data.get("neural", {})
-        mood_data = self.coordinator.data.get("mood", {})
-        suggestions = self.coordinator.data.get("suggestions", [])
+        neural_data = coordinator_data.get("neural", {})
+        mood_data = coordinator_data.get("mood", {})
+        suggestions = coordinator_data.get("suggestions", [])
 
         context = self._build_voice_context(mood_data, neural_data, suggestions)
         self._context_data = context
@@ -193,11 +194,12 @@ class VoicePromptSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self) -> str:
         """Return the projected voice prompt."""
-        if not self.coordinator.data:
+        coordinator_data = _as_mapping(self.coordinator.data)
+        if not coordinator_data:
             return "Kein Kontext verfügbar."
 
-        mood_data = self.coordinator.data.get("mood", {})
-        neural_data = self.coordinator.data.get("neural", {})
+        mood_data = coordinator_data.get("mood", {})
+        neural_data = coordinator_data.get("neural", {})
         context = _project_voice_context(mood_data, neural_data)
         return _build_voice_prompt(context)
 
