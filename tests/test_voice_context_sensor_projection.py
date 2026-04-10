@@ -53,7 +53,7 @@ class VoiceContextSensorContract:
     def _as_string_list(value) -> list[str]:
         if not isinstance(value, list):
             return []
-        return [item for item in value if isinstance(item, str)]
+        return [item for item in value if isinstance(item, str) and item.strip()]
 
     @staticmethod
     def _as_string(value, default: str) -> str:
@@ -317,6 +317,18 @@ def empty_data():
         "voice_greeting",
         "Hallo",
     ),
+    # VC1u2: blank presence entries are filtered instead of leaking empty labels into HA attrs/prompt
+    (
+        {"neural": {"zone": {"presence": ["", "Küche", "   "]}}},
+        "zone_presence",
+        ["Küche"],
+    ),
+    # VC1u3: blank activities are filtered before voice suggestion projection
+    (
+        {"neural": {"zone": {"typical_activities": ["", "Lesen", "   "]}}},
+        "voice_suggestions",
+        ["Lesen ist aktuell."],
+    ),
     # VC1v: truthy non-dict coordinator payload is rejected at the top-level guard
     (
         ["bad-payload"],
@@ -566,7 +578,7 @@ def test_gc7_source_hardens_projection_against_malformed_list_payloads():
 
     assert 'def _as_string_list(value: Any) -> list[str]:' in source
     assert 'if not isinstance(value, list):' in source
-    assert 'return [item for item in value if isinstance(item, str)]' in source
+    assert 'return [item for item in value if isinstance(item, str) and item.strip()]' in source
 
 
 def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():

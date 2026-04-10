@@ -38,7 +38,7 @@ def _as_string_list(value: Any) -> list[str]:
     """Return string-only list payloads without inventing fallback semantics."""
     if not isinstance(value, list):
         return []
-    return [item for item in value if isinstance(item, str)]
+    return [item for item in value if isinstance(item, str) and item.strip()]
 
 
 def _as_string(value: Any, default: str) -> str:
