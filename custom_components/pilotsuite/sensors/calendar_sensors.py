@@ -30,7 +30,7 @@ class CalendarLoadSensor(CoordinatorEntity, SensorEntity):
     """
     
     _attr_name = "PilotSuite Calendar Load"
-    _attr_unique_id = "ai_copilot_calendar_load"
+    _attr_unique_id = "pilotsuite_calendar_load"
     _attr_icon = "mdi:calendar-clock"
     _attr_should_poll = True
     

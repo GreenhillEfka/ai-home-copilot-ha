@@ -356,3 +356,19 @@ class TestGlobalContract:
         # Verify no Core API endpoint patterns
         assert "/api/v1/" not in source
         assert "coordinator.data" not in source
+
+    def test_GC3_identity_canonicalized_to_pilotsuite(self):
+        """GC3: CalendarLoadSensor uses the canonical pilotsuite unique_id.
+
+        Also verifies legacy ai_copilot unique_id migration is registered.
+        """
+        import inspect
+        from pathlib import Path
+        from custom_components.pilotsuite.sensors.calendar_sensors import CalendarLoadSensor
+
+        source = inspect.getsource(CalendarLoadSensor)
+        init_source = Path("custom_components/pilotsuite/__init__.py").read_text(encoding="utf-8")
+
+        assert '_attr_unique_id = "pilotsuite_calendar_load"' in source
+        assert 'ai_copilot_calendar_load' not in source
+        assert '"ai_copilot_calendar_load": "pilotsuite_calendar_load"' in init_source
