@@ -13,6 +13,35 @@ from ..entity import CopilotBaseEntity
 _LOGGER = logging.getLogger(__name__)
 
 
+# =============================================================================
+# Guard helpers
+# =============================================================================
+
+def _as_mapping(val: Any) -> dict[str, Any]:
+    """Reject non-dict top-level payloads."""
+    if isinstance(val, dict):
+        return val
+    return {}
+
+
+def _as_list(val: Any) -> list:
+    """Accept only list payloads."""
+    if isinstance(val, list):
+        return val
+    return []
+
+
+def _safe_count(val: Any) -> int:
+    """Accept only non-negative integer counts; reject floats, negatives, non-int."""
+    if isinstance(val, int) and not isinstance(val, bool) and val >= 0:
+        return val
+    return 0
+
+
+# =============================================================================
+# NotificationSensor
+# =============================================================================
+
 class NotificationSensor(CopilotBaseEntity):
     """Sensor exposing notification engine state."""
 
@@ -28,19 +57,20 @@ class NotificationSensor(CopilotBaseEntity):
     @property
     def native_value(self) -> str | None:
         """Return unread notification count as state."""
-        if self._notif_data and self._notif_data.get("ok"):
-            count = self._notif_data.get("count", 0)
-            return f"{count} pending" if count > 0 else "no alerts"
-        return "unavailable"
+        notif = _as_mapping(self._notif_data)
+        if not notif or not _is_ok(notif):
+            return "unavailable"
+        count = _safe_count(notif.get("count"))
+        return f"{count} pending" if count > 0 else "no alerts"
 
     @property
     def icon(self) -> str:
         """Dynamic icon based on pending count."""
-        if self._notif_data and self._notif_data.get("ok"):
-            count = self._notif_data.get("count", 0)
-            if count > 0:
-                return "mdi:bell-alert"
-        return "mdi:bell-outline"
+        notif = _as_mapping(self._notif_data)
+        if not notif or not _is_ok(notif):
+            return "mdi:bell-outline"
+        count = _safe_count(notif.get("count"))
+        return "mdi:bell-alert" if count > 0 else "mdi:bell-outline"
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -54,15 +84,18 @@ class NotificationSensor(CopilotBaseEntity):
             ),
         }
 
-        if self._notif_data and self._notif_data.get("ok"):
-            notifications = self._notif_data.get("notifications", [])
-            attrs["pending_count"] = self._notif_data.get("count", 0)
+        notif = _as_mapping(self._notif_data)
+        if notif and _is_ok(notif):
+            notifications = _as_list(notif.get("notifications"))
+            count = _safe_count(notif.get("count"))
+            attrs["pending_count"] = count
             attrs["latest"] = notifications[:5]
 
-        if self._digest_data and self._digest_data.get("ok"):
-            attrs["digest_count"] = self._digest_data.get("count", 0)
-            attrs["by_source"] = self._digest_data.get("by_source", {})
-            attrs["by_priority"] = self._digest_data.get("by_priority", {})
+        digest = _as_mapping(self._digest_data)
+        if digest and _is_ok(digest):
+            attrs["digest_count"] = _safe_count(digest.get("count"))
+            attrs["by_source"] = _as_mapping(digest.get("by_source"))
+            attrs["by_priority"] = _as_mapping(digest.get("by_priority"))
 
         return attrs
 
@@ -82,14 +115,25 @@ class NotificationSensor(CopilotBaseEntity):
                 headers=headers, timeout=10,
             ) as resp:
                 if resp.status == 200:
-                    self._notif_data = await resp.json()
+                    raw = await resp.json()
+                    self._notif_data = _as_mapping(raw) if isinstance(raw, dict) else {}
 
             async with session.get(
                 f"{base}/api/v1/notifications/digest?hours=24",
                 headers=headers, timeout=10,
             ) as resp:
                 if resp.status == 200:
-                    self._digest_data = await resp.json()
+                    raw = await resp.json()
+                    self._digest_data = _as_mapping(raw) if isinstance(raw, dict) else {}
 
         except Exception as e:
             _LOGGER.debug("Failed to fetch notification data: %s", e)
+
+
+# =============================================================================
+# Internal
+# =============================================================================
+
+def _is_ok(data: dict[str, Any]) -> bool:
+    """Return True only when data contains an explicit ok=True."""
+    return data.get("ok") is True

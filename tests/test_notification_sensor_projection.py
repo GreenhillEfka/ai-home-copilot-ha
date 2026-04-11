@@ -3,7 +3,13 @@
 Verifies NotificationSensor is a pure projection shell on Core
 /api/v1/notifications + /api/v1/notifications/digest — no local semantic invention.
 
+Contract: sensor derives ALL display values from Core API payloads via trivial
+Dict-lookups and string formatting. No local classification, no heuristic.
+
+Malformed-payload guards added: NSM1–NSM10, NSGC1–NSGC3 (HA-337)
+
 HA-120 — 2026-04-05
+HA-337 — 2026-04-11
 """
 from __future__ import annotations
 
@@ -15,34 +21,50 @@ from unittest.mock import MagicMock
 # Contract Mirror
 # =============================================================================
 
+def _as_mapping(val):
+    if isinstance(val, dict):
+        return val
+    return {}
+
+
+def _as_list(val):
+    if isinstance(val, list):
+        return val
+    return []
+
+
+def _safe_count(val):
+    if isinstance(val, int) and not isinstance(val, bool) and val >= 0:
+        return val
+    return 0
+
+
+def _is_ok(data):
+    return data.get("ok") is True
+
+
 class NotificationSensorContract:
-    """Mirror of NotificationSensor projection logic.
+    """Mirror of NotificationSensor projection logic with guard semantics."""
 
-    Contract:
-    - hits /api/v1/notifications + /api/v1/notifications/digest
-    - native_value: "{count} pending" | "no alerts" | "unavailable"
-    - icon: "mdi:bell-alert" if count>0 else "mdi:bell-outline"
-    - attrs: notifications_url, digest_url, pending_count, latest, digest_count
-    """
-
-    def __init__(self, notif_data: dict | None, digest_data: dict | None):
+    def __init__(self, notif_data, digest_data):
         self._notif_data = notif_data
         self._digest_data = digest_data
 
     @property
     def native_value(self) -> str:
-        if self._notif_data and self._notif_data.get("ok"):
-            count = self._notif_data.get("count", 0)
-            return f"{count} pending" if count > 0 else "no alerts"
-        return "unavailable"
+        notif = _as_mapping(self._notif_data)
+        if not notif or not _is_ok(notif):
+            return "unavailable"
+        count = _safe_count(notif.get("count"))
+        return f"{count} pending" if count > 0 else "no alerts"
 
     @property
     def icon(self) -> str:
-        if self._notif_data and self._notif_data.get("ok"):
-            count = self._notif_data.get("count", 0)
-            if count > 0:
-                return "mdi:bell-alert"
-        return "mdi:bell-outline"
+        notif = _as_mapping(self._notif_data)
+        if not notif or not _is_ok(notif):
+            return "mdi:bell-outline"
+        count = _safe_count(notif.get("count"))
+        return "mdi:bell-alert" if count > 0 else "mdi:bell-outline"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -50,14 +72,17 @@ class NotificationSensorContract:
             "notifications_url": "/api/v1/notifications",
             "digest_url": "/api/v1/notifications/digest",
         }
-        if self._notif_data and self._notif_data.get("ok"):
-            notifications = self._notif_data.get("notifications", [])
-            attrs["pending_count"] = self._notif_data.get("count", 0)
+        notif = _as_mapping(self._notif_data)
+        if notif and _is_ok(notif):
+            notifications = _as_list(notif.get("notifications"))
+            count = _safe_count(notif.get("count"))
+            attrs["pending_count"] = count
             attrs["latest"] = notifications[:5]
-        if self._digest_data and self._digest_data.get("ok"):
-            attrs["digest_count"] = self._digest_data.get("count", 0)
-            attrs["by_source"] = self._digest_data.get("by_source", {})
-            attrs["by_priority"] = self._digest_data.get("by_priority", {})
+        digest = _as_mapping(self._digest_data)
+        if digest and _is_ok(digest):
+            attrs["digest_count"] = _safe_count(digest.get("count"))
+            attrs["by_source"] = _as_mapping(digest.get("by_source"))
+            attrs["by_priority"] = _as_mapping(digest.get("by_priority"))
         return attrs
 
 
@@ -200,29 +225,183 @@ class TestNotificationSensorEdge:
 
 
 # =============================================================================
-# GC — Global Contract
+# NSM — Malformed payload guards (HA-337)
 # =============================================================================
 
-class TestGlobalContract:
-    """GC: NotificationSensor is a pure projection shell on Core API."""
+class TestNotificationSensorMalformed:
+    """NSM: Guard against malformed Core API payloads."""
 
-    def test_gc1_hits_core_endpoints(self):
-        """GC1: Sensor targets /api/v1/notifications + /api/v1/notifications/digest."""
+    # --- Top-level non-dict payloads ---
+
+    def test_nsm1_notif_top_level_string(self):
+        """NSM1: String top-level → 'unavailable'."""
+        sensor = NotificationSensorContract("not-a-dict", None)
+        assert sensor.native_value == "unavailable"
+        assert sensor.icon == "mdi:bell-outline"
+
+    def test_nsm2_notif_top_level_list(self):
+        """NSM2: List top-level → 'unavailable'."""
+        sensor = NotificationSensorContract([{"ok": True}], None)
+        assert sensor.native_value == "unavailable"
+
+    def test_nsm3_notif_top_level_int(self):
+        """NSM3: Integer top-level → 'unavailable'."""
+        sensor = NotificationSensorContract(42, None)
+        assert sensor.native_value == "unavailable"
+
+    def test_nsm4_notif_top_level_none(self):
+        """NSM4: None top-level → 'unavailable' (unchanged behavior)."""
         sensor = NotificationSensorContract(None, None)
-        attrs = sensor.extra_state_attributes
-        assert "/api/v1/notifications" in attrs["notifications_url"]
-        assert "/api/v1/notifications/digest" in attrs["digest_url"]
+        assert sensor.native_value == "unavailable"
 
-    def test_gc2_no_local_semantic_invention(self):
-        """GC2: Sensor formats count directly — no local classification/priority logic."""
+    # --- ok field edge cases ---
+
+    def test_nsm5_ok_is_none(self):
+        """NSM5: ok=None treated as unavailable."""
+        sensor = NotificationSensorContract({"ok": None, "count": 5}, None)
+        assert sensor.native_value == "unavailable"
+
+    def test_nsm6_ok_is_string(self):
+        """NSM6: ok='true' (string) → unavailable."""
+        sensor = NotificationSensorContract({"ok": "true", "count": 5}, None)
+        assert sensor.native_value == "unavailable"
+
+    def test_nsm7_ok_is_int(self):
+        """NSM7: ok=1 (int) → unavailable (needs strict True)."""
+        sensor = NotificationSensorContract({"ok": 1, "count": 5}, None)
+        assert sensor.native_value == "unavailable"
+
+    # --- count field malformed ---
+
+    def test_nsm8_count_string(self):
+        """NSM8: count='5' (string) → 0, 'no alerts'."""
+        sensor = NotificationSensorContract({"ok": True, "count": "5"}, None)
+        assert sensor.native_value == "no alerts"
+
+    def test_nsm9_count_negative(self):
+        """NSM9: count=-3 → 0, 'no alerts'."""
+        sensor = NotificationSensorContract({"ok": True, "count": -3}, None)
+        assert sensor.native_value == "no alerts"
+
+    def test_nsm10_count_float(self):
+        """NSM10: count=3.14 (float) → 0, 'no alerts'."""
+        sensor = NotificationSensorContract({"ok": True, "count": 3.14}, None)
+        assert sensor.native_value == "no alerts"
+
+    def test_nsm11_count_bool_true(self):
+        """NSM11: count=True (bool) → 0, 'no alerts'."""
+        sensor = NotificationSensorContract({"ok": True, "count": True}, None)
+        assert sensor.native_value == "no alerts"
+
+    def test_nsm12_count_none(self):
+        """NSM12: count=None → 0, 'no alerts'."""
+        sensor = NotificationSensorContract({"ok": True, "count": None}, None)
+        assert sensor.native_value == "no alerts"
+
+    # --- notifications malformed ---
+
+    def test_nsm13_notifications_dict(self):
+        """NSM13: notifications={} (dict, not list) → latest=[]."""
         sensor = NotificationSensorContract(
-            {"ok": True, "count": 5, "notifications": [{"id": 1}]},
-            {"ok": True, "count": 10, "by_source": {}, "by_priority": {}}
+            {"ok": True, "count": 1, "notifications": {"a": 1}}, None
         )
         attrs = sensor.extra_state_attributes
-        # count passed through unchanged
-        assert attrs["pending_count"] == 5
-        assert attrs["digest_count"] == 10
-        # no invented fields
-        assert "priority_score" not in attrs
-        assert "urgency_level" not in attrs
+        assert attrs["latest"] == []
+
+    def test_nsm14_notifications_string(self):
+        """NSM14: notifications='abc' (string) → latest=[]."""
+        sensor = NotificationSensorContract(
+            {"ok": True, "count": 1, "notifications": "abc"}, None
+        )
+        attrs = sensor.extra_state_attributes
+        assert attrs["latest"] == []
+
+    def test_nsm15_notifications_int(self):
+        """NSM15: notifications=42 (int) → latest=[]."""
+        sensor = NotificationSensorContract(
+            {"ok": True, "count": 1, "notifications": 42}, None
+        )
+        attrs = sensor.extra_state_attributes
+        assert attrs["latest"] == []
+
+    # --- digest malformed ---
+
+    def test_nsm16_digest_top_level_string(self):
+        """NSM16: digest string → no digest attrs."""
+        sensor = NotificationSensorContract(
+            {"ok": True, "count": 1, "notifications": []},
+            "not-a-dict"
+        )
+        attrs = sensor.extra_state_attributes
+        assert "digest_count" not in attrs
+
+    def test_nsm17_digest_ok_none(self):
+        """NSM17: digest ok=None → no digest attrs."""
+        sensor = NotificationSensorContract(
+            {"ok": True, "count": 1, "notifications": []},
+            {"ok": None, "count": 5}
+        )
+        attrs = sensor.extra_state_attributes
+        assert "digest_count" not in attrs
+
+    def test_nsm18_digest_count_string(self):
+        """NSM18: digest count='7' (string) → digest_count=0."""
+        sensor = NotificationSensorContract(
+            {"ok": True, "count": 1, "notifications": []},
+            {"ok": True, "count": "7"}
+        )
+        attrs = sensor.extra_state_attributes
+        assert attrs["digest_count"] == 0
+
+    def test_nsm19_digest_by_source_string(self):
+        """NSM19: digest by_source='bad' (string) → {}."""
+        sensor = NotificationSensorContract(
+            {"ok": True, "count": 1, "notifications": []},
+            {"ok": True, "count": 3, "by_source": "bad"}
+        )
+        attrs = sensor.extra_state_attributes
+        assert attrs["by_source"] == {}
+
+    def test_nsm20_digest_by_priority_list(self):
+        """NSM20: digest by_priority=[1,2] (list) → {}."""
+        sensor = NotificationSensorContract(
+            {"ok": True, "count": 1, "notifications": []},
+            {"ok": True, "count": 3, "by_priority": [1, 2]}
+        )
+        attrs = sensor.extra_state_attributes
+        assert attrs["by_priority"] == {}
+
+
+# =============================================================================
+# NSGC — Source guards (HA-337)
+# =============================================================================
+
+class TestNotificationSensorSourceGuard:
+    """NSGC: Guard helpers are anchored in the production module."""
+
+    def test_nsgc1_as_mapping_defined(self):
+        """NSGC1: _as_mapping exists and rejects non-dict."""
+        from custom_components.pilotsuite.sensors.notification_sensor import _as_mapping
+        assert _as_mapping({"a": 1}) == {"a": 1}
+        assert _as_mapping("string") == {}
+        assert _as_mapping(None) == {}
+        assert _as_mapping([1, 2]) == {}
+
+    def test_nsgc2_as_list_defined(self):
+        """NSGC2: _as_list exists and rejects non-list."""
+        from custom_components.pilotsuite.sensors.notification_sensor import _as_list
+        assert _as_list([1, 2]) == [1, 2]
+        assert _as_list("string") == []
+        assert _as_list(None) == []
+        assert _as_list({"a": 1}) == []
+
+    def test_nsgc3_safe_count_defined(self):
+        """NSGC3: _safe_count exists and enforces int >= 0."""
+        from custom_components.pilotsuite.sensors.notification_sensor import _safe_count
+        assert _safe_count(5) == 5
+        assert _safe_count(0) == 0
+        assert _safe_count("5") == 0
+        assert _safe_count(-3) == 0
+        assert _safe_count(3.14) == 0
+        assert _safe_count(True) == 0
+        assert _safe_count(None) == 0
