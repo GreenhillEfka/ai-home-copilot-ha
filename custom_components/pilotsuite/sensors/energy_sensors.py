@@ -60,7 +60,7 @@ class EnergyProxySensor(CoordinatorEntity, SensorEntity):
     """
     
     _attr_name: str = "PilotSuite Energy Proxy"
-    _attr_unique_id: str = "ai_copilot_energy_proxy"
+    _attr_unique_id: str = "pilotsuite_energy_proxy"
     _attr_icon: str = "mdi:lightning-bolt"
     _attr_device_class = SensorDeviceClass.ENUM
     _attr_options: list[str] = ["low", "moderate", "high", "very_high"]

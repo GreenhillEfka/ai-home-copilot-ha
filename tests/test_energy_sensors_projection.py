@@ -474,3 +474,17 @@ def test_gc2_no_local_semantic_invention() -> None:
     assert "model" not in source.lower()
     assert "predict" not in source.lower()
     assert "neural" not in source.lower()
+
+
+def test_gc3_energy_proxy_unique_id_guard() -> None:
+    """GC3: EnergyProxySensor uses pilotsuite canonical unique ID, not ai_copilot legacy."""
+    import inspect
+    from custom_components.pilotsuite.sensors.energy_sensors import EnergyProxySensor
+    
+    source = inspect.getsource(EnergyProxySensor)
+    
+    # Must use pilotsuite canonical ID
+    assert '_attr_unique_id' in source
+    assert 'pilotsuite_energy_proxy' in source
+    # Must NOT contain stale ai_copilot prefix
+    assert 'ai_copilot_energy_proxy' not in source

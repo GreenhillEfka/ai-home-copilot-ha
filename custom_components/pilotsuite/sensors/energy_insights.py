@@ -63,7 +63,7 @@ class EnergyInsightSensor(SensorEntity):
     """Sensor showing current energy insights."""
 
     _attr_name = "PilotSuite Energy Insights"
-    _attr_unique_id = "ai_copilot_energy_insights"
+    _attr_unique_id = "pilotsuite_energy_insights"
     _attr_icon = "mdi:lightning-bolt"
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
@@ -119,7 +119,7 @@ class EnergyRecommendationSensor(SensorEntity):
     """Sensor showing active energy recommendations."""
 
     _attr_name = "PilotSuite Energy Recommendations"
-    _attr_unique_id = "ai_copilot_energy_recommendations"
+    _attr_unique_id = "pilotsuite_energy_recommendations"
     _attr_icon = "mdi:idea"
     _attr_should_poll = False
 

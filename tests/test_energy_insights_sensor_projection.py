@@ -340,3 +340,22 @@ def test_gc2_source_hardens_energy_insights_against_malformed_payloads():
     assert 'for item in _as_list(coordinator_data.get("energy_recommendations"))' in source
     assert 'if (projected := _project_recommendation(item))' in source
     assert 'return _as_string(best.get("title"), "unknown")' in source
+
+
+def test_gc3_energy_insights_unique_id_guard() -> None:
+    """GC3: EnergyInsightSensor and EnergyRecommendationSensor use pilotsuite canonical unique IDs."""
+    import inspect
+    from custom_components.pilotsuite.sensors.energy_insights import (
+        EnergyInsightSensor,
+        EnergyRecommendationSensor,
+    )
+    
+    insights_source = inspect.getsource(EnergyInsightSensor)
+    recs_source = inspect.getsource(EnergyRecommendationSensor)
+    
+    # Must use pilotsuite canonical IDs
+    assert 'pilotsuite_energy_insights' in insights_source
+    assert 'pilotsuite_energy_recommendations' in recs_source
+    # Must NOT contain stale ai_copilot prefixes
+    assert 'ai_copilot_energy_insights' not in insights_source
+    assert 'ai_copilot_energy_recommendations' not in recs_source
