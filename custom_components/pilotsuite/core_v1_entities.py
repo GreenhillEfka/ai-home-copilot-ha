@@ -19,7 +19,7 @@ class CoreApiV1StatusSensor(CopilotBaseEntity, SensorEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite core API v1"
-    _attr_unique_id = "copilot_ha_core_api_v1"
+    _attr_unique_id = "pilotsuite_core_api_v1"
     _attr_icon = "mdi:api"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 

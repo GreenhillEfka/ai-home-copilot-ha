@@ -128,6 +128,12 @@ _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
     "_notifications": "copilot_notifications",
     "_home_alerts_count": "pilotsuite_home_alerts_count",
     "_home_health_score": "pilotsuite_home_health_score",
+    "_core_api_v1": "pilotsuite_core_api_v1",
+    "_core_connection": "pilotsuite_core_connection",
+    "_poll_interval": "pilotsuite_poll_interval",
+    "_api_failures": "pilotsuite_api_failures",
+    "_modules_ready": "pilotsuite_modules_ready",
+    "_forwarder_status": "pilotsuite_forwarder_status",
 }
 
 

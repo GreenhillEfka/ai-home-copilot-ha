@@ -274,8 +274,8 @@ class StyxCoreApiCard extends StyxCardBase {
   _getCoreUrl() {
     if (this._config.core_url) return this._config.core_url;
     if (this._hass) {
-      const apiSensor = this._hass.states['sensor.copilot_ha_core_api_v1']
-        || this._hass.states['sensor.pilotsuite_core_api_v1'];
+      const apiSensor = this._hass.states['sensor.pilotsuite_core_api_v1']
+        || this._hass.states['sensor.copilot_ha_core_api_v1'];
       if (apiSensor && apiSensor.attributes && apiSensor.attributes.base_url) {
         return apiSensor.attributes.base_url;
       }

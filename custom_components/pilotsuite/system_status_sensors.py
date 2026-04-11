@@ -29,7 +29,7 @@ class CoreConnectionSensor(CopilotBaseEntity, SensorEntity):
     _attr_icon = "mdi:api"
     _attr_has_entity_name = False
     _attr_name = "PilotSuite Core Connection"
-    _attr_unique_id = "copilot_ha_core_connection"
+    _attr_unique_id = "pilotsuite_core_connection"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hass, entry, coordinator) -> None:
@@ -96,7 +96,7 @@ class PollIntervalSensor(CopilotBaseEntity, SensorEntity):
     _attr_icon = "mdi:timer-outline"
     _attr_has_entity_name = False
     _attr_name = "PilotSuite Poll Interval"
-    _attr_unique_id = "copilot_ha_poll_interval"
+    _attr_unique_id = "pilotsuite_poll_interval"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_native_unit_of_measurement = "s"
 
@@ -126,7 +126,7 @@ class ApiFailuresSensor(CopilotBaseEntity, SensorEntity):
     _attr_icon = "mdi:alert-circle-outline"
     _attr_has_entity_name = False
     _attr_name = "PilotSuite API Failures"
-    _attr_unique_id = "copilot_ha_api_failures"
+    _attr_unique_id = "pilotsuite_api_failures"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hass, entry, coordinator) -> None:
@@ -151,7 +151,7 @@ class ModulesReadySensor(CopilotBaseEntity, SensorEntity):
     _attr_icon = "mdi:view-module-outline"
     _attr_has_entity_name = False
     _attr_name = "PilotSuite Modules Ready"
-    _attr_unique_id = "copilot_ha_modules_ready"
+    _attr_unique_id = "pilotsuite_modules_ready"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, hass, entry, runtime) -> None:

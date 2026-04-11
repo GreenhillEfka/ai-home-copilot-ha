@@ -10,7 +10,7 @@ from .entity import CopilotBaseEntity
 class CopilotForwarderStatusButton(CopilotBaseEntity, ButtonEntity):
     _attr_has_entity_name = False
     _attr_name = "PilotSuite forwarder status"
-    _attr_unique_id = "copilot_ha_forwarder_status"
+    _attr_unique_id = "pilotsuite_forwarder_status"
     _attr_icon = "mdi:transit-connection-variant"
 
     def __init__(self, coordinator, entry):
@@ -73,5 +73,5 @@ class CopilotForwarderStatusButton(CopilotBaseEntity, ButtonEntity):
             self.hass,
             msg,
             title="PilotSuite forwarder status",
-            notification_id="copilot_ha_forwarder_status",
+            notification_id="pilotsuite_forwarder_status",
         )
