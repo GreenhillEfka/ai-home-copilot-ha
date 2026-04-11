@@ -126,6 +126,8 @@ _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
     "_energy_schedule": "copilot_energy_schedule",
     "_energy_sankey_flow": "copilot_energy_sankey_flow",
     "_notifications": "copilot_notifications",
+    "_home_alerts_count": "pilotsuite_home_alerts_count",
+    "_home_health_score": "pilotsuite_home_health_score",
 }
 
 
@@ -255,6 +257,10 @@ async def _async_migrate_legacy_sensor_unique_ids(
             if current_unique_id.endswith(legacy_suffix):
                 replacement = stable_unique_id
                 break
+
+        if replacement is None and current_unique_id.startswith("copilot_ha_home_alerts_"):
+            category_suffix = current_unique_id.removeprefix("copilot_ha_home_alerts_")
+            replacement = f"pilotsuite_home_alerts_{category_suffix}"
 
         if replacement is None:
             continue

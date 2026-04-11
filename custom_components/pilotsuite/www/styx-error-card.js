@@ -219,7 +219,8 @@ class StyxErrorCard extends _ErrBase {
 
   _loadFromSensors() {
     if (!this._hass) return false;
-    const alertSensor = this._hass.states['sensor.copilot_ha_home_alerts_count'] ||
+    const alertSensor = this._hass.states['sensor.pilotsuite_home_alerts_count'] ||
+                         this._hass.states['sensor.copilot_ha_home_alerts_count'] ||
                         this._hass.states['sensor.copilot_home_alerts_count'];
     if (!alertSensor) return false;
 

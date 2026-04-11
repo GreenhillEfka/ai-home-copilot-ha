@@ -91,7 +91,7 @@ class HomeAlertsCountSensor(SensorEntity):
         self._module = module
         self._entry = entry
         
-        self._attr_unique_id = "copilot_ha_home_alerts_count"
+        self._attr_unique_id = "pilotsuite_home_alerts_count"
         self._attr_translation_key = "home_alerts_count"
         self._attr_device_info = _device_info_for_entry(entry)
     
@@ -133,7 +133,7 @@ class HomeHealthScoreSensor(SensorEntity):
         self._module = module
         self._entry = entry
         
-        self._attr_unique_id = "copilot_ha_home_health_score"
+        self._attr_unique_id = "pilotsuite_home_health_score"
         self._attr_translation_key = "home_health_score"
         self._attr_device_info = _device_info_for_entry(entry)
     
@@ -204,7 +204,7 @@ class HomeAlertsByCategorySensor(SensorEntity):
         self._entry = entry
         self._category = category
         
-        self._attr_unique_id = f"copilot_ha_home_alerts_{category}"
+        self._attr_unique_id = f"pilotsuite_home_alerts_{category}"
         self._attr_translation_key = f"home_alerts_{category}"
         self._attr_icon = self.CATEGORY_ICONS.get(category, "mdi:alert")
         self._attr_device_info = _device_info_for_entry(entry)
