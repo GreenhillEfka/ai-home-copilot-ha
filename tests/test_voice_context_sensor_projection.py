@@ -735,3 +735,28 @@ def test_gc9_source_collapses_embedded_whitespace_in_projection_scalars_and_list
 
     assert 'def _normalize_whitespace(value: str) -> str:' in source
     assert 'return " ".join(value.split())' in source
+
+
+
+def test_gc10_source_canonicalizes_voice_sensor_identity_and_migrates_legacy_ids():
+    """GC10: voice_context sensors use pilotsuite IDs and migrate legacy ai_copilot IDs."""
+    sensor_source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+    init_source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "__init__.py"
+    ).read_text()
+
+    assert "sensor.pilotsuite_voice_context" in sensor_source
+    assert '_attr_unique_id = "pilotsuite_voice_context"' in sensor_source
+    assert '_attr_unique_id = "pilotsuite_voice_prompt"' in sensor_source
+    assert "sensor.ai_copilot_voice_context" not in sensor_source
+    assert '"ai_copilot_voice_context": "pilotsuite_voice_context"' in init_source
+    assert '"ai_copilot_voice_prompt": "pilotsuite_voice_prompt"' in init_source

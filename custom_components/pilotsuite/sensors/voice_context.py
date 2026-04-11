@@ -7,7 +7,7 @@ Exposes the neural system's voice context to Home Assistant:
 
 Use in HA Assist templates:
 ```
-{{ state_attr('sensor.ai_copilot_voice_context', 'voice_prompt') }}
+{{ state_attr('sensor.pilotsuite_voice_context', 'voice_prompt') }}
 ```
 
 HA 2025.8+ supports context-based sensor selection for Assist.
@@ -137,7 +137,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
     """Sensor exposing voice context from neural system."""
 
     _attr_name = "PilotSuite Voice Context"
-    _attr_unique_id = "ai_copilot_voice_context"
+    _attr_unique_id = "pilotsuite_voice_context"
     _attr_icon = "mdi:microphone-message"
     _attr_should_poll = False
 
@@ -201,7 +201,7 @@ class VoicePromptSensor(CoordinatorEntity, SensorEntity):
     """Sensor providing a ready-to-use voice prompt for HA Assist."""
 
     _attr_name = "PilotSuite Voice Prompt"
-    _attr_unique_id = "ai_copilot_voice_prompt"
+    _attr_unique_id = "pilotsuite_voice_prompt"
     _attr_icon = "mdi:text-to-speech"
     _attr_should_poll = False
 

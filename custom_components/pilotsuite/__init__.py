@@ -134,6 +134,8 @@ _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
     "_api_failures": "pilotsuite_api_failures",
     "_modules_ready": "pilotsuite_modules_ready",
     "_forwarder_status": "pilotsuite_forwarder_status",
+    "ai_copilot_voice_context": "pilotsuite_voice_context",
+    "ai_copilot_voice_prompt": "pilotsuite_voice_prompt",
 }
 
 
