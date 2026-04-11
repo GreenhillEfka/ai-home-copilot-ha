@@ -372,3 +372,51 @@ def test_gc3_max_history_constant_present():
     with open(filepath, "r") as fh:
         source = fh.read()
     assert "_max_history = 20" in source or "_max_history=20" in source
+
+
+def _resolve_neuron_dashboard_path():
+    import os, inspect
+    test_file = os.path.abspath(inspect.getfile(inspect.currentframe()))
+    parts = test_file.split(os.sep)
+    idx = parts.index("tests")
+    return os.path.join(os.sep, *parts[:idx], "custom_components", "pilotsuite", "sensors", "neuron_dashboard.py")
+
+
+def test_gc4_unique_ids_are_pilotsuite_canonical():
+    """GC4: All three neuron_dashboard sensor unique IDs use pilotsuite_* namespace."""
+    filepath = _resolve_neuron_dashboard_path()
+    with open(filepath, "r") as fh:
+        source = fh.read()
+    assert 'pilotsuite_neuron_dashboard' in source
+    assert 'pilotsuite_mood_history' in source
+    assert 'pilotsuite_suggestions' in source
+
+
+def test_gc5_no_stale_ai_copilot_unique_ids():
+    """GC5: No stale ai_copilot_* unique IDs remain in neuron_dashboard.py."""
+    filepath = _resolve_neuron_dashboard_path()
+    with open(filepath, "r") as fh:
+        source = fh.read()
+    assert 'ai_copilot_neuron_dashboard' not in source
+    assert 'ai_copilot_mood_history' not in source
+    assert 'ai_copilot_suggestions' not in source
+
+
+def test_gc6_migration_entries_in_init():
+    """GC6: Legacy→pilotsuite migrations for all three sensors exist in __init__.py."""
+    import pathlib
+    candidates = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "custom_components", "pilotsuite", "__init__.py"),
+    ]
+    filepath = None
+    for p in candidates:
+        if pathlib.Path(p).exists():
+            filepath = p
+            break
+    if filepath is None:
+        pytest.skip("__init__.py not resolvable from test context")
+    with open(filepath, "r") as fh:
+        source = fh.read()
+    assert '"ai_copilot_neuron_dashboard": "pilotsuite_neuron_dashboard"' in source
+    assert '"ai_copilot_mood_history": "pilotsuite_mood_history"' in source
+    assert '"ai_copilot_suggestions": "pilotsuite_suggestions"' in source

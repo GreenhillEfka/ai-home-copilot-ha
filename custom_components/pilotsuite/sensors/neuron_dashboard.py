@@ -23,7 +23,7 @@ class NeuronDashboardSensor(CoordinatorEntity, SensorEntity):
     """Sensor showing all neuron states as JSON."""
     
     _attr_name = "PilotSuite Neuron Dashboard"
-    _attr_unique_id = "ai_copilot_neuron_dashboard"
+    _attr_unique_id = "pilotsuite_neuron_dashboard"
     _attr_icon = "mdi:brain"
     _attr_should_poll = False
     
@@ -70,7 +70,7 @@ class MoodHistorySensor(CoordinatorEntity, SensorEntity):
     """Sensor showing mood history for trends."""
     
     _attr_name = "PilotSuite Mood History"
-    _attr_unique_id = "ai_copilot_mood_history"
+    _attr_unique_id = "pilotsuite_mood_history"
     _attr_icon = "mdi:chart-line"
     _attr_should_poll = False
     
@@ -117,7 +117,7 @@ class SuggestionSensor(CoordinatorEntity, SensorEntity):
     """Sensor showing current suggestions from neural system."""
     
     _attr_name = "PilotSuite Suggestions"
-    _attr_unique_id = "ai_copilot_suggestions"
+    _attr_unique_id = "pilotsuite_suggestions"
     _attr_icon = "mdi:lightbulb-outline"
     _attr_should_poll = False
     
