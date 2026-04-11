@@ -275,3 +275,53 @@ class TestGlobalContract:
         # RoutineStabilitySensor: static "stable" default (ML placeholder)
         # No ML, no heuristics, no Core-API aggregation
         assert True
+
+    def test_GC3_canonical_unique_ids_and_migrations(self):
+        """GC3: Source guard — canonical pilotsuite IDs, stale ai_copilot_* absent, migrations present."""
+        import inspect
+        import os
+        from custom_components.pilotsuite.sensors.time_sensors import (
+            TimeOfDaySensor,
+            DayTypeSensor,
+            RoutineStabilitySensor,
+        )
+
+        # Canonical pilotsuite unique IDs
+        assert TimeOfDaySensor._attr_unique_id == "pilotsuite_time_of_day"
+        assert DayTypeSensor._attr_unique_id == "pilotsuite_day_type"
+        assert RoutineStabilitySensor._attr_unique_id == "pilotsuite_routine_stability"
+
+        # Legacy ai_copilot_* strings are NOT in the production module source
+        src = (
+            inspect.getsource(TimeOfDaySensor)
+            + inspect.getsource(DayTypeSensor)
+            + inspect.getsource(RoutineStabilitySensor)
+        )
+        assert "ai_copilot_time_of_day" not in src
+        assert "ai_copilot_day_type" not in src
+        assert "ai_copilot_routine_stability" not in src
+
+        # Migration map includes the legacy → pilotsuite mappings
+        # Read __init__.py as plain text (avoids homeassistant import dependency)
+        ps_root = os.path.dirname(os.path.dirname(os.path.dirname(
+            inspect.getfile(TimeOfDaySensor))))
+        init_path = os.path.join(ps_root, "pilotsuite", "__init__.py")
+        init_src = open(init_path).read()
+
+        # Verify legacy → pilotsuite entries exist in migrations map
+        for legacy, canonical in [
+            ("ai_copilot_time_of_day", "pilotsuite_time_of_day"),
+            ("ai_copilot_day_type", "pilotsuite_day_type"),
+            ("ai_copilot_routine_stability", "pilotsuite_routine_stability"),
+        ]:
+            assert (f'"{legacy}"' in init_src or f"'{legacy}'" in init_src), \
+                f"{legacy} not found in __init__.py"
+            assert (f'"{canonical}"' in init_src or f"'{canonical}'" in init_src), \
+                f"{canonical} not found in __init__.py"
+            idx_legacy = max(init_src.find(f'"{legacy}"'), init_src.find(f"'{legacy}'"))
+            idx_migrations = init_src.rfind(
+                "_LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS", 0, idx_legacy)
+            assert idx_migrations != -1, \
+                f"_LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS not found before {legacy}"
+            assert idx_legacy - idx_migrations < 2000, \
+                f"{legacy} at {idx_legacy} too far from dict start {idx_migrations}"

@@ -144,6 +144,9 @@ _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
     "ai_copilot_energy_proxy": "pilotsuite_energy_proxy",
     "ai_copilot_energy_insights": "pilotsuite_energy_insights",
     "ai_copilot_energy_recommendations": "pilotsuite_energy_recommendations",
+    "ai_copilot_time_of_day": "pilotsuite_time_of_day",
+    "ai_copilot_day_type": "pilotsuite_day_type",
+    "ai_copilot_routine_stability": "pilotsuite_routine_stability",
 }
 
 
