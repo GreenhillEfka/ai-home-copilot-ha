@@ -450,3 +450,9 @@ class TestGlobalContract:
         assert "_as_mapping(self.coordinator.data)" in source
         assert "_as_list(data.get(\"autonomy_history\"))" in source
         assert "_as_mapping(data.get(\"zone_health\"))" in source
+        assert '_attr_unique_id = "pilotsuite_autonomy_status"' in source
+        assert '_attr_unique_id = "pilotsuite_autonomy_history"' in source
+        assert '_attr_unique_id = "pilotsuite_zone_health_overview"' in source
+        assert 'copilot_ha_autonomy_status' not in source
+        assert 'copilot_ha_autonomy_history' not in source
+        assert 'copilot_ha_zone_health_overview' not in source

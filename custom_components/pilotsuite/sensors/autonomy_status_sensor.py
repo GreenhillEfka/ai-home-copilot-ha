@@ -64,7 +64,7 @@ class AutonomyStatusSensor(CopilotBaseEntity, SensorEntity):
     _attr_icon = "mdi:robot"
     _attr_has_entity_name = False
     _attr_name = "PilotSuite Autonomie Status"
-    _attr_unique_id = "copilot_ha_autonomy_status"
+    _attr_unique_id = "pilotsuite_autonomy_status"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator)
@@ -127,7 +127,7 @@ class AutonomyHistorySensor(CopilotBaseEntity, SensorEntity):
     _attr_icon = "mdi:history"
     _attr_has_entity_name = False
     _attr_name = "PilotSuite Autonomie Verlauf"
-    _attr_unique_id = "copilot_ha_autonomy_history"
+    _attr_unique_id = "pilotsuite_autonomy_history"
 
     def __init__(self, coordinator) -> None:
         super().__init__(coordinator)
@@ -159,7 +159,7 @@ class ZoneHealthOverviewSensor(CopilotBaseEntity, SensorEntity):
     _attr_icon = "mdi:shield-check"
     _attr_has_entity_name = False
     _attr_name = "PilotSuite Zonen Gesundheit"
-    _attr_unique_id = "copilot_ha_zone_health_overview"
+    _attr_unique_id = "pilotsuite_zone_health_overview"
     _attr_native_unit_of_measurement = "%"
 
     def __init__(self, coordinator) -> None:
