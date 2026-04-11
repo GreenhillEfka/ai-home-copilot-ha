@@ -6,6 +6,7 @@ Verifies:
 """
 
 import math
+from typing import Any
 
 import pytest
 
@@ -42,7 +43,13 @@ def _as_int(value, default):
     return default
 
 
-def _as_string(value, default):
+def _as_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    return []
+
+
+def _as_string(value: Any, default: str = "") -> str:
     if isinstance(value, str) and value.strip():
         return value.strip()
     return default
@@ -94,38 +101,39 @@ class EnergyForecastSensorContract:
 
     @staticmethod
     def native_value(data: dict) -> float | None:
-        summary = data.get("summary") if data else None
-        if isinstance(summary, dict):
-            return summary.get("total_pv_kwh_estimated")
-        return None
+        # Guard top-level access same as production: use _as_mapping first
+        mapped = _as_mapping(data)
+        summary = _as_mapping(mapped.get("summary") if mapped else None)
+        return _as_float(summary.get("total_pv_kwh_estimated"), default=0.0)
 
     @staticmethod
     def extra_state_attributes(data: dict) -> dict:
-        if not data:
+        mapped = _as_mapping(data)
+        if not mapped:
             return {
                 "total_hours": 0,
-                "avg_price_ct_kwh": 0,
-                "min_price_ct_kwh": 0,
-                "max_price_ct_kwh": 0,
+                "avg_price_ct_kwh": 0.0,
+                "min_price_ct_kwh": 0.0,
+                "max_price_ct_kwh": 0.0,
                 "card_count": 0,
                 "generated_at": "",
             }
-        summary = data.get("summary", {})
-        cards = data.get("cards", [])
+        summary = _as_mapping(mapped.get("summary"))
+        cards = _as_list(mapped.get("cards"))
         return {
-            "total_hours": summary.get("total_hours", 0) if isinstance(summary, dict) else 0,
-            "avg_price_ct_kwh": summary.get("avg_price_ct", 0) if isinstance(summary, dict) else 0,
-            "min_price_ct_kwh": summary.get("min_price_ct", 0) if isinstance(summary, dict) else 0,
-            "max_price_ct_kwh": summary.get("max_price_ct", 0) if isinstance(summary, dict) else 0,
-            "cheapest_hour": summary.get("cheapest_hour", "") if isinstance(summary, dict) else "",
-            "most_expensive_hour": summary.get("most_expensive_hour", "") if isinstance(summary, dict) else "",
-            "daylight_hours": summary.get("daylight_hours", 0) if isinstance(summary, dict) else 0,
-            "avg_pv_factor": summary.get("avg_pv_factor", 0) if isinstance(summary, dict) else 0,
-            "best_charge_window": summary.get("best_charge_window", "") if isinstance(summary, dict) else "",
-            "best_consume_window": summary.get("best_consume_window", "") if isinstance(summary, dict) else "",
-            "weather_impacted_hours": summary.get("weather_impacted_hours", 0) if isinstance(summary, dict) else 0,
-            "card_count": len(cards) if isinstance(cards, list) else 0,
-            "generated_at": data.get("generated_at", "") or "",
+            "total_hours": _as_int(summary.get("total_hours"), 0),
+            "avg_price_ct_kwh": _as_float(summary.get("avg_price_ct_kwh"), 0.0),
+            "min_price_ct_kwh": _as_float(summary.get("min_price_ct_kwh"), 0.0),
+            "max_price_ct_kwh": _as_float(summary.get("max_price_ct_kwh"), 0.0),
+            "cheapest_hour": _as_string(summary.get("cheapest_hour"), ""),
+            "most_expensive_hour": _as_string(summary.get("most_expensive_hour"), ""),
+            "daylight_hours": _as_int(summary.get("daylight_hours"), 0),
+            "avg_pv_factor": _as_float(summary.get("avg_pv_factor"), 0.0),
+            "best_charge_window": _as_string(summary.get("best_charge_window"), ""),
+            "best_consume_window": _as_string(summary.get("best_consume_window"), ""),
+            "weather_impacted_hours": _as_int(summary.get("weather_impacted_hours"), 0),
+            "card_count": len(cards),
+            "generated_at": _as_string(mapped.get("generated_at"), ""),
         }
 
 
@@ -279,11 +287,11 @@ def test_ec_attrs_malformed_budget_fields():
 @pytest.mark.parametrize("data,expected", [
     ({"summary": {"total_pv_kwh_estimated": 18.5}, "cards": []}, 18.5),
     ({"summary": {"total_pv_kwh_estimated": 0.0}}, 0.0),
-    ({}, None),
-    ({"summary": {}}, None),
-    ({"summary": None, "cards": []}, None),
-    (None, None),
-    ({"summary": "not-a-dict"}, None),
+    ({}, 0.0),                           # guard: empty dict → 0.0
+    ({"summary": {}}, 0.0),             # guard: empty summary dict → 0.0
+    ({"summary": None, "cards": []}, 0.0),   # guard: None summary → 0.0
+    (None, 0.0),                         # guard: None data → 0.0
+    ({"summary": "not-a-dict"}, 0.0),   # guard: string summary → 0.0
 ])
 def test_ef_native_value(data, expected):
     result = EnergyForecastSensorContract.native_value(data)
@@ -298,9 +306,9 @@ def test_ef_attrs_full():
     data = {
         "summary": {
             "total_hours": 48,
-            "avg_price_ct": 28.5,
-            "min_price_ct": 12.0,
-            "max_price_ct": 45.0,
+            "avg_price_ct_kwh": 28.5,
+            "min_price_ct_kwh": 12.0,
+            "max_price_ct_kwh": 45.0,
             "cheapest_hour": "2026-04-06T03:00",
             "most_expensive_hour": "2026-04-06T18:00",
             "daylight_hours": 14,
@@ -339,6 +347,64 @@ def test_ef_attrs_none():
 
 
 # =============================================================================
+# EnergyForecastSensor — malformed payload guards (HA-357)
+# =============================================================================
+
+
+@pytest.mark.parametrize("data,expected_total_hours,expected_avg,expected_card_count,expected_generated", [
+    # EFm1: non-dict top-level → all safe defaults
+    ("not-a-dict", 0, 0.0, 0, ""),
+    # EFm2: non-dict summary → safe defaults
+    ({"summary": "broken"}, 0, 0.0, 0, ""),
+    # EFm3: non-dict cards → card_count 0
+    ({"summary": {"total_hours": 48}, "cards": "not-a-list"}, 48, 0.0, 0, ""),
+    # EFm4: None summary → safe defaults
+    ({"summary": None, "cards": [1, 2]}, 0, 0.0, 2, ""),
+    # EFm5: string total_pv_kwh_estimated → 0.0 in native_value
+    ({"summary": {"total_pv_kwh_estimated": "forty"}}, 0, 0.0, 0, ""),
+    # EFm6: bool total_pv_kwh_estimated → 0.0
+    ({"summary": {"total_pv_kwh_estimated": True}}, 0, 0.0, 0, ""),
+    # EFm7: inf total_pv_kwh_estimated → 0.0 (guard rejects non-finite)
+    ({"summary": {"total_pv_kwh_estimated": float("inf")}}, 0, 0.0, 0, ""),
+    # EFm8: nan total_pv_kwh_estimated → 0.0
+    ({"summary": {"total_pv_kwh_estimated": float("nan")}}, 0, 0.0, 0, ""),
+    # EFm9: string avg_price_ct_kwh → 0.0
+    ({"summary": {"avg_price_ct": "expensive", "total_pv_kwh_estimated": 10.0}}, 0, 0.0, 0, ""),
+    # EFm10: bool avg_pv_factor → 0.0
+    ({"summary": {"avg_pv_factor": False, "total_pv_kwh_estimated": 10.0}}, 0, 0.0, 0, ""),
+    # EFm11: None cheapest_hour → ""
+    ({"summary": {"cheapest_hour": None, "total_pv_kwh_estimated": 10.0}}, 0, 0.0, 0, ""),
+    # EFm12: blank best_charge_window → ""
+    ({"summary": {"best_charge_window": "   ", "total_pv_kwh_estimated": 10.0}}, 0, 0.0, 0, ""),
+    # EFm13: list daylight_hours (non-int) → 0
+    ({"summary": {"daylight_hours": "fourteen", "total_pv_kwh_estimated": 10.0}}, 0, 0.0, 0, ""),
+    # EFm14: top-level non-dict → async_update rejects, _data stays {} → safe defaults
+    ([{"summary": {}}], 0, 0.0, 0, ""),
+])
+def test_ef_malformed_payloads(
+    data, expected_total_hours, expected_avg, expected_card_count, expected_generated
+):
+    attrs = EnergyForecastSensorContract.extra_state_attributes(data)
+    assert attrs["total_hours"] == expected_total_hours
+    assert attrs["avg_price_ct_kwh"] == expected_avg
+    assert attrs["card_count"] == expected_card_count
+    assert attrs["generated_at"] == expected_generated
+
+
+def test_ef_malformed_native_value():
+    """native_value rejects non-numeric total_pv_kwh_estimated."""
+    assert EnergyForecastSensorContract.native_value(
+        {"summary": {"total_pv_kwh_estimated": "forty"}}
+    ) == 0.0
+    assert EnergyForecastSensorContract.native_value(
+        {"summary": {"total_pv_kwh_estimated": True}}
+    ) == 0.0
+    assert EnergyForecastSensorContract.native_value(
+        {"summary": {"total_pv_kwh_estimated": float("nan")}}
+    ) == 0.0
+
+
+# =============================================================================
 # Global Contract
 # =============================================================================
 
@@ -374,8 +440,8 @@ def test_ec_contract_no_local_semantic_invention():
 
 def test_ef_contract_no_local_semantic_invention():
     """EnergyForecastSensor derives nothing locally, all from Core API."""
-    assert EnergyForecastSensorContract.native_value({}) is None
-    assert EnergyForecastSensorContract.native_value(None) is None
+    assert EnergyForecastSensorContract.native_value({}) == 0.0
+    assert EnergyForecastSensorContract.native_value(None) == 0.0
     assert EnergyForecastSensorContract.native_value(
         {"summary": {"total_pv_kwh_estimated": 18.5}}
     ) == 18.5
@@ -402,3 +468,28 @@ def test_ec_source_guard_async_update_normalizes_payloads():
     source = inspect.getsource(EnergyCostSensor)
     assert "self._summary_data = _as_mapping(data)" in source
     assert "self._budget_data = _as_mapping(data)" in source
+
+
+# =============================================================================
+# Source Guard — energy_forecast hardening present in production (HA-357)
+# =============================================================================
+
+def test_ef_source_guard_helpers_present():
+    """energy_forecast_sensor.py has module-level type guards."""
+    import inspect
+
+    source = inspect.getsource(EnergyForecastSensor)
+    assert "_as_mapping" in source
+    assert "_as_float" in source
+    assert "_as_int" in source
+    assert "_as_list" in source
+    assert "_as_str" in source
+
+
+def test_ef_source_guard_unique_id_canonical():
+    """EnergyForecastSensor uses pilotsuite identity, not copilot_legacy."""
+    import inspect
+
+    source = inspect.getsource(EnergyForecastSensor)
+    assert "pilotsuite_energy_forecast" in source
+    assert "copilot_energy_forecast" not in source
