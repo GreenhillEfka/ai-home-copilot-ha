@@ -8,7 +8,7 @@ Mobile-optimized dashboard with:
 - Dark/Light Mode Support
 - Touch-optimized Controls
 
-Path: custom_components/copilot_ha/dashboard_cards/
+Path: custom_components/pilotsuite/dashboard_cards/
 """
 
 from __future__ import annotations
@@ -539,7 +539,7 @@ def create_complete_mobile_dashboard(
             }, theme),
             apply_theme_styles({
                 "type": "entity",
-                "entity": data.get("mood_entity", "sensor.copilot_ha_mood"),
+                "entity": data.get("mood_entity", "sensor.pilotsuite_mood"),
                 "name": "Stimmung",
                 "icon": "mdi:emoticon",
             }, theme),
