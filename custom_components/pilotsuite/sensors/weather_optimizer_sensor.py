@@ -18,6 +18,36 @@ from ..entity import CopilotBaseEntity
 _LOGGER = logging.getLogger(__name__)
 
 
+def _as_mapping(value: Any) -> dict:
+    """Return dict-like payloads, otherwise a safe empty mapping."""
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value: Any) -> list:
+    """Return list-like payloads, otherwise a safe empty list."""
+    return value if isinstance(value, list) else []
+
+
+def _as_int(value: Any, default: int) -> int:
+    """Return integer payloads, otherwise a safe default."""
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    return default
+
+
+def _as_float(value: Any, default: float) -> float:
+    """Return finite numeric payloads, otherwise a safe default."""
+    import math
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        numeric_value = float(value)
+        return numeric_value if math.isfinite(numeric_value) else default
+    return default
+
+
 class WeatherOptimizerSensor(CopilotBaseEntity, SensorEntity):
     """Sensor showing weather-aware energy optimization status."""
 
@@ -32,21 +62,23 @@ class WeatherOptimizerSensor(CopilotBaseEntity, SensorEntity):
 
     @property
     def native_value(self) -> int:
-        return self._data.get("optimal_windows_count", 0)
+        return _as_int(self._data.get("optimal_windows_count"), 0)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        summary = self._data.get("summary", {})
+        summary = _as_mapping(self._data.get("summary"))
+        top_windows = _as_list(self._data.get("top_windows"))
+        alerts = _as_list(self._data.get("alerts"))
         return {
-            "total_pv_kwh": summary.get("total_pv_kwh", 0),
-            "avg_price_eur_kwh": summary.get("avg_price_eur_kwh", 0),
-            "best_hours": summary.get("best_hours", []),
-            "worst_hours": summary.get("worst_hours", []),
-            "pv_self_consumption_pct": summary.get("pv_self_consumption_potential_pct", 0),
-            "alerts": self._data.get("alerts", []),
-            "top_windows": self._data.get("top_windows", [])[:3],
-            "battery_actions": self._data.get("battery_plan_count", 0),
-            "horizon_hours": self._data.get("horizon_hours", 0),
+            "total_pv_kwh": _as_float(summary.get("total_pv_kwh"), 0.0),
+            "avg_price_eur_kwh": _as_float(summary.get("avg_price_eur_kwh"), 0.0),
+            "best_hours": _as_list(summary.get("best_hours")),
+            "worst_hours": _as_list(summary.get("worst_hours")),
+            "pv_self_consumption_pct": _as_float(summary.get("pv_self_consumption_potential_pct"), 0.0),
+            "alerts": alerts,
+            "top_windows": top_windows[:3],
+            "battery_actions": _as_int(self._data.get("battery_plan_count"), 0),
+            "horizon_hours": _as_int(self._data.get("horizon_hours"), 0),
         }
 
     async def async_update(self) -> None:
@@ -57,10 +89,10 @@ class WeatherOptimizerSensor(CopilotBaseEntity, SensorEntity):
             async with session.get(url, headers=headers, timeout=15) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    if data.get("ok"):
+                    if isinstance(data, dict) and data.get("ok"):
                         self._data = data
-                        self._data["optimal_windows_count"] = (
-                            data.get("summary", {}).get("optimal_windows_count", 0)
+                        self._data["optimal_windows_count"] = _as_int(
+                            _as_mapping(data.get("summary")).get("optimal_windows_count"), 0
                         )
                 else:
                     _LOGGER.warning("Weather optimizer API returned %s", resp.status)

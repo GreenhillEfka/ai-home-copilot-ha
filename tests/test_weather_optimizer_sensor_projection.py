@@ -3,16 +3,47 @@
 Verifies WeatherOptimizerSensor is a pure projection shell on
 /api/v1/predict/weather-optimize — no local semantic invention.
 
-HA-132
+HA-132, HA-341
 """
+from pathlib import Path
 
+import math
 import pytest
 from unittest.mock import MagicMock
 
 
-# ---------------------------------------------------------------------------
+# =============================================================================
+# Guard Helpers (mirror production module)
+# =============================================================================
+
+def _as_mapping(value):
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value):
+    return value if isinstance(value, list) else []
+
+
+def _as_int(value, default):
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    return default
+
+
+def _as_float(value, default):
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        numeric_value = float(value)
+        return numeric_value if math.isfinite(numeric_value) else default
+    return default
+
+
+# =============================================================================
 # Contract Mirror
-# ---------------------------------------------------------------------------
+# =============================================================================
 
 class WeatherOptimizerSensorContract:
     """Mirror of WeatherOptimizerSensor projection contract."""
@@ -62,12 +93,12 @@ class WeatherOptimizerSensorContract:
         return data
 
     # ------------------------------------------------------------------
-    # native_value = _data.get("optimal_windows_count", 0)
+    # native_value = _as_int(_data.get("optimal_windows_count"), 0)
     # ------------------------------------------------------------------
 
     @staticmethod
     def native_value(coordinator_data: dict) -> int:
-        return coordinator_data.get("optimal_windows_count", 0)
+        return _as_int(coordinator_data.get("optimal_windows_count"), 0)
 
     # ------------------------------------------------------------------
     # extra_state_attributes
@@ -75,17 +106,19 @@ class WeatherOptimizerSensorContract:
 
     @staticmethod
     def extra_state_attributes(coordinator_data: dict) -> dict:
-        summary = coordinator_data.get("summary", {})
+        summary = _as_mapping(coordinator_data.get("summary"))
+        top_windows = _as_list(coordinator_data.get("top_windows"))
+        alerts = _as_list(coordinator_data.get("alerts"))
         return {
-            "total_pv_kwh": summary.get("total_pv_kwh", 0),
-            "avg_price_eur_kwh": summary.get("avg_price_eur_kwh", 0),
-            "best_hours": summary.get("best_hours", []),
-            "worst_hours": summary.get("worst_hours", []),
-            "pv_self_consumption_pct": summary.get("pv_self_consumption_potential_pct", 0),
-            "alerts": coordinator_data.get("alerts", []),
-            "top_windows": coordinator_data.get("top_windows", [])[:3],
-            "battery_actions": coordinator_data.get("battery_plan_count", 0),
-            "horizon_hours": coordinator_data.get("horizon_hours", 0),
+            "total_pv_kwh": _as_float(summary.get("total_pv_kwh"), 0.0),
+            "avg_price_eur_kwh": _as_float(summary.get("avg_price_eur_kwh"), 0.0),
+            "best_hours": _as_list(summary.get("best_hours")),
+            "worst_hours": _as_list(summary.get("worst_hours")),
+            "pv_self_consumption_pct": _as_float(summary.get("pv_self_consumption_potential_pct"), 0.0),
+            "alerts": alerts,
+            "top_windows": top_windows[:3],
+            "battery_actions": _as_int(coordinator_data.get("battery_plan_count"), 0),
+            "horizon_hours": _as_int(coordinator_data.get("horizon_hours"), 0),
         }
 
 
@@ -263,6 +296,68 @@ class TestWOEdge:
         assert attrs["horizon_hours"] == 24
 
 
+class TestWOMalformed:
+    """WO4: malformed payloads fall back to safe defaults."""
+
+    def test_wo4_string_optimal_windows_count_defaults_zero(self, sensor, mock_coordinator):
+        data = WeatherOptimizerSensorContract.build_coordinator_data()
+        data["optimal_windows_count"] = "3"
+        mock_coordinator.data = data
+        sensor._data = data
+        assert sensor.native_value == 0
+
+    def test_wo4_bool_optimal_windows_count_defaults_zero(self, sensor, mock_coordinator):
+        data = WeatherOptimizerSensorContract.build_coordinator_data()
+        data["optimal_windows_count"] = True
+        mock_coordinator.data = data
+        sensor._data = data
+        assert sensor.native_value == 0
+
+    def test_wo4_non_mapping_summary_defaults_all_summary_fields(self, sensor, mock_coordinator):
+        data = WeatherOptimizerSensorContract.build_coordinator_data()
+        data["summary"] = "broken"
+        mock_coordinator.data = data
+        sensor._data = data
+        attrs = sensor.extra_state_attributes
+        assert attrs["total_pv_kwh"] == 0.0
+        assert attrs["avg_price_eur_kwh"] == 0.0
+        assert attrs["best_hours"] == []
+        assert attrs["worst_hours"] == []
+        assert attrs["pv_self_consumption_pct"] == 0.0
+
+    def test_wo4_non_list_alerts_and_top_windows_default_empty_lists(self, sensor, mock_coordinator):
+        data = WeatherOptimizerSensorContract.build_coordinator_data()
+        data["alerts"] = "storm"
+        data["top_windows"] = {"start": "2026-04-06T14:00"}
+        mock_coordinator.data = data
+        sensor._data = data
+        attrs = sensor.extra_state_attributes
+        assert attrs["alerts"] == []
+        assert attrs["top_windows"] == []
+
+    def test_wo4_non_finite_summary_numbers_default_zero(self, sensor, mock_coordinator):
+        data = WeatherOptimizerSensorContract.build_coordinator_data()
+        data["summary"]["total_pv_kwh"] = float("inf")
+        data["summary"]["avg_price_eur_kwh"] = float("nan")
+        data["summary"]["pv_self_consumption_potential_pct"] = True
+        mock_coordinator.data = data
+        sensor._data = data
+        attrs = sensor.extra_state_attributes
+        assert attrs["total_pv_kwh"] == 0.0
+        assert attrs["avg_price_eur_kwh"] == 0.0
+        assert attrs["pv_self_consumption_pct"] == 0.0
+
+    def test_wo4_non_int_battery_actions_and_horizon_default_zero(self, sensor, mock_coordinator):
+        data = WeatherOptimizerSensorContract.build_coordinator_data()
+        data["battery_plan_count"] = 2.5
+        data["horizon_hours"] = "48"
+        mock_coordinator.data = data
+        sensor._data = data
+        attrs = sensor.extra_state_attributes
+        assert attrs["battery_actions"] == 0
+        assert attrs["horizon_hours"] == 0
+
+
 # ---------------------------------------------------------------------------
 # Global Contract
 # ---------------------------------------------------------------------------
@@ -297,3 +392,14 @@ class TestWOGlobalContract:
         assert "top_windows" in data
         assert "battery_plan_count" in data
         assert "horizon_hours" in data
+
+    def test_gc3_source_guard_uses_safe_helpers_and_top_level_response_guard(self):
+        source = Path(
+            "custom_components/pilotsuite/sensors/weather_optimizer_sensor.py"
+        ).read_text()
+        assert "def _as_mapping" in source
+        assert "def _as_list" in source
+        assert "def _as_int" in source
+        assert "def _as_float" in source
+        assert "math.isfinite" in source
+        assert 'if isinstance(data, dict) and data.get("ok"):' in source
