@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
@@ -11,6 +12,51 @@ from ..entity import CopilotBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+
+# =============================================================================
+# Guard helpers
+# =============================================================================
+
+def _as_mapping(value: Any) -> dict:
+    """Return value as a dict, or empty dict if not a mapping."""
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _as_list(value: Any) -> list:
+    """Return value as a list, or empty list if not a list."""
+    if isinstance(value, list):
+        return value
+    return []
+
+
+def _as_int(value: Any, default: int = 0) -> int:
+    """Return value as int, or default if not a finite numeric int."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    return default
+
+
+def _as_float(value: Any, default: float = 0.0) -> float:
+    """Return value as float, or default if not a finite numeric value."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        numeric = float(value)
+        if math.isfinite(numeric):
+            return numeric
+    return default
+
+
+def _as_string(value: Any, default: str = "") -> str:
+    """Return value as string, or default if not a non-empty string."""
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return default
+
+
+# =============================================================================
+# AutonomyStatusSensor
+# =============================================================================
 
 class AutonomyStatusSensor(CopilotBaseEntity, SensorEntity):
     """Overall autonomy system status."""
@@ -25,18 +71,23 @@ class AutonomyStatusSensor(CopilotBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        data = self.coordinator.data or {}
-        autonomy = data.get("autonomy", {})
+        data = _as_mapping(self.coordinator.data)
+        autonomy = _as_mapping(data.get("autonomy"))
+        zones = _as_mapping(autonomy.get("zones"))
+        stats = _as_mapping(autonomy.get("stats"))
 
-        stats = autonomy.get("stats", {})
-        zones = autonomy.get("zones", {})
-
-        active_zones = sum(1 for z in zones.values() if z.get("mode") == "autonomy")
-        total_executed = stats.get("executed", 0)
+        # Guard zone iteration against non-dict zone items
+        active_zones = 0
+        for z in zones.values():
+            if isinstance(z, dict) and z.get("mode") == "autonomy":
+                active_zones += 1
 
         if active_zones > 0:
             self._attr_native_value = "aktiv"
-        elif any(z.get("mode") == "learning" for z in zones.values()):
+        elif any(
+            isinstance(z, dict) and z.get("mode") == "learning"
+            for z in zones.values()
+        ):
             self._attr_native_value = "lernend"
         else:
             self._attr_native_value = "inaktiv"
@@ -44,18 +95,19 @@ class AutonomyStatusSensor(CopilotBaseEntity, SensorEntity):
         # Extract per-zone module states from dashboard data
         zone_modules: dict[str, Any] = {}
         for zone_id, zone_data in zones.items():
-            ms = zone_data.get("module_states")
-            if ms and isinstance(ms, dict):
-                zone_modules[zone_id] = ms
+            if isinstance(zone_data, dict):
+                ms = zone_data.get("module_states")
+                if ms and isinstance(ms, dict):
+                    zone_modules[zone_id] = ms
 
         self._attr_extra_state_attributes = {
             "active_zones": active_zones,
-            "total_zones": len(zones),
-            "total_executed": total_executed,
-            "total_suggested": stats.get("suggested", 0),
-            "total_skipped": stats.get("skipped", 0),
-            "total_errors": stats.get("errors", 0),
-            "total_events": stats.get("total_events", 0),
+            "total_zones": _as_int(len(zones)),
+            "total_executed": _as_int(stats.get("executed")),
+            "total_suggested": _as_int(stats.get("suggested")),
+            "total_skipped": _as_int(stats.get("skipped")),
+            "total_errors": _as_int(stats.get("errors")),
+            "total_events": _as_int(stats.get("total_events")),
             "zone_modules": zone_modules,
         }
         self.async_write_ha_state()
@@ -64,6 +116,10 @@ class AutonomyStatusSensor(CopilotBaseEntity, SensorEntity):
         await super().async_added_to_hass()
         self._handle_coordinator_update()
 
+
+# =============================================================================
+# AutonomyHistorySensor
+# =============================================================================
 
 class AutonomyHistorySensor(CopilotBaseEntity, SensorEntity):
     """Recent autonomy execution history."""
@@ -78,13 +134,13 @@ class AutonomyHistorySensor(CopilotBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        data = self.coordinator.data or {}
-        history = data.get("autonomy_history", [])
+        data = _as_mapping(self.coordinator.data)
+        history = _as_list(data.get("autonomy_history"))
 
-        self._attr_native_value = len(history)
+        self._attr_native_value = _as_int(len(history))
         self._attr_extra_state_attributes = {
             "recent_actions": history[:10],
-            "total_count": len(history),
+            "total_count": _as_int(len(history)),
         }
         self.async_write_ha_state()
 
@@ -92,6 +148,10 @@ class AutonomyHistorySensor(CopilotBaseEntity, SensorEntity):
         await super().async_added_to_hass()
         self._handle_coordinator_update()
 
+
+# =============================================================================
+# ZoneHealthOverviewSensor
+# =============================================================================
 
 class ZoneHealthOverviewSensor(CopilotBaseEntity, SensorEntity):
     """Zone health overview sensor."""
@@ -107,28 +167,28 @@ class ZoneHealthOverviewSensor(CopilotBaseEntity, SensorEntity):
 
     @callback
     def _handle_coordinator_update(self) -> None:
-        data = self.coordinator.data or {}
-        zone_health = data.get("zone_health", {})
+        data = _as_mapping(self.coordinator.data)
+        zone_health = _as_mapping(data.get("zone_health"))
+        summary = _as_mapping(zone_health.get("summary"))
+        zones = _as_list(zone_health.get("zones"))
 
-        summary = zone_health.get("summary", {})
-        zones = zone_health.get("zones", [])
-
-        avg_score = summary.get("avg_score", 0)
+        avg_score = _as_float(summary.get("avg_score"))
         self._attr_native_value = round(avg_score)
 
         zone_scores = {}
         for z in zones:
-            zone_scores[z.get("zone_id", "")] = {
-                "score": z.get("health_score", 0),
-                "status": z.get("status", "unknown"),
-                "zone_name": z.get("zone_name", ""),
-            }
+            if isinstance(z, dict):
+                zone_scores[_as_string(z.get("zone_id"))] = {
+                    "score": _as_int(z.get("health_score")),
+                    "status": _as_string(z.get("status"), "unknown"),
+                    "zone_name": _as_string(z.get("zone_name")),
+                }
 
         self._attr_extra_state_attributes = {
-            "total_zones": summary.get("total_zones", 0),
-            "healthy": summary.get("healthy", 0),
-            "degraded": summary.get("degraded", 0),
-            "critical": summary.get("critical", 0),
+            "total_zones": _as_int(summary.get("total_zones")),
+            "healthy": _as_int(summary.get("healthy")),
+            "degraded": _as_int(summary.get("degraded")),
+            "critical": _as_int(summary.get("critical")),
             "avg_score": avg_score,
             "zones": zone_scores,
         }
