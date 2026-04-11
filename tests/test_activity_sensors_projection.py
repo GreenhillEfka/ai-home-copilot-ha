@@ -450,3 +450,18 @@ def test_gc3_source_guard_helpers_present():
     assert "def _as_string" in source
     assert "def _as_int" in source
     assert "def _as_bool" in source
+
+
+def test_gc4_unique_id_guard_activity_level():
+    """GC4: ActivityLevelSensor unique_id is canonical pilotsuite ID."""
+    source = inspect.getsource(activity_module)
+    assert 'pilotsuite_activity_level' in source
+    assert 'ai_copilot_activity_level' not in source or '_attr_unique_id' in source
+
+
+
+def test_gc5_unique_id_guard_activity_stillness():
+    """GC5: ActivityStillnessSensor unique_id is canonical pilotsuite ID."""
+    source = inspect.getsource(activity_module)
+    assert 'pilotsuite_activity_stillness' in source
+    assert 'ai_copilot_activity_stillness' not in source or '_attr_unique_id' in source

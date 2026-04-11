@@ -193,7 +193,7 @@ class ActivityLevelSensor(CoordinatorEntity, SensorEntity):
     """
     
     _attr_name = "PilotSuite Activity Level"
-    _attr_unique_id = "ai_copilot_activity_level"
+    _attr_unique_id = "pilotsuite_activity_level"
     _attr_icon = "mdi:run"
     _attr_should_poll = False  # Using coordinator
     
@@ -223,7 +223,7 @@ class ActivityStillnessSensor(CoordinatorEntity, SensorEntity):
     """
     
     _attr_name = "PilotSuite Activity Stillness"
-    _attr_unique_id = "ai_copilot_activity_stillness"
+    _attr_unique_id = "pilotsuite_activity_stillness"
     _attr_icon = "mdi:meditation"
     _attr_should_poll = False  # Using coordinator
     
