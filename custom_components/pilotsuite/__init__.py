@@ -139,6 +139,8 @@ _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
     "ai_copilot_calendar_load": "pilotsuite_calendar_load",
     "ai_copilot_attention_load": "pilotsuite_attention_load",
     "ai_copilot_stress_proxy": "pilotsuite_stress_proxy",
+    "ai_copilot_presence_room": "pilotsuite_presence_room",
+    "ai_copilot_presence_person": "pilotsuite_presence_person",
 }
 
 

@@ -425,3 +425,46 @@ def test_gc2_primary_source_is_api() -> None:
     assert room == "Wohnzimmer"
     assert attrs["active_persons"] == 2
     assert attrs["motion_sensors_active"] == 3
+
+
+def test_gc3_source_guard() -> None:
+    """GC3: Source-Guard — pilotsuite_presence_* IDs im Produktionsmodul, keine stale ai_copilot_presence_ Reste."""
+    import ast
+    import pathlib
+
+    sensor_path = pathlib.Path("custom_components/pilotsuite/sensors/presence_sensors.py")
+    source = sensor_path.read_text()
+    tree = ast.parse(source)
+
+    unique_ids = set()
+    for node in ast.walk(tree):
+        # Handle AnnAssign (annotated assignments: _attr_unique_id: str = "value")
+        if isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == "_attr_unique_id":
+                if isinstance(node.value, ast.Constant):
+                    unique_ids.add(node.value.value)
+        # Handle plain Assign (some classes use that style)
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "_attr_unique_id":
+                    if isinstance(node.value, ast.Constant):
+                        unique_ids.add(node.value.value)
+
+    assert "pilotsuite_presence_room" in unique_ids, \
+        "pilotsuite_presence_room muss _attr_unique_id in presence_sensors.py sein"
+    assert "pilotsuite_presence_person" in unique_ids, \
+        "pilotsuite_presence_person muss _attr_unique_id in presence_sensors.py sein"
+    assert "ai_copilot_presence_room" not in unique_ids, \
+        "ai_copilot_presence_room darf nicht mehr in presence_sensors.py stehen"
+    assert "ai_copilot_presence_person" not in unique_ids, \
+        "ai_copilot_presence_person darf nicht mehr in presence_sensors.py stehen"
+
+    init_source = pathlib.Path("custom_components/pilotsuite/__init__.py").read_text()
+    assert "ai_copilot_presence_room" in init_source, \
+        "ai_copilot_presence_room muss in _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS in __init__.py stehen"
+    assert "ai_copilot_presence_person" in init_source, \
+        "ai_copilot_presence_person muss in _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS in __init__.py stehen"
+    assert "pilotsuite_presence_room" in init_source, \
+        "pilotsuite_presence_room muss als Migrationsziel in __init__.py stehen"
+    assert "pilotsuite_presence_person" in init_source, \
+        "pilotsuite_presence_person muss als Migrationsziel in __init__.py stehen"

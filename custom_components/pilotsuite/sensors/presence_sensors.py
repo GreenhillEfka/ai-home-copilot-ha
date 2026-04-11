@@ -174,7 +174,7 @@ class PresenceRoomSensor(CoordinatorEntity, SensorEntity):
     """
     
     _attr_name: str = "PilotSuite Presence Room"
-    _attr_unique_id: str = "ai_copilot_presence_room"
+    _attr_unique_id: str = "pilotsuite_presence_room"
     _attr_icon: str = "mdi:door"
     _attr_should_poll: bool = False  # Using coordinator
     
@@ -222,7 +222,7 @@ class PresencePersonSensor(CoordinatorEntity, SensorEntity):
     """
     
     _attr_name: str = "PilotSuite Presence Person"
-    _attr_unique_id: str = "ai_copilot_presence_person"
+    _attr_unique_id: str = "pilotsuite_presence_person"
     _attr_icon: str = "mdi:account-group"
     _attr_native_unit_of_measurement: str = "persons"
     _attr_should_poll: bool = False  # Using coordinator
