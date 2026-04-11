@@ -362,3 +362,48 @@ class TestGlobalContract:
         from homeassistant.helpers.update_coordinator import CoordinatorEntity
         assert issubclass(AttentionLoadSensor, CoordinatorEntity)
         assert issubclass(StressProxySensor, CoordinatorEntity)
+
+    def test_GC3_identity_canonical_pilotsuite(self):
+        """GC3: Both sensors use pilotsuite canonical unique IDs."""
+        from custom_components.pilotsuite.sensors.cognitive_sensors import AttentionLoadSensor, StressProxySensor
+        
+        # Canonical pilotsuite unique IDs
+        assert AttentionLoadSensor._attr_unique_id == "pilotsuite_attention_load"
+        assert StressProxySensor._attr_unique_id == "pilotsuite_stress_proxy"
+        
+        # Legacy ai_copilot_* strings are NOT in the production module source
+        import inspect
+        src = inspect.getsource(AttentionLoadSensor) + inspect.getsource(StressProxySensor)
+        assert "ai_copilot_attention_load" not in src
+        assert "ai_copilot_stress_proxy" not in src
+        
+        # Migration map includes the legacy → pilotsuite mappings
+        # Read __init__.py as plain text (avoids homeassistant import dependency)
+        import os
+        ps_root = os.path.dirname(os.path.dirname(os.path.dirname(
+            inspect.getfile(AttentionLoadSensor))))
+        init_path = os.path.join(ps_root, "pilotsuite", "__init__.py")
+        init_src = open(init_path).read()
+        
+        # Verify legacy → pilotsuite entries exist in migrations map
+        # via substring search (sufficient as source-level guard)
+        assert '"ai_copilot_attention_load"' in init_src or "'ai_copilot_attention_load'" in init_src
+        assert '"ai_copilot_stress_proxy"' in init_src or "'ai_copilot_stress_proxy'" in init_src
+        assert '"pilotsuite_attention_load"' in init_src or "'pilotsuite_attention_load'" in init_src
+        assert '"pilotsuite_stress_proxy"' in init_src or "'pilotsuite_stress_proxy'" in init_src
+        # Both entries appear in the same _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS dict
+        idx_legacy = max(
+            init_src.find('"ai_copilot_attention_load"'),
+            init_src.find("'ai_copilot_attention_load'"),
+        )
+        idx_stress = max(
+            init_src.find('"ai_copilot_stress_proxy"'),
+            init_src.find("'ai_copilot_stress_proxy'"),
+        )
+        idx_migrations = init_src.rfind("_LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS", 0, idx_legacy)
+        assert idx_migrations != -1, "_LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS not found before ai_copilot_attention_load"
+        # Both entries are within 2000 chars of the dict start (same dict block)
+        assert idx_legacy - idx_migrations < 2000, \
+            f"ai_copilot_attention_load at {idx_legacy} too far from dict start {idx_migrations}"
+        assert idx_stress - idx_migrations < 2000, \
+            f"ai_copilot_stress_proxy at {idx_stress} too far from dict start {idx_migrations}"

@@ -32,7 +32,7 @@ class AttentionLoadSensor(CoordinatorEntity, SensorEntity):
     """
     
     _attr_name = "PilotSuite Attention Load"
-    _attr_unique_id = "ai_copilot_attention_load"
+    _attr_unique_id = "pilotsuite_attention_load"
     _attr_icon = "mdi:brain"
     _attr_should_poll = True
     
@@ -111,7 +111,7 @@ class StressProxySensor(CoordinatorEntity, SensorEntity):
     """Sensor for stress proxy estimation."""
     
     _attr_name = "PilotSuite Stress Proxy"
-    _attr_unique_id = "ai_copilot_stress_proxy"
+    _attr_unique_id = "pilotsuite_stress_proxy"
     _attr_icon = "mdi:heart-pulse"
     _attr_should_poll = True
     
