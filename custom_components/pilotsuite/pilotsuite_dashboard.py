@@ -167,19 +167,19 @@ async def async_generate_pilotsuite_dashboard(
     overview_entities = _compact_entities([
         _resolve_entity(
             hass,
-            ["binary_sensor.copilot_ha_online", "binary_sensor.pilotsuite_styx_online"],
+            ["binary_sensor.pilotsuite_online", "binary_sensor.pilotsuite_styx_online"],
         ),
         _resolve_entity(
             hass,
-            ["sensor.copilot_ha_version", "sensor.pilotsuite_styx_version"],
+            ["sensor.pilotsuite_version", "sensor.pilotsuite_styx_version"],
         ),
         _resolve_entity(
             hass,
-            ["sensor.copilot_ha_core_api_v1", "sensor.pilotsuite_core_api_v1"],
+            ["sensor.pilotsuite_core_api_v1", "sensor.pilotsuite_core_api_v1"],
         ),
         _resolve_entity(
             hass,
-            ["sensor.copilot_ha_habitus_zones_count", "sensor.pilotsuite_habitus_zones_count"],
+            ["sensor.pilotsuite_habitus_zones_count", "sensor.pilotsuite_habitus_zones_count"],
         ),
     ])
 
@@ -203,15 +203,15 @@ async def async_generate_pilotsuite_dashboard(
     operations_entities = _compact_entities([
         _resolve_entity(
             hass,
-            ["button.copilot_ha_reload_config_entry", "button.pilotsuite_reload_config_entry"],
+            ["button.pilotsuite_reload_config_entry", "button.pilotsuite_reload_config_entry"],
         ),
         _resolve_entity(
             hass,
-            ["button.copilot_ha_forwarder_status", "button.pilotsuite_forwarder_status"],
+            ["button.pilotsuite_forwarder_status", "button.pilotsuite_forwarder_status"],
         ),
         _resolve_entity(
             hass,
-            ["button.copilot_ha_fetch_ha_errors", "button.pilotsuite_fetch_ha_errors"],
+            ["button.pilotsuite_fetch_ha_errors", "button.pilotsuite_fetch_ha_errors"],
         ),
     ])
 
@@ -226,8 +226,8 @@ async def async_generate_pilotsuite_dashboard(
             _existing_entities(
                 hass,
                 [
-                "button.copilot_ha_safety_backup_create",
-                "button.copilot_ha_safety_backup_status",
+                "button.pilotsuite_safety_backup_create",
+                "button.pilotsuite_safety_backup_status",
                 ],
             )
         )
@@ -243,10 +243,10 @@ async def async_generate_pilotsuite_dashboard(
             _existing_entities(
                 hass,
                 [
-                "button.copilot_ha_ping_core",
-                "button.copilot_ha_enable_debug_30m",
-                "button.copilot_ha_disable_debug",
-                "button.copilot_ha_clear_error_digest",
+                "button.pilotsuite_ping_core",
+                "button.pilotsuite_enable_debug_30m",
+                "button.pilotsuite_disable_debug",
+                "button.pilotsuite_clear_error_digest",
                 ],
             )
         )
@@ -262,8 +262,8 @@ async def async_generate_pilotsuite_dashboard(
             _existing_entities(
                 hass,
                 [
-                "button.copilot_ha_preview_graph_candidates",
-                "button.copilot_ha_offer_graph_candidates",
+                "button.pilotsuite_preview_graph_candidates",
+                "button.pilotsuite_offer_graph_candidates",
                 ],
             )
         )
@@ -272,8 +272,8 @@ async def async_generate_pilotsuite_dashboard(
         _existing_entities(
             hass,
             [
-            "button.copilot_ha_generate_config_snapshot",
-            "button.copilot_ha_download_config_snapshot",
+            "button.pilotsuite_generate_config_snapshot",
+            "button.pilotsuite_download_config_snapshot",
             ],
         )
     )
@@ -284,45 +284,45 @@ async def async_generate_pilotsuite_dashboard(
     dashboards_entities = _compact_entities([
         _resolve_entity(
             hass,
-            ["button.copilot_ha_generate_pilotsuite_dashboard", "button.pilotsuite_generate_pilotsuite_dashboard"],
+            ["button.pilotsuite_generate_pilotsuite_dashboard", "button.pilotsuite_generate_pilotsuite_dashboard"],
         ),
         _resolve_entity(
             hass,
-            ["button.copilot_ha_generate_habitus_dashboard", "button.pilotsuite_generate_habitus_dashboard"],
+            ["button.pilotsuite_generate_habitus_dashboard", "button.pilotsuite_generate_habitus_dashboard"],
         ),
     ])
 
     core_entities = _compact_entities([
         _resolve_entity(
             hass,
-            ["button.copilot_ha_fetch_core_capabilities", "button.pilotsuite_fetch_core_capabilities"],
+            ["button.pilotsuite_fetch_core_capabilities", "button.pilotsuite_fetch_core_capabilities"],
         ),
         _resolve_entity(
             hass,
-            ["button.copilot_ha_fetch_core_events", "button.pilotsuite_fetch_core_events"],
+            ["button.pilotsuite_fetch_core_events", "button.pilotsuite_fetch_core_events"],
         ),
         _resolve_entity(
             hass,
-            ["button.copilot_ha_fetch_core_graph_state", "button.pilotsuite_fetch_core_graph_state"],
+            ["button.pilotsuite_fetch_core_graph_state", "button.pilotsuite_fetch_core_graph_state"],
         ),
     ])
 
     habitus_entities = _existing_entities(
         hass,
         [
-        "button.copilot_ha_validate_habitus_zones",
+        "button.pilotsuite_validate_habitus_zones",
         ],
     )
 
     media_entities = _existing_entities(
         hass,
         [
-        "sensor.copilot_ha_music_now_playing",
-        "sensor.copilot_ha_music_primary_area",
-        "sensor.copilot_ha_music_active_count",
-        "sensor.copilot_ha_tv_primary_area",
-        "sensor.copilot_ha_tv_source",
-        "sensor.copilot_ha_tv_active_count",
+        "sensor.pilotsuite_music_now_playing",
+        "sensor.pilotsuite_music_primary_area",
+        "sensor.pilotsuite_music_active_count",
+        "sensor.pilotsuite_tv_primary_area",
+        "sensor.pilotsuite_tv_source",
+        "sensor.pilotsuite_tv_active_count",
         ],
     )
 
@@ -331,11 +331,11 @@ async def async_generate_pilotsuite_dashboard(
     dev_entities = _existing_entities(
         hass,
         [
-        "button.copilot_ha_fetch_ha_errors",
-        "button.copilot_ha_devlogs_fetch",
-        "button.copilot_ha_forwarder_status",
-        "button.copilot_ha_fetch_core_events",
-        "button.copilot_ha_fetch_core_capabilities",
+        "button.pilotsuite_fetch_ha_errors",
+        "button.pilotsuite_devlogs_fetch",
+        "button.pilotsuite_forwarder_status",
+        "button.pilotsuite_fetch_core_events",
+        "button.pilotsuite_fetch_core_capabilities",
         ],
     )
 
@@ -363,13 +363,13 @@ async def async_generate_pilotsuite_dashboard(
     # Mood + Neurons side by side
     mood_card = (
         "      - type: custom:styx-mood-card\n"
-        "        entity: sensor.copilot_ha_mood\n"
+        "        entity: sensor.pilotsuite_mood\n"
         "        title: Stimmung\n"
         "        show_emotions: 5\n"
     )
     neurons_card = (
         "      - type: custom:styx-brain-card\n"
-        "        entity: sensor.copilot_ha_brain_graph_nodes\n"
+        "        entity: sensor.pilotsuite_brain_graph_nodes\n"
         "        title: Brain Graph\n"
     )
     styx_cards.append(_grid_card([mood_card, neurons_card], columns=2))
@@ -405,8 +405,8 @@ async def async_generate_pilotsuite_dashboard(
     automation_entities = _existing_entities(
         hass,
         [
-            "sensor.copilot_ha_predictive_automation",
-            "sensor.copilot_ha_zone_scenes",
+            "sensor.pilotsuite_predictive_automation",
+            "sensor.pilotsuite_zone_scenes",
         ],
     )
     if automation_entities:
@@ -446,7 +446,7 @@ async def async_generate_pilotsuite_dashboard(
     if has_zones:
         habitus_custom_card = (
             "      - type: custom:styx-zone-card\n"
-            "        entity: sensor.copilot_ha_habitus_zones\n"
+            "        entity: sensor.pilotsuite_habitus_zones\n"
             "        title: Habitus-Zonen\n"
             "        show_mood: true\n"
             "        show_neuron_activity: true\n"

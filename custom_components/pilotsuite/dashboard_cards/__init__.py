@@ -1,6 +1,6 @@
 """Dashboard Cards Module - Lazy Loading.
 
-Lovelace UI card generators for AI Home Copilot:
+Lovelace UI card generators for PilotSuite:
 
 Structure (by Feature):
 - energy/: Energy distribution & media cards
@@ -11,7 +11,7 @@ Structure (by Feature):
 - interactive/: Detail views, filters, modals
 - overview/: Complete dashboard builders
 
-Path: custom_components/copilot_ha/dashboard_cards/
+Path: custom_components/pilotsuite/dashboard_cards/
 """
 
 from __future__ import annotations

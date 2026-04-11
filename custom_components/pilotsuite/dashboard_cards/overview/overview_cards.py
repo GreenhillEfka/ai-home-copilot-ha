@@ -1,4 +1,4 @@
-"""Overview cards for comprehensive dashboard.
+"""Overview cards for PilotSuite dashboards.
 
 Cards:
 - Dashboard Overview Card (main entry point)
@@ -9,298 +9,217 @@ Cards:
 """
 from __future__ import annotations
 
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..data_classes import (
-        DashboardData,
-        NeuronStatus,
-        MoodData,
-    )
+    from ..data_classes import DashboardData, NeuronStatus
 
 
 def create_dashboard_overview_card(
     data: DashboardData,
     config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """
-    Create the main Dashboard Overview Card.
-    
-    Features:
-    - Neuronen Status (grid of all neurons)
-    - Mood Overview (current mood with icon)
-    - Zone Overview (active zones)
-    - System Health (health score, alerts)
-    
-    Args:
-        data: Dashboard data
-        config: Optional configuration overrides
-        
-    Returns:
-        Lovelace card configuration dict
-    """
+    """Create the main dashboard overview card stack."""
     config = config or {}
-    
-    cards = [
-        _create_neuron_status_card(data),
-        _create_mood_overview_card(data),
-        _create_zone_overview_card(data),
-        _create_system_health_card(data),
-    ]
-    
-    card_config = {
-        "type": "vertical-stack",
-        "title": config.get("title", "🏠 AI Home Copilot Dashboard"),
-        "cards": cards,
-    }
-    
-    # Add styling for dark/light mode
-    card_config["card_mod"] = {
-        "style": {
-            "margin": "8px",
-            "padding": "12px",
-        }
-    }
-    
-    return card_config
 
-
-def _create_neuron_status_card(data: DashboardData) -> dict[str, Any]:
-    """Create neuron status overview card."""
-    neuron_cards = []
-    
-    # Group neurons by status
-    status_groups = {
-        "active": [],
-        "inactive": [],
-        "warning": [],
-        "error": [],
-    }
-    
-    for neuron in data.neurons:
-        status_groups[neuron.status].append(neuron)
-    
-    # Create grid of neuron buttons
-    for status, neurons in status_groups.items():
-        if not neurons:
-            continue
-            
-        icon_map = {
-            "active": "mdi:check-circle",
-            "inactive": "mdi:circle-outline",
-            "warning": "mdi:alert-circle",
-            "error": "mdi:close-circle",
-        }
-        
-        color_map = {
-            "active": "#4CAF50",
-            "inactive": "#9E9E9E",
-            "warning": "#FF9800",
-            "error": "#F44336",
-        }
-        
-        neuron_cards.append({
-            "type": "horizontal-stack",
-            "cards": [
-                {
-                    "type": "button",
-                    "name": neuron.name,
-                    "icon": neuron.icon,
-                    "show_state": True,
-                    "state_color": True,
-                    "tap_action": {
-                        "action": "navigate",
-                        "navigation_path": f"/ai-home/neurons/{neuron.entity_id}",
-                    },
-                    "hold_action": {
-                        "action": "more-info",
-                    },
-                    "styles": {
-                        "card": {
-                            "background-color": color_map.get(neuron.status, "#9E9E9E"),
-                            "border-radius": "12px",
-                        },
-                    },
-                }
-                for neuron in neurons[:4]  # Max 4 per row
-            ],
-        })
-    
-    if not neuron_cards:
-        neuron_cards.append({
-            "type": "markdown",
-            "content": "**Keine Neuronen aktiv**",
-        })
-    
     return {
         "type": "vertical-stack",
-        "title": "🧠 Neuronen Status",
-        "cards": neuron_cards,
+        "title": config.get("title", "🏠 PilotSuite Dashboard"),
+        "cards": [
+            _create_neuron_status_card(data),
+            _create_mood_overview_card(data),
+            _create_zone_overview_card(data),
+            _create_system_health_card(data),
+        ],
         "card_mod": {
             "style": {
-                "background": "var(--card-background-color, #fff)",
-                "border-radius": "16px",
-                "padding": "8px",
+                "margin": "8px",
+                "padding": "12px",
             }
         },
     }
 
 
+def _group_neurons_by_status(neurons: list[NeuronStatus]) -> dict[str, list[NeuronStatus]]:
+    groups: dict[str, list[NeuronStatus]] = {
+        "active": [],
+        "inactive": [],
+        "warning": [],
+        "error": [],
+    }
+    for neuron in neurons:
+        groups.setdefault(neuron.status, []).append(neuron)
+    return groups
+
+
+def _create_neuron_status_card(data: DashboardData) -> dict[str, Any]:
+    """Create neuron status overview card using standard Lovelace cards."""
+    status_labels = {
+        "active": "Aktiv",
+        "inactive": "Inaktiv",
+        "warning": "Warnung",
+        "error": "Fehler",
+    }
+    status_icons = {
+        "active": "mdi:check-circle",
+        "inactive": "mdi:circle-outline",
+        "warning": "mdi:alert-circle",
+        "error": "mdi:close-circle",
+    }
+
+    cards: list[dict[str, Any]] = []
+    for status, neurons in _group_neurons_by_status(data.neurons).items():
+        if not neurons:
+            continue
+        cards.append(
+            {
+                "type": "markdown",
+                "content": f"**{status_icons.get(status, 'mdi:brain')} {status_labels.get(status, status.title())}: {len(neurons)}**",
+            }
+        )
+        cards.append(
+            {
+                "type": "grid",
+                "columns": 2,
+                "square": False,
+                "cards": [
+                    {
+                        "type": "button",
+                        "entity": neuron.entity_id,
+                        "name": neuron.name,
+                        "icon": neuron.icon,
+                        "show_state": True,
+                        "tap_action": {"action": "more-info"},
+                        "hold_action": {
+                            "action": "navigate",
+                            "navigation_path": f"/dashboard-styx/neuron/{neuron.entity_id}",
+                        },
+                    }
+                    for neuron in neurons[:6]
+                ],
+            }
+        )
+
+    if not cards:
+        cards = [{"type": "markdown", "content": "**Keine Neuronen aktiv**"}]
+
+    return {
+        "type": "vertical-stack",
+        "title": "🧠 Neuronen Status",
+        "cards": cards,
+    }
+
+
 def _create_mood_overview_card(data: DashboardData) -> dict[str, Any]:
-    """Create mood overview card."""
-    mood = data.mood
-    
-    if not mood:
-        return {
-            "type": "entity",
-            "entity": "sensor.copilot_ha_mood",
-            "name": "🎭 Stimmung",
-            "icon": "mdi:emoticon-outline",
-        }
-    
-    mood_icon = mood.get("icon", "mdi:emoticon-outline")
-    mood_color = mood.get("color", "#9E9E9E")
-    mood_name = mood.get("name_de", "Neutral")
-    confidence = mood.get("confidence", 0.0)
-    
+    """Create mood overview card with PilotSuite naming."""
+    mood = data.mood or {}
+    mood_name = mood.get("name_de") or mood.get("name") or "Unbekannt"
+    confidence = mood.get("confidence")
+    factors = mood.get("factors") or mood.get("emotions") or []
+
+    summary_lines = [f"**Aktuelle Stimmung:** {mood_name}"]
+    if confidence is not None:
+        summary_lines.append(f"**Confidence:** {confidence:.0%}")
+    if isinstance(factors, list) and factors:
+        summary_lines.append(f"**Faktoren:** {', '.join(map(str, factors[:3]))}")
+
     return {
         "type": "vertical-stack",
         "title": "🎭 Stimmungsübersicht",
         "cards": [
             {
-                "type": "picture-elements",
-                "elements": [
-                    {
-                        "type": "icon",
-                        "icon": mood_icon,
-                        "style": {
-                            "color": mood_color,
-                            "font-size": "48px",
-                            "position": "center",
-                        },
-                    },
-                    {
-                        "type": "state-badge",
-                        "style": {
-                            "position": "absolute",
-                            "top": "8px",
-                            "right": "8px",
-                        },
-                    },
-                ],
+                "type": "entity",
+                "entity": "sensor.pilotsuite_mood",
+                "name": "PilotSuite Stimmung",
+                "icon": mood.get("icon", "mdi:emoticon-outline"),
             },
             {
-                "type": "entities",
-                "entities": [
-                    {
-                        "entity": "sensor.copilot_ha_mood",
-                        "name": mood_name,
-                        "secondary_info": f"Confidence: {confidence:.0%}",
-                    },
-                ],
+                "type": "markdown",
+                "content": "\n".join(summary_lines),
             },
         ],
     }
 
 
 def _create_zone_overview_card(data: DashboardData) -> dict[str, Any]:
-    """Create zone overview card."""
-    zones = []
-    
-    # Get zones from presence data
+    """Create zone overview card based on presence data."""
+    rows: list[dict[str, Any]] = []
+
     for user_id, user_data in data.presence.users.items():
         zone_name = user_data.get("zone", "Unbekannt")
         status = user_data.get("status", "unknown")
-        
         status_icon = {
             "home": "mdi:home",
             "away": "mdi:home-export-outline",
             "sleep": "mdi:sleep",
         }.get(status, "mdi:account")
-        
-        zones.append({
-            "type": "entity",
-            "entity": user_id,
-            "name": user_data.get("name", user_id),
-            "icon": status_icon,
-            "secondary_info": f"Zone: {zone_name}",
-        })
-    
-    if not zones:
-        zones.append({
-            "type": "markdown",
-            "content": "Keine Benutzer erkannt",
-        })
-    
+
+        rows.append(
+            {
+                "entity": user_id,
+                "name": f"{user_data.get('name', user_id)} · {zone_name}",
+                "icon": status_icon,
+            }
+        )
+
+    if not rows:
+        rows = [{"type": "section", "label": "Keine Benutzer erkannt"}]
+
     return {
         "type": "vertical-stack",
         "title": "🏠 Zonenübersicht",
         "cards": [
             {
-                "type": "grid",
-                "columns": 2,
-                "cards": [
-                    {
-                        "type": "stat",
-                        "entity": "sensor.total_presence",
-                        "name": "Anwesend",
-                        "icon": "mdi:account-multiple",
-                    },
-                    {
-                        "type": "stat",
-                        "entity": "sensor.guest_count",
-                        "name": "Gäste",
-                        "icon": "mdi:account-group",
-                    },
-                ],
+                "type": "markdown",
+                "content": (
+                    f"**Anwesend:** {data.presence.total_presence}  \n"
+                    f"**Gäste:** {data.presence.guest_count}"
+                ),
             },
             {
                 "type": "entities",
-                "entities": zones[:6],
+                "entities": rows[:6],
             },
         ],
     }
 
 
 def _create_system_health_card(data: DashboardData) -> dict[str, Any]:
-    """Create system health card."""
+    """Create system health card without non-standard Lovelace types."""
     health = data.system_health
-    
-    # Determine health color
-    if health.health_score >= 80:
-        health_color = "#4CAF50"
-        health_icon = "mdi:check-circle"
-    elif health.health_score >= 50:
-        health_color = "#FF9800"
-        health_icon = "mdi:alert-circle"
-    else:
-        health_color = "#F44336"
-        health_icon = "mdi:close-circle"
-    
+
+    status_label = "Stabil"
+    if health.health_score < 50:
+        status_label = "Kritisch"
+    elif health.health_score < 80:
+        status_label = "Beobachten"
+
+    alert_lines = []
+    for alert in health.alerts[:5]:
+        title = alert.get("title") or alert.get("message") or str(alert)
+        alert_lines.append(f"- {title}")
+
+    content = [
+        f"**Health Score:** {health.health_score}/100 ({status_label})",
+        f"**Neuronen aktiv:** {health.active_neurons}/{health.total_neurons}",
+    ]
+    if alert_lines:
+        content.append("**Alerts:**")
+        content.extend(alert_lines)
+
     return {
         "type": "vertical-stack",
         "title": "💚 System Status",
         "cards": [
             {
-                "type": "gauge",
-                "entity": "sensor.system_health_score",
-                "min": 0,
-                "max": 100,
-                "name": "System Health",
-                "severity": {
-                    "green": 80,
-                    "yellow": 50,
-                    "red": 0,
-                },
+                "type": "entity",
+                "entity": "sensor.pilotsuite_home_health_score",
+                "name": "PilotSuite Home Health",
+                "icon": "mdi:heart-pulse",
             },
             {
-                "type": "entities",
-                "entities": [
-                    {
-                        "type": "section",
-                        "label": f"Aktive Neuronen: {health.active_neurons}/{health.total_neurons}",
-                    },
-                ],
+                "type": "markdown",
+                "content": "\n".join(content),
             },
         ],
     }

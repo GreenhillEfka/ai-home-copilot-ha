@@ -27,7 +27,7 @@ from .entity import build_main_device_identifiers
 
 _LOGGER = logging.getLogger(__name__)
 
-DEBUG_MODE_ENTITY_ID = "sensor.copilot_ha_debug_mode_enabled"
+DEBUG_MODE_ENTITY_ID = "sensor.pilotsuite_debug_mode_enabled"
 DEBUG_HISTORY_SIZE = 50
 DEBUG_STORAGE_KEY = "copilot_ha_debug_state"
 DEBUG_STORAGE_VERSION = 1

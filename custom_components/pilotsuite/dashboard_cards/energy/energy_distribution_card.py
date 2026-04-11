@@ -101,7 +101,7 @@ def _create_energy_gauge_card(energy_data: EnergyData) -> dict[str, Any]:
         "cards": [
             {
                 "type": "gauge",
-                "entity": "sensor.copilot_ha_energy_power",
+                "entity": "sensor.pilotsuite_energy_power",
                 "name": "aktuell",
                 "min": 0,
                 "max": max_power,
@@ -117,13 +117,13 @@ def _create_energy_gauge_card(energy_data: EnergyData) -> dict[str, Any]:
                 "cards": [
                     {
                         "type": "sensor",
-                        "entity": "sensor.copilot_ha_energy_power",
+                        "entity": "sensor.pilotsuite_energy_power",
                         "name": "aktuell",
                         "unit": "W",
                     },
                     {
                         "type": "sensor",
-                        "entity": "sensor.copilot_ha_energy_daily",
+                        "entity": "sensor.pilotsuite_energy_daily",
                         "name": "heute",
                         "unit": "kWh",
                     },
@@ -143,13 +143,13 @@ def _create_energy_sources_card(energy_data: EnergyData) -> dict[str, Any]:
             "type": "conditional",
             "conditions": [
                 {
-                    "entity": "sensor.copilot_ha_energy_grid",
+                    "entity": "sensor.pilotsuite_energy_grid",
                     "state_not": "unavailable",
                 },
             ],
             "card": {
                 "type": "sensor",
-                "entity": "sensor.copilot_ha_energy_grid",
+                "entity": "sensor.pilotsuite_energy_grid",
                 "name": "Netz",
                 "unit": "W",
                 "icon": "mdi:transmission-tower",
@@ -162,13 +162,13 @@ def _create_energy_sources_card(energy_data: EnergyData) -> dict[str, Any]:
             "type": "conditional",
             "conditions": [
                 {
-                    "entity": "sensor.copilot_ha_energy_solar",
+                    "entity": "sensor.pilotsuite_energy_solar",
                     "state_not": "unavailable",
                 },
             ],
             "card": {
                 "type": "sensor",
-                "entity": "sensor.copilot_ha_energy_solar",
+                "entity": "sensor.pilotsuite_energy_solar",
                 "name": "Solar",
                 "unit": "W",
                 "icon": "mdi:solar-power",
@@ -184,13 +184,13 @@ def _create_energy_sources_card(energy_data: EnergyData) -> dict[str, Any]:
             "type": "conditional",
             "conditions": [
                 {
-                    "entity": "sensor.copilot_ha_energy_battery",
+                    "entity": "sensor.pilotsuite_energy_battery",
                     "state_not": "unavailable",
                 },
             ],
             "card": {
                 "type": "sensor",
-                "entity": "sensor.copilot_ha_energy_battery",
+                "entity": "sensor.pilotsuite_energy_battery",
                 "name": "Batterie",
                 "unit": "W",
                 "icon": "mdi:battery-charging",
@@ -218,7 +218,7 @@ def _create_energy_cost_card(energy_data: EnergyData) -> dict[str, Any]:
     if energy_data.current_cost_eur is not None:
         cards.append({
             "type": "sensor",
-            "entity": "sensor.copilot_ha_energy_cost_current",
+            "entity": "sensor.pilotsuite_energy_cost_current",
             "name": "aktuell",
             "unit": "€/h",
             "icon": "mdi:currency-eur",
@@ -228,7 +228,7 @@ def _create_energy_cost_card(energy_data: EnergyData) -> dict[str, Any]:
     if energy_data.today_cost_eur is not None:
         cards.append({
             "type": "sensor",
-            "entity": "sensor.copilot_ha_energy_cost_daily",
+            "entity": "sensor.pilotsuite_energy_cost_daily",
             "name": "heute",
             "unit": "€",
             "icon": "mdi:currency-eur",
@@ -240,13 +240,13 @@ def _create_energy_cost_card(energy_data: EnergyData) -> dict[str, Any]:
             "type": "conditional",
             "conditions": [
                 {
-                    "entity": "sensor.copilot_ha_energy_savings",
+                    "entity": "sensor.pilotsuite_energy_savings",
                     "state_not": "unavailable",
                 },
             ],
             "card": {
                 "type": "gauge",
-                "entity": "sensor.copilot_ha_energy_savings",
+                "entity": "sensor.pilotsuite_energy_savings",
                 "name": "Einsparung",
                 "min": 0,
                 "max": 100,

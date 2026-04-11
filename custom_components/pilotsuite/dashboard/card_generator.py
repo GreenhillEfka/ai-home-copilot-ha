@@ -52,14 +52,14 @@ def generate_styx_view(host: str, port: int) -> dict[str, Any]:
                         "type": "entities",
                         "title": "Stimmung",
                         "entities": [
-                            {"entity": "sensor.copilot_ha_mood", "name": "Aktuelle Stimmung"},
+                            {"entity": "sensor.pilotsuite_mood", "name": "Aktuelle Stimmung"},
                         ],
                     },
                     {
                         "type": "entities",
                         "title": "Brain Graph",
                         "entities": [
-                            {"entity": "sensor.copilot_ha_brain_graph_nodes", "name": "Knoten"},
+                            {"entity": "sensor.pilotsuite_brain_graph_nodes", "name": "Knoten"},
                         ],
                     },
                 ],
@@ -69,7 +69,7 @@ def generate_styx_view(host: str, port: int) -> dict[str, Any]:
                 "type": "markdown",
                 "title": "KI-Vorschlaege",
                 "content": (
-                    "{% set suggestions = state_attr('sensor.copilot_ha_suggestions', 'suggestions') %}\n"
+                    "{% set suggestions = state_attr('sensor.pilotsuite_suggestions', 'suggestions') %}\n"
                     "{% if suggestions %}\n"
                     "{% for s in suggestions[:5] %}\n"
                     "- **{{ s.title }}** ({{ s.confidence }}%): {{ s.description }}\n"
@@ -85,7 +85,7 @@ def generate_styx_view(host: str, port: int) -> dict[str, Any]:
                 "title": "Automatisierungen",
                 "show_header_toggle": False,
                 "entities": [
-                    {"entity": "sensor.copilot_ha_predictive_automation", "name": "Vorhergesagte Automatisierung"},
+                    {"entity": "sensor.pilotsuite_predictive_automation", "name": "Vorhergesagte Automatisierung"},
                 ],
             },
         ],
@@ -954,10 +954,10 @@ def generate_network_view() -> dict[str, Any]:
                 "title": "UniFi Netzwerk",
                 "show_header_toggle": False,
                 "entities": [
-                    {"entity": "sensor.copilot_ha_unifi_clients_online", "name": "Clients online"},
-                    {"entity": "sensor.copilot_ha_unifi_wan_latency", "name": "WAN Latenz"},
-                    {"entity": "sensor.copilot_ha_unifi_packet_loss", "name": "Paketverlust"},
-                    {"entity": "sensor.copilot_ha_unifi_uptime", "name": "Uptime"},
+                    {"entity": "sensor.pilotsuite_unifi_clients_online", "name": "Clients online"},
+                    {"entity": "sensor.pilotsuite_unifi_wan_latency", "name": "WAN Latenz"},
+                    {"entity": "sensor.pilotsuite_unifi_packet_loss", "name": "Paketverlust"},
+                    {"entity": "sensor.pilotsuite_unifi_uptime", "name": "Uptime"},
                 ],
             },
             {
@@ -965,10 +965,10 @@ def generate_network_view() -> dict[str, Any]:
                 "title": "Wetter & Umgebung",
                 "show_header_toggle": False,
                 "entities": [
-                    {"entity": "sensor.copilot_ha_weather_condition", "name": "Wetterlage"},
-                    {"entity": "sensor.copilot_ha_weather_temperature", "name": "Temperatur"},
-                    {"entity": "sensor.copilot_ha_weather_cloud_coverage", "name": "Bewoelkung"},
-                    {"entity": "sensor.copilot_ha_weather_uv_index", "name": "UV-Index"},
+                    {"entity": "sensor.pilotsuite_weather_condition", "name": "Wetterlage"},
+                    {"entity": "sensor.pilotsuite_weather_temperature", "name": "Temperatur"},
+                    {"entity": "sensor.pilotsuite_weather_cloud_coverage", "name": "Bewoelkung"},
+                    {"entity": "sensor.pilotsuite_weather_uv_index", "name": "UV-Index"},
                 ],
             },
         ],
@@ -988,9 +988,9 @@ def generate_system_view() -> dict[str, Any]:
                 "title": "System & Version",
                 "show_header_toggle": False,
                 "entities": [
-                    {"entity": "binary_sensor.copilot_ha_online", "name": "Online"},
-                    {"entity": "sensor.copilot_ha_version", "name": "Version"},
-                    {"entity": "sensor.copilot_ha_core_api_v1", "name": "Core API"},
+                    {"entity": "binary_sensor.pilotsuite_online", "name": "Online"},
+                    {"entity": "sensor.pilotsuite_version", "name": "Version"},
+                    {"entity": "sensor.pilotsuite_core_api_v1", "name": "Core API"},
                 ],
             },
             {
@@ -998,10 +998,10 @@ def generate_system_view() -> dict[str, Any]:
                 "title": "Kamera & Bewegung",
                 "show_header_toggle": False,
                 "entities": [
-                    {"entity": "sensor.copilot_ha_camera_motion_history", "name": "Bewegungsverlauf"},
-                    {"entity": "sensor.copilot_ha_camera_presence_history", "name": "Praesenzverlauf"},
-                    {"entity": "sensor.copilot_ha_camera_activity_history", "name": "Aktivitaetsverlauf"},
-                    {"entity": "sensor.copilot_ha_camera_zone_activity", "name": "Zonen-Aktivitaet"},
+                    {"entity": "sensor.pilotsuite_camera_motion_history", "name": "Bewegungsverlauf"},
+                    {"entity": "sensor.pilotsuite_camera_presence_history", "name": "Praesenzverlauf"},
+                    {"entity": "sensor.pilotsuite_camera_activity_history", "name": "Aktivitaetsverlauf"},
+                    {"entity": "sensor.pilotsuite_camera_zone_activity", "name": "Zonen-Aktivitaet"},
                 ],
             },
             {
@@ -1009,11 +1009,11 @@ def generate_system_view() -> dict[str, Any]:
                 "title": "Debug & Wartung",
                 "show_header_toggle": False,
                 "entities": [
-                    {"entity": "button.copilot_ha_reload_config_entry", "name": "Config neu laden"},
-                    {"entity": "button.copilot_ha_enable_debug_30m", "name": "Debug 30min"},
-                    {"entity": "button.copilot_ha_disable_debug", "name": "Debug aus"},
-                    {"entity": "button.copilot_ha_clear_all_logs", "name": "Logs leeren"},
-                    {"entity": "button.copilot_ha_ping_core", "name": "Core anpingen"},
+                    {"entity": "button.pilotsuite_reload_config_entry", "name": "Config neu laden"},
+                    {"entity": "button.pilotsuite_enable_debug_30m", "name": "Debug 30min"},
+                    {"entity": "button.pilotsuite_disable_debug", "name": "Debug aus"},
+                    {"entity": "button.pilotsuite_clear_all_logs", "name": "Logs leeren"},
+                    {"entity": "button.pilotsuite_ping_core", "name": "Core anpingen"},
                 ],
             },
         ],

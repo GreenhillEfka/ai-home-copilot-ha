@@ -26,11 +26,11 @@ views:
         square: false
         cards:
           - type: custom:styx-mood-card
-            entity: sensor.copilot_ha_mood
+            entity: sensor.pilotsuite_mood
             title: "Stimmung"
             show_emotions: 5
           - type: custom:styx-brain-card
-            entity: sensor.copilot_ha_brain_graph_nodes
+            entity: sensor.pilotsuite_brain_graph_nodes
             title: "Brain Graph"
 
       # Styx Chat Interface
@@ -100,26 +100,26 @@ views:
             title: "Status"
             show_header_toggle: false
             entities:
-              - entity: binary_sensor.copilot_ha_online
+              - entity: binary_sensor.pilotsuite_online
                 name: "Online"
-              - entity: sensor.copilot_ha_version
+              - entity: sensor.pilotsuite_version
                 name: "Version"
-              - entity: sensor.copilot_ha_habitus_zones_count
+              - entity: sensor.pilotsuite_habitus_zones_count
                 name: "Zonen"
           - type: entities
             title: "Betrieb"
             show_header_toggle: false
             entities:
-              - entity: button.copilot_ha_reload_config_entry
+              - entity: button.pilotsuite_reload_config_entry
                 name: "Config neu laden"
-              - entity: button.copilot_ha_forwarder_status
+              - entity: button.pilotsuite_forwarder_status
                 name: "Forwarder Status"
-              - entity: button.copilot_ha_fetch_ha_errors
+              - entity: button.pilotsuite_fetch_ha_errors
                 name: "HA-Fehler holen"
 
       # Zone Overview
       - type: custom:styx-zone-card
-        entity: sensor.copilot_ha_habitus_zones
+        entity: sensor.pilotsuite_habitus_zones
         title: "Habitus-Zonen"
         show_mood: true
         show_neuron_activity: true

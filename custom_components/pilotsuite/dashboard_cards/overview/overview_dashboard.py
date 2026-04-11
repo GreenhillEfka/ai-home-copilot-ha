@@ -39,10 +39,10 @@ def create_complete_dashboard(
     
     return {
         "type": "vertical-stack",
-        "title": config.get("title", "🏠 AI Home Copilot"),
+        "title": config.get("title", "🏠 PilotSuite"),
         "cards": [
             # === SECTION 1: OVERVIEW ===
-            create_dashboard_overview_card(data, {"title": "📊 Übersicht"}),
+            create_dashboard_overview_card(data, {"title": "📊 PilotSuite Übersicht"}),
             
             # === SECTION 2: PRESENCE + ACTIVITY ===
             {
@@ -95,7 +95,7 @@ def create_mobile_dashboard(
     
     return {
         "type": "vertical-stack",
-        "title": config.get("title", "🏠 AI Home Copilot"),
+        "title": config.get("title", "🏠 PilotSuite"),
         "cards": [
             # Overview (compact)
             {
@@ -103,14 +103,14 @@ def create_mobile_dashboard(
                 "cards": [
                     {
                         "type": "gauge",
-                        "entity": "sensor.system_health_score",
+                        "entity": "sensor.pilotsuite_home_health_score",
                         "name": "System",
                         "min": 0,
                         "max": 100,
                     },
                     {
                         "type": "entity",
-                        "entity": "sensor.copilot_ha_mood",
+                        "entity": "sensor.pilotsuite_mood",
                         "name": "Stimmung",
                         "icon": "mdi:emoticon",
                     },

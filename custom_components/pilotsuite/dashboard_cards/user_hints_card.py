@@ -73,7 +73,7 @@ def generate_hint_entity_card(hint_data: Dict[str, Any]) -> Dict[str, Any]:
         "title": f"💡 {hint_data.get('text', 'Hint')[:50]}...",
         "entities": [
             {
-                "entity": "sensor.copilot_ha_hint_confidence",
+                "entity": "sensor.pilotsuite_hint_confidence",
                 "name": "Confidence",
                 "icon": f"mdi:check-circle" if confidence >= 0.8 else "mdi:alert-circle",
                 "attribute": None,
@@ -100,7 +100,7 @@ def generate_hint_entity_card(hint_data: Dict[str, Any]) -> Dict[str, Any]:
 # Lovelace card YAML templates
 HINTS_CARD_YAML = """
 type: custom:button-card
-entity: sensor.copilot_ha_hints_pending
+entity: sensor.pilotsuite_hints_pending
 name: 💡 Hints
 icon: mdi:lightbulb-on
 show_state: true

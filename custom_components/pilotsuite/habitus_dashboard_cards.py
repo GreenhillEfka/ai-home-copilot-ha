@@ -236,7 +236,7 @@ def generate_zone_status_card_yaml(
 
     # Zone selector (dropdown)
     zone_entities = [
-        f"sensor.copilot_ha_zone_{z.zone_id}_status" for z in zones
+        f"sensor.pilotsuite_zone_{z.zone_id}_status" for z in zones
     ]
     if zone_entities:
         cards.append(_entities_card("Zonen", zone_entities))
@@ -257,7 +257,7 @@ def generate_zone_status_card_yaml(
         icon = "mdi:home-circle" if is_active else "mdi:home-circle-outline"
 
         zone_card = _stat_card(
-            entity_id=f"sensor.copilot_ha_zone_{z.zone_id}_score",
+            entity_id=f"sensor.pilotsuite_zone_{z.zone_id}_score",
             title=z.name,
             value=state,
             icon=icon,
@@ -290,7 +290,7 @@ def generate_zone_status_card_simple(
 
     # Score if available
     if score is not None:
-        cards.append(_gauge_card("sensor.copilot_ha_zone_score", "Zone Score", 0, 100))
+        cards.append(_gauge_card("sensor.pilotsuite_zone_score", "Zone Score", 0, 100))
 
     return _vertical_stack_card(cards)
 
@@ -390,7 +390,7 @@ def generate_zone_transitions_card_yaml(
 
     # History graph (if sensor entities exist)
     graph_entities = [
-        f"sensor.copilot_ha_zone_{t.to_zone}"
+        f"sensor.pilotsuite_zone_{t.to_zone}"
         for t in transitions[:5]
         if t.to_zone
     ]
@@ -490,7 +490,7 @@ def generate_mood_distribution_card_yaml(
         color = _get_mood_color(m.mood)
 
         bar_card = f"""        - type: custom:bar-card
-          entity: sensor.copilot_ha_mood_{zone_id}
+          entity: sensor.pilotsuite_mood_{zone_id}
           title: {m.zone_name}
           direction: rtl
           value: {m.mood}
