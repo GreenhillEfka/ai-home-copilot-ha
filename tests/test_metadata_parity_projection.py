@@ -250,3 +250,43 @@ def test_branch_recheck_against_origin_main_blocks_documented_metadata_and_confi
     assert 'EXPORT_DIR = "/config/copilot_ha/exports"' in (origin_snapshot or "")
     assert 'PUBLISH_DIR = "/config/www/pilotsuite-styx"' in (head_snapshot or "")
     assert 'PUBLISH_DIR = "/config/www/copilot_ha"' in (origin_snapshot or "")
+
+
+def test_branch_recheck_against_origin_main_blocks_remaining_config_surface_rollback() -> None:
+    git_probe = _git("rev-parse", "--git-dir")
+    if git_probe.returncode != 0:
+        pytest.skip("git-backed branch recheck requires repository metadata")
+
+    behind_ahead = _git("rev-list", "--left-right", "--count", "origin/main...HEAD")
+    assert behind_ahead.returncode == 0
+    assert behind_ahead.stdout.strip().startswith("1\t")
+
+    upstream_commit = _git("log", "--format=%H %s", "-1", "HEAD..origin/main")
+    assert upstream_commit.returncode == 0
+    assert upstream_commit.stdout.strip().startswith("9b934614")
+    assert "restore missing setup-flow files from known-good state" in upstream_commit.stdout
+
+    head_init = _git_show_text("HEAD", "custom_components/pilotsuite/__init__.py")
+    origin_init = _git_show_text("origin/main", "custom_components/pilotsuite/__init__.py")
+    head_tags_flow = _git_show_text("HEAD", "custom_components/pilotsuite/config_tags_flow.py")
+    origin_tags_flow = _git_show_text("origin/main", "custom_components/pilotsuite/config_tags_flow.py")
+
+    assert 'CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)' in (head_init or "")
+    assert 'from .core.runtime import CopilotRuntime' in (head_init or "")
+    assert '"voice_context": (".core.modules.voice_context", "VoiceContextModule")' in (head_init or "")
+    assert 'async_register_all_services' in (head_init or "")
+    assert 'hass.components.frontend.async_register_built_in_panel' not in (head_init or "")
+
+    assert 'hass.components.frontend.async_register_built_in_panel' in (origin_init or "")
+    assert "config={'url': '/api/hassio_ingress/pilotsuite_core/'}" in (origin_init or "")
+    assert 'return True' in (origin_init or "")
+    assert 'CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)' not in (origin_init or "")
+    assert 'from .core.runtime import CopilotRuntime' not in (origin_init or "")
+
+    assert 'from .const import DOMAIN' in (head_tags_flow or "")
+    assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' in (head_tags_flow or "")
+    assert 'data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})' in (head_tags_flow or "")
+
+    assert 'from .const import DOMAIN' not in (origin_tags_flow or "")
+    assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' not in (origin_tags_flow or "")
+    assert 'data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})' in (origin_tags_flow or "")
