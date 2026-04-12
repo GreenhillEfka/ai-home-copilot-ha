@@ -48,7 +48,7 @@ views:
       - type: custom:bar-card
         title: "🎭 Stimmungsverteilung"
         entities:
-          - entity: sensor.ai_copilot_mood
+          - entity: sensor.pilotsuite_mood
             icon: mdi:emoticon-happy
           - entity: sensor.ai_copilot_energy
             icon: mdi:lightning-bolt
@@ -153,7 +153,7 @@ views:
           - entity: sensor.ai_copilot_neuron_dashboard
             name: "Neuron Dashboard"
             icon: mdi:brain
-          - entity: sensor.ai_copilot_mood
+          - entity: sensor.pilotsuite_mood
             name: "Aktueller Mood"
             icon: mdi:emoticon
           - entity: sensor.ai_copilot_energy
