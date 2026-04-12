@@ -145,7 +145,7 @@ class MobileDashboardSensor(SensorEntity):
     
     def _get_mood_data(self) -> Dict[str, Any]:
         """Get current mood state."""
-        mood_entity = self._hass.states.get("sensor.ai_copilot_mood")
+        mood_entity = self._hass.states.get("sensor.pilotsuite_mood")
         
         mood_icons = {
             "relax": "🧘",
