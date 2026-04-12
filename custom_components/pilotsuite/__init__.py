@@ -163,6 +163,8 @@ _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
     "ai_copilot_sequence_predictions": "pilotsuite_sequence_predictions",
     "ai_copilot_media_activity": "pilotsuite_media_activity",
     "ai_copilot_media_intensity": "pilotsuite_media_intensity",
+    "ai_copilot_anomaly_alert": "pilotsuite_anomaly_alert",
+    "ai_copilot_alert_history": "pilotsuite_alert_history",
 }
 
 

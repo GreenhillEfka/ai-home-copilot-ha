@@ -46,7 +46,7 @@ class AnomalyAlertSensor(CoordinatorEntity, SensorEntity):
     """Sensor showing current anomaly detection status."""
 
     _attr_name = "PilotSuite Anomaly Alert"
-    _attr_unique_id = "ai_copilot_anomaly_alert"
+    _attr_unique_id = "pilotsuite_anomaly_alert"
     _attr_icon = "mdi:alert-octagon"
 
     def __init__(self, coordinator: CopilotDataUpdateCoordinator) -> None:
@@ -107,7 +107,7 @@ class AlertHistorySensor(CoordinatorEntity, SensorEntity):
     """Sensor showing recent alert history."""
 
     _attr_name = "PilotSuite Alert History"
-    _attr_unique_id = "ai_copilot_alert_history"
+    _attr_unique_id = "pilotsuite_alert_history"
     _attr_icon = "mdi:history"
 
     def __init__(self, coordinator: CopilotDataUpdateCoordinator) -> None:

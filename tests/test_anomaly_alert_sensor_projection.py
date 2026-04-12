@@ -487,3 +487,24 @@ class TestGlobalContract:
         source = inspect.getsource(module)
         assert "_as_mapping" in source, "anomaly_alert must define _as_mapping"
         assert "_as_list" in source, "anomaly_alert must define _as_list"
+
+    def test_gc4_canonical_pilotsuite_unique_ids(self):
+        """GC4: Production module uses canonical pilotsuite unique IDs only."""
+        import inspect
+        from custom_components.pilotsuite.sensors import anomaly_alert as module
+
+        source = inspect.getsource(module)
+
+        assert '"pilotsuite_anomaly_alert"' in source
+        assert '"pilotsuite_alert_history"' in source
+        assert '"ai_copilot_anomaly_alert"' not in source
+        assert '"ai_copilot_alert_history"' not in source
+
+    def test_gc5_legacy_unique_id_migrations_present(self):
+        """GC5: __init__.py preserves anomaly legacy unique-id migrations."""
+        from pathlib import Path
+
+        init_source = Path("custom_components/pilotsuite/__init__.py").read_text(encoding="utf-8")
+
+        assert '"ai_copilot_anomaly_alert": "pilotsuite_anomaly_alert"' in init_source
+        assert '"ai_copilot_alert_history": "pilotsuite_alert_history"' in init_source
