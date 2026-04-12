@@ -146,3 +146,31 @@ def test_GC2_all_sensor_types_covered():
     assert InspectorSensorContract.INSPECTOR_SENSOR_TYPES == [
         "zones", "tags", "character", "mood"
     ]
+
+
+# ─── GC3 — source guard: pilotsuite_* unique IDs, no stale ai_copilot_* strings ──
+
+def _read_file(path):
+    with open(path) as f:
+        return f.read()
+
+def test_GC3_inspector_uses_pilotsuite_unique_id_template():
+    """InspectorSensor uses the pilotsuite_inspector_ unique ID template."""
+    src = _read_file("custom_components/pilotsuite/sensors/inspector_sensor.py")
+    assert 'f"pilotsuite_inspector_{sensor_type}"' in src
+
+def test_GC3_no_stale_ai_copilot_inspector_template():
+    """No stale ai_copilot_inspector_ unique ID template remains."""
+    src = _read_file("custom_components/pilotsuite/sensors/inspector_sensor.py")
+    assert 'f"ai_copilot_inspector_{sensor_type}"' not in src
+
+def test_GC3_migration_map_entries_present():
+    """Migration map in __init__.py covers all 4 legacy inspector unique IDs."""
+    src = _read_file("custom_components/pilotsuite/__init__.py")
+    for legacy, canonical in [
+        ("ai_copilot_inspector_zones", "pilotsuite_inspector_zones"),
+        ("ai_copilot_inspector_tags", "pilotsuite_inspector_tags"),
+        ("ai_copilot_inspector_character", "pilotsuite_inspector_character"),
+        ("ai_copilot_inspector_mood", "pilotsuite_inspector_mood"),
+    ]:
+        assert f'"{legacy}": "{canonical}"' in src, f"Missing migration: {legacy} -> {canonical}"
