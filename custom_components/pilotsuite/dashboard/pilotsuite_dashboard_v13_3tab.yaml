@@ -82,7 +82,7 @@ views:
         max: 100
         unit_of_measurement: "%"
         entities:
-          - entity: sensor.ai_copilot_mood
+          - entity: sensor.pilotsuite_mood
             name: "Mood Score"
             icon: mdi:emoticon-happy
           - entity: sensor.ai_copilot_energy
@@ -324,7 +324,7 @@ views:
           - entity: sensor.ai_copilot_neuron_dashboard
             name: "Dashboard Neuron"
             icon: mdi:brain
-          - entity: sensor.ai_copilot_mood
+          - entity: sensor.pilotsuite_mood
             name: "Mood Neuron"
             icon: mdi:emoticon
           - entity: sensor.ai_copilot_energy
