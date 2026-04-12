@@ -5,8 +5,8 @@
  * contributing neurons, and a smooth mood history timeline chart.
  *
  * Entities:
- * - sensor.copilot_ha_mood (state: mood name, attrs: confidence, emotions, contributing_neurons, _history)
- * - sensor.copilot_ha_mood_confidence (state: 0-100%, attrs: mood, factors)
+ * - sensor.pilotsuite_mood (state: mood name, attrs: confidence, emotions, contributing_neurons, _history)
+ * - sensor.pilotsuite_mood_confidence (state: 0-100%, attrs: mood, factors)
  *
  * Requires: styx-card-base.js (StyxCardBase, registerStyxCard) — optional fallback
  */
@@ -39,7 +39,7 @@ class StyxMoodCard extends _Base {
   }
 
   static getStubConfig() {
-    return { entity: 'sensor.copilot_ha_mood' };
+    return { entity: 'sensor.pilotsuite_mood' };
   }
 
   setConfig(config) {
@@ -58,8 +58,8 @@ class StyxMoodCard extends _Base {
   _findEntity(suffix) {
     if (!this._hass) return null;
     const candidates = [
-      `sensor.copilot_ha_${suffix}`,
       `sensor.pilotsuite_${suffix}`,
+      `sensor.copilot_ha_${suffix}`,
     ];
     for (const eid of candidates) {
       if (this._hass.states[eid]) return this._hass.states[eid];
