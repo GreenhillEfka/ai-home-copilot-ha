@@ -8,7 +8,7 @@ Interactive elements for the comprehensive dashboard:
 - Filter Cards
 - Modal Dialogs
 
-Path: custom_components/copilot_ha/dashboard_cards/
+Path: custom_components/pilotsuite/dashboard_cards/
 """
 
 from __future__ import annotations
@@ -87,7 +87,7 @@ def create_neuron_detail_card(
         },
         "double_tap_action": config.get("double_tap_action", {
             "action": "call-service",
-            "service": "copilot_ha.toggle_neuron",
+            "service": "pilotsuite.toggle_neuron",
             "service_data": {"neuron_id": neuron_id},
         }),
         "styles": {
@@ -320,7 +320,7 @@ def create_neuron_detail_view(
                         "icon": "mdi:refresh",
                         "tap_action": {
                             "action": "call-service",
-                            "service": "copilot_ha.refresh_neuron",
+                            "service": "pilotsuite.refresh_neuron",
                             "service_data": {"neuron_id": neuron_id},
                         },
                     },
@@ -330,7 +330,7 @@ def create_neuron_detail_view(
                         "icon": "mdi:pause",
                         "tap_action": {
                             "action": "call-service",
-                            "service": "copilot_ha.disable_neuron",
+                            "service": "pilotsuite.disable_neuron",
                             "service_data": {"neuron_id": neuron_id},
                         },
                     },

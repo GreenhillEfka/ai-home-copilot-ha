@@ -84,12 +84,12 @@ def generate_hint_entity_card(hint_data: Dict[str, Any]) -> Dict[str, Any]:
             "entities": [
                 {
                     "name": "✓ Aktivieren",
-                    "service": "copilot_ha.accept_hint",
+                    "service": "pilotsuite.accept_hint",
                     "service_data": {"hint_id": hint_data.get("id")},
                 },
                 {
                     "name": "✗ Ablehnen",
-                    "service": "copilot_ha.reject_hint",
+                    "service": "pilotsuite.reject_hint",
                     "service_data": {"hint_id": hint_data.get("id")},
                 },
             ],
