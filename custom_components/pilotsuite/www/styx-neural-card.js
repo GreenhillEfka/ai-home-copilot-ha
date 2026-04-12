@@ -88,8 +88,8 @@ class StyxNeuralCard extends _NeuralBase {
     if (super._getCoreUrl) return super._getCoreUrl();
     if (this._config.core_url) return this._config.core_url;
     if (this._hass) {
-      const s = this._hass.states['sensor.copilot_ha_core_api_v1'] ||
-                this._hass.states['sensor.pilotsuite_core_api_v1'];
+      const s = this._hass.states['sensor.pilotsuite_core_api_v1'] ||
+                this._hass.states['sensor.copilot_ha_core_api_v1'];
       if (s && s.attributes && s.attributes.base_url) return s.attributes.base_url;
     }
     return 'http://homeassistant.local:8909';
