@@ -45,7 +45,7 @@ views:
 
       # Neuron Activity Card
       - type: custom:ha-copilot-neurons-card
-        entity: sensor.copilot_ha_neuron_activity
+        entity: sensor.pilotsuite_neuron_activity
         title: "Neuronen-Aktivität"
         show_graph: true
 
@@ -56,7 +56,7 @@ views:
         title: "🏠 Habitus-Zonen"
         cards:
           - type: custom:ha-copilot-habitus-card
-            entity: sensor.copilot_ha_habitus_zones
+            entity: sensor.pilotsuite_habitus_zones
             title: "Zonen-Übersicht"
             show_details: true
 
@@ -88,7 +88,7 @@ views:
           - entity: sensor.ai_copilot_energy
             name: "Energy Level"
             icon: mdi:lightning-bolt
-          - entity: sensor.ai_copilot_presence
+          - entity: sensor.pilotsuite_presence_intelligence
             name: "Presence"
             icon: mdi:account-multiple
 
@@ -97,7 +97,7 @@ views:
         title: "🧠 Neuronen-Status"
         show_header_toggle: false
         entities:
-          - entity: sensor.ai_copilot_neuron_dashboard
+          - entity: sensor.pilotsuite_neuron_dashboard
             name: "Dashboard Neuron"
             icon: mdi:brain
           - entity: sensor.neuron_active_count
@@ -160,7 +160,7 @@ views:
         title: "👥 Anwesenheit"
         show_header_toggle: false
         entities:
-          - entity: sensor.ai_copilot_presence
+          - entity: sensor.pilotsuite_presence_intelligence
             name: "Presence Score"
             icon: mdi:account-multiple
           - entity: binary_sensor.presence_living_room
@@ -321,7 +321,7 @@ views:
         title: "🧠 Neuronen-Status"
         show_header_toggle: false
         entities:
-          - entity: sensor.ai_copilot_neuron_dashboard
+          - entity: sensor.pilotsuite_neuron_dashboard
             name: "Dashboard Neuron"
             icon: mdi:brain
           - entity: sensor.pilotsuite_mood
@@ -330,7 +330,7 @@ views:
           - entity: sensor.ai_copilot_energy
             name: "Energy Neuron"
             icon: mdi:lightning-bolt
-          - entity: sensor.ai_copilot_presence
+          - entity: sensor.pilotsuite_presence_intelligence
             name: "Presence Neuron"
             icon: mdi:account-multiple
 
