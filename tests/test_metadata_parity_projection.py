@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +59,26 @@ EXPECTED_COMPONENT_MANIFEST_KEYS = {
 
 def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _git(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _git_show_text(revision: str, path: str) -> str | None:
+    result = _git("show", f"{revision}:{path}")
+    if result.returncode == 0:
+        return result.stdout
+    stderr = result.stderr.lower()
+    if "does not exist in" in stderr or "exists on disk, but not in" in stderr:
+        return None
+    raise AssertionError(f"git show {revision}:{path} failed: {result.stderr.strip()}")
 
 
 def test_metadata_versions_and_names_are_aligned() -> None:
@@ -168,3 +191,62 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
     # HA-290 / HA-292 / HA-374: block legacy-domain and known behind-1 metadata rollback values.
     assert 'DOMAIN = "copilot_ha"' not in text
     assert 'CONFIG_FLOW_DOMAIN = "copilot_ha"' not in text
+
+
+def test_branch_recheck_against_origin_main_blocks_documented_metadata_and_config_rollback() -> None:
+    git_probe = _git("rev-parse", "--git-dir")
+    if git_probe.returncode != 0:
+        pytest.skip("git-backed branch recheck requires repository metadata")
+
+    behind_ahead = _git("rev-list", "--left-right", "--count", "origin/main...HEAD")
+    assert behind_ahead.returncode == 0
+    assert behind_ahead.stdout.strip().startswith("1\t")
+
+    upstream_commit = _git("log", "--format=%H %s", "-1", "HEAD..origin/main")
+    assert upstream_commit.returncode == 0
+    assert upstream_commit.stdout.strip().startswith("9b934614")
+    assert "restore missing setup-flow files from known-good state" in upstream_commit.stdout
+
+    head_version = _git_show_text("HEAD", "VERSION")
+    origin_version = _git_show_text("origin/main", "VERSION")
+    head_root_manifest = _git_show_text("HEAD", "manifest.json")
+    origin_root_manifest = _git_show_text("origin/main", "manifest.json")
+    head_root_hacs = _git_show_text("HEAD", "hacs.json")
+    origin_root_hacs = _git_show_text("origin/main", "hacs.json")
+    head_component_manifest = _git_show_text("HEAD", "custom_components/pilotsuite/manifest.json")
+    origin_component_manifest = _git_show_text("origin/main", "custom_components/pilotsuite/manifest.json")
+    head_component_hacs = _git_show_text("HEAD", "custom_components/pilotsuite/hacs.json")
+    origin_component_hacs = _git_show_text("origin/main", "custom_components/pilotsuite/hacs.json")
+    head_const = _git_show_text("HEAD", "custom_components/pilotsuite/const.py")
+    origin_const = _git_show_text("origin/main", "custom_components/pilotsuite/const.py")
+    head_snapshot = _git_show_text("HEAD", "custom_components/pilotsuite/config_snapshot.py")
+    origin_snapshot = _git_show_text("origin/main", "custom_components/pilotsuite/config_snapshot.py")
+
+    assert head_version == "20.0.8\n"
+    assert origin_version == "20.0.5\n"
+    assert '"version": "20.0.8"' in (head_root_manifest or "")
+    assert '"version": "20.0.5"' in (origin_root_manifest or "")
+    assert '"version": "20.0.8"' in (head_component_manifest or "")
+    assert '"version": "20.0.5"' in (origin_component_manifest or "")
+
+    assert '"name": "PilotSuite HA"' in (head_root_hacs or "")
+    assert '"domain": "pilotsuite"' in (head_root_hacs or "")
+    assert '"filename": "pilotsuite-styx-ha.zip"' in (head_root_hacs or "")
+    assert '"homeassistant": "2024.4.0"' in (head_root_hacs or "")
+    assert '"name": "PilotSuite"' in (origin_root_hacs or "")
+    assert '"domain": "pilotsuite"' not in (origin_root_hacs or "")
+    assert '"filename": "pilotsuite-styx-ha.zip"' not in (origin_root_hacs or "")
+    assert '"homeassistant": "2024.4.0"' not in (origin_root_hacs or "")
+    assert '"homeassistant": "2024.1.0"' in (origin_root_hacs or "")
+
+    assert json.loads(head_component_hacs or "{}") == EXPECTED_HACS
+    assert origin_component_hacs is None
+
+    assert 'DOMAIN = "pilotsuite"' in (head_const or "")
+    assert 'DOMAIN = "copilot_ha"' in (origin_const or "")
+    assert '"schema": "pilotsuite_config_snapshot"' in (head_snapshot or "")
+    assert '"schema": "copilot_ha_config_snapshot"' in (origin_snapshot or "")
+    assert 'EXPORT_DIR = "/config/pilotsuite-styx/exports"' in (head_snapshot or "")
+    assert 'EXPORT_DIR = "/config/copilot_ha/exports"' in (origin_snapshot or "")
+    assert 'PUBLISH_DIR = "/config/www/pilotsuite-styx"' in (head_snapshot or "")
+    assert 'PUBLISH_DIR = "/config/www/copilot_ha"' in (origin_snapshot or "")
