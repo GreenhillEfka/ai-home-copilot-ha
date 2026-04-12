@@ -19,6 +19,14 @@ COMPONENT_HACS_FILE = REPO_ROOT / "custom_components" / "pilotsuite" / "hacs.jso
 EXPECTED_VERSION = "20.0.8"
 EXPECTED_HOMEASSISTANT = "2024.4.0"
 EXPECTED_REPO_URL = "https://github.com/GreenhillEfka/pilotsuite-styx-ha"
+EXPECTED_ROOT_MANIFEST = {
+    "domain": "pilotsuite",
+    "name": "PilotSuite HA",
+    "codeowners": ["@GreenhillEfka"],
+    "config_flow": True,
+    "iot_class": "local_polling",
+    "version": EXPECTED_VERSION,
+}
 EXPECTED_HACS = {
     "name": "PilotSuite HA",
     "domain": "pilotsuite",
@@ -56,12 +64,25 @@ def test_metadata_versions_and_names_are_aligned() -> None:
     component_manifest = _load_json(COMPONENT_MANIFEST)
 
     assert version == EXPECTED_VERSION
+    assert root_manifest == EXPECTED_ROOT_MANIFEST
     assert root_manifest["version"] == version
     assert component_manifest["version"] == version
     assert root_manifest["domain"] == "pilotsuite"
     assert component_manifest["domain"] == "pilotsuite"
     assert root_manifest["name"] == "PilotSuite HA"
     assert component_manifest["name"] == "PilotSuite HA"
+
+
+def test_root_manifest_stays_in_release_lockstep_with_component_manifest() -> None:
+    root_manifest = _load_json(ROOT_MANIFEST)
+    component_manifest = _load_json(COMPONENT_MANIFEST)
+    mirrored_release_fields = {
+        field: component_manifest[field]
+        for field in ("domain", "name", "codeowners", "config_flow", "iot_class", "version")
+    }
+
+    assert root_manifest == EXPECTED_ROOT_MANIFEST
+    assert root_manifest == mirrored_release_fields
 
 
 def test_manifest_contract_matches_hacs_release_metadata() -> None:
