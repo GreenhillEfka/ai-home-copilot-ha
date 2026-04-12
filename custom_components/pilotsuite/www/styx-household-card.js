@@ -6,13 +6,13 @@
  * energy prices, fuel prices, persons home, notifications.
  *
  * Reads from multiple existing sensors:
- * - sensor.copilot_home_health_score
- * - sensor.copilot_weather_warnings
- * - sensor.copilot_electricity_tariff
- * - sensor.copilot_fuel_price_comparison
- * - sensor.copilot_proactive_alerts
- * - sensor.copilot_persons_home
- * - sensor.copilot_habitus_zones
+ * - sensor.pilotsuite_home_health_score
+ * - sensor.pilotsuite_weather_warnings
+ * - sensor.pilotsuite_electricity_tariff
+ * - sensor.pilotsuite_fuel_price_comparison
+ * - sensor.pilotsuite_proactive_alerts
+ * - sensor.pilotsuite_persons_home
+ * - sensor.pilotsuite_habitus_zones
  */
 
 const _HouseholdBase = window.StyxCardBase || HTMLElement;
@@ -68,7 +68,7 @@ class StyxHouseholdCard extends _HouseholdBase {
   _sensorVal(entityId, fallback) {
     if (typeof super._sensorVal === 'function') return super._sensorVal(entityId, fallback);
     if (!this._hass) return fallback;
-    const prefixes = ['sensor.copilot_ha_', 'sensor.copilot_', 'sensor.pilotsuite_'];
+    const prefixes = ['sensor.pilotsuite_', 'sensor.copilot_ha_', 'sensor.copilot_'];
     const suffixes = entityId.startsWith('sensor.') ? [entityId] :
       prefixes.map(p => p + entityId);
     for (const eid of suffixes) {
