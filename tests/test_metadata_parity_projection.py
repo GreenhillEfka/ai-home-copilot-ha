@@ -290,3 +290,50 @@ def test_branch_recheck_against_origin_main_blocks_remaining_config_surface_roll
     assert 'from .const import DOMAIN' not in (origin_tags_flow or "")
     assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' not in (origin_tags_flow or "")
     assert 'data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})' in (origin_tags_flow or "")
+
+
+
+def test_branch_recheck_against_origin_main_still_regressive_keeps_guard_posture() -> None:
+    """HA-391: confirm the behind-1 state is still the same documented rollback commit.
+
+
+    origin/main carries the same known-regressive setup-flow restore commit 9b934614.
+    This guard prevents accidentally treating the behind-1 as a clean rebase opportunity.
+    """
+    git_probe = _git("rev-parse", "--git-dir")
+    if git_probe.returncode != 0:
+        pytest.skip("git-backed branch recheck requires repository metadata")
+
+
+    behind_ahead = _git("rev-list", "--left-right", "--count", "origin/main...HEAD")
+    assert behind_ahead.returncode == 0
+    behind_count, ahead_count = behind_ahead.stdout.strip().split("\t")
+    assert int(behind_count) == 1, f"expected exactly 1 behind-1 posture, got {behind_count}"
+    assert int(ahead_count) >= 158, f"expected ahead >= 158, got {ahead_count}"
+
+    upstream_commit = _git("log", "--format=%H %s", "-1", "HEAD..origin/main")
+    assert upstream_commit.returncode == 0
+    assert upstream_commit.stdout.strip().startswith("9b934614")
+    assert "restore missing setup-flow files from known-good state" in upstream_commit.stdout
+
+
+    head_version = _git_show_text("HEAD", "VERSION")
+    origin_version = _git_show_text("origin/main", "VERSION")
+    assert head_version == "20.0.8\n", "HEAD VERSION must stay at 20.0.8"
+    assert origin_version == "20.0.5\n", "origin/main VERSION must stay at 20.0.5 (known regression)"
+
+    head_component_manifest = _git_show_text("HEAD", "custom_components/pilotsuite/manifest.json")
+    origin_component_manifest = _git_show_text("origin/main", "custom_components/pilotsuite/manifest.json")
+    assert '"version": "20.0.8"' in (head_component_manifest or "")
+    assert '"version": "20.0.5"' in (origin_component_manifest or "")
+
+    head_init = _git_show_text("HEAD", "custom_components/pilotsuite/__init__.py")
+    origin_init = _git_show_text("origin/main", "custom_components/pilotsuite/__init__.py")
+    assert 'CopilotRuntime' in (head_init or "")
+    assert 'CopilotRuntime' not in (origin_init or "")
+    assert 'voice_context' in (head_init or "")
+
+    head_const = _git_show_text("HEAD", "custom_components/pilotsuite/const.py")
+    origin_const = _git_show_text("origin/main", "custom_components/pilotsuite/const.py")
+    assert 'DOMAIN = "pilotsuite"' in (head_const or "")
+    assert 'DOMAIN = "copilot_ha"' in (origin_const or "")
