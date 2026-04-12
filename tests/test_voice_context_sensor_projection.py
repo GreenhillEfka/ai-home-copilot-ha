@@ -760,3 +760,22 @@ def test_gc10_source_canonicalizes_voice_sensor_identity_and_migrates_legacy_ids
     assert "sensor.ai_copilot_voice_context" not in sensor_source
     assert '"ai_copilot_voice_context": "pilotsuite_voice_context"' in init_source
     assert '"ai_copilot_voice_prompt": "pilotsuite_voice_prompt"' in init_source
+
+
+
+def test_gc11_source_never_consumes_raw_suggestions_payload():
+    """GC11: voice_context projection must stay grounded in zone activities, not raw suggestions."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'Note: coordinator.data["suggestions"] is intentionally not consumed here.' in source
+    assert 'Voice suggestions are derived solely from neural.zone.typical_activities' in source
+    assert 'coordinator_data.get("suggestions")' not in source
+    assert 'self.coordinator.data.get("suggestions")' not in source
+    assert 'neural_data.get("suggestions")' not in source
+    assert 'mood_data.get("suggestions")' not in source
