@@ -779,3 +779,55 @@ def test_gc11_source_never_consumes_raw_suggestions_payload():
     assert 'self.coordinator.data.get("suggestions")' not in source
     assert 'neural_data.get("suggestions")' not in source
     assert 'mood_data.get("suggestions")' not in source
+
+
+def test_gc12_behavior_ignores_raw_suggestions_when_no_zone_activities_exist():
+    """GC12: raw suggestions payload must not leak into attrs/prompt without zone activities."""
+    coordinator_data = {
+        "mood": {"mood": "focus"},
+        "neural": {
+            "time": {"description_de": "Abend"},
+            "zone": {"presence": ["Wohnzimmer"]},
+        },
+        "suggestions": [
+            "Licht einschalten",
+            {"text": "Temperatur anpassen"},
+            ["Medien steuern"],
+        ],
+    }
+
+    attrs = VoiceContextSensorContract.extra_state_attributes(coordinator_data)
+    prompt = VoicePromptSensorContract.native_value(coordinator_data)
+
+    assert attrs["voice_suggestions"] == []
+    assert attrs["voice_prompt"] == "Der Nutzer ist gerade Abend. Anwesend in: Wohnzimmer."
+    assert prompt == attrs["voice_prompt"]
+
+
+def test_gc13_behavior_prefers_projected_zone_activities_over_raw_suggestions_payload():
+    """GC13: only neural.zone.typical_activities may shape voice suggestions and prompt text."""
+    coordinator_data = {
+        "mood": {"mood": "focus"},
+        "neural": {
+            "time": {"description_de": "Tag"},
+            "zone": {
+                "presence": ["Büro"],
+                "typical_activities": ["Lesen", "Planen"],
+            },
+        },
+        "suggestions": [
+            "Licht einschalten",
+            "Temperatur anpassen",
+        ],
+    }
+
+    attrs = VoiceContextSensorContract.extra_state_attributes(coordinator_data)
+    prompt = VoicePromptSensorContract.native_value(coordinator_data)
+
+    assert attrs["voice_suggestions"] == ["Lesen ist aktuell.", "Planen ist aktuell."]
+    assert "Licht einschalten" not in attrs["voice_prompt"]
+    assert "Temperatur anpassen" not in attrs["voice_prompt"]
+    assert prompt == (
+        "Der Nutzer ist gerade Tag. Anwesend in: Büro. "
+        "Vorschläge: Lesen ist aktuell.; Planen ist aktuell.."
+    )
