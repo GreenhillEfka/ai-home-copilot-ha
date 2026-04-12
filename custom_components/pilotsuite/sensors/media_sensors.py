@@ -73,7 +73,7 @@ class MediaActivitySensor(CoordinatorEntity, SensorEntity):
     """Sensor for media activity."""
     
     _attr_name: str = "PilotSuite Media Activity"
-    _attr_unique_id: str = "ai_copilot_media_activity"
+    _attr_unique_id: str = "pilotsuite_media_activity"
     _attr_icon: str = "mdi:play-circle"
     _attr_should_poll: bool = False  # Using coordinator
     
@@ -163,7 +163,7 @@ class MediaIntensitySensor(CoordinatorEntity, SensorEntity):
     """Sensor for media intensity/volume."""
     
     _attr_name: str = "PilotSuite Media Intensity"
-    _attr_unique_id: str = "ai_copilot_media_intensity"
+    _attr_unique_id: str = "pilotsuite_media_intensity"
     _attr_icon: str = "mdi:volume-high"
     _attr_native_unit_of_measurement: str = "%"
     _attr_should_poll: bool = False  # Using coordinator

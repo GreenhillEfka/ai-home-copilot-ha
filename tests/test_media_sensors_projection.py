@@ -17,6 +17,7 @@ HA-167 — 2026-04-07
 """
 from __future__ import annotations
 
+from pathlib import Path
 import pytest
 from unittest.mock import MagicMock, PropertyMock
 
@@ -416,7 +417,7 @@ class TestMediaIntensitySensor:
 
 
 # =============================================================================
-# Global Contract Tests (GC1–GC2)
+# Global Contract Tests (GC1–GC4)
 # =============================================================================
 
 
@@ -461,3 +462,30 @@ class TestGlobalContract:
         contract = MediaIntensitySensorContract(states)
         # Contract works with state dicts only — no HTTP/API dependency
         assert contract.native_value() == "medium"
+
+    def test_gc3_canonical_media_unique_ids_in_prod_module(self):
+        """GC3: Prod-Modul nutzt kanonische pilotsuite_* media unique IDs."""
+        source = (
+            Path(__file__).resolve().parents[1]
+            / "custom_components"
+            / "pilotsuite"
+            / "sensors"
+            / "media_sensors.py"
+        ).read_text(encoding="utf-8")
+
+        assert '"pilotsuite_media_activity"' in source
+        assert '"pilotsuite_media_intensity"' in source
+        assert '"ai_copilot_media_activity"' not in source
+        assert '"ai_copilot_media_intensity"' not in source
+
+    def test_gc4_media_legacy_unique_id_migrations_present(self):
+        """GC4: __init__.py bewahrt Legacy→PilotSuite-Migrationen für media-Sensoren."""
+        init_source = (
+            Path(__file__).resolve().parents[1]
+            / "custom_components"
+            / "pilotsuite"
+            / "__init__.py"
+        ).read_text(encoding="utf-8")
+
+        assert '"ai_copilot_media_activity": "pilotsuite_media_activity"' in init_source
+        assert '"ai_copilot_media_intensity": "pilotsuite_media_intensity"' in init_source
