@@ -98,7 +98,7 @@ class StyxCardBase extends HTMLElement {
    */
   _sensorVal(entityId, fallback) {
     if (!this._hass) return fallback;
-    const prefixes = ['sensor.copilot_ha_', 'sensor.copilot_', 'sensor.pilotsuite_'];
+    const prefixes = ['sensor.pilotsuite_', 'sensor.copilot_ha_', 'sensor.copilot_'];
     const candidates = entityId.startsWith('sensor.')
       ? [entityId]
       : prefixes.map(p => p + entityId);
