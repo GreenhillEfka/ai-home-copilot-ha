@@ -1,5 +1,5 @@
 # AI Home Copilot - RAG Search Card Configuration
-# Path: custom_components/copilot_ha/dashboard_cards/rag_search_card.yaml
+# Path: custom_components/pilotsuite/dashboard_cards/rag_search_card.yaml
 # 
 # This YAML provides configuration examples for the RAG Search Card
 # Features: Search input with autocomplete, results with snippets, source documents, zone/category filters
@@ -145,7 +145,7 @@ views:
         cards:
           - type: custom:ha-copilot-mood-card
             title: 😊 Stimmung
-            entity: sensor.copilot_ha_mood
+            entity: sensor.pilotsuite_mood
           - type: custom:ha-copilot-neurons-card
             title: 🧠 Neuronen
             entity: sensor.neuron_activity
