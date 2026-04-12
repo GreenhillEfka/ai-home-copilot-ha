@@ -156,6 +156,8 @@ _LEGACY_SENSOR_UNIQUE_ID_MIGRATIONS: dict[str, str] = {
     "ai_copilot_inspector_tags": "pilotsuite_inspector_tags",
     "ai_copilot_inspector_character": "pilotsuite_inspector_character",
     "ai_copilot_inspector_mood": "pilotsuite_inspector_mood",
+    "ai_copilot_predictive_automation": "pilotsuite_predictive_automation",
+    "ai_copilot_predictive_automation_details": "pilotsuite_predictive_automation_details",
 }
 
 

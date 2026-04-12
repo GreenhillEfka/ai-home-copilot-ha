@@ -287,3 +287,26 @@ class TestGlobalContract:
         assert pa_attrs["suggestion_count"] == 1
         assert pad_value == "test"
         assert pad_attrs["count"] == 1
+
+    def test_gc7_pilotsuite_predictive_automation_unique_id(self):
+        """GC7: PredictiveAutomationSensor _attr_unique_id ist pilotsuite_predictive_automation."""
+        source = _SOURCE_TEXT
+        assert '_attr_unique_id = "pilotsuite_predictive_automation"' in source
+    
+    def test_gc8_pilotsuite_predictive_automation_details_unique_id(self):
+        """GC8: PredictiveAutomationDetailsSensor _attr_unique_id ist pilotsuite_predictive_automation_details."""
+        source = _SOURCE_TEXT
+        assert '_attr_unique_id = "pilotsuite_predictive_automation_details"' in source
+    
+    def test_gc9_no_stale_ai_copilot_predictive_strings(self):
+        """GC9: Prod-Modul führt keine stale ai_copilot_predictive_* Strings."""
+        source = _SOURCE_TEXT
+        assert "ai_copilot_predictive_automation" not in source
+        assert "ai_copilot_predictive_automation_details" not in source
+
+    def test_gc10_migration_map_entry_for_predictive_automation(self):
+        """"GC10: Migrationsmap in __init__.py enthält predictive_automation-Einträge."""
+        init_path = _SOURCE_PATH.parents[1] / "__init__.py"
+        init_text = init_path.read_text(encoding="utf-8")
+        assert '"ai_copilot_predictive_automation": "pilotsuite_predictive_automation"' in init_text
+        assert '"ai_copilot_predictive_automation_details": "pilotsuite_predictive_automation_details"' in init_text
