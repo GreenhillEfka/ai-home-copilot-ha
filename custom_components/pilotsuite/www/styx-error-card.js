@@ -4,8 +4,9 @@
  * Lovelace custom card displaying error digest with categorization,
  * severity badges, and automated repair suggestions.
  *
- * Reads from sensor.copilot_home_alerts_* and calls
- * /api/v1/errors/digest for aggregated errors with repair hints.
+ * Reads from sensor.pilotsuite_home_alerts_* first and falls back to
+ * legacy copilot home_alerts sensors when needed.
+ * Calls /api/v1/errors/digest for aggregated errors with repair hints.
  */
 
 const SEVERITY_CONFIG = {
@@ -113,8 +114,8 @@ class StyxErrorCard extends _ErrBase {
   _getCoreUrl() {
     if (this._config.core_url) return this._config.core_url;
     if (this._hass) {
-      const s = this._hass.states['sensor.copilot_ha_core_api_v1'] ||
-                this._hass.states['sensor.pilotsuite_core_api_v1'];
+      const s = this._hass.states['sensor.pilotsuite_core_api_v1'] ||
+                this._hass.states['sensor.copilot_ha_core_api_v1'];
       if (s && s.attributes && s.attributes.base_url) return s.attributes.base_url;
     }
     return 'http://homeassistant.local:8909';
