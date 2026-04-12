@@ -1,5 +1,5 @@
 # AI Home Copilot - Comprehensive Dashboard YAML Examples
-# Path: custom_components/copilot_ha/dashboard_cards/
+# Path: custom_components/pilotsuite/dashboard_cards/dashboard_examples.yaml
 # 
 # These YAML examples show how to use the dashboard cards in Lovelace UI
 
@@ -71,7 +71,7 @@ views:
                 min: 0
                 max: 100
               - type: entity
-                entity: sensor.copilot_ha_mood
+                entity: sensor.pilotsuite_mood
                 name: Stimmung
 
           # Presence Card
@@ -160,7 +160,7 @@ views:
           - type: button
             name: Mood
             icon: mdi:emoticon
-            entity: sensor.copilot_ha_mood
+            entity: sensor.pilotsuite_mood
             tap_action:
               action: more-info
 
@@ -313,5 +313,5 @@ views:
             title: Letzte Ereignisse
             hours_to_show: 24
             entities:
-              - sensor.copilot_ha_mood
+              - sensor.pilotsuite_mood
               - sensor.system_health_score
