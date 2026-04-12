@@ -638,3 +638,27 @@ class TestGlobalContract:
         assert "machine learning" not in source.lower()
         assert "neural" not in source.lower()
         assert "prediction" not in source.lower()
+
+    def test_gc3_canonical_pilotsuite_unique_ids(self):
+        """GC3: Production module uses canonical pilotsuite_* unique IDs only."""
+        import inspect
+        from custom_components.pilotsuite.sensors import environment_sensors
+
+        source = inspect.getsource(environment_sensors)
+
+        assert '"pilotsuite_light_level"' in source
+        assert '"pilotsuite_noise_level"' in source
+        assert '"pilotsuite_weather_context"' in source
+        assert '"ai_copilot_light_level"' not in source
+        assert '"ai_copilot_noise_level"' not in source
+        assert '"ai_copilot_weather_context"' not in source
+
+    def test_gc4_legacy_unique_id_migrations_present(self):
+        """GC4: Legacy ai_copilot_* environment IDs migrate to pilotsuite_* IDs."""
+        from pathlib import Path
+
+        source = Path("custom_components/pilotsuite/__init__.py").read_text(encoding="utf-8")
+
+        assert '"ai_copilot_light_level": "pilotsuite_light_level"' in source
+        assert '"ai_copilot_noise_level": "pilotsuite_noise_level"' in source
+        assert '"ai_copilot_weather_context": "pilotsuite_weather_context"' in source
