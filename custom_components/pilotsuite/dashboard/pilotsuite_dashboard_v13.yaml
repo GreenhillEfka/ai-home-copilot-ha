@@ -24,12 +24,12 @@ views:
 
       # Neuron Activity
       - type: custom:ha-copilot-neurons-card
-        entity: sensor.copilot_ha_neuron_activity
+        entity: sensor.pilotsuite_neuron_activity
         title: "🧠 Neuronen"
 
       # Habitus Zones
       - type: custom:ha-copilot-habitus-card
-        entity: sensor.copilot_ha_habitus_zones
+        entity: sensor.pilotsuite_habitus_zones
         title: "🏠 Habitus-Zonen"
 
       # Zone Controls
@@ -77,7 +77,7 @@ views:
         title: "👥 Anwesenheit"
         show_header_toggle: false
         entities:
-          - entity: sensor.ai_copilot_presence
+          - entity: sensor.pilotsuite_presence_intelligence
             name: "Presence Score"
           - entity: binary_sensor.presence_living_room
             name: "Wohnzimmer"
@@ -150,7 +150,7 @@ views:
         title: "🧠 Neuronen Status"
         show_header_toggle: false
         entities:
-          - entity: sensor.ai_copilot_neuron_dashboard
+          - entity: sensor.pilotsuite_neuron_dashboard
             name: "Neuron Dashboard"
             icon: mdi:brain
           - entity: sensor.pilotsuite_mood
@@ -159,7 +159,7 @@ views:
           - entity: sensor.ai_copilot_energy
             name: "Energy Level"
             icon: mdi:lightning-bolt
-          - entity: sensor.ai_copilot_presence
+          - entity: sensor.pilotsuite_presence_intelligence
             name: "Presence Score"
             icon: mdi:account-multiple
 
