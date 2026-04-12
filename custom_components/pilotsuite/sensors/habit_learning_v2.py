@@ -32,7 +32,7 @@ class HabitLearningSensor(SensorEntity):
     """Sensor showing learned habit patterns."""
 
     _attr_name = "PilotSuite Habit Learning"
-    _attr_unique_id = "ai_copilot_habit_learning"
+    _attr_unique_id = "pilotsuite_habit_learning"
     _attr_icon = "mdi:repeat"
     _attr_should_poll = False
 
@@ -75,7 +75,7 @@ class HabitPredictionSensor(SensorEntity):
     """Sensor showing habit predictions."""
 
     _attr_name = "PilotSuite Habit Predictions"
-    _attr_unique_id = "ai_copilot_habit_predictions"
+    _attr_unique_id = "pilotsuite_habit_predictions"
     _attr_icon = "mdi:forecast"
     _attr_should_poll = False
 
@@ -130,7 +130,7 @@ class SequencePredictionSensor(SensorEntity):
     """Sensor showing device sequence predictions."""
 
     _attr_name = "PilotSuite Sequence Predictions"
-    _attr_unique_id = "ai_copilot_sequence_predictions"
+    _attr_unique_id = "pilotsuite_sequence_predictions"
     _attr_icon = "mdi:chain"
     _attr_should_poll = False
 

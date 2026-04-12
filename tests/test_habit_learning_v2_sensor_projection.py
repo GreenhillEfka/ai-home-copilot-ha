@@ -15,6 +15,7 @@ from __future__ import annotations
 import pytest
 
 SENSOR_PATH = "custom_components/pilotsuite/sensors/habit_learning_v2.py"
+INIT_PATH = "custom_components/pilotsuite/__init__.py"
 
 
 # ---------------------------------------------------------------------------
@@ -403,3 +404,20 @@ class TestHabitLearningGlobalContract:
         """Guard: source must use _as_mapping guard for habit_summary and sub-payloads."""
         src = open(SENSOR_PATH).read()
         assert "_as_mapping" in src, "Source must use _as_mapping guard for dict-like payloads"
+
+    def test_gc5_unique_ids_canonicalized_to_pilotsuite(self):
+        """Guard: all habit-learning unique IDs use canonical pilotsuite_* names."""
+        src = open(SENSOR_PATH).read()
+        assert 'pilotsuite_habit_learning' in src
+        assert 'pilotsuite_habit_predictions' in src
+        assert 'pilotsuite_sequence_predictions' in src
+        assert 'ai_copilot_habit_learning' not in src
+        assert 'ai_copilot_habit_predictions' not in src
+        assert 'ai_copilot_sequence_predictions' not in src
+
+    def test_gc6_legacy_unique_id_migrations_present(self):
+        """Guard: __init__.py preserves legacy ai_copilot_* registry migrations."""
+        init_src = open(INIT_PATH).read()
+        assert '"ai_copilot_habit_learning": "pilotsuite_habit_learning"' in init_src
+        assert '"ai_copilot_habit_predictions": "pilotsuite_habit_predictions"' in init_src
+        assert '"ai_copilot_sequence_predictions": "pilotsuite_sequence_predictions"' in init_src
