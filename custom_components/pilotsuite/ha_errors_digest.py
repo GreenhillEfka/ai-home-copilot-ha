@@ -295,7 +295,7 @@ async def async_show_ha_errors_digest(hass: HomeAssistant, entry: ConfigEntry) -
         hass,
         msg,
         title=title,
-        notification_id="copilot_ha_ha_errors_digest",
+        notification_id="pilotsuite_ha_errors_digest",
     )
 
 
@@ -321,7 +321,7 @@ async def async_setup_ha_errors_digest(hass: HomeAssistant, entry: ConfigEntry) 
             hass,
             msg,
             title=title,
-            notification_id="copilot_ha_ha_errors_digest",
+            notification_id="pilotsuite_ha_errors_digest",
         )
 
         state[key] = {"last_sig": sig, "last_sent": _now_iso()}
