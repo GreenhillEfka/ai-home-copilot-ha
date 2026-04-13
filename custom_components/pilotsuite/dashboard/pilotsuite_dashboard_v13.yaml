@@ -18,7 +18,7 @@ views:
     cards:
       # Mood Overview
       - type: custom:ha-copilot-mood-card
-        entity: sensor.copilot_ha_mood
+        entity: sensor.pilotsuite_mood
         title: "🎭 Stimmung"
         show_emotions: 5
 

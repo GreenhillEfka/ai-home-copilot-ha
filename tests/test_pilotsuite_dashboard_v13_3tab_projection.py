@@ -31,7 +31,7 @@ class TestPilotSuiteDashboardV133TabProjection:
         source = DASHBOARD_PATH.read_text(encoding="utf-8")
 
         assert 'name: "Mood Neuron"' in source
-        assert source.count("entity: sensor.pilotsuite_mood") == 2
+        assert source.count("entity: sensor.pilotsuite_mood") == 3
 
     def test_PDV133T3_contains_no_legacy_ai_copilot_mood_entity(self):
         source = DASHBOARD_PATH.read_text(encoding="utf-8")

@@ -38,7 +38,7 @@ views:
 
       # Mood Card (Custom Component)
       - type: custom:ha-copilot-mood-card
-        entity: sensor.copilot_ha_mood
+        entity: sensor.pilotsuite_mood
         title: "Aktuelle Stimmung"
         show_emotions: 5
         show_history: true
