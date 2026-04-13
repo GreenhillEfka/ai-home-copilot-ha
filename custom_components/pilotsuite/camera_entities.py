@@ -34,10 +34,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # Signal for camera events
-SIGNAL_CAMERA_MOTION = "copilot_ha_camera_motion"
-SIGNAL_CAMERA_PRESENCE = "copilot_ha_camera_presence"
-SIGNAL_CAMERA_ACTIVITY = "copilot_ha_camera_activity"
-SIGNAL_CAMERA_ZONE = "copilot_ha_camera_zone"
+SIGNAL_CAMERA_MOTION = "pilotsuite_camera_motion"
+SIGNAL_CAMERA_PRESENCE = "pilotsuite_camera_presence"
+SIGNAL_CAMERA_ACTIVITY = "pilotsuite_camera_activity"
+SIGNAL_CAMERA_ZONE = "pilotsuite_camera_zone"
 
 
 @dataclass
@@ -120,7 +120,7 @@ class MotionDetectionCamera(CopilotBaseEntity, BinarySensorEntity):
         self._camera_id = camera_id
         self._camera_name = camera_name
         self._camera_entity_id = camera_entity_id
-        self._attr_unique_id = f"copilot_ha_motion_{camera_id}"
+        self._attr_unique_id = f"pilotsuite_motion_{camera_id}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"motion_camera_{camera_id}")},
             "name": f"Motion {camera_name}",
@@ -172,7 +172,7 @@ class PresenceCamera(CopilotBaseEntity, BinarySensorEntity):
         self._entry = entry
         self._camera_id = camera_id
         self._camera_name = camera_name
-        self._attr_unique_id = f"copilot_ha_presence_{camera_id}"
+        self._attr_unique_id = f"pilotsuite_presence_{camera_id}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"presence_camera_{camera_id}")},
             "name": f"Presence {camera_name}",
@@ -227,7 +227,7 @@ class ActivityCamera(CopilotBaseEntity, SensorEntity):
         self._entry = entry
         self._camera_id = camera_id
         self._camera_name = camera_name
-        self._attr_unique_id = f"copilot_ha_activity_{camera_id}"
+        self._attr_unique_id = f"pilotsuite_activity_{camera_id}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"activity_camera_{camera_id}")},
             "name": f"Activity {camera_name}",
@@ -283,7 +283,7 @@ class ZoneCamera(CopilotBaseEntity, SensorEntity):
         self._camera_id = camera_id
         self._camera_name = camera_name
         self._zones = zones or []
-        self._attr_unique_id = f"copilot_ha_zone_{camera_id}"
+        self._attr_unique_id = f"pilotsuite_zone_{camera_id}"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, f"zone_camera_{camera_id}")},
             "name": f"Zone Monitor {camera_name}",
@@ -332,7 +332,7 @@ class CameraMotionHistorySensor(CopilotBaseEntity, SensorEntity):
     def __init__(self, coordinator: CopilotCoordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = "copilot_ha_camera_motion_history"
+        self._attr_unique_id = "pilotsuite_camera_motion_history"
         
     @property
     def native_value(self) -> int:
@@ -368,7 +368,7 @@ class CameraPresenceHistorySensor(CopilotBaseEntity, SensorEntity):
     def __init__(self, coordinator: CopilotCoordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = "copilot_ha_camera_presence_history"
+        self._attr_unique_id = "pilotsuite_camera_presence_history"
         
     @property
     def native_value(self) -> int:
@@ -407,7 +407,7 @@ class CameraActivityHistorySensor(CopilotBaseEntity, SensorEntity):
     def __init__(self, coordinator: CopilotCoordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = "copilot_ha_camera_activity_history"
+        self._attr_unique_id = "pilotsuite_camera_activity_history"
         
     @property
     def native_value(self) -> int:
@@ -446,7 +446,7 @@ class CameraZoneActivitySensor(CopilotBaseEntity, SensorEntity):
     def __init__(self, coordinator: CopilotCoordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = "copilot_ha_camera_zone_activity"
+        self._attr_unique_id = "pilotsuite_camera_zone_activity"
         
     @property
     def native_value(self) -> int:
