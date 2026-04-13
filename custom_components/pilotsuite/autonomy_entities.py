@@ -41,7 +41,7 @@ class ZoneModuleStateSelect(CopilotBaseEntity, SelectEntity):
         super().__init__(coordinator)
         self._zone_id = zone_id
         self._module_id = module_id
-        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{module_id}_state"
+        self._attr_unique_id = f"pilotsuite_zone_{zone_id}_{module_id}_state"
         self._attr_name = f"PilotSuite {zone_name} {module_name}"
         self._attr_icon = icon
         self._attr_current_option = "active"
@@ -89,7 +89,7 @@ class ZoneSceneCaptureButton(CopilotBaseEntity, ButtonEntity):
         super().__init__(coordinator)
         self._zone_id = zone_id
         self._zone_name = zone_name
-        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_scene_capture"
+        self._attr_unique_id = f"pilotsuite_zone_{zone_id}_scene_capture"
         self._attr_name = f"PilotSuite {zone_name} Szene Speichern"
 
     async def async_press(self) -> None:
