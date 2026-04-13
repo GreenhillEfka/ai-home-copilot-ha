@@ -13,7 +13,7 @@ class CopilotTagRegistrySyncLabelsNowButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_has_entity_name = False
     _attr_name = "PilotSuite tag registry sync labels now"
-    _attr_unique_id = "copilot_ha_tag_registry_sync_labels_now"
+    _attr_unique_id = "pilotsuite_tag_registry_sync_labels_now"
     _attr_icon = "mdi:tag-sync"
 
     async def async_press(self) -> None:
@@ -35,5 +35,5 @@ class CopilotTagRegistrySyncLabelsNowButton(CopilotBaseEntity, ButtonEntity):
             self.hass,
             "\n".join(lines),
             title="PilotSuite Tag Registry",
-            notification_id="copilot_ha_tag_registry",
+            notification_id="pilotsuite_tag_registry",
         )
