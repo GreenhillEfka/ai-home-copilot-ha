@@ -371,7 +371,7 @@ class HabitusZonesV2JsonText(CopilotBaseEntity, TextEntity):
     _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = False
     _attr_name = "PilotSuite habitus zones v2 (bulk editor)"
-    _attr_unique_id = "copilot_ha_habitus_zones_v2_json"
+    _attr_unique_id = "pilotsuite_habitus_zones_v2_json"
     _attr_icon = "mdi:layers-outline"
     _attr_mode = "text"  # multiline
     _attr_native_max = 65535
@@ -457,7 +457,7 @@ class HabitusZonesV2CountSensor(CopilotBaseEntity, SensorEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite habitus zones count"
-    _attr_unique_id = "copilot_ha_habitus_zones_count"
+    _attr_unique_id = "pilotsuite_habitus_zones_count"
     _attr_icon = "mdi:counter"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -501,7 +501,7 @@ class HabitusZonesSensor(CopilotBaseEntity, SensorEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite Habitus Zones"
-    _attr_unique_id = "copilot_ha_habitus_zones"
+    _attr_unique_id = "pilotsuite_habitus_zones"
     _attr_icon = "mdi:layers-outline"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -595,7 +595,7 @@ class HabitusZonesV2ValidateButton(CopilotBaseEntity, ButtonEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite validate habitus zones v2"
-    _attr_unique_id = "copilot_ha_validate_habitus_zones_v2"
+    _attr_unique_id = "pilotsuite_validate_habitus_zones_v2"
     _attr_icon = "mdi:check-decagram"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -678,7 +678,7 @@ class HabitusZonesV2StatesSensor(CopilotBaseEntity, SensorEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite habitus zones v2 states"
-    _attr_unique_id = "copilot_ha_habitus_zones_v2_states"
+    _attr_unique_id = "pilotsuite_habitus_zones_v2_states"
     _attr_icon = "mdi:state-machine"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -736,7 +736,7 @@ class HabitusZonesV2HealthSensor(CopilotBaseEntity, SensorEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite habitus zones v2 health"
-    _attr_unique_id = "copilot_ha_habitus_zones_v2_health"
+    _attr_unique_id = "pilotsuite_habitus_zones_v2_health"
     _attr_icon = "mdi:heart-pulse"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -795,7 +795,7 @@ class HabitusZonesV2GlobalStateSelect(CopilotBaseEntity, SelectEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite zones v2 global state"
-    _attr_unique_id = "copilot_ha_habitus_zones_v2_global_state"
+    _attr_unique_id = "pilotsuite_habitus_zones_v2_global_state"
     _attr_icon = "mdi:cog-transfer"
     _attr_options = ["auto", "manual", "disabled"]
     _attr_current_option = "auto"
@@ -830,7 +830,7 @@ class HabitusZonesV2SyncGraphButton(CopilotBaseEntity, ButtonEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite sync zones v2 to brain graph"
-    _attr_unique_id = "copilot_ha_habitus_zones_v2_sync_graph"
+    _attr_unique_id = "pilotsuite_habitus_zones_v2_sync_graph"
     _attr_icon = "mdi:graph-outline"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -873,7 +873,7 @@ class HabitusZonesV2ReloadButton(CopilotBaseEntity, ButtonEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite reload zones v2"
-    _attr_unique_id = "copilot_ha_habitus_zones_v2_reload"
+    _attr_unique_id = "pilotsuite_habitus_zones_v2_reload"
     _attr_icon = "mdi:reload"
 
     def __init__(self, coordinator, entry: ConfigEntry):
