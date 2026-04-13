@@ -8,7 +8,7 @@ from .safety_backup import async_create_safety_backup, async_show_safety_backup_
 
 class CopilotSafetyBackupCreateButton(CopilotButtonBase):
     _attr_name = "PilotSuite Safety-Backup erstellen"
-    _attr_unique_id = "copilot_ha_safety_backup_create"
+    _attr_unique_id = "pilotsuite_safety_backup_create"
     _attr_icon = "mdi:shield-check"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -22,7 +22,7 @@ class CopilotSafetyBackupCreateButton(CopilotButtonBase):
 
 class CopilotSafetyBackupStatusButton(CopilotButtonBase):
     _attr_name = "PilotSuite Safety-Backup Status"
-    _attr_unique_id = "copilot_ha_safety_backup_status"
+    _attr_unique_id = "pilotsuite_safety_backup_status"
     _attr_icon = "mdi:shield-search"
 
     def __init__(self, coordinator, entry: ConfigEntry):
