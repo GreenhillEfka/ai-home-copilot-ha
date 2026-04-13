@@ -23,6 +23,41 @@ def _get_unique_ids() -> list[str]:
     return unique_ids
 
 
+def _get_notification_ids() -> list[str]:
+    """Extract all notification_id= keyword argument strings from the source."""
+    source = SRC.read_text()
+    found = []
+    for line in source.splitlines():
+        if 'notification_id=' in line:
+            # Extract the string value after notification_id=
+            idx = line.index('notification_id=')
+            rest = line[idx + len('notification_id='):].lstrip()
+            if rest.startswith('"') or rest.startswith("'"):
+                quote = rest[0]
+                end = rest.index(quote, 1)
+                found.append(rest[1:end])
+    return found
+
+
+class TestHabitusZonesV2NotificationIds:
+    """Contract: all notification_id values use pilotsuite_ prefix."""
+
+    def test_no_stale_copilot_ha_notification_ids(self):
+        nids = _get_notification_ids()
+        stale = [n for n in nids if "copilot_ha" in n]
+        assert not stale, f"Found stale copilot_ha notification_ids: {stale}"
+
+    def test_ast_scan_no_copilot_ha_literal_in_notification_id(self):
+        source = SRC.read_text()
+        tree = ast.parse(source)
+        found = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.keyword) and node.arg == "notification_id":
+                if isinstance(node.value, ast.Constant) and "copilot_ha" in node.value.value:
+                    found.append(node.value.value)
+        assert not found, f"AST found copilot_ha literal in notification_id kwarg: {found}"
+
+
 class TestHabitusZonesV2UniqueIds:
     """Contract: all _attr_unique_id values use pilotsuite_ prefix."""
 

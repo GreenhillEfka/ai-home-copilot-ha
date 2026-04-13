@@ -439,7 +439,7 @@ class HabitusZonesV2JsonText(CopilotBaseEntity, TextEntity):
                 self.hass,
                 f"Invalid Habitus zones v2 YAML/JSON: {err}",
                 title="PilotSuite Habitus zones v2",
-                notification_id="copilot_ha_habitus_zones_v2",
+                notification_id="pilotsuite_habitus_zones_v2",
             )
             return
 
@@ -447,7 +447,7 @@ class HabitusZonesV2JsonText(CopilotBaseEntity, TextEntity):
             self.hass,
             f"Saved {len(zones)} Habitus zones v2.",
             title="PilotSuite Habitus zones v2",
-            notification_id="copilot_ha_habitus_zones_v2",
+            notification_id="pilotsuite_habitus_zones_v2",
         )
         await self._reload_value()
 
