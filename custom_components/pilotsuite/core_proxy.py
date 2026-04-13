@@ -89,7 +89,7 @@ class CoreProxyView(HomeAssistantView):
     """Authenticated same-origin proxy from Home Assistant to PilotSuite Core."""
 
     url = "/api/copilot_proxy/{tail:.*}"
-    name = "api:copilot_ha:core_proxy"
+    name = "api:pilotsuite:core_proxy"
     requires_auth = True
 
     def __init__(self, hass: HomeAssistant) -> None:
