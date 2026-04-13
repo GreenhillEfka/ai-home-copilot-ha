@@ -17,7 +17,7 @@ class CopilotUpdateRollbackReportButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_has_entity_name = False
     _attr_name = "PilotSuite update/rollback report"
-    _attr_unique_id = "copilot_ha_update_rollback_report"
+    _attr_unique_id = "pilotsuite_update_rollback_report"
     _attr_icon = "mdi:update"
 
     async def async_press(self) -> None:
