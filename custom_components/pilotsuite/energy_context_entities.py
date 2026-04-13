@@ -1,12 +1,12 @@
 """Energy Context Entities for PilotSuite.
 
 Exposes energy data as Home Assistant entities:
-- sensor.copilot_ha_energy_consumption_today
-- sensor.copilot_ha_energy_production_today
-- sensor.copilot_ha_energy_current_power
-- sensor.copilot_ha_energy_anomalies
-- sensor.copilot_ha_energy_shifting_opportunities
-- binary_sensor.copilot_ha_energy_anomaly_alert
+- sensor.pilotsuite_energy_consumption_today
+- sensor.pilotsuite_energy_production_today
+- sensor.pilotsuite_energy_current_power
+- sensor.pilotsuite_energy_anomalies
+- sensor.pilotsuite_energy_shifting_opportunities
+- binary_sensor.pilotsuite_energy_anomaly_alert
 """
 from __future__ import annotations
 
