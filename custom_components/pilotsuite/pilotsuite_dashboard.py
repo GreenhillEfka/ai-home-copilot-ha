@@ -540,7 +540,7 @@ async def async_generate_pilotsuite_dashboard(
                 "Hinweis: In der Regel reicht **Generate** + Browser-Reload (das Dashboard referenziert die latest-Datei)."
             ),
             title="PilotSuite Dashboard",
-            notification_id="copilot_ha_pilotsuite_dashboard",
+            notification_id="pilotsuite_pilotsuite_dashboard",
         )
 
     _LOGGER.info("Generated PilotSuite dashboard at %s", out_path)
@@ -587,7 +587,7 @@ async def async_publish_last_pilotsuite_dashboard(hass: HomeAssistant) -> str:
             f"Legacy URL: /local/{LEGACY_DASHBOARD_DIR}/{dst.name}"
         ),
         title="PilotSuite Dashboard Download",
-        notification_id="copilot_ha_pilotsuite_dashboard_download",
+        notification_id="pilotsuite_pilotsuite_dashboard_download",
     )
 
     _LOGGER.info("Published PilotSuite dashboard to %s (url=%s)", dst, url)
