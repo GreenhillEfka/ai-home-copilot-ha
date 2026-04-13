@@ -156,7 +156,7 @@ async def async_generate_ha_overview(hass: HomeAssistant) -> Path:
         hass,
         f"Generated Home Assistant overview report at: {out_path}",
         title="PilotSuite overview",
-        notification_id="copilot_ha_overview",
+        notification_id="pilotsuite_overview",
     )
 
     _LOGGER.info("Generated HA overview report at %s", out_path)
