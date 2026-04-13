@@ -16,7 +16,7 @@ from .pilotsuite_dashboard import async_generate_pilotsuite_dashboard, async_pub
 class CopilotGenerateOverviewButton(CopilotButtonBase):
     _attr_entity_registry_enabled_default = False
     _attr_name = "PilotSuite generate HA overview"
-    _attr_unique_id = "copilot_ha_generate_ha_overview"
+    _attr_unique_id = "pilotsuite_generate_ha_overview"
     _attr_icon = "mdi:map-search"
 
     async def async_press(self) -> None:
@@ -26,7 +26,7 @@ class CopilotGenerateOverviewButton(CopilotButtonBase):
 class CopilotDownloadOverviewButton(CopilotButtonBase):
     _attr_entity_registry_enabled_default = False
     _attr_name = "PilotSuite download HA overview"
-    _attr_unique_id = "copilot_ha_download_ha_overview"
+    _attr_unique_id = "pilotsuite_download_ha_overview"
     _attr_icon = "mdi:download"
 
     async def async_press(self) -> None:
@@ -36,7 +36,7 @@ class CopilotDownloadOverviewButton(CopilotButtonBase):
 class CopilotGenerateInventoryButton(CopilotButtonBase):
     _attr_entity_registry_enabled_default = False
     _attr_name = "PilotSuite generate inventory"
-    _attr_unique_id = "copilot_ha_generate_inventory"
+    _attr_unique_id = "pilotsuite_generate_inventory"
     _attr_icon = "mdi:clipboard-list"
 
     async def async_press(self) -> None:
@@ -45,21 +45,21 @@ class CopilotGenerateInventoryButton(CopilotButtonBase):
 
 class CopilotSystemHealthReportButton(CopilotButtonBase):
     _attr_name = "SystemHealth report"
-    _attr_unique_id = "copilot_ha_systemhealth_report"
+    _attr_unique_id = "pilotsuite_systemhealth_report"
     _attr_icon = "mdi:stethoscope"
 
     async def async_press(self) -> None:
         await self._press_with_notification(
             async_generate_and_publish_systemhealth_report(self.hass),
             title="PilotSuite SystemHealth",
-            notification_id="copilot_ha_systemhealth",
+            notification_id="pilotsuite_systemhealth",
             error_prefix="Failed to generate SystemHealth report",
         )
 
 
 class CopilotGenerateConfigSnapshotButton(CopilotButtonBase):
     _attr_name = "PilotSuite generate config snapshot"
-    _attr_unique_id = "copilot_ha_generate_config_snapshot"
+    _attr_unique_id = "pilotsuite_generate_config_snapshot"
     _attr_icon = "mdi:content-save-cog"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -71,21 +71,21 @@ class CopilotGenerateConfigSnapshotButton(CopilotButtonBase):
 
 class CopilotDownloadConfigSnapshotButton(CopilotButtonBase):
     _attr_name = "PilotSuite download config snapshot"
-    _attr_unique_id = "copilot_ha_download_config_snapshot"
+    _attr_unique_id = "pilotsuite_download_config_snapshot"
     _attr_icon = "mdi:download"
 
     async def async_press(self) -> None:
         await self._press_with_notification(
             async_publish_last_config_snapshot(self.hass),
             title="PilotSuite config snapshot",
-            notification_id="copilot_ha_config_snapshot",
+            notification_id="pilotsuite_config_snapshot",
             error_prefix="Failed to publish config snapshot",
         )
 
 
 class CopilotReloadConfigEntryButton(CopilotButtonBase):
     _attr_name = "PilotSuite reload"
-    _attr_unique_id = "copilot_ha_reload_config_entry"
+    _attr_unique_id = "pilotsuite_reload_config_entry"
     _attr_icon = "mdi:reload"
 
     def __init__(self, coordinator, entry_id: str):
@@ -98,7 +98,7 @@ class CopilotReloadConfigEntryButton(CopilotButtonBase):
 
 class CopilotGenerateHabitusDashboardButton(CopilotButtonBase):
     _attr_name = "PilotSuite generate habitus dashboard"
-    _attr_unique_id = "copilot_ha_generate_habitus_dashboard"
+    _attr_unique_id = "pilotsuite_generate_habitus_dashboard"
     _attr_icon = "mdi:view-dashboard-outline"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -110,7 +110,7 @@ class CopilotGenerateHabitusDashboardButton(CopilotButtonBase):
 
 class CopilotDownloadHabitusDashboardButton(CopilotButtonBase):
     _attr_name = "PilotSuite download habitus dashboard"
-    _attr_unique_id = "copilot_ha_download_habitus_dashboard"
+    _attr_unique_id = "pilotsuite_download_habitus_dashboard"
     _attr_icon = "mdi:download"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -120,14 +120,14 @@ class CopilotDownloadHabitusDashboardButton(CopilotButtonBase):
         await self._press_with_notification(
             async_publish_last_habitus_dashboard(self.hass),
             title="PilotSuite Habitus dashboard",
-            notification_id="copilot_ha_habitus_dashboard_download",
+            notification_id="pilotsuite_habitus_dashboard_download",
             error_prefix="Failed to publish habitus dashboard",
         )
 
 
 class CopilotGeneratePilotSuiteDashboardButton(CopilotButtonBase):
     _attr_name = "PilotSuite generate PilotSuite dashboard"
-    _attr_unique_id = "copilot_ha_generate_pilotsuite_dashboard"
+    _attr_unique_id = "pilotsuite_generate_pilotsuite_dashboard"
     _attr_icon = "mdi:view-dashboard"
 
     def __init__(self, coordinator, entry: ConfigEntry):
@@ -139,16 +139,13 @@ class CopilotGeneratePilotSuiteDashboardButton(CopilotButtonBase):
 
 class CopilotDownloadPilotSuiteDashboardButton(CopilotButtonBase):
     _attr_name = "PilotSuite download PilotSuite dashboard"
-    _attr_unique_id = "copilot_ha_download_pilotsuite_dashboard"
+    _attr_unique_id = "pilotsuite_download_pilotsuite_dashboard"
     _attr_icon = "mdi:download"
-
-    def __init__(self, coordinator, entry: ConfigEntry):
-        super().__init__(coordinator, entry)
 
     async def async_press(self) -> None:
         await self._press_with_notification(
             async_publish_last_pilotsuite_dashboard(self.hass),
             title="PilotSuite PilotSuite dashboard",
-            notification_id="copilot_ha_pilotsuite_dashboard_download",
+            notification_id="pilotsuite_pilotsuite_dashboard_download",
             error_prefix="Failed to publish PilotSuite dashboard",
         )
