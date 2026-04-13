@@ -63,7 +63,7 @@ class HabitusZoneScoreSensor(CopilotBaseEntity, SensorEntity):
         super().__init__(coordinator)
         self._entry = entry
         self._zone_id = zone_id
-        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_score"
+        self._attr_unique_id = f"pilotsuite_zone_{zone_id}_score"
         self._attr_name = f"PilotSuite Zone {zone_id} Score"
 
     @property
@@ -116,7 +116,7 @@ class HabitusZoneStatusSensor(CopilotBaseEntity, SensorEntity):
     def __init__(self, coordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = "copilot_ha_habitus_zone_status"
+        self._attr_unique_id = "pilotsuite_habitus_zone_status"
         self._attr_name = "PilotSuite Habitus Zone Status"
         self._unsub = None
 
@@ -196,7 +196,7 @@ class HabitusMoodDistributionSensor(CopilotBaseEntity, SensorEntity):
     def __init__(self, coordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = "copilot_ha_habitus_mood_distribution"
+        self._attr_unique_id = "pilotsuite_habitus_mood_distribution"
         self._attr_name = "PilotSuite Habitus Mood Distribution"
         self._unsub = None
 
@@ -284,7 +284,7 @@ class HabitusCurrentMoodSensor(CopilotBaseEntity, SensorEntity):
     def __init__(self, coordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = "copilot_ha_habitus_current_mood"
+        self._attr_unique_id = "pilotsuite_habitus_current_mood"
         self._attr_name = "PilotSuite Habitus Current Mood"
         self._unsub = None
 
@@ -373,7 +373,7 @@ class HabitusZoneTransitionLogSensor(CopilotBaseEntity, SensorEntity):
     def __init__(self, coordinator, entry: ConfigEntry):
         super().__init__(coordinator)
         self._entry = entry
-        self._attr_unique_id = "copilot_ha_habitus_transitions"
+        self._attr_unique_id = "pilotsuite_habitus_transitions"
         self._attr_name = "PilotSuite Habitus Zone Transitions"
         self._transitions: list[dict] = []
         self._unsub = None
@@ -457,7 +457,7 @@ class HabitusCardsConfigText(CopilotBaseEntity, TextEntity):
     _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = False
     _attr_name = "PilotSuite habitus cards YAML"
-    _attr_unique_id = "copilot_ha_habitus_cards_yaml"
+    _attr_unique_id = "pilotsuite_habitus_cards_yaml"
     _attr_icon = "mdi:card-text"
     _attr_mode = "text"  # multiline
     _attr_native_max = 65535
