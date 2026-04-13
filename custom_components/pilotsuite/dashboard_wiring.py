@@ -41,8 +41,8 @@ _LEGACY_DASHBOARD_FILE_MARKERS = (
     f"{LEGACY_DASHBOARD_DIR}/pilotsuite_dashboard_latest.yaml",
     f"{LEGACY_DASHBOARD_DIR}/habitus_zones_dashboard_latest.yaml",
 )
-_AUTOMATED_BLOCK_MARKER = "# PilotSuite dashboard wiring (managed by copilot_ha)"
-_NOTIFICATION_ID = "copilot_ha_dashboard_wiring"
+_AUTOMATED_BLOCK_MARKER = "# PilotSuite dashboard wiring (managed by pilotsuite)"
+_NOTIFICATION_ID = "pilotsuite_dashboard_wiring"
 
 
 def _snippet_content() -> str:
