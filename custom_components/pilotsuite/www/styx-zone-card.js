@@ -309,7 +309,7 @@ class StyxZoneCard extends _ZoneBase {
     // Set syncing state on the pill
     this._setHoldSyncState(zoneId, 'syncing');
     
-    // Use copilot_ha REST command if available, otherwise dispatch event for companion handler
+    // Use generic REST command if available, otherwise dispatch event for companion handler
     try {
       this._hass.callService('rest_command', 'zone_presence_hold', {
         entity_id: `zone.${zoneId}`,
