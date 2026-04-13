@@ -15,7 +15,7 @@ class CopilotPublishBrainGraphVizButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = None
     _attr_has_entity_name = False
     _attr_name = "PilotSuite publish brain graph viz"
-    _attr_unique_id = "copilot_ha_publish_brain_graph_viz"
+    _attr_unique_id = "pilotsuite_publish_brain_graph_viz"
     _attr_icon = "mdi:graph"
 
     def __init__(self, coordinator, entry):
@@ -31,7 +31,7 @@ class CopilotPublishBrainGraphPanelButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = None
     _attr_has_entity_name = False
     _attr_name = "PilotSuite publish brain graph panel (Phase 5)"
-    _attr_unique_id = "copilot_ha_publish_brain_graph_panel"
+    _attr_unique_id = "pilotsuite_publish_brain_graph_panel"
     _attr_icon = "mdi:graph"
 
     def __init__(self, coordinator, entry):
@@ -47,7 +47,7 @@ class CopilotBrainGraphPanelVizButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_has_entity_name = False
     _attr_name = "PilotSuite brain graph panel (v0.8)"
-    _attr_unique_id = "copilot_ha_brain_graph_panel"
+    _attr_unique_id = "pilotsuite_brain_graph_panel"
     _attr_icon = "mdi:graph-outline"
 
     def __init__(self, coordinator, entry):
@@ -63,7 +63,7 @@ class CopilotBrainDashboardSummaryButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = None
     _attr_has_entity_name = False
     _attr_name = "PilotSuite brain dashboard summary"
-    _attr_unique_id = "copilot_ha_brain_dashboard_summary"
+    _attr_unique_id = "pilotsuite_brain_dashboard_summary"
     _attr_icon = "mdi:brain"
 
     def __init__(self, coordinator, entry):
@@ -108,7 +108,7 @@ class CopilotBrainDashboardSummaryButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 summary_text,
                 title="🧠 Brain Dashboard Summary",
-                notification_id="copilot_ha_brain_dashboard_summary",
+                notification_id="pilotsuite_brain_dashboard_summary",
             )
 
         except Exception as err:  # noqa: BLE001
@@ -116,5 +116,5 @@ class CopilotBrainDashboardSummaryButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 f"Failed to fetch brain dashboard summary: {str(err)}",
                 title="PilotSuite Brain Dashboard",
-                notification_id="copilot_ha_brain_dashboard_error",
+                notification_id="pilotsuite_brain_dashboard_error",
             )

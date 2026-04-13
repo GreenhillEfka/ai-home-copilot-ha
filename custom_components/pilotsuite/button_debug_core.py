@@ -12,7 +12,7 @@ from .suggest import Candidate, async_offer_candidate
 class CopilotCoreCapabilitiesFetchButton(CopilotBaseEntity, ButtonEntity):
     _attr_has_entity_name = False
     _attr_name = "PilotSuite fetch core capabilities"
-    _attr_unique_id = "copilot_ha_fetch_core_capabilities"
+    _attr_unique_id = "pilotsuite_fetch_core_capabilities"
     _attr_icon = "mdi:api"
 
     def __init__(self, coordinator, entry):
@@ -29,7 +29,7 @@ class CopilotCoreCapabilitiesFetchButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 f"Failed to fetch capabilities: {err}",
                 title="PilotSuite Core capabilities",
-                notification_id="copilot_ha_core_capabilities",
+                notification_id="pilotsuite_core_capabilities",
             )
             return
 
@@ -52,14 +52,14 @@ class CopilotCoreCapabilitiesFetchButton(CopilotBaseEntity, ButtonEntity):
             self.hass,
             "\n".join(msg),
             title="PilotSuite Core capabilities",
-            notification_id="copilot_ha_core_capabilities",
+            notification_id="pilotsuite_core_capabilities",
         )
 
 
 class CopilotCoreEventsFetchButton(CopilotBaseEntity, ButtonEntity):
     _attr_has_entity_name = False
     _attr_name = "PilotSuite fetch core events"
-    _attr_unique_id = "copilot_ha_fetch_core_events"
+    _attr_unique_id = "pilotsuite_fetch_core_events"
     _attr_icon = "mdi:clipboard-list-outline"
 
     def __init__(self, coordinator, entry):
@@ -75,7 +75,7 @@ class CopilotCoreEventsFetchButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 f"Failed to fetch core events: {err}",
                 title="PilotSuite Core events",
-                notification_id="copilot_ha_core_events",
+                notification_id="pilotsuite_core_events",
             )
             return
 
@@ -123,14 +123,14 @@ class CopilotCoreEventsFetchButton(CopilotBaseEntity, ButtonEntity):
             self.hass,
             msg,
             title="PilotSuite Core events (last 20)",
-            notification_id="copilot_ha_core_events",
+            notification_id="pilotsuite_core_events",
         )
 
 
 class CopilotCoreGraphStateFetchButton(CopilotBaseEntity, ButtonEntity):
     _attr_has_entity_name = False
     _attr_name = "PilotSuite fetch core graph state"
-    _attr_unique_id = "copilot_ha_fetch_core_graph_state"
+    _attr_unique_id = "pilotsuite_fetch_core_graph_state"
     _attr_icon = "mdi:graph"
 
     def __init__(self, coordinator, entry):
@@ -146,7 +146,7 @@ class CopilotCoreGraphStateFetchButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 f"Failed to fetch core graph state: {err}",
                 title="PilotSuite Core graph",
-                notification_id="copilot_ha_core_graph_state",
+                notification_id="pilotsuite_core_graph_state",
             )
             return
 
@@ -198,7 +198,7 @@ class CopilotCoreGraphStateFetchButton(CopilotBaseEntity, ButtonEntity):
             self.hass,
             msg,
             title="PilotSuite Core graph (state)",
-            notification_id="copilot_ha_core_graph_state",
+            notification_id="pilotsuite_core_graph_state",
         )
 
 
@@ -207,7 +207,7 @@ class CopilotCoreGraphCandidatesPreviewButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = None
     _attr_has_entity_name = False
     _attr_name = "PilotSuite preview graph candidates"
-    _attr_unique_id = "copilot_ha_preview_graph_candidates"
+    _attr_unique_id = "pilotsuite_preview_graph_candidates"
     _attr_icon = "mdi:graph-outline"
 
     def __init__(self, coordinator, entry):
@@ -223,7 +223,7 @@ class CopilotCoreGraphCandidatesPreviewButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 f"Failed to fetch graph candidates: {err}",
                 title="PilotSuite graph candidates",
-                notification_id="copilot_ha_graph_candidates",
+                notification_id="pilotsuite_graph_candidates",
             )
             return
 
@@ -251,7 +251,7 @@ class CopilotCoreGraphCandidatesPreviewButton(CopilotBaseEntity, ButtonEntity):
             self.hass,
             msg,
             title="PilotSuite graph candidates (preview)",
-            notification_id="copilot_ha_graph_candidates",
+            notification_id="pilotsuite_graph_candidates",
         )
 
 
@@ -260,7 +260,7 @@ class CopilotCoreGraphCandidatesOfferButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = None
     _attr_has_entity_name = False
     _attr_name = "PilotSuite offer graph candidates"
-    _attr_unique_id = "copilot_ha_offer_graph_candidates"
+    _attr_unique_id = "pilotsuite_offer_graph_candidates"
     _attr_icon = "mdi:lightbulb-auto-outline"
 
     def __init__(self, coordinator, entry):
@@ -276,7 +276,7 @@ class CopilotCoreGraphCandidatesOfferButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 f"Failed to fetch graph candidates: {err}",
                 title="PilotSuite graph candidates",
-                notification_id="copilot_ha_graph_candidates_offer",
+                notification_id="pilotsuite_graph_candidates_offer",
             )
             return
 
@@ -316,7 +316,7 @@ class CopilotCoreGraphCandidatesOfferButton(CopilotBaseEntity, ButtonEntity):
             self.hass,
             f"Offered {offered} graph candidates via Repairs.",
             title="PilotSuite graph candidates",
-            notification_id="copilot_ha_graph_candidates_offer",
+            notification_id="pilotsuite_graph_candidates_offer",
         )
 
 
@@ -325,7 +325,7 @@ class CopilotPingCoreButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_category = None
     _attr_has_entity_name = False
     _attr_name = "PilotSuite ping core"
-    _attr_unique_id = "copilot_ha_ping_core"
+    _attr_unique_id = "pilotsuite_ping_core"
     _attr_icon = "mdi:access-point-network"
 
     def __init__(self, coordinator, entry):
@@ -340,12 +340,12 @@ class CopilotPingCoreButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 f"Core ping ok (duration_ms={dt}).",
                 title="PilotSuite core ping",
-                notification_id="copilot_ha_core_ping",
+                notification_id="pilotsuite_core_ping",
             )
         except Exception as err:  # noqa: BLE001
             persistent_notification.async_create(
                 self.hass,
                 f"Core ping failed: {err}",
                 title="PilotSuite core ping",
-                notification_id="copilot_ha_core_ping",
+                notification_id="pilotsuite_core_ping",
             )
