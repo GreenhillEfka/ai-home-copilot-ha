@@ -27,7 +27,7 @@ class CopilotGenerateCameraDashboardButton(ButtonEntity):
     """Button to generate camera dashboard YAML."""
 
     _attr_name = "Generate Camera Dashboard"
-    _attr_unique_id = "copilot_ha_generate_camera_dashboard"
+    _attr_unique_id = "pilotsuite_generate_camera_dashboard"
     _attr_icon = "mdi:cctv"
 
     def __init__(
@@ -51,7 +51,7 @@ class CopilotGenerateCameraDashboardButton(ButtonEntity):
             now = dt_util.now()
             ts = now.strftime("%Y%m%d_%H%M%S")
             
-            out_dir = Path(self._hass.config.path("copilot_ha"))
+            out_dir = Path(self._hass.config.path("pilotsuite"))
             out_dir.mkdir(parents=True, exist_ok=True)
             
             out_path = out_dir / f"camera_dashboard_{ts}.yaml"
@@ -68,7 +68,7 @@ class CopilotGenerateCameraDashboardButton(ButtonEntity):
                     f"Latest (stable):\n{latest_path}"
                 ),
                 title="PilotSuite Camera Dashboard",
-                notification_id="copilot_ha_camera_dashboard",
+                notification_id="pilotsuite_camera_dashboard",
             )
             
             _LOGGER.info("Generated camera dashboard at %s", out_path)
@@ -80,7 +80,7 @@ class CopilotGenerateCameraDashboardButton(ButtonEntity):
                 self._hass,
                 f"Failed to generate camera dashboard: {e}",
                 title="PilotSuite Camera Dashboard Error",
-                notification_id="copilot_ha_camera_dashboard_error",
+                notification_id="pilotsuite_camera_dashboard_error",
             )
 
 
@@ -88,7 +88,7 @@ class CopilotDownloadCameraDashboardButton(ButtonEntity):
     """Button to download camera dashboard YAML."""
 
     _attr_name = "Download Camera Dashboard"
-    _attr_unique_id = "copilot_ha_download_camera_dashboard"
+    _attr_unique_id = "pilotsuite_download_camera_dashboard"
     _attr_icon = "mdi:download"
 
     def __init__(
@@ -105,7 +105,7 @@ class CopilotDownloadCameraDashboardButton(ButtonEntity):
         
         from homeassistant.components import persistent_notification
         
-        out_dir = Path(self._hass.config.path("copilot_ha"))
+        out_dir = Path(self._hass.config.path("pilotsuite"))
         latest_path = out_dir / "camera_dashboard_latest.yaml"
         
         if not latest_path.exists():
@@ -113,7 +113,7 @@ class CopilotDownloadCameraDashboardButton(ButtonEntity):
                 self._hass,
                 "No camera dashboard generated yet. Click 'Generate Camera Dashboard' first.",
                 title="PilotSuite Camera Dashboard",
-                notification_id="copilot_ha_camera_dashboard_download",
+                notification_id="pilotsuite_camera_dashboard_download",
             )
             return
         
@@ -121,7 +121,7 @@ class CopilotDownloadCameraDashboardButton(ButtonEntity):
             self._hass,
             f"Camera dashboard YAML available at:\n{latest_path}",
             title="PilotSuite Camera Dashboard",
-            notification_id="copilot_ha_camera_dashboard_download",
+            notification_id="pilotsuite_camera_dashboard_download",
         )
 
 
