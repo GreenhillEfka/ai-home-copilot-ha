@@ -38,7 +38,7 @@ class CardAssetView(HomeAssistantView):
     """Serve bundled PilotSuite Lovelace card scripts from the integration itself."""
 
     url = f"/api/{DOMAIN}/cards/{{filename}}"
-    name = "api:copilot_ha:card_assets"
+    name = "api:pilotsuite:card_assets"
     requires_auth = False
 
     async def get(self, request: web.Request, filename: str) -> web.Response:
