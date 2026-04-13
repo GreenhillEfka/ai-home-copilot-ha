@@ -40,7 +40,7 @@ class NeuronFeedTagSwitch(CopilotBaseEntity, SwitchEntity):
         super().__init__(coordinator)
         self._tag_id = tag_id
         self._tag_name = tag_name
-        self._attr_unique_id = f"copilot_ha_neuron_feed_{tag_id}"
+        self._attr_unique_id = f"pilotsuite_neuron_feed_{tag_id}"
         self._attr_name = f"PilotSuite Neuron Feed: {tag_name}"
         self._attr_is_on = True  # default: all tags feed to neurons
 
@@ -76,7 +76,7 @@ class NeuronFeedSummarySensor(CopilotBaseEntity, SensorEntity):
     """Sensor showing how many entities are included/excluded from neuron feed."""
 
     _attr_has_entity_name = False
-    _attr_unique_id = "copilot_ha_neuron_feed_summary"
+    _attr_unique_id = "pilotsuite_neuron_feed_summary"
     _attr_name = "PilotSuite Neuron Feed Summary"
     _attr_icon = "mdi:brain"
 
