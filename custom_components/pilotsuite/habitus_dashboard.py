@@ -388,7 +388,7 @@ async def async_generate_habitus_zones_dashboard(
                 f"Legacy mirror:\n{legacy_latest_path}"
             ),
             title="PilotSuite Habitus dashboard",
-            notification_id="copilot_ha_habitus_dashboard",
+            notification_id="pilotsuite_habitus_dashboard",
         )
 
     _LOGGER.info("Generated Habitus zones dashboard at %s", out_path)
@@ -436,7 +436,7 @@ async def async_publish_last_habitus_dashboard(hass: HomeAssistant) -> str:
             f"Legacy URL: /local/{LEGACY_DASHBOARD_DIR}/{dst.name}"
         ),
         title="PilotSuite Habitus dashboard download",
-        notification_id="copilot_ha_habitus_dashboard_download",
+        notification_id="pilotsuite_habitus_dashboard_download",
     )
 
     _LOGGER.info("Published Habitus dashboard to %s (url=%s)", dst, url)
