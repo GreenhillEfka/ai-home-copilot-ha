@@ -20,8 +20,8 @@ from .privacy import sanitize_text
 
 _LOGGER = logging.getLogger(__name__)
 
-EXPORT_DIR = "/config/copilot_ha/exports"
-PUBLISH_DIR = "/config/www/copilot_ha"
+EXPORT_DIR = "/config/pilotsuite/exports"
+PUBLISH_DIR = "/config/www/pilotsuite"
 
 
 def _now_stamp() -> str:
@@ -225,7 +225,7 @@ async def async_generate_and_publish_inventory(hass: HomeAssistant) -> dict[str,
     generated = datetime.now(timezone.utc).isoformat()
 
     payload: dict[str, Any] = {
-        "schema": "copilot_ha_inventory",
+        "schema": "pilotsuite_inventory",
         "version": 1,
         "generated": generated,
         "counts": {
@@ -243,7 +243,7 @@ async def async_generate_and_publish_inventory(hass: HomeAssistant) -> dict[str,
     }
 
     stamp = _now_stamp()
-    base = f"copilot_ha_inventory_{stamp}"
+    base = f"pilotsuite_inventory_{stamp}"
     json_path = os.path.join(EXPORT_DIR, base + ".json")
     md_path = os.path.join(EXPORT_DIR, base + ".md")
 
@@ -305,8 +305,8 @@ async def async_generate_and_publish_inventory(hass: HomeAssistant) -> dict[str,
     await hass.async_add_executor_job(_copy, json_path, dst_json)
     await hass.async_add_executor_job(_copy, md_path, dst_md)
 
-    url_json = f"/local/copilot_ha/{os.path.basename(dst_json)}"
-    url_md = f"/local/copilot_ha/{os.path.basename(dst_md)}"
+    url_json = f"/local/pilotsuite/{os.path.basename(dst_json)}"
+    url_md = f"/local/pilotsuite/{os.path.basename(dst_md)}"
 
     # Persist state
     st: InventoryState = await async_get_inventory_state(hass)
@@ -326,7 +326,7 @@ async def async_generate_and_publish_inventory(hass: HomeAssistant) -> dict[str,
             "\nPrivacy: bounded export (no attributes blobs)."
         ),
         title="PilotSuite inventory",
-        notification_id="copilot_ha_inventory",
+        notification_id="pilotsuite_inventory",
     )
 
     _LOGGER.info("Inventory published (md=%s json=%s)", url_md, url_json)

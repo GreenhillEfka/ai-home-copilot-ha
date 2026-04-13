@@ -916,7 +916,7 @@ from custom_components.copilot_ha import config_snapshot_flow as _snapshot_flow
 class TestConfigSnapshotFlowPathResolve:
     def test_maps_local_url_to_www_path(self):
         resolved = _snapshot_flow._resolve_snapshot_import_path("/local/copilot_ha/snapshot.json")
-        assert resolved == "/config/www/copilot_ha/snapshot.json"
+        assert resolved == "/config/www/pilotsuite/snapshot.json"
 
     def test_relative_path_defaults_to_export_dir_when_missing(self, monkeypatch):
         monkeypatch.setattr(_snapshot_flow.os.path, "exists", lambda p: False)
