@@ -199,7 +199,7 @@ async def async_publish_brain_graph_viz(hass: HomeAssistant, coordinator) -> Pat
             hass,
             f"Failed to fetch core graph state: {sanitize_text(err, max_chars=240)}",
             title="PilotSuite Brain graph viz",
-            notification_id="copilot_ha_brain_graph_viz",
+            notification_id="pilotsuite_brain_graph_viz",
         )
         return None
 
@@ -216,13 +216,13 @@ async def async_publish_brain_graph_viz(hass: HomeAssistant, coordinator) -> Pat
         title="PilotSuite brain graph (preview)",
     )
 
-    latest_path = Path("/config/www/copilot_ha/brain_graph_latest.html")
+    latest_path = Path("/config/www/pilotsuite/brain_graph_latest.html")
 
     # No archive by default (avoid clutter). If you want history later,
     # we can add an opt-in archive option.
     await hass.async_add_executor_job(_write_text, latest_path, html)
 
-    url_local = "/local/copilot_ha/brain_graph_latest.html"
+    url_local = "/local/pilotsuite/brain_graph_latest.html"
     msg = "\n".join(
         [
             f"Brain graph visualization published: {url_local}",
@@ -240,7 +240,7 @@ async def async_publish_brain_graph_viz(hass: HomeAssistant, coordinator) -> Pat
         hass,
         msg,
         title="PilotSuite Brain graph viz",
-        notification_id="copilot_ha_brain_graph_viz",
+        notification_id="pilotsuite_brain_graph_viz",
     )
 
     return latest_path
