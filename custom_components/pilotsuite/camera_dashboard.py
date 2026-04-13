@@ -164,7 +164,7 @@ async def generate_camera_dashboard_yaml(
     # Get motion cameras
     motion_cameras = [
         eid for eid in hass.states.async_entity_ids("binary_sensor")
-        if "copilot_ha_motion" in eid
+        if "pilotsuite_motion" in eid
     ]
     
     # Get camera entities
@@ -263,7 +263,7 @@ async def generate_camera_dashboard_v2_yaml(
     
     motion_cameras = [
         eid for eid in hass.states.async_entity_ids("binary_sensor")
-        if "copilot_ha_motion" in eid
+        if "pilotsuite_motion" in eid
     ]
     
     # Get counts
