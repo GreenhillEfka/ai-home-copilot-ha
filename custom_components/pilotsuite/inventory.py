@@ -22,7 +22,7 @@ def _write_text(path: Path, content: str) -> None:
 async def async_generate_ha_overview(hass: HomeAssistant) -> Path:
     """Generate a structured overview of the HA instance.
 
-    Privacy-first: stays local, writes to /config/copilot_ha/.
+    Privacy-first: stays local, writes to /config/pilotsuite/.
     """
 
     ar = area_registry.async_get(hass)
@@ -129,7 +129,7 @@ async def async_generate_ha_overview(hass: HomeAssistant) -> Path:
 
     content = "\n".join(md) + "\n"
 
-    out_dir = Path(hass.config.path("copilot_ha"))
+    out_dir = Path(hass.config.path("pilotsuite"))
     out_path = out_dir / f"ha_overview_{now.strftime('%Y%m%d_%H%M%S')}.md"
 
     await hass.async_add_executor_job(_write_text, out_path, content)
@@ -137,7 +137,7 @@ async def async_generate_ha_overview(hass: HomeAssistant) -> Path:
     # Also copy to /share (if present) for easy access via Samba/Add-ons.
     shared_path = None
     try:
-        share_dir = Path("/share") / "copilot_ha"
+        share_dir = Path("/share") / "pilotsuite"
         if share_dir.exists() or share_dir.parent.exists():
             share_dir.mkdir(parents=True, exist_ok=True)
             shared_path = share_dir / out_path.name
