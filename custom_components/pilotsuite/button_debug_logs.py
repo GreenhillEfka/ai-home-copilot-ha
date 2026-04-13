@@ -13,7 +13,7 @@ class CopilotAnalyzeLogsButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = False
     _attr_name = "PilotSuite analyze logs"
-    _attr_unique_id = "copilot_ha_analyze_logs"
+    _attr_unique_id = "pilotsuite_analyze_logs"
     _attr_icon = "mdi:file-search"
 
     async def async_press(self) -> None:
@@ -24,7 +24,7 @@ class CopilotRollbackLastFixButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = False
     _attr_name = "PilotSuite rollback last fix"
-    _attr_unique_id = "copilot_ha_rollback_last_fix"
+    _attr_unique_id = "pilotsuite_rollback_last_fix"
     _attr_icon = "mdi:undo-variant"
 
     async def async_press(self) -> None:
@@ -35,7 +35,7 @@ class CopilotDevLogTestPushButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = False
     _attr_name = "PilotSuite devlog push test"
-    _attr_unique_id = "copilot_ha_devlog_push_test"
+    _attr_unique_id = "pilotsuite_devlog_push_test"
     _attr_icon = "mdi:bug-play"
 
     def __init__(self, coordinator, entry):
@@ -50,7 +50,7 @@ class CopilotDevLogPushLatestButton(CopilotBaseEntity, ButtonEntity):
     _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = False
     _attr_name = "PilotSuite devlog push latest"
-    _attr_unique_id = "copilot_ha_devlog_push_latest"
+    _attr_unique_id = "pilotsuite_devlog_push_latest"
     _attr_icon = "mdi:bug-outline"
 
     def __init__(self, coordinator, entry):
@@ -66,7 +66,7 @@ class CopilotDevLogPushLatestButton(CopilotBaseEntity, ButtonEntity):
 class CopilotDevLogsFetchButton(CopilotBaseEntity, ButtonEntity):
     _attr_has_entity_name = False
     _attr_name = "PilotSuite devlogs fetch"
-    _attr_unique_id = "copilot_ha_devlogs_fetch"
+    _attr_unique_id = "pilotsuite_devlogs_fetch"
     _attr_icon = "mdi:clipboard-text-search"
 
     def __init__(self, coordinator, entry):
@@ -91,7 +91,7 @@ class CopilotDevLogsFetchButton(CopilotBaseEntity, ButtonEntity):
                 self.hass,
                 f"Failed to fetch devlogs: {err}",
                 title="PilotSuite DevLogs",
-                notification_id="copilot_ha_devlogs",
+                notification_id="pilotsuite_devlogs",
             )
             return
 
@@ -125,5 +125,5 @@ class CopilotDevLogsFetchButton(CopilotBaseEntity, ButtonEntity):
             self.hass,
             msg,
             title="PilotSuite DevLogs (last 10)",
-            notification_id="copilot_ha_devlogs",
+            notification_id="pilotsuite_devlogs",
         )

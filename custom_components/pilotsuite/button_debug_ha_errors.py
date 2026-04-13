@@ -9,7 +9,7 @@ from .ha_errors_digest import async_show_ha_errors_digest
 class CopilotHaErrorsFetchButton(CopilotBaseEntity, ButtonEntity):
     _attr_has_entity_name = False
     _attr_name = "PilotSuite fetch HA errors"
-    _attr_unique_id = "copilot_ha_fetch_ha_errors"
+    _attr_unique_id = "pilotsuite_fetch_ha_errors"
     _attr_icon = "mdi:alert-circle-outline"
 
     def __init__(self, coordinator, entry):
