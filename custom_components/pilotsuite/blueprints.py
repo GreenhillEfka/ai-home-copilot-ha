@@ -16,7 +16,7 @@ _BLUEPRINTS = [
         / "automation"
         / "ai_home_copilot"
         / "a_to_b_safe.yaml",
-        Path("blueprints") / "automation" / "copilot_ha" / "a_to_b_safe.yaml",
+        Path("blueprints") / "automation" / "pilotsuite" / "a_to_b_safe.yaml",
     )
 ]
 
