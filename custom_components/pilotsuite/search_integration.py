@@ -6,8 +6,8 @@ Provides HA entity search capabilities:
 - Index management via HA event forwarding
 
 Services:
-- copilot_ha.search - Perform search
-- copilot_ha.index_search - Update search index
+- pilotsuite.search - Perform search
+- pilotsuite.index_search - Update search index
 """
 from __future__ import annotations
 

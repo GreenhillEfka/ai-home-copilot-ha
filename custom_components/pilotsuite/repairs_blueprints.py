@@ -27,7 +27,7 @@ class BlueprintApplyPlan:
     blueprint_inputs: dict[str, Any]
 
     risk: str = "medium"
-    slug: str = "copilot_ha__a_to_b_safe"
+    slug: str = "pilotsuite__a_to_b_safe"
     automation_name: str = "PilotSuite: A→B (safe)"
 
 
@@ -80,7 +80,7 @@ def async_build_plan_from_issue_data(
 
     if not blueprint_path:
         # Default to our shipped blueprint.
-        blueprint_path = "copilot_ha/a_to_b_safe.yaml"
+        blueprint_path = "pilotsuite/a_to_b_safe.yaml"
 
     return BlueprintApplyPlan(
         entry_id=entry_id,
