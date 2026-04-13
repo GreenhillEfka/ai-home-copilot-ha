@@ -59,7 +59,7 @@ class CopilotButtonBase(CopilotBaseEntity, ButtonEntity):
         service: str,
         data: dict[str, Any] | None = None,
         *,
-        domain: str = "copilot_ha",
+        domain: str = "pilotsuite",
         blocking: bool = False,
     ) -> None:
         """Call a Home Assistant service."""
