@@ -23,8 +23,8 @@ from .config_snapshot_store import (
 
 EXPORT_DIR = "/config/pilotsuite-styx/exports"
 PUBLISH_DIR = "/config/www/pilotsuite-styx"
-LEGACY_EXPORT_DIR = "/config/copilot_ha/exports"
-LEGACY_PUBLISH_DIR = "/config/www/copilot_ha"
+LEGACY_EXPORT_DIR = "/config/pilotsuite/exports"
+LEGACY_PUBLISH_DIR = "/config/www/pilotsuite"
 
 
 def _now_stamp() -> str:
