@@ -1054,7 +1054,7 @@ async def async_publish_brain_graph_panel(hass: HomeAssistant, coordinator) -> P
             hass,
             f"Failed to fetch core graph state: {sanitize_text(err, max_chars=240)}",
             title="PilotSuite Brain Graph Panel",
-            notification_id="copilot_ha_brain_graph_panel",
+            notification_id="pilotsuite_brain_graph_panel",
         )
         return None
 
@@ -1071,10 +1071,10 @@ async def async_publish_brain_graph_panel(hass: HomeAssistant, coordinator) -> P
         title="PilotSuite Brain Graph",
     )
 
-    panel_path = Path("/config/www/copilot_ha/brain_graph_panel.html")
+    panel_path = Path("/config/www/pilotsuite/brain_graph_panel.html")
     await hass.async_add_executor_job(_write_text, panel_path, html)
 
-    url_local = "/local/copilot_ha/brain_graph_panel.html"
+    url_local = "/local/pilotsuite/brain_graph_panel.html"
     msg = "\n".join([
         f"Interactive Brain Graph Panel: {url_local}",
         "",
@@ -1095,7 +1095,7 @@ async def async_publish_brain_graph_panel(hass: HomeAssistant, coordinator) -> P
         hass,
         msg,
         title="PilotSuite Brain Graph Panel",
-        notification_id="copilot_ha_brain_graph_panel",
+        notification_id="pilotsuite_brain_graph_panel",
     )
 
     return panel_path
