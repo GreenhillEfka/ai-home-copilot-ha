@@ -35,8 +35,8 @@ async def async_publish_last_overview(hass: HomeAssistant) -> str:
         src = Path(p)
         st.last_path = str(p)
 
-    # Publish under www/copilot_ha/
-    www_dir = Path(hass.config.path("www")) / "copilot_ha"
+    # Publish under www/pilotsuite/
+    www_dir = Path(hass.config.path("www")) / "pilotsuite"
     dst = www_dir / src.name
 
     await hass.async_add_executor_job(_copy, src, dst)
@@ -44,7 +44,7 @@ async def async_publish_last_overview(hass: HomeAssistant) -> str:
     st.last_published_path = str(dst)
     await async_set_overview_state(hass, st)
 
-    url = f"/local/copilot_ha/{dst.name}"
+    url = f"/local/pilotsuite/{dst.name}"
     persistent_notification.async_create(
         hass,
         (
@@ -52,7 +52,7 @@ async def async_publish_last_overview(hass: HomeAssistant) -> str:
             f"Open this URL in your browser: {url}"
         ),
         title="PilotSuite overview download",
-        notification_id="copilot_ha_overview_download",
+        notification_id="pilotsuite_overview_download",
     )
 
     _LOGGER.info("Published overview report to %s (url=%s)", dst, url)
