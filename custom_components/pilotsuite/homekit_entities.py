@@ -47,7 +47,7 @@ class HomeKitZoneToggleButton(CopilotBaseEntity, ButtonEntity):
         self._entity_ids = entity_ids
         self._attr_has_entity_name = False
         self._attr_name = f"PilotSuite HomeKit — {zone_name}"
-        self._attr_unique_id = f"copilot_ha_homekit_toggle_{zone_id}"
+        self._attr_unique_id = f"pilotsuite_homekit_toggle_{zone_id}"
 
     async def async_press(self) -> None:
         """Toggle HomeKit for this zone."""
@@ -115,7 +115,7 @@ class HomeKitZoneQRSensor(CopilotBaseEntity, SensorEntity):
         self._zone_name = zone_name
         self._attr_has_entity_name = False
         self._attr_name = f"PilotSuite HomeKit QR — {zone_name}"
-        self._attr_unique_id = f"copilot_ha_homekit_qr_{zone_id}"
+        self._attr_unique_id = f"pilotsuite_homekit_qr_{zone_id}"
 
     @property
     def native_value(self) -> str:
