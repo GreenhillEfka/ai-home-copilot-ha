@@ -901,13 +901,13 @@ def _register_unifi_services(hass: HomeAssistant) -> None:
         )
 
     # Legacy aliases kept during the pilotsuite migration.
-    if not hass.services.has_service(DOMAIN, "copilot_ha_unifi_run_diagnostics"):
+    if not hass.services.has_service(DOMAIN, "pilotsuite_unifi_run_diagnostics"):
         hass.services.async_register(
-            DOMAIN, "copilot_ha_unifi_run_diagnostics", _handle_unifi_diagnostics
+            DOMAIN, "pilotsuite_unifi_run_diagnostics", _handle_unifi_diagnostics
         )
-    if not hass.services.has_service(DOMAIN, "copilot_ha_unifi_get_report"):
+    if not hass.services.has_service(DOMAIN, "pilotsuite_unifi_get_report"):
         hass.services.async_register(
-            DOMAIN, "copilot_ha_unifi_get_report", _handle_unifi_report
+            DOMAIN, "pilotsuite_unifi_get_report", _handle_unifi_report
         )
 
 
