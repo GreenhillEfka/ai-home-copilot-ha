@@ -15,7 +15,7 @@ class CopilotInventoryLastRunSensor(CopilotBaseEntity, SensorEntity):
 
     _attr_has_entity_name = False
     _attr_name = "PilotSuite inventory last run"
-    _attr_unique_id = "copilot_ha_inventory_last_run"
+    _attr_unique_id = "pilotsuite_inventory_last_run"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:clipboard-text-clock-outline"
