@@ -64,7 +64,7 @@ class MLContextModule(CopilotModule):
         if self._mood_module:
             try:
                 # Try to get mood from mood module
-                entry_data = self._hass.data.get("copilot_ha", {}).get(self._entry.entry_id, {})
+                entry_data = self._hass.data.get("pilotsuite", {}).get(self._entry.entry_id, {})
                 mood_data = entry_data.get("mood_module", {})
                 last_orchestration = mood_data.get("last_orchestration", {})
                 
@@ -107,10 +107,10 @@ class MLContextModule(CopilotModule):
                 _LOGGER.info("ML Context module initialized")
                 
                 # Register with hass.data for other modules
-                if entry.entry_id not in hass.data.get("copilot_ha", {}):
-                    hass.data.setdefault("copilot_ha", {})
-                    hass.data["copilot_ha"][entry.entry_id] = {}
-                hass.data["copilot_ha"][entry.entry_id]["ml_context"] = self._ml_context
+                if entry.entry_id not in hass.data.get("pilotsuite", {}):
+                    hass.data.setdefault("pilotsuite", {})
+                    hass.data["pilotsuite"][entry.entry_id] = {}
+                hass.data["pilotsuite"][entry.entry_id]["ml_context"] = self._ml_context
                 
                 # Try to connect with mood module
                 await self._connect_mood_module()
@@ -131,7 +131,7 @@ class MLContextModule(CopilotModule):
         if self._hass is None or self._entry is None:
             return
         try:
-            entry_data = self._hass.data.get("copilot_ha", {}).get(self._entry.entry_id, {})
+            entry_data = self._hass.data.get("pilotsuite", {}).get(self._entry.entry_id, {})
             mood_data = entry_data.get("mood_module")
             
             if mood_data:
@@ -145,7 +145,7 @@ class MLContextModule(CopilotModule):
         """Initialize ML context (CPU-bound, run in executor)."""
         try:
             ml_ctx = MLContext(
-                storage_path="/config/.storage/copilot_ha/ml",
+                storage_path="/config/.storage/pilotsuite/ml",
                 enabled=True,
             )
             if ml_ctx.initialize():
@@ -370,5 +370,5 @@ class MLContextModule(CopilotModule):
 
 def get_ml_module(hass: HomeAssistant, entry_id: str) -> Optional[MLContextModule]:
     """Get the ML context module for an entry."""
-    entry_data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    entry_data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return entry_data.get("ml_context_module")

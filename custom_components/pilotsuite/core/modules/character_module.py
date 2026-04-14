@@ -623,5 +623,5 @@ def create_module() -> CharacterModule:
 
 def get_character_module(hass, entry_id):
     """Return the CharacterModule instance for a config entry, or None."""
-    data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return data.get("character_module")
