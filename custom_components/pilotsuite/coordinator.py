@@ -1484,7 +1484,7 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
         """Get habit learning data from ML context."""
         try:
             # Try to get ML context from hass.data
-            entry_data = self.hass.data.get("copilot_ha", {})
+            entry_data = self.hass.data.get("pilotsuite", {})
             
             for entry_id, data in entry_data.items():
                 ml_context = data.get("ml_context")
