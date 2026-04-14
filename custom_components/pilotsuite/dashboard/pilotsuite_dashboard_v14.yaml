@@ -59,9 +59,9 @@ views:
         title: "Automatisierungen"
         show_header_toggle: false
         entities:
-          - entity: sensor.copilot_ha_predictive_automation
+          - entity: sensor.pilotsuite_predictive_automation
             name: "Vorhergesagte Automatisierung"
-          - entity: sensor.copilot_ha_zone_scenes
+          - entity: sensor.pilotsuite_zone_scenes
             name: "Zonen-Szenen"
 
       # v14.2.0: Autonomy System Status
@@ -130,7 +130,7 @@ views:
         title: "Zonen-Steuerung"
         show_header_toggle: false
         entities:
-          - entity: button.copilot_ha_validate_habitus_zones
+          - entity: button.pilotsuite_validate_habitus_zones_v2
             name: "Zonen validieren"
           - entity: input_button.ai_copilot_reset_mood
             name: "Mood zuruecksetzen"
@@ -150,11 +150,11 @@ views:
         title: "Medien"
         show_header_toggle: false
         entities:
-          - entity: sensor.copilot_ha_music_now_playing
+          - entity: sensor.pilotsuite_music_now_playing
             name: "Aktueller Song"
-          - entity: sensor.copilot_ha_music_primary_area
+          - entity: sensor.pilotsuite_music_primary_area
             name: "Musik-Zone"
-          - entity: sensor.copilot_ha_music_active_count
+          - entity: sensor.pilotsuite_music_active_count
             name: "Aktive Player"
 
       # Energy Overview
@@ -162,9 +162,9 @@ views:
         title: "Energie"
         show_header_toggle: false
         entities:
-          - entity: sensor.copilot_ha_energy_insight
+          - entity: sensor.pilotsuite_energy_insight
             name: "Energie-Einblick"
-          - entity: sensor.copilot_ha_energy_recommendation
+          - entity: sensor.pilotsuite_energy_recommendation
             name: "Empfehlung"
 
       # System Resources
@@ -184,9 +184,9 @@ views:
         title: "Dashboard-Verwaltung"
         show_header_toggle: false
         entities:
-          - entity: button.copilot_ha_generate_pilotsuite_dashboard
+          - entity: button.pilotsuite_generate_pilotsuite_dashboard
             name: "Dashboard generieren"
-          - entity: button.copilot_ha_generate_habitus_dashboard
+          - entity: button.pilotsuite_generate_habitus_dashboard
             name: "Zonen-Dashboard generieren"
 
       # Dev Surface
@@ -194,11 +194,11 @@ views:
         title: "Entwicklung"
         show_header_toggle: false
         entities:
-          - entity: button.copilot_ha_fetch_ha_errors
+          - entity: button.pilotsuite_fetch_ha_errors
             name: "HA-Fehler"
-          - entity: button.copilot_ha_devlogs_fetch
+          - entity: button.pilotsuite_devlogs_fetch
             name: "Dev-Logs"
-          - entity: button.copilot_ha_fetch_core_events
+          - entity: button.pilotsuite_fetch_core_events
             name: "Core Events"
 
       # Core Links
