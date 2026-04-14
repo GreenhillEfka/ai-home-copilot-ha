@@ -319,7 +319,7 @@ async def async_setup_agent_auto_config(
 
     # 3. Register HA services
     async def handle_set_default(call: ServiceCall) -> None:
-        """Service: copilot_ha.set_default_agent."""
+        """Service: pilotsuite.set_default_agent."""
         result = await async_set_default_conversation_agent(hass, entry)
         if result:
             from homeassistant.components.persistent_notification import async_create
@@ -337,7 +337,7 @@ async def async_setup_agent_auto_config(
             )
 
     async def handle_verify(call: ServiceCall) -> None:
-        """Service: copilot_ha.verify_agent."""
+        """Service: pilotsuite.verify_agent."""
         result = await async_verify_agent_connectivity(hass, entry)
 
         from homeassistant.components.persistent_notification import async_create
@@ -367,7 +367,7 @@ async def async_setup_agent_auto_config(
             )
 
     async def handle_get_status(call: ServiceCall) -> None:
-        """Service: copilot_ha.get_agent_status."""
+        """Service: pilotsuite.get_agent_status."""
         result = await async_get_agent_status(hass, entry)
 
         from homeassistant.components.persistent_notification import async_create
@@ -395,7 +395,7 @@ async def async_setup_agent_auto_config(
             )
 
     async def handle_repair(call: ServiceCall) -> None:
-        """Service: copilot_ha.repair_agent."""
+        """Service: pilotsuite.repair_agent."""
         result = await async_attempt_agent_self_heal(hass, entry, reason="manual_service")
         from homeassistant.components.persistent_notification import async_create
 
