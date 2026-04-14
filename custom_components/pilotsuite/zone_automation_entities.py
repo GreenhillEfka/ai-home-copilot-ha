@@ -89,7 +89,7 @@ class ZoneAutomationModeSelect(CopilotBaseEntity, SelectEntity):
         super().__init__(coordinator)
         self._zone_id = zone_id
         self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
-        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_automation_mode"
+        self._attr_unique_id = f"pilotsuite_zone_{zone_id}_automation_mode"
         self._attr_name = f"PilotSuite {zone_name} Automationsmodus"
         self._attr_current_option = "off"
 
@@ -142,7 +142,7 @@ class _ZoneAutoSwitch(CopilotBaseEntity, SwitchEntity):
         self._target = target
         self._config_key = key
         self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
-        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{target}_{key}"
+        self._attr_unique_id = f"pilotsuite_zone_{zone_id}_{target}_{key}"
         self._attr_name = f"PilotSuite {zone_name} {name_suffix}"
         self._attr_icon = icon
         self._attr_is_on = False
@@ -246,7 +246,7 @@ class _ZoneConfigNumber(CopilotBaseEntity, NumberEntity):
         self._target = target
         self._config_key = key
         self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
-        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{target}_{key}"
+        self._attr_unique_id = f"pilotsuite_zone_{zone_id}_{target}_{key}"
         self._attr_name = f"PilotSuite {zone_name} {name_suffix}"
         self._attr_icon = icon
         self._attr_native_min_value = min_value
@@ -501,7 +501,7 @@ class _ZoneModuleSwitch(CopilotBaseEntity, SwitchEntity):
         self._module_id = module_id
         self._config_key = key
         self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
-        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{module_id}_{key}"
+        self._attr_unique_id = f"pilotsuite_zone_{zone_id}_{module_id}_{key}"
         self._attr_name = f"PilotSuite {zone_name} {label_de}"
         self._attr_icon = icon
         self._attr_is_on = False
@@ -564,7 +564,7 @@ class _ZoneModuleNumber(CopilotBaseEntity, NumberEntity):
         self._module_id = module_id
         self._config_key = key
         self._zone_device_info = _build_zone_device_info(zone_id, zone_name, area_name)
-        self._attr_unique_id = f"copilot_ha_zone_{zone_id}_{module_id}_{key}"
+        self._attr_unique_id = f"pilotsuite_zone_{zone_id}_{module_id}_{key}"
         self._attr_name = f"PilotSuite {zone_name} {label_de}"
         self._attr_icon = icon
         self._attr_native_min_value = min_value
