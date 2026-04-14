@@ -1,4 +1,4 @@
-"""Core runtime for copilot_ha.
+"""Core runtime for pilotsuite.
 
 This package intentionally contains only lightweight plumbing:
 - module interface
