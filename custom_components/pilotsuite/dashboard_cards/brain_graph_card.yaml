@@ -3,7 +3,7 @@
 
 title: Gehirn
 cards:
-  - type: custom:copilot_ha
+  - type: custom:styx-brain-card
     card_type: brain_graph
     title: 🧠 Neuronales Netz
     refresh_interval: 30

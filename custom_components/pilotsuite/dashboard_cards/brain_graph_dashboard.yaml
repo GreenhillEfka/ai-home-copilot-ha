@@ -5,7 +5,7 @@ title: 🧠 Gehirn
 cards:
   # Brain Graph Panel (iframe)
   - type: iframe
-    url: /local/copilot_ha/brain_graph_panel.html
+    url: /local/pilotsuite/brain_graph_panel.html
     title: 🧠 Neuronales Netzwerk
     aspect_ratio: '16:9'
     
