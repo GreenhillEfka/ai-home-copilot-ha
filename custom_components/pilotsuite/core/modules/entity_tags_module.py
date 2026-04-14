@@ -51,9 +51,9 @@ class EntityTagsModule(CopilotModule):
         from ...entity_tags_store import async_get_entity_tags
         self._tags = await async_get_entity_tags(ctx.hass)
 
-        ctx.hass.data.setdefault("copilot_ha", {})
-        ctx.hass.data["copilot_ha"].setdefault(ctx.entry_id, {})
-        ctx.hass.data["copilot_ha"][ctx.entry_id]["entity_tags_module"] = self
+        ctx.hass.data.setdefault("pilotsuite", {})
+        ctx.hass.data["pilotsuite"].setdefault(ctx.entry_id, {})
+        ctx.hass.data["pilotsuite"][ctx.entry_id]["entity_tags_module"] = self
 
         # Auto-create neuron tags for existing zones if none exist yet.
         # This ensures zones created before v14.4.x get neuron tags on upgrade.
@@ -98,7 +98,7 @@ class EntityTagsModule(CopilotModule):
             _LOGGER.debug("Could not auto-create neuron tags from zones", exc_info=True)
 
     async def async_unload_entry(self, ctx: ModuleContext) -> bool:
-        entry_store = ctx.hass.data.get("copilot_ha", {}).get(ctx.entry_id, {})
+        entry_store = ctx.hass.data.get("pilotsuite", {}).get(ctx.entry_id, {})
         if isinstance(entry_store, dict):
             entry_store.pop("entity_tags_module", None)
         return True
@@ -278,7 +278,7 @@ class EntityTagsModule(CopilotModule):
         """Get the CopilotDataUpdateCoordinator instance."""
         if not self._hass or not self._entry_id:
             return None
-        entry_data = self._hass.data.get("copilot_ha", {}).get(self._entry_id, {})
+        entry_data = self._hass.data.get("pilotsuite", {}).get(self._entry_id, {})
         return entry_data.get("coordinator")
 
     # ------------------------------------------------------------------
@@ -305,5 +305,5 @@ class EntityTagsModule(CopilotModule):
 
 def get_entity_tags_module(hass: HomeAssistant, entry_id: str) -> Optional[EntityTagsModule]:
     """Return the EntityTagsModule instance for a config entry, or None."""
-    data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return data.get("entity_tags_module")
