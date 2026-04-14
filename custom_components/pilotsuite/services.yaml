@@ -332,14 +332,6 @@ unifi_get_report:
   name: UniFi – Report abrufen
   description: Ruft den letzten UniFi-Netzwerk-Report ab.
 
-copilot_ha_unifi_run_diagnostics:
-  name: UniFi – Diagnostik starten (Legacy Alias)
-  description: Legacy-Alias fuer pilotsuite.unifi_run_diagnostics waehrend der Migration.
-
-copilot_ha_unifi_get_report:
-  name: UniFi – Report abrufen (Legacy Alias)
-  description: Legacy-Alias fuer pilotsuite.unifi_get_report waehrend der Migration.
-
 # ─── Habitus Miner (Local) ───────────────────────────────────────────────────
 
 habitus_mine_rules:
