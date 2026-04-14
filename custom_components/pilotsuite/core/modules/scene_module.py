@@ -57,9 +57,9 @@ class SceneModule(CopilotModule):
         from ...scene_store import async_get_scenes
         self._scenes = await async_get_scenes(ctx.hass)
 
-        ctx.hass.data.setdefault("copilot_ha", {})
-        ctx.hass.data["copilot_ha"].setdefault(ctx.entry_id, {})
-        ctx.hass.data["copilot_ha"][ctx.entry_id]["scene_module"] = self
+        ctx.hass.data.setdefault("pilotsuite", {})
+        ctx.hass.data["pilotsuite"].setdefault(ctx.entry_id, {})
+        ctx.hass.data["pilotsuite"][ctx.entry_id]["scene_module"] = self
 
         _LOGGER.info(
             "SceneModule setup: %d scenes loaded",
@@ -67,7 +67,7 @@ class SceneModule(CopilotModule):
         )
 
     async def async_unload_entry(self, ctx: ModuleContext) -> bool:
-        entry_store = ctx.hass.data.get("copilot_ha", {}).get(ctx.entry_id, {})
+        entry_store = ctx.hass.data.get("pilotsuite", {}).get(ctx.entry_id, {})
         if isinstance(entry_store, dict):
             entry_store.pop("scene_module", None)
         return True
@@ -364,5 +364,5 @@ class SceneModule(CopilotModule):
 
 def get_scene_module(hass: HomeAssistant, entry_id: str) -> Optional[SceneModule]:
     """Return the SceneModule instance for a config entry, or None."""
-    data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return data.get("scene_module")
