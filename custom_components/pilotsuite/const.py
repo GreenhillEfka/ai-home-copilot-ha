@@ -333,5 +333,5 @@ DEFAULT_LLM_CLOUD_MODEL = ""
 DEFAULT_LLM_OLLAMA_MODEL = "qwen3:0.6b"
 
 # Entity Tags (v3.2.2)
-ENTITY_TAGS_STORE_KEY = "copilot_ha.entity_tags"
+ENTITY_TAGS_STORE_KEY = "pilotsuite.entity_tags"
 ENTITY_TAGS_STORE_VERSION = 1

@@ -14,7 +14,7 @@ from homeassistant.helpers.storage import Store
 
 _LOGGER = logging.getLogger(__name__)
 
-ENTITY_TAGS_STORE_KEY = "copilot_ha.entity_tags"
+ENTITY_TAGS_STORE_KEY = "pilotsuite.entity_tags"
 ENTITY_TAGS_STORE_VERSION = 1
 
 # Predefined tag colors
