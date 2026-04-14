@@ -65,7 +65,7 @@ views:
         title: "⚡ Zonen-Aktionen"
         show_header_toggle: false
         entities:
-          - entity: button.copilot_ha_validate_habitus_zones
+          - entity: button.pilotsuite_validate_habitus_zones_v2
             name: "Zonen validieren"
             icon: mdi:check-circle
           - entity: input_button.ai_copilot_reset_mood
@@ -281,7 +281,7 @@ views:
       # Brain Graph iframe (Canvas-basierte Visualisierung)
       - type: iframe
         title: "🧠 Neuronales Netzwerk"
-        url: /local/copilot_ha/brain_graph_panel.html
+        url: /local/pilotsuite/brain_graph_panel.html
         aspect_ratio: "16:9"
 
       # Neuron Status Grid
@@ -361,13 +361,13 @@ views:
           - entity: input_boolean.ai_copilot_debug_mode
             name: "Debug Modus"
             icon: mdi:bug
-          - entity: button.copilot_ha_ping_core
+          - entity: button.pilotsuite_ping_core
             name: "Core Ping"
             icon: mdi:ping
-          - entity: button.copilot_ha_fetch_core_graph_state
+          - entity: button.pilotsuite_fetch_core_graph_state
             name: "Graph State holen"
             icon: mdi:download
-          - entity: button.copilot_ha_enable_debug_30m
+          - entity: button.pilotsuite_enable_debug_30m
             name: "Debug 30min"
             icon: mdi:timer-outline
 
