@@ -88,7 +88,7 @@
     "ops_runbook_smoke_test": "mdi:test-tube",
     "ops_runbook_execute_action": "mdi:play-circle",
     "ops_runbook_run_checklist": "mdi:clipboard-check",
-    "copilot_ha_unifi_run_diagnostics": "mdi:network",
-    "copilot_ha_unifi_get_report": "mdi:file-chart"
+    "pilotsuite_unifi_run_diagnostics": "mdi:network",
+    "pilotsuite_unifi_get_report": "mdi:file-chart"
   }
 }
