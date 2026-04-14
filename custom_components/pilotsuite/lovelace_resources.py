@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 CARD_JS_PATH = "/api/v1/cards/pilotsuite-cards.js"
 
-# Local cards served from custom_components/copilot_ha/www/
+# Local cards served from custom_components/pilotsuite/www/
 LOCAL_CARD_FILES = [
     "styx-chat-card.js",
     "styx-suggestions-card.js",
