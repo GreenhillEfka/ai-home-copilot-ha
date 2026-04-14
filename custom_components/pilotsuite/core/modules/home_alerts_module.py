@@ -43,7 +43,7 @@ BATTERY_CRITICAL_THRESHOLD = 10  # %
 CLIMATE_DEVIATION_THRESHOLD = 2.0  # °C difference from target
 
 # Persistence
-STORAGE_KEY = "copilot_ha.home_alerts"
+STORAGE_KEY = "pilotsuite.home_alerts"
 STORAGE_VERSION = 1
 HISTORY_RETENTION_DAYS = 30
 
