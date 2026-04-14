@@ -121,7 +121,7 @@ def _build_suggest_candidate(raw: dict[str, Any]) -> SuggestCandidate | None:
 
     # If the miner provided blueprint info, use it.
     blueprint_url = metadata.get("blueprint_url")
-    blueprint_id = metadata.get("blueprint_id", "copilot_ha/a_to_b_safe.yaml")
+    blueprint_id = metadata.get("blueprint_id", "pilotsuite/a_to_b_safe.yaml")
     if blueprint_id:
         data["blueprint_id"] = blueprint_id
 
