@@ -548,7 +548,7 @@ class DisableCustomIntegrationRepairFlow(RepairsFlow):
                         f"Traceback (gekürzt):\n{self._last_tb}"
                     ),
                     notification_id=_safe_notification_id(
-                        "copilot_ha_repair_disable_failed",
+                        "pilotsuite_repair_disable_failed",
                         self._integration,
                         self._issue_id,
                         str(self._failures),
@@ -598,7 +598,7 @@ class DisableCustomIntegrationRepairFlow(RepairsFlow):
                         + ("Traceback (gekürzt):\n" + (self._last_tb or "(keine)") if action == "details" else "")
                     ),
                     notification_id=_safe_notification_id(
-                        "copilot_ha_repair_disable_details",
+                        "pilotsuite_repair_disable_details",
                         self._integration,
                         self._issue_id,
                         action,
