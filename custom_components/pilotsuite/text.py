@@ -70,14 +70,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
                 entry,
                 key=CONF_SEED_ALLOWED_DOMAINS,
                 name="PilotSuite seed allow domains (csv)",
-                unique_id="copilot_ha_seed_allow_domains_csv",
+                unique_id="pilotsuite_seed_allow_domains_csv",
             ),
             _BaseConfigText(
                 coordinator,
                 entry,
                 key=CONF_SEED_BLOCKED_DOMAINS,
                 name="PilotSuite seed block domains (csv)",
-                unique_id="copilot_ha_seed_block_domains_csv",
+                unique_id="pilotsuite_seed_block_domains_csv",
             ),
             # v2 Entities
             HabitusZonesV2JsonText(coordinator, entry),
