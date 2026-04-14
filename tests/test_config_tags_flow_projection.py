@@ -50,12 +50,12 @@ class TestConfigTagsFlowProjection:
             "primary lookup path"
         )
 
-    def test_ctf3_legacy_fallback_uses_copilot_ha_string(self) -> None:
-        """CTF3: Legacy fallback preserves the legacy 'copilot_ha' string as a string literal."""
+    def test_ctf3_legacy_fallback_uses_pilotsuite_string(self) -> None:
+        """CTF3: Legacy fallback uses the 'pilotsuite' string as the canonical domain."""
         source = _read_source()
-        assert '"copilot_ha"' in source, (
-            "The legacy fallback must retain the string literal 'copilot_ha' "
-            "to support migrations from the old domain"
+        assert '"pilotsuite"' in source, (
+            "The legacy fallback must use the string literal 'pilotsuite' "
+            "as the canonical domain for migration from the old domain"
         )
 
     def test_ctf4_no_bare_hardcoded_copilot_ha_in_data_lookup(self) -> None:

@@ -192,7 +192,7 @@ def _reload_module(flow) -> None:
             return
         data = flow.hass.data.get(DOMAIN, {}).get(entry_id)
         if not data:
-            data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})
+            data = flow.hass.data.get("pilotsuite", {}).get(entry_id, {})
         mod = data.get("entity_tags_module")
         if mod and hasattr(mod, "reload_from_storage"):
             flow.hass.async_create_task(mod.reload_from_storage())
