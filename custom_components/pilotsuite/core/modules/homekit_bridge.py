@@ -27,11 +27,11 @@ from .module import CopilotModule, ModuleContext
 
 _LOGGER = logging.getLogger(__name__)
 
-HOMEKIT_STORE_KEY = "copilot_ha.homekit_zones"
+HOMEKIT_STORE_KEY = "pilotsuite.homekit_zones"
 HOMEKIT_STORE_VERSION = 2
 
 # Signal fired when zone HomeKit state changes
-SIGNAL_HOMEKIT_ZONE_TOGGLED = "copilot_ha_homekit_zone_toggled"
+SIGNAL_HOMEKIT_ZONE_TOGGLED = "pilotsuite_homekit_zone_toggled"
 
 # Domains that HomeKit understands
 HOMEKIT_SUPPORTED_DOMAINS = {
@@ -74,9 +74,9 @@ class HomeKitBridgeModule(CopilotModule):
         if raw and isinstance(raw, dict):
             self._zone_config = raw.get("zones", {})
 
-        ctx.hass.data.setdefault("copilot_ha", {})
-        ctx.hass.data["copilot_ha"].setdefault(ctx.entry_id, {})
-        ctx.hass.data["copilot_ha"][ctx.entry_id]["homekit_bridge_module"] = self
+        ctx.hass.data.setdefault("pilotsuite", {})
+        ctx.hass.data["pilotsuite"].setdefault(ctx.entry_id, {})
+        ctx.hass.data["pilotsuite"][ctx.entry_id]["homekit_bridge_module"] = self
 
         # Listen for zone creation/updates → auto-expose
         from ...habitus_zones_store_v2 import (
@@ -100,7 +100,7 @@ class HomeKitBridgeModule(CopilotModule):
             self._unsub_zones()
         if callable(self._unsub_zone_state):
             self._unsub_zone_state()
-        entry_store = ctx.hass.data.get("copilot_ha", {}).get(ctx.entry_id, {})
+        entry_store = ctx.hass.data.get("pilotsuite", {}).get(ctx.entry_id, {})
         if isinstance(entry_store, dict):
             entry_store.pop("homekit_bridge_module", None)
         return True
@@ -412,5 +412,5 @@ class HomeKitBridgeModule(CopilotModule):
 
 def get_homekit_bridge(hass: HomeAssistant, entry_id: str) -> Optional[HomeKitBridgeModule]:
     """Return the HomeKitBridgeModule instance for a config entry, or None."""
-    data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return data.get("homekit_bridge_module")
