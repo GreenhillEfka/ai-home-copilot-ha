@@ -45,9 +45,9 @@ class CalendarModule(CopilotModule):
         # Discover calendar entities
         self._calendar_entities = self._discover_calendars()
 
-        ctx.hass.data.setdefault("copilot_ha", {})
-        ctx.hass.data["copilot_ha"].setdefault(ctx.entry_id, {})
-        ctx.hass.data["copilot_ha"][ctx.entry_id]["calendar_module"] = self
+        ctx.hass.data.setdefault("pilotsuite", {})
+        ctx.hass.data["pilotsuite"].setdefault(ctx.entry_id, {})
+        ctx.hass.data["pilotsuite"][ctx.entry_id]["calendar_module"] = self
 
         _LOGGER.info(
             "CalendarModule setup: %d calendars found: %s",
@@ -56,7 +56,7 @@ class CalendarModule(CopilotModule):
         )
 
     async def async_unload_entry(self, ctx: ModuleContext) -> bool:
-        entry_store = ctx.hass.data.get("copilot_ha", {}).get(ctx.entry_id, {})
+        entry_store = ctx.hass.data.get("pilotsuite", {}).get(ctx.entry_id, {})
         if isinstance(entry_store, dict):
             entry_store.pop("calendar_module", None)
         return True
@@ -186,5 +186,5 @@ def get_calendar_module(
     hass: HomeAssistant, entry_id: str
 ) -> Optional[CalendarModule]:
     """Return the CalendarModule instance for a config entry, or None."""
-    data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return data.get("calendar_module")
