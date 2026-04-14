@@ -52,7 +52,7 @@ def _tail_file_sync(path: str, max_lines: int) -> list[str]:
 
 
 def _extract_latest_block(lines: list[str]) -> str | None:
-    """Extract the most recent traceback block that references copilot_ha."""
+    """Extract the most recent traceback block that references pilotsuite."""
 
     if not lines:
         return None
@@ -76,12 +76,18 @@ def _extract_latest_block(lines: list[str]) -> str | None:
         block = "\n".join(lines[start:j]).strip()
         if not block:
             continue
-        if "/config/custom_components/copilot_ha/" in block or "[copilot_ha]" in block:
+        if (
+            "/config/custom_components/pilotsuite/" in block
+            or "[pilotsuite]" in block
+        ):
             return block
 
     # Fallback: any block containing our integration path.
     for i in range(len(lines) - 1, -1, -1):
-        if "/config/custom_components/copilot_ha/" in lines[i] or "[copilot_ha]" in lines[i]:
+        if (
+            "/config/custom_components/pilotsuite/" in lines[i]
+            or "[pilotsuite]" in lines[i]
+        ):
             start = max(0, i - 50)
             end = min(len(lines), i + 20)
             block = "\n".join(lines[start:end]).strip()
@@ -140,7 +146,7 @@ async def async_push_devlog_test(hass: HomeAssistant, entry: ConfigEntry, *, api
 
 
 async def async_push_latest_ai_copilot_error(hass: HomeAssistant, entry: ConfigEntry, *, api: CopilotApiClient) -> bool:
-    """Push the latest copilot_ha-related traceback block, if any. Returns True if sent."""
+    """Push the latest pilotsuite-related traceback block, if any. Returns True if sent."""
 
     cfg = entry.data | entry.options
     max_lines = int(cfg.get(CONF_DEVLOG_PUSH_MAX_LINES, DEFAULT_DEVLOG_PUSH_MAX_LINES))
