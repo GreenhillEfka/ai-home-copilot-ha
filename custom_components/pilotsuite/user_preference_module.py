@@ -22,7 +22,7 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-STORAGE_KEY = "copilot_ha_user_preferences"
+STORAGE_KEY = "pilotsuite_user_preferences"
 STORAGE_VERSION = 1
 
 # Default preferences
