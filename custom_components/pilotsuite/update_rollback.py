@@ -192,5 +192,5 @@ async def async_show_update_rollback_report(hass: HomeAssistant) -> None:
         hass,
         msg,
         title="PilotSuite — Update/Rollback report",
-        notification_id="copilot_ha_update_rollback_report",
+        notification_id="pilotsuite_update_rollback_report",
     )
