@@ -23,7 +23,7 @@ UNASSIGNED = "Nicht zugeordnet"
 
 
 def _find_entry_id(hass: HomeAssistant) -> str | None:
-    """Find the first copilot_ha config entry ID."""
+    """Find the first pilotsuite config entry ID."""
     entries = hass.config_entries.async_entries(DOMAIN)
     return entries[0].entry_id if entries else None
 
