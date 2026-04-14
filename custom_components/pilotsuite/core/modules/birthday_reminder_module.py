@@ -178,12 +178,12 @@ class BirthdayReminderModule(CopilotModule):
         )
 
         # Store state
-        ctx.hass.data.setdefault("copilot_ha", {})
-        ctx.hass.data["copilot_ha"].setdefault(ctx.entry_id, {})
-        ctx.hass.data["copilot_ha"][ctx.entry_id]["birthday_reminder"] = self
+        ctx.hass.data.setdefault("pilotsuite", {})
+        ctx.hass.data["pilotsuite"].setdefault(ctx.entry_id, {})
+        ctx.hass.data["pilotsuite"][ctx.entry_id]["birthday_reminder"] = self
 
         # Get API client
-        entry_store = ctx.hass.data.get("copilot_ha", {}).get(ctx.entry_id, {})
+        entry_store = ctx.hass.data.get("pilotsuite", {}).get(ctx.entry_id, {})
         coord = entry_store.get("coordinator") if isinstance(entry_store, dict) else None
         self._api_client = getattr(coord, "api", None) if coord else None
 
@@ -455,5 +455,5 @@ class BirthdayReminderModule(CopilotModule):
 
 def get_birthday_reminder_module(hass, entry_id):
     """Return the BirthdayReminderModule instance for a config entry, or None."""
-    data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return data.get("birthday_reminder")
