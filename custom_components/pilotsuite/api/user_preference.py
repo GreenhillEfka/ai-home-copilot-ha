@@ -30,7 +30,7 @@ class UserPreferencesView(_UserPreferenceBaseView):
     """GET all preferences for a user."""
 
     url = "/api/v1/user/{user_id}/preferences"
-    name = "api:copilot_ha:user_preferences"
+    name = "api:pilotsuite:user_preferences"
 
     async def get(self, request: web.Request) -> web.Response:
         user_id = request.match_info.get("user_id", "")
@@ -54,7 +54,7 @@ class UserZonePreferenceView(_UserPreferenceBaseView):
     """GET preference for a user in a specific zone."""
 
     url = "/api/v1/user/{user_id}/zone/{zone_id}/preference"
-    name = "api:copilot_ha:user_zone_preference"
+    name = "api:pilotsuite:user_zone_preference"
 
     async def get(self, request: web.Request) -> web.Response:
         user_id = request.match_info.get("user_id", "")
@@ -91,7 +91,7 @@ class UserPreferenceUpdateView(_UserPreferenceBaseView):
     """POST to update a user's preference for a zone."""
 
     url = "/api/v1/user/{user_id}/preference"
-    name = "api:copilot_ha:user_preference_update"
+    name = "api:pilotsuite:user_preference_update"
 
     async def post(self, request: web.Request) -> web.Response:
         user_id = request.match_info.get("user_id", "")
