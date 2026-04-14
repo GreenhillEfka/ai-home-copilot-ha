@@ -142,7 +142,7 @@ async def async_offer_demo_candidate(hass: HomeAssistant, entry_id: str) -> None
         title="A→B: Wenn A passiert, führe B aus (sicherer Blueprint)",
         blueprint_url=None,
         data={
-            "blueprint_id": "copilot_ha/a_to_b_safe.yaml",
+            "blueprint_id": "pilotsuite/a_to_b_safe.yaml",
             "blueprint_inputs": {},
             "risk": "medium",
         },
