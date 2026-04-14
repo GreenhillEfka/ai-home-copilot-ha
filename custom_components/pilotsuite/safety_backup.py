@@ -86,7 +86,7 @@ async def async_create_safety_backup(hass: HomeAssistant) -> SafetyBackupResult:
             "(Dieses Backup wird nur manuell per Button gestartet – nicht automatisch bei Updates.)"
         ),
         title="PilotSuite Safety Backup",
-        notification_id="copilot_ha_safety_backup",
+        notification_id="pilotsuite_safety_backup",
     )
 
     return SafetyBackupResult(service=service, started_at=started_at)
@@ -124,5 +124,5 @@ async def async_show_safety_backup_status(hass: HomeAssistant) -> None:
         hass,
         msg,
         title="PilotSuite Safety Backup",
-        notification_id="copilot_ha_safety_backup",
+        notification_id="pilotsuite_safety_backup",
     )
