@@ -79,9 +79,9 @@ async def _save_state(hass: HomeAssistant, data: dict[str, Any]) -> None:
 
 _MATCH_SUBSTRINGS = [
     # direct signal
-    "copilot_ha",
-    "custom_components.copilot_ha",
-    "custom integration 'copilot_ha'",
+    "pilotsuite",
+    "custom_components.pilotsuite",
+    "custom integration 'pilotsuite'",
     # generic HA issues we care about (only when our stack/lines are involved)
     "Detected that custom integration",
     "calls hass.async_create_task",
@@ -126,11 +126,11 @@ def _is_relevant_entry(entry: list[str]) -> bool:
     text = "\n".join(entry)
 
     # Prefer entries clearly tied to our integration.
-    if any(s in text for s in ("copilot_ha", "custom_components.copilot_ha")):
+    if any(s in text for s in ("pilotsuite", "custom_components.pilotsuite")):
         return True
 
     # Allow some generic HA problems *only* if the stack points to our files.
-    if "custom_components/copilot_ha" in text:
+    if "custom_components/pilotsuite" in text:
         return True
 
     return False
@@ -174,7 +174,7 @@ def _parse_traceback_signature(entry: list[str]) -> str:
     
     # Look for file location (most specific stack frame in our code)
     for line in entry:
-        if "custom_components/copilot_ha" in line and "line " in line:
+        if "custom_components/pilotsuite" in line and "line " in line:
             # Extract filename and line
             if 'File "' in line:
                 try:
