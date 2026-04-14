@@ -31,7 +31,7 @@ from ..module import ModuleContext
 _LOGGER = logging.getLogger(__name__)
 
 # Persistence
-STORAGE_KEY = "copilot_ha.habitus_miner"
+STORAGE_KEY = "pilotsuite.habitus_miner"
 STORAGE_VERSION = 1
 BUFFER_SAVE_INTERVAL = timedelta(minutes=5)
 
@@ -457,7 +457,7 @@ class HabitusMinerModule:
             if not coordinator:
                 _LOGGER.error("No coordinator found - legacy module may not be loaded")
                 hass.bus.async_fire(
-                    "copilot_ha_notification",
+                    "pilotsuite_notification",
                     {
                         "title": "Habitus Mining Failed",
                         "message": "Coordinator not available. Please ensure the integration is fully loaded.",
@@ -493,7 +493,7 @@ class HabitusMinerModule:
             if not events:
                 _LOGGER.warning("No events found for mining")
                 hass.bus.async_fire(
-                    "copilot_ha_notification",
+                    "pilotsuite_notification",
                     {
                         "title": "Habitus Mining",
                         "message": "No events available for pattern mining",
@@ -547,7 +547,7 @@ class HabitusMinerModule:
 
                 # Send notification
                 hass.bus.async_fire(
-                    "copilot_ha_notification",
+                    "pilotsuite_notification",
                     {
                         "title": "Habitus Mining Complete",
                         "message": f"Discovered {discovered_count} behavioral patterns from {total_events} events across {len(zones_analyzed)} zones",
@@ -569,7 +569,7 @@ class HabitusMinerModule:
             else:
                 _LOGGER.error("Mining failed - no result from Core API")
                 hass.bus.async_fire(
-                    "copilot_ha_notification",
+                    "pilotsuite_notification",
                     {
                         "title": "Habitus Mining Failed",
                         "message": "Could not connect to Core API for pattern mining",
@@ -606,7 +606,7 @@ class HabitusMinerModule:
 
             # Fire event for other modules to consume
             hass.bus.async_fire(
-                "copilot_ha_habitus_patterns_discovered",
+                "pilotsuite_habitus_patterns_discovered",
                 {
                     "rules": rules[:10],  # Top 10 rules
                     "count": len(rules),
@@ -677,7 +677,7 @@ class HabitusMinerModule:
                     message = "No behavioral patterns found matching criteria"
 
                 hass.bus.async_fire(
-                    "copilot_ha_notification",
+                    "pilotsuite_notification",
                     {
                         "title": "Habitus Rules Retrieved",
                         "message": message,
@@ -730,7 +730,7 @@ class HabitusMinerModule:
             _LOGGER.info("Reset Habitus Miner cache")
 
             hass.bus.async_fire(
-                "copilot_ha_notification",
+                "pilotsuite_notification",
                 {
                     "title": "Habitus Cache Reset",
                     "message": "All cached rules and events have been cleared",
@@ -790,7 +790,7 @@ class HabitusMinerModule:
                 _LOGGER.info("Updated Habitus Miner configuration: %s", updates)
 
                 hass.bus.async_fire(
-                    "copilot_ha_notification",
+                    "pilotsuite_notification",
                     {
                         "title": "Habitus Configuration Updated",
                         "message": f"Mining configuration updated: {list(updates.keys())}",
