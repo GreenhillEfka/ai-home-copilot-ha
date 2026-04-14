@@ -810,7 +810,7 @@ class RepairsBlueprintApplyFlow(RepairsFlow):
                 step_id="init",
                 data_schema=STEP_BP_INIT,
                 description_placeholders={
-                    "blueprint": str(self._issue_data.get("blueprint_id") or "copilot_ha/a_to_b_safe.yaml"),
+                    "blueprint": str(self._issue_data.get("blueprint_id") or "pilotsuite/a_to_b_safe.yaml"),
                     "risk": self._risk(),
                 },
             )
@@ -819,7 +819,7 @@ class RepairsBlueprintApplyFlow(RepairsFlow):
             step_id="init",
             data_schema=STEP_BP_INIT,
             description_placeholders={
-                "blueprint": str(self._issue_data.get("blueprint_id") or "copilot_ha/a_to_b_safe.yaml"),
+                "blueprint": str(self._issue_data.get("blueprint_id") or "pilotsuite/a_to_b_safe.yaml"),
                 "risk": self._risk(),
             },
         )
