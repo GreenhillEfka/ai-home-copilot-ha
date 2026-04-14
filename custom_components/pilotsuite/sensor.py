@@ -647,7 +647,7 @@ async def _discover_camera_entities_for_sensors(hass: HomeAssistant) -> list[tup
 
 class CopilotVersionSensor(CopilotBaseEntity, SensorEntity):
     _attr_name = "Version"
-    _attr_unique_id = "copilot_ha_version"
+    _attr_unique_id = "pilotsuite_version"
     _attr_icon = "mdi:tag"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
