@@ -239,9 +239,15 @@ def test_branch_recheck_against_origin_main_blocks_documented_metadata_and_confi
     origin_const = _git_show_text("origin/main", "custom_components/pilotsuite/const.py")
     head_snapshot = _git_show_text("HEAD", "custom_components/pilotsuite/config_snapshot.py")
     origin_snapshot = _git_show_text("origin/main", "custom_components/pilotsuite/config_snapshot.py")
+    head_readme = _git_show_text("HEAD", "README.md")
+    origin_readme = _git_show_text("origin/main", "README.md")
 
     assert head_version == "20.0.8\n"
     assert origin_version == "20.0.5\n"
+    assert '**Version:** 20.0.8' in (head_readme or "")
+    assert '**Version:** 20.0.0' in (origin_readme or "")
+    assert 'Home Assistant ≥ 2024.4.0' in (head_readme or "")
+    assert 'Home Assistant ≥ 2024.1.0' in (origin_readme or "")
     assert '"version": "20.0.8"' in (head_root_manifest or "")
     assert '"version": "20.0.5"' in (origin_root_manifest or "")
     assert '"version": "20.0.8"' in (head_component_manifest or "")
@@ -308,6 +314,12 @@ def test_branch_recheck_against_origin_main_blocks_remaining_config_surface_roll
     assert 'from .const import DOMAIN' not in (origin_tags_flow or "")
     assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' not in (origin_tags_flow or "")
     assert 'data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})' in (origin_tags_flow or "")
+    head_readme2 = _git_show_text("HEAD", "README.md")
+    origin_readme2 = _git_show_text("origin/main", "README.md")
+    assert '**Version:** 20.0.8' in (head_readme2 or "")
+    assert '**Version:** 20.0.0' in (origin_readme2 or "")
+    assert 'Home Assistant ≥ 2024.4.0' in (head_readme2 or "")
+    assert 'Home Assistant ≥ 2024.1.0' in (origin_readme2 or "")
 
 
 
