@@ -399,7 +399,7 @@ class FrigateBridgeModule(CopilotModule):
         confidence: float,
         person_count: int,
     ) -> None:
-        """Fire an copilot_ha_camera_event for CameraContextModule."""
+        """Fire a pilotsuite_camera_event for CameraContextModule."""
         camera_info = self._frigate_cameras.get(camera_name)
         camera_entity = camera_info.camera_entity if camera_info else f"camera.{camera_name}"
 
