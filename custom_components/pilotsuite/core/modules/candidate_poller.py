@@ -307,7 +307,7 @@ class CandidatePollerModule:
         _LOGGER.info("CandidatePoller: started (interval=%s)", DEFAULT_POLL_INTERVAL)
 
     async def _register_mining_service(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
-        """Register ``copilot_ha.trigger_mining`` service (on-demand Core mining run)."""
+        """Register ``pilotsuite.trigger_mining`` service (on-demand Core mining run)."""
 
         if hass.services.has_service(DOMAIN, "trigger_mining"):
             return
