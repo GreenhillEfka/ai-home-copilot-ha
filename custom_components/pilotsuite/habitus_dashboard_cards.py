@@ -341,7 +341,7 @@ def generate_zone_entity_suggestions_card(
     # Add configuration link
     cards.append(_markdown_card(
         "⚙️ Konfigurieren",
-        "[Zone bearbeiten](/config/copilot_ha/zones)"
+        "[Zone bearbeiten](/config/pilotsuite/zones)"
     ))
     
     return _vertical_stack_card(cards)
