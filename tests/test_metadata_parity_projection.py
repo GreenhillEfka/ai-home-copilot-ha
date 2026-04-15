@@ -17,6 +17,7 @@ VERSION_FILE = REPO_ROOT / "VERSION"
 ROOT_MANIFEST = REPO_ROOT / "manifest.json"
 COMPONENT_MANIFEST = REPO_ROOT / "custom_components" / "pilotsuite" / "manifest.json"
 COMPONENT_VERSION_STUB = REPO_ROOT / "custom_components" / "pilotsuite" / "VERSION"
+README_FILE = REPO_ROOT / "README.md"
 HACS_FILE = REPO_ROOT / "hacs.json"
 COMPONENT_HACS_FILE = REPO_ROOT / "custom_components" / "pilotsuite" / "hacs.json"
 EXPECTED_VERSION = "20.0.8"
@@ -166,6 +167,20 @@ def test_component_version_stub_is_absent() -> None:
     assert COMPONENT_VERSION_STUB.exists() is False
 
 
+def test_readme_release_metadata_matches_manifest_contract() -> None:
+    readme = README_FILE.read_text(encoding="utf-8")
+    component_manifest = _load_json(COMPONENT_MANIFEST)
+    hacs = _load_json(HACS_FILE)
+
+    assert f"**Version:** {EXPECTED_VERSION}" in readme
+    assert f"Home Assistant ≥ {EXPECTED_HOMEASSISTANT}" in readme
+    assert component_manifest["version"] == EXPECTED_VERSION
+    assert component_manifest["homeassistant"] == EXPECTED_HOMEASSISTANT
+    assert hacs["homeassistant"] == EXPECTED_HOMEASSISTANT
+    assert "**Version:** 20.0.0" not in readme
+    assert "Home Assistant ≥ 2024.1.0" not in readme
+
+
 def test_metadata_source_guard_blocks_stale_values() -> None:
     text = "\n".join(
         [
@@ -174,6 +189,7 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
             COMPONENT_MANIFEST.read_text(encoding="utf-8"),
             HACS_FILE.read_text(encoding="utf-8"),
             COMPONENT_HACS_FILE.read_text(encoding="utf-8"),
+            README_FILE.read_text(encoding="utf-8"),
             (REPO_ROOT / "custom_components" / "pilotsuite" / "const.py").read_text(encoding="utf-8"),
             (REPO_ROOT / "custom_components" / "pilotsuite" / "config_flow.py").read_text(encoding="utf-8"),
         ]
@@ -187,6 +203,8 @@ def test_metadata_source_guard_blocks_stale_values() -> None:
     assert '"zip_release": true' not in text
     assert '"filename": "copilot-ha.zip"' not in text
     assert '"homeassistant": "2024.1.0"' not in text
+    assert 'Home Assistant ≥ 2024.1.0' not in text
+    assert '**Version:** 20.0.0' not in text
     assert '"domain": "copilot_ha"' not in text
     # HA-290 / HA-292 / HA-374: block legacy-domain and known behind-1 metadata rollback values.
     assert 'DOMAIN = "copilot_ha"' not in text

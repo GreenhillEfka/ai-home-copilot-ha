@@ -1,6 +1,6 @@
 # PilotSuite — Home Assistant Integration
 
-**Version:** 20.0.0  
+**Version:** 20.0.8  
 **License:** MIT  
 **Author:** GreenhillEfka
 
@@ -35,7 +35,7 @@ PilotSuite is an AI-powered home automation copilot that brings brain architectu
 
 ## Requirements
 
-- Home Assistant ≥ 2024.1.0
+- Home Assistant ≥ 2024.4.0
 - [PilotSuite Core Add-on](https://github.com/GreenhillEfka/pilotsuite-styx-core) (for full functionality)
 
 ## Documentation
