@@ -1,7 +1,7 @@
 """PilotSuite Frontend Module — Dashboard lifecycle management.
 
 Owns:
-- Dashboard refresh service (copilot_ha.refresh_dashboard)
+- Dashboard refresh service (pilotsuite.refresh_dashboard)
 - View toggle state persistence (which views are enabled/disabled)
 - Auto-rebuild when Habitus zones change (debounced)
 - SIGNAL_FRONTEND_MODULE_READY for lazy entity creation in switch/button platforms
@@ -194,5 +194,5 @@ class FrontendModule:
         self._pending_refresh_cancel = async_call_later(self._hass, 2.0, _run_refresh)
 
     async def _handle_refresh_dashboard(self, call: ServiceCall) -> None:
-        """Handle copilot_ha.refresh_dashboard service call."""
+        """Handle pilotsuite.refresh_dashboard service call."""
         await self.async_rebuild_dashboard("service_call")
