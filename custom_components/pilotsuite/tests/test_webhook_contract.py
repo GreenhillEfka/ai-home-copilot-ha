@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import custom_components.copilot_ha.webhook as webhook_module
-from custom_components.copilot_ha.const import (
+from custom_components.pilotsuite.const import (
     CONF_TOKEN,
     CONF_WEBHOOK_ID,
     ENV_LEGACY_HEADER_SUNSET_AT,
@@ -100,7 +100,7 @@ async def _capture_registered_handler(hass, entry, coordinator):
         holder["handler"] = handler
 
     with patch(
-        "custom_components.copilot_ha.webhook.webhook.async_register",
+        "custom_components.pilotsuite.webhook.webhook.async_register",
         side_effect=_fake_register,
     ):
         webhook_id = await webhook_module.async_register_webhook(hass, entry, coordinator)
