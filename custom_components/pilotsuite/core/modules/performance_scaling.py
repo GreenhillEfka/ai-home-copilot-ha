@@ -194,9 +194,9 @@ class PerformanceScalingModule:
             return sum(
                 1
                 for s in all_states
-                if s.entity_id.startswith("sensor.copilot_ha")
-                or s.entity_id.startswith("button.copilot_ha")
-                or s.entity_id.startswith("binary_sensor.copilot_ha")
+                if s.entity_id.startswith("sensor.pilotsuite")
+                or s.entity_id.startswith("button.pilotsuite")
+                or s.entity_id.startswith("binary_sensor.pilotsuite")
             )
         except Exception:
             return 0
