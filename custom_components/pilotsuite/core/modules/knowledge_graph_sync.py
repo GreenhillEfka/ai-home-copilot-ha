@@ -191,7 +191,7 @@ class KnowledgeGraphSyncModule(CopilotModule):
         self._area_registry = ar.async_get(self._hass)
 
         # Get API client from runtime
-        runtime = self._hass.data.get("copilot_ha", {}).get("runtime")
+        runtime = self._hass.data.get("pilotsuite", {}).get("runtime")
         if runtime and hasattr(runtime, "api_client"):
             session = self._hass.helpers.aiohttp_client.async_get_clientsession()
             base_url = runtime.config.get("core_addon_url", "http://localhost:8909")
@@ -784,7 +784,7 @@ class KnowledgeGraphSyncModule(CopilotModule):
 
 async def async_get_knowledge_graph_sync(hass: HomeAssistant) -> Optional[KnowledgeGraphSyncModule]:
     """Get the Knowledge Graph sync module from runtime."""
-    runtime = hass.data.get("copilot_ha", {}).get("runtime")
+    runtime = hass.data.get("pilotsuite", {}).get("runtime")
     if runtime and hasattr(runtime, "registry"):
         return runtime.registry.get("knowledge_graph_sync")
     return None
