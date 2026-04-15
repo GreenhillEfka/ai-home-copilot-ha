@@ -17,4 +17,4 @@ def test_normalize_proxy_path_rejects_non_api_paths():
 
 def test_card_asset_urls_are_same_origin_api_routes():
     for filename in _CARD_FILENAMES:
-        assert get_card_asset_url(filename) == f"/api/copilot_ha/cards/{filename}"
+        assert get_card_asset_url(filename) == f"/api/pilotsuite/cards/{filename}"

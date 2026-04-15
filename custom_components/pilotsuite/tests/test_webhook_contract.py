@@ -582,7 +582,7 @@ async def test_autonomy_executed_merges_history_and_fires_event(hass, coordinato
     coordinator.async_set_updated_data.assert_called_once()
     hass.bus.async_fire.assert_called_once()
     call_args = hass.bus.async_fire.call_args
-    assert call_args[0][0] == "copilot_ha_autonomy_executed"
+    assert call_args[0][0] == "pilotsuite_autonomy_executed"
 
 
 @pytest.mark.asyncio
@@ -611,7 +611,7 @@ async def test_scene_captured_fires_ha_event(hass, coordinator):
     response = await handler(hass, "webhook-test-id", request)
     assert response.status == 200
     hass.bus.async_fire.assert_called_once()
-    assert hass.bus.async_fire.call_args[0][0] == "copilot_ha_scene_captured"
+    assert hass.bus.async_fire.call_args[0][0] == "pilotsuite_scene_captured"
 
 
 @pytest.mark.asyncio
