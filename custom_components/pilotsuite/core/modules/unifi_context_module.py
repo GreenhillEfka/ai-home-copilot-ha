@@ -423,5 +423,5 @@ class UnifiContextModule:
 
 def get_network_module(hass, entry_id):
     """Return the UniFiContextModule instance for a config entry, or None."""
-    data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return data.get("network_module")
