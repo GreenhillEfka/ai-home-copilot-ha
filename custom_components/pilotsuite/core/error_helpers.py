@@ -88,7 +88,7 @@ def _sanitize_traceback(tb_lines: list[str]) -> list[str]:
         
         # Keep only PilotSuite frames and immediate neighbors
         if any(marker in line for marker in [
-            "copilot_ha", "copilot_core", "custom_components",
+            "pilotsuite", "copilot_core", "custom_components",
             "File \"<", "Traceback", "Exception", "Error"
         ]):
             sanitized.append(line.rstrip())
@@ -104,7 +104,7 @@ def _extract_traceback_summary(tb_lines: list[str]) -> str:
     # Find the last frame in our code
     our_frames = []
     for line in tb_lines:
-        if "copilot_ha" in line and "File " in line:
+        if "pilotsuite" in line and "File " in line:
             # Extract file and line number
             try:
                 file_part = line.split(", line ")[0].split("File ")[-1].strip('"')
