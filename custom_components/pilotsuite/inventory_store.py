@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
 DOMAIN = "pilotsuite"
-LEGACY_DOMAIN = "copilot_ha"
+LEGACY_DOMAIN = "pilotsuite"
 STORE_KEY = f"{DOMAIN}.inventory"
 LEGACY_STORE_KEY = f"{LEGACY_DOMAIN}.inventory"
 STORE_VERSION = 1
