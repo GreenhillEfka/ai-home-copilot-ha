@@ -8,7 +8,7 @@ Tests cover:
 - Mood distribution aggregation
 - Transition data handling
 
-Run with: python3 -m pytest custom_components/copilot_ha/tests/ -v
+Run with: python3 -m pytest custom_components/pilotsuite/tests/ -v
 """
 
 import pytest
@@ -532,6 +532,30 @@ class TestEdgeCases:
 
         # Should still generate valid card structure
         assert "type:" in result or len(result) > 0
+
+
+class TestModuleMetadata:
+    """"Contract tests for module-level metadata."""
+
+    def test_docstring_pilot_path_reference(self):
+        """"Assert the module docstring references the correct pilotsuite test path."""
+        import ast
+        with open(__file__, "r", encoding="utf-8") as fh:
+            source = fh.read()
+        tree = ast.parse(source)
+        # Extract module-level docstring from AST
+        docstring = ast.get_docstring(tree) or ""
+        # The module docstring must reference the canonical pilotsuite path,
+        # not the legacy copilot_ha path
+        assert "custom_components/copilot_ha/tests/" not in docstring, (
+            "Module docstring still references stale legacy test path "
+            "custom_components/copilot_ha/tests/ — expected "
+            "custom_components/pilotsuite/tests/"
+        )
+        assert "custom_components/pilotsuite/tests/" in docstring, (
+            "Module docstring does not reference canonical test path "
+            "custom_components/pilotsuite/tests/"
+        )
 
 
 if __name__ == "__main__":
