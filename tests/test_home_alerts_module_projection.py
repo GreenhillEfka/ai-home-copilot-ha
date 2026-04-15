@@ -90,6 +90,22 @@ def test_HA_module_4_syntax() -> None:
     print("HA-module-4 passed: syntax OK")
 
 
+def test_HA_module_5_docstring_entity_ids() -> None:
+    """HA-module-5: Docstring entity ID examples use pilotsuite namespace."""
+    # The module docstring references sensor entity IDs for the alerts and health sensors
+    assert "sensor.pilotsuite_alerts" in CONTENT, (
+        "Docstring should reference canonical sensor.pilotsuite_alerts"
+    )
+    assert "sensor.pilotsuite_health" in CONTENT, (
+        "Docstring should reference canonical sensor.pilotsuite_health"
+    )
+    # Ensure no stale copilot_ha entity IDs remain in docstring
+    stale_patterns = ["sensor.copilot_ha_alerts", "sensor.copilot_ha_health"]
+    for pat in stale_patterns:
+        assert pat not in CONTENT, f"Stale docstring entity ID found: {pat}"
+    print("HA-module-5 passed: docstring entity IDs use pilotsuite namespace")
+
+
 if __name__ == "__main__":
     test_HA_module_4_syntax()
     test_HA_module_1_canonical_storage_key()

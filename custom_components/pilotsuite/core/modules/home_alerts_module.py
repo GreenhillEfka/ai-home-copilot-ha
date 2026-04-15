@@ -88,8 +88,8 @@ class HomeAlertsModule(CopilotModule):
     - System issues (unavailable entities, errors)
 
     Alerts are exposed via:
-    - `sensor.copilot_ha_alerts` - Current alert count
-    - `sensor.copilot_ha_health` - Home health score (0-100)
+    - `sensor.pilotsuite_alerts` - Current alert count
+    - `sensor.pilotsuite_health` - Home health score (0-100)
     - Dashboard Card - Visual alert display
 
     Persistence:
