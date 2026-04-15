@@ -1,6 +1,6 @@
 # Changelog
 
-## [20.0.0] - 2026-04-08
+## [20.0.8] - 2026-04-15
 
 ### Changed
 - **BREAKING:** Domain renamed from `copilot_ha` to `pilotsuite` for consistency
