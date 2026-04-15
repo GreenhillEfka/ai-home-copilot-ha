@@ -285,7 +285,7 @@ def test_branch_recheck_against_origin_main_blocks_remaining_config_surface_roll
 
     assert 'from .const import DOMAIN' in (head_tags_flow or "")
     assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' in (head_tags_flow or "")
-    assert 'data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})' in (head_tags_flow or "")
+    assert 'data = flow.hass.data.get("pilotsuite", {}).get(entry_id, {})' in (head_tags_flow or "")
 
     assert 'from .const import DOMAIN' not in (origin_tags_flow or "")
     assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' not in (origin_tags_flow or "")

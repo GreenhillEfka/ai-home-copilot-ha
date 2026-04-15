@@ -126,9 +126,9 @@ class HomeAlertsModule(CopilotModule):
         await self._load_persisted_state()
 
         # Store module state
-        ctx.hass.data.setdefault("copilot_ha", {})
-        ctx.hass.data["copilot_ha"].setdefault(ctx.entry_id, {})
-        ctx.hass.data["copilot_ha"][ctx.entry_id]["home_alerts"] = self._state
+        ctx.hass.data.setdefault("pilotsuite", {})
+        ctx.hass.data["pilotsuite"].setdefault(ctx.entry_id, {})
+        ctx.hass.data["pilotsuite"][ctx.entry_id]["home_alerts"] = self._state
 
         # Initial scan
         await self._async_scan_all()
@@ -587,5 +587,5 @@ class HomeAlertsModule(CopilotModule):
 # Module registration helper
 def get_home_alerts_module(hass: HomeAssistant, entry_id: str) -> Optional[HomeAlertsModule]:
     """Get the HomeAlerts module instance for a config entry."""
-    data = hass.data.get("copilot_ha", {}).get(entry_id, {})
+    data = hass.data.get("pilotsuite", {}).get(entry_id, {})
     return data.get("home_alerts")
