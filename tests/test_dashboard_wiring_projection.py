@@ -21,10 +21,8 @@ class TestDashboardWiringProjection:
     def test_notification_id_uses_pilotsuite(self) -> None:
         """DW1: _NOTIFICATION_ID must use pilotsuite prefix, not copilot_ha."""
         content = DASHBOARD_WIRING_PATH.read_text()
-        # Extract the _NOTIFICATION_ID assignment
         for line in content.splitlines():
             if "_NOTIFICATION_ID" in line and "=" in line:
-                # Must contain pilotsuite and NOT copilot_ha
                 assert "pilotsuite" in line, f"Expected pilotsuite in _NOTIFICATION_ID, got: {line!r}"
                 assert "copilot_ha" not in line, f"Unexpected copilot_ha in _NOTIFICATION_ID: {line!r}"
                 break
@@ -43,15 +41,13 @@ class TestDashboardWiringProjection:
 
         Legitimate exceptions (legacy fallback lookups for entity resolution):
         - button.copilot_ha_*  / button.pilotsuite_*  (entity ID prefixes, runtime choice)
-        - sensor.copilot_ha_mood  (entity ID fallback)
         All other copilot_ha literals are stale drift.
         """
         content = DASHBOARD_WIRING_PATH.read_text()
         tree = ast.parse(content)
 
         violations: list[str] = []
-        # Lines with known-good exceptions
-        LEGIT_LINES = {341, 342, 360, 363, 366, 369, 372}
+        LEGIT_LINES = {341, 342}
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -64,3 +60,19 @@ class TestDashboardWiringProjection:
             "Stale copilot_ha literals found outside known-good legacy fallback zones:\n"
             + "\n".join(violations)
         )
+
+    def test_sensor_fallbacks_use_pilotsuite_only(self) -> None:
+        """DW4: sensor entity fallbacks in dashboard_wiring.py use pilotsuite names only."""
+        content = DASHBOARD_WIRING_PATH.read_text()
+        lines = content.splitlines()
+
+        for lineno, line in enumerate(lines, start=1):
+            if "sensor.pilotsuite_mood" in line or "sensor.pilotsuite_brain_graph" in line or "sensor.pilotsuite_habitus" in line:
+                if "sensor.copilot_ha_" in line:
+                    assert False, (
+                        f"Stale copilot_ha sensor fallback at line {lineno}: {line.strip()!r}; "
+                        "all sensor fallbacks must use only pilotsuite-prefixed names"
+                    )
+        for lineno, line in enumerate(lines, start=1):
+            if "sensor.copilot_ha_" in line:
+                assert False, f"Stale sensor.copilot_ha_ reference at line {lineno}: {line.strip()!r}"

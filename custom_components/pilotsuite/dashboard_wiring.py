@@ -357,19 +357,19 @@ def _build_storage_dashboard_config(
 
     # ── Resolve key entity IDs for custom cards ──
     mood_entity = _find_entity(
-        entities, "sensor.pilotsuite_mood", "sensor.copilot_ha_mood",
+        entities, "sensor.pilotsuite_mood",
     ) or "sensor.pilotsuite_mood"
     brain_nodes_entity = _find_entity(
-        entities, "sensor.pilotsuite_brain_graph_nodes", "sensor.copilot_ha_brain_graph_nodes",
+        entities, "sensor.pilotsuite_brain_graph_nodes",
     ) or "sensor.pilotsuite_brain_graph_nodes"
     brain_edges_entity = _find_entity(
-        entities, "sensor.pilotsuite_brain_graph_edges", "sensor.copilot_ha_brain_graph_edges",
+        entities, "sensor.pilotsuite_brain_graph_edges",
     ) or "sensor.pilotsuite_brain_graph_edges"
     habitus_entity = _find_entity(
-        entities, "sensor.pilotsuite_habitus_rules_count", "sensor.copilot_ha_habitus_rules_count",
+        entities, "sensor.pilotsuite_habitus_rules_count",
     ) or "sensor.pilotsuite_habitus_rules_count"
     zones_entity = _find_entity(
-        entities, "sensor.pilotsuite_habitus_zones", "sensor.copilot_ha_habitus_zones",
+        entities, "sensor.pilotsuite_habitus_zones",
     ) or "sensor.pilotsuite_habitus_zones"
 
     views = [
