@@ -31,12 +31,12 @@ def _resolve_entry(hass: HomeAssistant, entry_id: str | None) -> ConfigEntry:
         for entry in entries:
             if entry.entry_id == entry_id:
                 return entry
-        raise HomeAssistantError(f"copilot_ha entry '{entry_id}' not found")
+        raise HomeAssistantError(f"pilotsuite entry '{entry_id}' not found")
 
     if not entries:
-        raise HomeAssistantError("No copilot_ha config entry is set up yet")
+        raise HomeAssistantError("No pilotsuite config entry is set up yet")
     if len(entries) > 1:
-        _LOGGER.debug("Multiple copilot_ha entries found; defaulting to the first one")
+        _LOGGER.debug("Multiple pilotsuite entries found; defaulting to the first one")
     return entries[0]
 
 
