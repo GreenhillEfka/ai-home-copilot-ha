@@ -210,24 +210,30 @@ def test_ha488_init_zone_migration_marker():
 
 
 def test_ha488_voice_context_projection_full_parity():
-    """PR-6: voice_context.py has zero copilot_ha references — full parity achieved.
+    """PR-6: sensors/voice_context.py has zero copilot_ha references — full parity achieved.
 
-    voice_context.py was the canonical reference source for the entire parity sweep.
-    It must remain 100% pilotsuite-referenced and serve as the stable proof anchor.
+    sensors/voice_context.py was the canonical proof anchor for the projection sweep.
+    This guard must execute against the real production sensor module, not a stale path,
+    so future regressions cannot hide behind a skipped test.
     """
-    vc_path = HA_ROOT / "core" / "modules" / "voice_context.py"
-    if not vc_path.exists():
-        pytest.skip("voice_context.py not found at expected path")
+    vc_path = HA_ROOT / "sensors" / "voice_context.py"
+    assert vc_path.exists(), "voice_context.py must exist at custom_components/pilotsuite/sensors/voice_context.py"
 
     content = vc_path.read_text(encoding="utf-8")
 
     assert "copilot_ha" not in content, (
-        "voice_context.py must remain 100% pilotsuite-referenced — "
+        "sensors/voice_context.py must remain 100% pilotsuite-referenced — "
         "no copilot_ha references permitted"
+    )
+    assert '_attr_unique_id = "pilotsuite_voice_context"' in content, (
+        "sensors/voice_context.py must keep the canonical pilotsuite_voice_context unique_id"
+    )
+    assert '_attr_unique_id = "pilotsuite_voice_prompt"' in content, (
+        "sensors/voice_context.py must keep the canonical pilotsuite_voice_prompt unique_id"
     )
     # DOMAIN is imported from const and used throughout; verify canonical domain usage
     assert "DOMAIN" in content or "pilotsuite" in content, (
-        "voice_context.py must use DOMAIN or 'pilotsuite' as the canonical domain reference"
+        "sensors/voice_context.py must use DOMAIN or 'pilotsuite' as the canonical domain reference"
     )
 
 
