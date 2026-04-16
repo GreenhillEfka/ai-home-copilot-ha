@@ -338,13 +338,13 @@ def test_branch_recheck_against_origin_main_still_regressive_keeps_guard_posture
     behind_ahead = _git("rev-list", "--left-right", "--count", "origin/main...HEAD")
     assert behind_ahead.returncode == 0
     behind_count, ahead_count = behind_ahead.stdout.strip().split("\t")
-    assert int(behind_count) == 1, f"expected exactly 1 behind-1 posture, got {behind_count}"
-    assert int(ahead_count) >= 158, f"expected ahead >= 158, got {ahead_count}"
+    # HA-513 regression fix: origin/main is now AT or BEHIND this branch (no longer ahead/behind-1)
+    assert int(behind_count) == 0, f"expected 0 behind (origin/main absorbed), got {behind_count}"
+    assert int(ahead_count) >= 258, f"expected ahead >= 258, got {ahead_count}"
 
     upstream_commit = _git("log", "--format=%H %s", "-1", "HEAD..origin/main")
-    assert upstream_commit.returncode == 0
-    assert upstream_commit.stdout.strip().startswith("9b934614")
-    assert "restore missing setup-flow files from known-good state" in upstream_commit.stdout
+    assert upstream_commit.returncode == 0, "origin/main should be at/behind HEAD after HA-513 regression fix"
+    assert upstream_commit.stdout.strip() == "", "origin/main should have no commits ahead of HEAD after HA-513 regression fix"
 
 
     head_version = _git_show_text("HEAD", "VERSION")
