@@ -454,14 +454,14 @@
       },
       "generate_dashboard": {
         "title": "Dashboard YAML generieren",
-        "description": "Erstellt eine Lovelace-YAML-Dashboard-Datei fuer alle Habituszonen. Die Datei wird im pilotsuite-styx/ Konfigurationsordner gespeichert (mit Legacy-Spiegel in copilot_ha/).",
+        "description": "Erstellt eine Lovelace-YAML-Dashboard-Datei fuer alle Habituszonen. Die Datei wird im pilotsuite-styx/ Konfigurationsordner gespeichert (mit Legacy-Spiegel in pilotsuite/).",
         "data": {
           "confirm": "Dashboard generieren"
         }
       },
       "publish_dashboard": {
         "title": "Dashboard in www veroeffentlichen",
-        "description": "Kopiert das zuletzt generierte Dashboard nach www/pilotsuite-styx/ fuer einfachen Download (mit Legacy-Spiegel in www/copilot_ha/).",
+        "description": "Kopiert das zuletzt generierte Dashboard nach www/pilotsuite-styx/ fuer einfachen Download (mit Legacy-Spiegel in www/pilotsuite/).",
         "data": {
           "confirm": "Dashboard veroeffentlichen"
         }

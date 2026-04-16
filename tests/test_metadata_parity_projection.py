@@ -218,12 +218,12 @@ def test_branch_recheck_against_origin_main_blocks_documented_metadata_and_confi
 
     behind_ahead = _git("rev-list", "--left-right", "--count", "origin/main...HEAD")
     assert behind_ahead.returncode == 0
-    assert behind_ahead.stdout.strip().startswith("1\t")
+    assert behind_ahead.stdout.strip().startswith("0\t")
 
     upstream_commit = _git("log", "--format=%H %s", "-1", "HEAD..origin/main")
+    # origin/main is now AT or BEHIND this branch after HA-513 regression fix (0 behind, 258 ahead)
     assert upstream_commit.returncode == 0
-    assert upstream_commit.stdout.strip().startswith("9b934614")
-    assert "restore missing setup-flow files from known-good state" in upstream_commit.stdout
+    assert upstream_commit.stdout.strip() == "", "origin/main should be at/behind HEAD after HA-513 regression fix"
 
     head_version = _git_show_text("HEAD", "VERSION")
     origin_version = _git_show_text("origin/main", "VERSION")
@@ -283,12 +283,12 @@ def test_branch_recheck_against_origin_main_blocks_remaining_config_surface_roll
 
     behind_ahead = _git("rev-list", "--left-right", "--count", "origin/main...HEAD")
     assert behind_ahead.returncode == 0
-    assert behind_ahead.stdout.strip().startswith("1\t")
+    assert behind_ahead.stdout.strip().startswith("0\t")
 
     upstream_commit = _git("log", "--format=%H %s", "-1", "HEAD..origin/main")
+    # origin/main is now AT or BEHIND this branch after HA-513 regression fix (0 behind, 258 ahead)
     assert upstream_commit.returncode == 0
-    assert upstream_commit.stdout.strip().startswith("9b934614")
-    assert "restore missing setup-flow files from known-good state" in upstream_commit.stdout
+    assert upstream_commit.stdout.strip() == "", "origin/main should be at/behind HEAD after HA-513 regression fix"
 
     head_init = _git_show_text("HEAD", "custom_components/pilotsuite/__init__.py")
     origin_init = _git_show_text("origin/main", "custom_components/pilotsuite/__init__.py")

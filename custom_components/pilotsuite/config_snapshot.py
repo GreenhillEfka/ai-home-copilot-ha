@@ -21,8 +21,10 @@ from .config_snapshot_store import (
 )
 
 
-EXPORT_DIR = "/config/copilot_ha/exports"
-PUBLISH_DIR = "/config/www/copilot_ha"
+EXPORT_DIR = "/config/pilotsuite-styx/exports"
+PUBLISH_DIR = "/config/www/pilotsuite-styx"
+LEGACY_EXPORT_DIR = "/config/pilotsuite/exports"
+LEGACY_PUBLISH_DIR = "/config/www/pilotsuite"
 
 
 def _now_stamp() -> str:
@@ -54,7 +56,7 @@ async def async_generate_config_snapshot(hass: HomeAssistant, entry: ConfigEntry
     data = dict(entry.data)
 
     snapshot: dict[str, Any] = {
-        "schema": "copilot_ha_config_snapshot",
+        "schema": "pilotsuite_config_snapshot",
         "version": 1,
         "generated": datetime.now(timezone.utc).isoformat(),
         "entry": {
@@ -73,7 +75,7 @@ async def async_generate_config_snapshot(hass: HomeAssistant, entry: ConfigEntry
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(obj, fh, ensure_ascii=False, indent=2)
 
-    fname = f"copilot_ha_snapshot_{_now_stamp()}.json"
+    fname = f"pilotsuite_snapshot_{_now_stamp()}.json"
     path = os.path.join(EXPORT_DIR, fname)
     await hass.async_add_executor_job(_write_json, path, snapshot)
 
@@ -83,7 +85,7 @@ async def async_generate_config_snapshot(hass: HomeAssistant, entry: ConfigEntry
         hass,
         f"Generated config snapshot:\n{path}",
         title="PilotSuite config snapshot",
-        notification_id="copilot_ha_config_snapshot",
+        notification_id="pilotsuite_config_snapshot",
     )
 
     return path
@@ -102,12 +104,12 @@ async def async_publish_last_config_snapshot(hass: HomeAssistant) -> str:
 
     await async_set_last_published(hass, dst)
 
-    url = f"/local/copilot_ha/{base}"
+    url = f"/local/pilotsuite-styx/{base}"
     persistent_notification.async_create(
         hass,
         f"Published snapshot for download:\n{url}",
         title="PilotSuite config snapshot",
-        notification_id="copilot_ha_config_snapshot",
+        notification_id="pilotsuite_config_snapshot",
     )
     return url
 
