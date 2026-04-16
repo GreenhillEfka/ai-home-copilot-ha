@@ -60,7 +60,6 @@ from .const import (
     DOMAIN,
     INTEGRATION_UNIQUE_ID,
 )
-
 from .setup_wizard import SetupWizard
 
 _LOGGER = logging.getLogger(__name__)

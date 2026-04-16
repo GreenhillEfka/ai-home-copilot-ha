@@ -145,3 +145,10 @@ This lane is back on track when:
 - Core dashboard shows non-zero zones,
 - HACS packaging truth is preserved,
 - status updates stop mixing HA, Core, git, and live runtime lanes.
+
+## HA-512 (2026-04-16 19:10) — UNBLOCKED ✅
+- Andreas hat behind-1-merge heute genehmigt
+- **Action:** HomeClaw führt den Merge jetzt durch
+- Status: BLOCKED → ACTIVE
+- Branch: `releases/v1.0.0-hacs-alpha` [ahead 257, behind 1]
+- Nächster Schritt: Merge + Manifest/HACS prüfen + Release-Tag

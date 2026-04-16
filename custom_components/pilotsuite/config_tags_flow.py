@@ -13,8 +13,6 @@ import voluptuous as vol
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
-from .const import DOMAIN
-
 _LOGGER = logging.getLogger(__name__)
 
 _SLUG_RE = re.compile(r"^[a-z0-9_äöüß]+$")
@@ -190,9 +188,7 @@ def _reload_module(flow) -> None:
             entry_id = getattr(flow._entry, "entry_id", None)
         if not entry_id:
             return
-        data = flow.hass.data.get(DOMAIN, {}).get(entry_id)
-        if not data:
-            data = flow.hass.data.get("pilotsuite", {}).get(entry_id, {})
+        data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})
         mod = data.get("entity_tags_module")
         if mod and hasattr(mod, "reload_from_storage"):
             flow.hass.async_create_task(mod.reload_from_storage())

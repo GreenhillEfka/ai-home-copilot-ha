@@ -1,19 +1,10 @@
-DOMAIN = "pilotsuite"
+DOMAIN = "copilot_ha"
 INTEGRATION_UNIQUE_ID = "pilotsuite_styx"
 MAIN_DEVICE_IDENTIFIER = "styx_hub"
 LEGACY_MAIN_DEVICE_IDENTIFIERS = (
     "copilot_ha",
     "copilot_hub",
     "pilotsuite_hub",
-)
-
-# Entity naming (Q-004, 2026-04-09)
-# New entity IDs must use the branded pilotsuite_ object-id prefix.
-# Legacy copilot_ha references remain readable during migration only.
-ENTITY_ID_PREFIX = DOMAIN
-LEGACY_ENTITY_ID_PREFIXES = (
-    "copilot_ha",
-    "copilot",
 )
 
 # Dashboard file layout:
@@ -333,5 +324,5 @@ DEFAULT_LLM_CLOUD_MODEL = ""
 DEFAULT_LLM_OLLAMA_MODEL = "qwen3:0.6b"
 
 # Entity Tags (v3.2.2)
-ENTITY_TAGS_STORE_KEY = "pilotsuite.entity_tags"
+ENTITY_TAGS_STORE_KEY = "copilot_ha.entity_tags"
 ENTITY_TAGS_STORE_VERSION = 1
