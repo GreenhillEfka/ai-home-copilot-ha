@@ -31,6 +31,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # HA entity state_attributes have a 255-byte hard limit; truncate all scalars to stay safe.
 _MAX_SCALAR_LENGTH = 64
+_VOICE_SUGGESTION_SUFFIX = " ist aktuell."
+_MAX_VOICE_SUGGESTION_BASE_LENGTH = _MAX_SCALAR_LENGTH - len(_VOICE_SUGGESTION_SUFFIX)
 
 
 def _as_mapping(value: Any) -> Dict[str, Any]:
@@ -89,7 +91,10 @@ def _project_voice_context(
     core_zone = _as_mapping(neural_data.get("zone"))
     zone_name = _as_string(core_zone.get("current"), "unknown")
     zone_activities = _as_string_list(core_zone.get("typical_activities"))
-    raw_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
+    raw_suggestions = [
+        f"{act[:_MAX_VOICE_SUGGESTION_BASE_LENGTH]}{_VOICE_SUGGESTION_SUFFIX}"
+        for act in zone_activities[:3]
+    ]
     voice_suggestions = [s[:_MAX_SCALAR_LENGTH] for s in raw_suggestions]
     zone_presence = _as_string_list(core_zone.get("presence"))
     if not zone_presence:

@@ -36,7 +36,7 @@ class VoiceContextSensorContract:
         voice_tone          ← mood.get("mood", "unknown")   (same as dominant_mood)
         voice_greeting      ← neural.get("time", {}).get("description_de") or
                                neural.get("time", {}).get("description_en", "Hallo")
-        voice_suggestions   ← [f"{act} ist aktuell." for act in
+        voice_suggestions   ← [f"{act[:51]} ist aktuell." for act in
                                neural.get("zone", {}).get("typical_activities", [])[:3]]
                                (NOT from coordinator.data["suggestions"])
         voice_prompt        ← built from greeting + presence + suggestions
@@ -113,8 +113,13 @@ class VoiceContextSensorContract:
         zone_activities = VoiceContextSensorContract._as_string_list(
             core_zone.get("typical_activities", [])
         )
-        voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
-        voice_suggestions = [s[:64] for s in voice_suggestions]
+        voice_suggestion_suffix = " ist aktuell."
+        max_voice_suggestion_base_length = 64 - len(voice_suggestion_suffix)
+        raw_suggestions = [
+            f"{act[:max_voice_suggestion_base_length]}{voice_suggestion_suffix}"
+            for act in zone_activities[:3]
+        ]
+        voice_suggestions = [s[:64] for s in raw_suggestions]
         presence = VoiceContextSensorContract._as_string_list(core_zone.get("presence"))
         if not presence:
             presence = VoiceContextSensorContract._as_string_list(neural.get("presence", []))
@@ -885,11 +890,11 @@ def test_gc18_source_truncates_mood_contributors_to_stay_within_ha_attrs_limit()
 # =============================================================================
 # VC19 / GC19 — voice_suggestions per-item truncation guard
 # =============================================================================
-# voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
-# Then: [s[:_MAX_SCALAR_LENGTH] for s in <list>]
+# voice_suggestions = [f"{act[:51]} ist aktuell." for act in zone_activities[:3]]
+# Then: [s[:_MAX_SCALAR_LENGTH] for s in <list>] as a defensive no-op.
 # Raw base + " ist aktuell." (13 chars) must stay within 64 chars.
-# Max raw base = 64 - 13 = 51 chars. Raw >= 52 chars gets truncated to 64,
-# overwriting the suffix.
+# Max raw base = 64 - 13 = 51 chars. Raw >= 52 chars gets truncated BEFORE
+# suffix formatting so the suffix is always preserved.
 # =============================================================================
 
 @pytest.mark.parametrize("raw_activity_bases, expected", [
@@ -902,38 +907,26 @@ def test_gc18_source_truncates_mood_contributors_to_stay_within_ha_attrs_limit()
      ["Lesen ist aktuell.", "Musik hören ist aktuell."]),
     # VC19d: raw 51 X's + suffix 13 = 64 → exactly at 64, preserved
     (["X" * 51], ["X" * 51 + " ist aktuell."]),  # 64 chars total
-    # VC19e: raw 52 Y's + suffix 13 = 65 → exceeds 64, [:64] cuts suffix mid-word
-    (["Y" * 52], [("Y" * 52 + " ist aktuell.")[:64]]),
-    # VC19f: 2 raw items both exceeding — both truncated to 64 at per-item level
-    (["A" * 70, "B" * 80], ["A" * 64, "B" * 64]),
-    # VC19g: 3 raw items at varying lengths (52/50/55) — formatting+suffix THEN per-item [:64]
-    #   C*52+suffix=65 → [:64] cuts suffix: 'CCCC...C ist aktuell' (64)
-    #   D*50+suffix=63 → [:64] preserves full: 'DDDD...D ist aktuell.' (63)
-    #   E*55+suffix=68 → [:64] cuts suffix: 'EEEE...E ist aktu' (64)
+    # VC19e: raw 52 Y's → base truncated to 51 BEFORE suffix formatting, suffix preserved
+    (["Y" * 52], ["Y" * 51 + " ist aktuell."]),
+    # VC19f: 2 raw items both exceeding — both truncate raw base to 51 and preserve suffix
+    (["A" * 70, "B" * 80], ["A" * 51 + " ist aktuell.", "B" * 51 + " ist aktuell."]),
+    # VC19g: 3 raw items at varying lengths (52/50/55) — raw base truncation happens before suffix formatting
     (["C" * 52, "D" * 50, "E" * 55],
-     [("C" * 52 + " ist aktuell.")[:64],
-      ("D" * 50 + " ist aktuell.")[:64],
-      ("E" * 55 + " ist aktuell.")[:64]]),
-    #   → ["CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC ist aktuell",
-    #      "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD ist aktuell.",
-    #      "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE ist aktu"]
-    # VC19h: 4 raw items (exceeds 3 cap) — take first 3, apply per-item truncation
-    #   F*60+suffix=73 → [:64]: 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF ist' (64)
-    #   G*70+suffix=83 → [:64]: 'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG' (64)
-    #   H*50+suffix=63 → [:64]: 'HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH ist aktuell.' (63)
+     ["C" * 51 + " ist aktuell.",
+      "D" * 50 + " ist aktuell.",
+      "E" * 51 + " ist aktuell."]),
+    # VC19h: 4 raw items (exceeds 3 cap) — take first 3, preserve suffix on each retained item
     (["F" * 60, "G" * 70, "H" * 50, "I" * 55],
-     [("F" * 60 + " ist aktuell.")[:64],
-      ("G" * 70 + " ist aktuell.")[:64],
-      ("H" * 50 + " ist aktuell.")[:64]]),
-    #   → ["FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF ist",
-    #      "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
-    #      "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH ist aktuell."]
+     ["F" * 51 + " ist aktuell.",
+      "G" * 51 + " ist aktuell.",
+      "H" * 50 + " ist aktuell."]),
     # VC19i: non-string items in raw list — filtered by _as_string_list, then list capped at 3
     (["Lesen", None, "Musik hören", 123],
      ["Lesen ist aktuell.", "Musik hören ist aktuell."]),
 ])
 def test_vc19_voice_suggestions_truncation_behavior(raw_activity_bases, expected):
-    """VC19: voice_suggestions — per-item [:64] truncation applied AFTER zone_activity formatting."""
+    """VC19: voice_suggestions truncate raw activity bases before suffix formatting so suffixes survive."""
     data = {
         "mood": {"mood": "neutral", "confidence": 0.5},
         "neural": {
@@ -955,7 +948,7 @@ def test_vc19_voice_suggestions_truncation_behavior(raw_activity_bases, expected
 
 
 def test_gc19_source_truncates_voice_suggestions_per_item_to_stay_within_ha_attrs_limit():
-    """GC19: voice_context.py truncates each voice_suggestions item to [:_MAX_SCALAR_LENGTH] ([:64])."""
+    """GC19: voice_context.py caps raw activity bases before suffix formatting, then keeps per-item [:64] guard."""
     source = (
         Path(__file__).parent.parent
         / "custom_components"
@@ -964,7 +957,9 @@ def test_gc19_source_truncates_voice_suggestions_per_item_to_stay_within_ha_attr
         / "voice_context.py"
     ).read_text()
 
-    # Check extra_state_attributes has per-item [:_MAX_SCALAR_LENGTH] truncation on voice_suggestions
+    assert '_VOICE_SUGGESTION_SUFFIX = " ist aktuell."' in source
+    assert '_MAX_VOICE_SUGGESTION_BASE_LENGTH = _MAX_SCALAR_LENGTH - len(_VOICE_SUGGESTION_SUFFIX)' in source
+    assert 'f"{act[:_MAX_VOICE_SUGGESTION_BASE_LENGTH]}{_VOICE_SUGGESTION_SUFFIX}"' in source
     assert '[s[:_MAX_SCALAR_LENGTH] for s in _as_string_list(context.get("voice", {}).get("suggestions"))' in source
 
 def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
@@ -1094,7 +1089,9 @@ def test_gc3_source_projects_core_voice_fields_directly():
     assert 'typical_activities' in source
     assert 'zone_presence = _as_string_list(core_zone.get("presence"))' in source
     assert 'zone_presence = _as_string_list(neural_data.get("presence"))' in source
-    assert 'f"{act} ist aktuell." for act in zone_activities[:3]' in source
+    assert '_VOICE_SUGGESTION_SUFFIX = " ist aktuell."' in source
+    assert '_MAX_VOICE_SUGGESTION_BASE_LENGTH = _MAX_SCALAR_LENGTH - len(_VOICE_SUGGESTION_SUFFIX)' in source
+    assert 'f"{act[:_MAX_VOICE_SUGGESTION_BASE_LENGTH]}{_VOICE_SUGGESTION_SUFFIX}"' in source
 
 
 def test_gc4_source_does_not_reintroduce_local_voice_semantics():
