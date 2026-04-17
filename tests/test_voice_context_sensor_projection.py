@@ -574,6 +574,73 @@ def test_vp2_empty_coordinator_returns_default():
 
 
 # =============================================================================
+# VC4 / GC14 — Float edge-case guard + None-in-list guard
+# =============================================================================
+
+@pytest.mark.parametrize("confidence_payload, expected", [
+    # VC4a: positive finite float — accepted
+    (0.95, 0.95),
+    # VC4b: zero — accepted
+    (0.0, 0.0),
+    # VC4c: int that fits in float — accepted
+    (1, 1.0),
+    # VC4d: NaN — rejected to default
+    (float("nan"), 0.0),
+    # VC4e: +Infinity — rejected to default
+    (float("inf"), 0.0),
+    # VC4f: -Infinity — rejected to default
+    (float("-inf"), 0.0),
+    # VC4g: bool True — rejected to default (bool is not numeric)
+    (True, 0.0),
+    # VC4h: bool False — rejected to default
+    (False, 0.0),
+    # VC4i: non-numeric string — rejected to default
+    ("high", 0.0),
+    # VC4j: nested dict — rejected to default
+    ({"value": 0.9}, 0.0),
+])
+def test_vc4_float_edge_cases_rejected_to_default(confidence_payload, expected):
+    """VC4: inf/nan/bool/non-numeric confidence must not leak into HA attributes."""
+    data = {"mood": {"confidence": confidence_payload, "mood": "focus"}, "neural": {"time": {"description_de": "Tag"}}}
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    assert attrs["mood_confidence"] == expected, f"payload {confidence_payload!r} → {attrs['mood_confidence']!r}, expected {expected}"
+
+
+@pytest.mark.parametrize("presence_payload, activity_payload, expected_suggestions", [
+    # GC14a: None item in presence list — item silently skipped
+    (["Wohnzimmer", None, "Küche"], ["Lesen", "Musik"], ["Lesen ist aktuell.", "Musik ist aktuell."]),
+    # GC14b: None item in activities list — item silently skipped
+    (["Büro"], ["Lesen", None, "Planen"], ["Lesen ist aktuell.", "Planen ist aktuell."]),
+    # GC14c: dict item in presence — dict is not a string, skipped
+    (["Wohnzimmer", {"room": "Küche"}], ["Lesen"], ["Lesen ist aktuell."]),
+    # GC14d: list item nested in activities — nested list not a string, skipped
+    (["Büro"], ["Lesen", ["nested"], "Planen"], ["Lesen ist aktuell.", "Planen ist aktuell."]),
+    # GC14e: mixed None and empty string — empty string normalized away, None skipped
+    (["Wohnzimmer", "", None], ["Lesen", "", None], ["Lesen ist aktuell."]),
+    # GC14f: all None — both lists empty after filtering
+    ([None, None], [None, None], []),
+])
+def test_gc14_none_and_non_string_list_items_are_silently_filtered(
+    presence_payload, activity_payload, expected_suggestions
+):
+    """GC14: None/dict/list items in presence or typical_activities must not appear in output."""
+    data = {
+        "mood": {"mood": "focus", "confidence": 0.9},
+        "neural": {
+            "time": {"description_de": "Tag"},
+            "zone": {
+                "current": "Büro",
+                "presence": presence_payload,
+                "typical_activities": activity_payload,
+            },
+        },
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    assert attrs["zone_presence"] == [p for p in presence_payload if isinstance(p, str) and p.strip()]
+    assert attrs["voice_suggestions"] == expected_suggestions
+
+
+# =============================================================================
 # GC1 — Global Contract: pure projection, no local semantic invention
 # =============================================================================
 
