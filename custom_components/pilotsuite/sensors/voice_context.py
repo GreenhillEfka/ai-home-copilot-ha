@@ -228,7 +228,7 @@ class VoicePromptSensor(CoordinatorEntity, SensorEntity):
         mood_data = coordinator_data.get("mood", {})
         neural_data = coordinator_data.get("neural", {})
         context = _project_voice_context(mood_data, neural_data)
-        return _build_voice_prompt(context)
+        return _build_voice_prompt(context)[:_MAX_SCALAR_LENGTH * 4]
 
     @callback
     def _handle_coordinator_update(self) -> None:

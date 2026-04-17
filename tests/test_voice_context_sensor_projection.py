@@ -127,7 +127,7 @@ class VoiceContextSensorContract:
             "voice_suggestions": voice_suggestions[:64],
             "voice_prompt": VoiceContextSensorContract._build_prompt(
                 time_greeting, presence, voice_suggestions
-            ),
+            )[:256],
             "last_update": VoiceContextSensorContract._as_string(neural.get("last_update", ""), "")[:64],
         }
 
@@ -596,6 +596,43 @@ def test_vp1_native_value(coordinator_data, expected):
 def test_vp2_empty_coordinator_returns_default():
     """VP2: empty coordinator data → sensor guard returns 'Kein Kontext verfügbar.'."""
     assert VoicePromptSensorContract.native_value({}) == "Kein Kontext verfügbar."
+
+
+# =============================================================================
+# VP3 — VoicePromptSensor native_value truncation guard
+# =============================================================================
+
+# greeting_text is neural.time.description_de — _build_voice_prompt wraps it as
+# "Der Nutzer ist gerade {greeting_text}." (26 chars prefix+suffix).
+# VP3b target: exactly 256 chars total → greeting = 230 chars (26+230=256).
+# VP3c: >256 → truncated to 256. greeting=400 chars → 426 total → [:256].
+@pytest.mark.parametrize("greeting_text, expected", [
+    # VP3a: short prompt → unchanged (far below 256 limit)
+    ("Hi", "Der Nutzer ist gerade Hi."),
+    # VP3b: exactly 256 chars total (23 prefix+suffix + 232 greeting = 255... let me calc)
+    # "Der Nutzer ist gerade " = 23, ". " = 1 suffix in prompt = 24 total wrapper
+    # 256 total → greeting_text = 232 chars
+    (
+        "A" * 232,
+        "Der Nutzer ist gerade " + "A" * 232 + ".",
+    ),
+    # VP3c: >256 → truncated to 256
+    (
+        "X" * 400,
+        ("Der Nutzer ist gerade " + "X" * 400 + ".")[:256],
+    ),
+])
+def test_vp3_native_value_truncation_guard(greeting_text, expected):
+    """VP3: VoicePromptSensor native_value is capped at 256 chars (HA state-attr limit)."""
+    coordinator_data = {
+        "mood": {"mood": "focus", "confidence": 0.9, "contributors": ["music"]},
+        "neural": {
+            "time": {"description_de": greeting_text},
+            "zone": {"presence": [], "typical_activities": []},
+        },
+    }
+    result = VoicePromptSensorContract.native_value(coordinator_data)
+    assert result == expected, f"Expected {expected!r} ({len(expected)}), got {result!r} ({len(result)})"
 
 
 # =============================================================================
