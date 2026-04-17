@@ -52,7 +52,7 @@ class VoiceContextSensorContract:
         """Return dominant mood from context data, or 'unknown' when no context is set."""
         mapped = VoiceContextSensorContract._as_mapping(coordinator_data)
         mood = VoiceContextSensorContract._as_mapping(mapped.get("mood", {}))
-        return VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")
+        return VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")[:255]
 
     @staticmethod
     def _as_mapping(value) -> dict:
@@ -570,6 +570,19 @@ def test_vc3_native_value_rotates_with_context_changes():
     assert VoiceContextSensorContract.native_value(ctx_energiert) == "energiert"
     # Rotation: different moods produce different values (not all the same "ok")
     assert VoiceContextSensorContract.native_value(ctx_entspannt) != VoiceContextSensorContract.native_value(ctx_konzentriert)
+
+
+@pytest.mark.parametrize("mood_payload, expected", [
+    ("focus", "focus"),
+    ("A" * 255, "A" * 255),
+    ("B" * 256, "B" * 255),
+    ("  " + "C" * 260 + "  ", "C" * 255),
+])
+def test_vc21_native_value_truncation_guard(mood_payload, expected):
+    """VC21: VoiceContextSensor native_value is capped at 255 chars for HA sensor state safety."""
+    result = VoiceContextSensorContract.native_value({"mood": {"mood": mood_payload}})
+    assert result == expected
+    assert len(result) <= 255, f"native_value length {len(result)} exceeds 255-char HA state budget"
 
 
 # =============================================================================
@@ -1315,3 +1328,17 @@ def test_gc21_source_eliminates_dead_projection_fields():
 
     # context_version was projected but never exposed in extra_state_attributes — dead field
     assert '"context_version"' not in source
+
+
+def test_gc22_source_truncates_voice_context_native_value_to_255_chars():
+    """GC22: voice_context.py caps VoiceContextSensor.native_value at 255 chars for HA state safety."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'def native_value(self) -> str:' in source
+    assert 'return _as_string(self._context_data.get("mood", {}).get("dominant"), "unknown")[:255]' in source
