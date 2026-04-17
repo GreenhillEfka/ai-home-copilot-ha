@@ -119,7 +119,7 @@ class VoiceContextSensorContract:
         return {
             "dominant_mood": dominant_mood,
             "mood_confidence": confidence,
-            "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", [])),
+            "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", []))[:64],
             "current_zone": zone_name,
             "zone_presence": presence,
             "voice_tone": dominant_mood[:64] or "unknown",
@@ -919,7 +919,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'greeting = _as_string(voice.get("greeting"), "") or "Neutral"' in source
     assert 'coordinator_data = _as_mapping(self.coordinator.data)' in source
     assert 'if not coordinator_data:' in source
-    assert '"contributors": _as_string_list(mood_data.get("contributors"))' in source
+    assert '"contributors": _as_string_list(mood_data.get("contributors"))[:_MAX_SCALAR_LENGTH]' in source
     assert 'last_update' in source and '[:_MAX_SCALAR_LENGTH]' in source
 
 

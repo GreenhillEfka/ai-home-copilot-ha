@@ -98,7 +98,7 @@ def _project_voice_context(
         "mood": {
             "dominant": dominant_mood,
             "confidence": confidence,
-            "contributors": _as_string_list(mood_data.get("contributors")),
+            "contributors": _as_string_list(mood_data.get("contributors"))[:_MAX_SCALAR_LENGTH],
         },
         "zone": {
             "current": zone_name,
