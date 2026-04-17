@@ -1293,3 +1293,17 @@ def test_gc13_behavior_prefers_projected_zone_activities_over_raw_suggestions_pa
         "Der Nutzer ist gerade Tag. Anwesend in: Büro. "
         "Vorschläge: Lesen ist aktuell.; Planen ist aktuell.."
     )
+
+
+def test_gc21_source_eliminates_dead_projection_fields():
+    """GC21: dead projection fields must not survive in _project_voice_context() output."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    # context_version was projected but never exposed in extra_state_attributes — dead field
+    assert '"context_version"' not in source

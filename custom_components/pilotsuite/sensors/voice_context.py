@@ -111,7 +111,6 @@ def _project_voice_context(
         },
         "metadata": {
             "last_update": _as_string(neural_data.get("last_update"), "")[:_MAX_SCALAR_LENGTH],
-            "context_version": "1.1",
         },
     }
 
