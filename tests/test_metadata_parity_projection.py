@@ -243,37 +243,37 @@ def test_branch_recheck_against_origin_main_blocks_documented_metadata_and_confi
     origin_readme = _git_show_text("origin/main", "README.md")
 
     assert head_version == "20.0.8\n"
-    assert origin_version == "20.0.5\n"
+    assert origin_version == "20.0.8\n"  # HA-522: post-merge, origin/main == HEAD
     assert '**Version:** 20.0.8' in (head_readme or "")
-    assert '**Version:** 20.0.0' in (origin_readme or "")
+    assert '**Version:** 20.0.8' in (origin_readme or "")  # HA-522: post-merge
     assert 'Home Assistant ≥ 2024.4.0' in (head_readme or "")
-    assert 'Home Assistant ≥ 2024.1.0' in (origin_readme or "")
+    assert 'Home Assistant ≥ 2024.4.0' in (origin_readme or "")  # HA-522: post-merge
     assert '"version": "20.0.8"' in (head_root_manifest or "")
-    assert '"version": "20.0.5"' in (origin_root_manifest or "")
+    assert '"version": "20.0.8"' in (origin_root_manifest or "")  # HA-522: post-merge
     assert '"version": "20.0.8"' in (head_component_manifest or "")
-    assert '"version": "20.0.5"' in (origin_component_manifest or "")
+    assert '"version": "20.0.8"' in (origin_component_manifest or "")  # HA-522: post-merge
 
     assert '"name": "PilotSuite HA"' in (head_root_hacs or "")
     assert '"domain": "pilotsuite"' in (head_root_hacs or "")
     assert '"filename": "pilotsuite-styx-ha.zip"' in (head_root_hacs or "")
     assert '"homeassistant": "2024.4.0"' in (head_root_hacs or "")
-    assert '"name": "PilotSuite"' in (origin_root_hacs or "")
-    assert '"domain": "pilotsuite"' not in (origin_root_hacs or "")
-    assert '"filename": "pilotsuite-styx-ha.zip"' not in (origin_root_hacs or "")
-    assert '"homeassistant": "2024.4.0"' not in (origin_root_hacs or "")
-    assert '"homeassistant": "2024.1.0"' in (origin_root_hacs or "")
+    # HA-522: post-merge, origin/main == HEAD — origin assertions mirror HEAD
+    assert '"name": "PilotSuite HA"' in (origin_root_hacs or "")
+    assert '"domain": "pilotsuite"' in (origin_root_hacs or "")
+    assert '"filename": "pilotsuite-styx-ha.zip"' in (origin_root_hacs or "")
+    assert '"homeassistant": "2024.4.0"' in (origin_root_hacs or "")
 
     assert json.loads(head_component_hacs or "{}") == EXPECTED_HACS
-    assert origin_component_hacs is None
+    assert json.loads(origin_component_hacs or "{}") == EXPECTED_HACS  # HA-522: post-merge
 
     assert 'DOMAIN = "pilotsuite"' in (head_const or "")
-    assert 'DOMAIN = "copilot_ha"' in (origin_const or "")
+    assert 'DOMAIN = "pilotsuite"' in (origin_const or "")  # HA-522: post-merge
     assert '"schema": "pilotsuite_config_snapshot"' in (head_snapshot or "")
-    assert '"schema": "copilot_ha_config_snapshot"' in (origin_snapshot or "")
+    assert '"schema": "pilotsuite_config_snapshot"' in (origin_snapshot or "")  # HA-522: post-merge
     assert 'EXPORT_DIR = "/config/pilotsuite-styx/exports"' in (head_snapshot or "")
-    assert 'EXPORT_DIR = "/config/copilot_ha/exports"' in (origin_snapshot or "")
+    assert 'EXPORT_DIR = "/config/pilotsuite-styx/exports"' in (origin_snapshot or "")  # HA-522: post-merge
     assert 'PUBLISH_DIR = "/config/www/pilotsuite-styx"' in (head_snapshot or "")
-    assert 'PUBLISH_DIR = "/config/www/copilot_ha"' in (origin_snapshot or "")
+    assert 'PUBLISH_DIR = "/config/www/pilotsuite-styx"' in (origin_snapshot or "")  # HA-522: post-merge
 
 
 def test_branch_recheck_against_origin_main_blocks_remaining_config_surface_rollback() -> None:
@@ -301,25 +301,25 @@ def test_branch_recheck_against_origin_main_blocks_remaining_config_surface_roll
     assert 'async_register_all_services' in (head_init or "")
     assert 'hass.components.frontend.async_register_built_in_panel' not in (head_init or "")
 
-    assert 'hass.components.frontend.async_register_built_in_panel' in (origin_init or "")
-    assert "config={'url': '/api/hassio_ingress/pilotsuite_core/'}" in (origin_init or "")
-    assert 'return True' in (origin_init or "")
-    assert 'CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)' not in (origin_init or "")
-    assert 'from .core.runtime import CopilotRuntime' not in (origin_init or "")
+    assert 'CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)' in (origin_init or "")  # HA-522: post-merge
+    assert 'from .core.runtime import CopilotRuntime' in (origin_init or "")  # HA-522: post-merge
+    assert '"voice_context": (".core.modules.voice_context", "VoiceContextModule")' in (origin_init or "")  # HA-522: post-merge
+    assert 'async_register_all_services' in (origin_init or "")  # HA-522: post-merge
+    assert 'hass.components.frontend.async_register_built_in_panel' not in (origin_init or "")  # HA-522: post-merge
 
     assert 'from .const import DOMAIN' in (head_tags_flow or "")
     assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' in (head_tags_flow or "")
     assert 'data = flow.hass.data.get("pilotsuite", {}).get(entry_id, {})' in (head_tags_flow or "")
 
-    assert 'from .const import DOMAIN' not in (origin_tags_flow or "")
-    assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' not in (origin_tags_flow or "")
-    assert 'data = flow.hass.data.get("copilot_ha", {}).get(entry_id, {})' in (origin_tags_flow or "")
+    assert 'from .const import DOMAIN' in (origin_tags_flow or "")  # HA-522: post-merge
+    assert 'data = flow.hass.data.get(DOMAIN, {}).get(entry_id)' in (origin_tags_flow or "")  # HA-522: post-merge
+    assert 'data = flow.hass.data.get("pilotsuite", {}).get(entry_id, {})' in (origin_tags_flow or "")  # HA-522: post-merge
     head_readme2 = _git_show_text("HEAD", "README.md")
     origin_readme2 = _git_show_text("origin/main", "README.md")
     assert '**Version:** 20.0.8' in (head_readme2 or "")
-    assert '**Version:** 20.0.0' in (origin_readme2 or "")
+    assert '**Version:** 20.0.8' in (origin_readme2 or "")  # HA-522: post-merge
     assert 'Home Assistant ≥ 2024.4.0' in (head_readme2 or "")
-    assert 'Home Assistant ≥ 2024.1.0' in (origin_readme2 or "")
+    assert 'Home Assistant ≥ 2024.4.0' in (origin_readme2 or "")  # HA-522: post-merge
 
 
 
@@ -338,9 +338,9 @@ def test_branch_recheck_against_origin_main_still_regressive_keeps_guard_posture
     behind_ahead = _git("rev-list", "--left-right", "--count", "origin/main...HEAD")
     assert behind_ahead.returncode == 0
     behind_count, ahead_count = behind_ahead.stdout.strip().split("\t")
-    # HA-513 regression fix: origin/main is now AT or BEHIND this branch (no longer ahead/behind-1)
+    # HA-522: post-merge — origin/main == HEAD, 0 ahead/behind
     assert int(behind_count) == 0, f"expected 0 behind (origin/main absorbed), got {behind_count}"
-    assert int(ahead_count) >= 258, f"expected ahead >= 258, got {ahead_count}"
+    assert int(ahead_count) == 0, f"expected 0 ahead (post-merge), got {ahead_count}"
 
     upstream_commit = _git("log", "--format=%H %s", "-1", "HEAD..origin/main")
     assert upstream_commit.returncode == 0, "origin/main should be at/behind HEAD after HA-513 regression fix"
@@ -350,20 +350,21 @@ def test_branch_recheck_against_origin_main_still_regressive_keeps_guard_posture
     head_version = _git_show_text("HEAD", "VERSION")
     origin_version = _git_show_text("origin/main", "VERSION")
     assert head_version == "20.0.8\n", "HEAD VERSION must stay at 20.0.8"
-    assert origin_version == "20.0.5\n", "origin/main VERSION must stay at 20.0.5 (known regression)"
+    assert origin_version == "20.0.8\n"  # HA-522: post-merge, origin/main == HEAD
 
     head_component_manifest = _git_show_text("HEAD", "custom_components/pilotsuite/manifest.json")
     origin_component_manifest = _git_show_text("origin/main", "custom_components/pilotsuite/manifest.json")
     assert '"version": "20.0.8"' in (head_component_manifest or "")
-    assert '"version": "20.0.5"' in (origin_component_manifest or "")
+    assert '"version": "20.0.8"' in (origin_component_manifest or "")  # HA-522: post-merge
 
     head_init = _git_show_text("HEAD", "custom_components/pilotsuite/__init__.py")
     origin_init = _git_show_text("origin/main", "custom_components/pilotsuite/__init__.py")
     assert 'CopilotRuntime' in (head_init or "")
-    assert 'CopilotRuntime' not in (origin_init or "")
+    assert 'CopilotRuntime' in (origin_init or "")  # HA-522: post-merge
     assert 'voice_context' in (head_init or "")
+    assert 'voice_context' in (origin_init or "")  # HA-522: post-merge
 
     head_const = _git_show_text("HEAD", "custom_components/pilotsuite/const.py")
     origin_const = _git_show_text("origin/main", "custom_components/pilotsuite/const.py")
     assert 'DOMAIN = "pilotsuite"' in (head_const or "")
-    assert 'DOMAIN = "copilot_ha"' in (origin_const or "")
+    assert 'DOMAIN = "pilotsuite"' in (origin_const or "")  # HA-522: post-merge
