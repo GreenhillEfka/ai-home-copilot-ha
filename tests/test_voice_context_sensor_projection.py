@@ -119,9 +119,9 @@ class VoiceContextSensorContract:
             "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", [])),
             "current_zone": zone_name,
             "zone_presence": presence,
-            "voice_tone": dominant_mood,
-            "voice_greeting": time_greeting,
-            "voice_suggestions": voice_suggestions,
+            "voice_tone": dominant_mood[:64] or "unknown",
+            "voice_greeting": time_greeting[:64],
+            "voice_suggestions": voice_suggestions[:64],
             "voice_prompt": VoiceContextSensorContract._build_prompt(
                 time_greeting, presence, voice_suggestions
             ),
@@ -673,6 +673,50 @@ def test_vc15_last_update_truncation_behavior(last_update_payload, expected):
     assert result == expected or (len(last_update_payload) > 64 and len(result) == 64)
 
 
+@pytest.mark.parametrize("tone_payload, expected_len", [
+    # VC16a: short string — accepted as-is
+    ("focused", 7),
+    # VC16b: exactly 64 chars — accepted
+    ("A" * 64, 64),
+    # VC16c: 65 chars — truncated to 64
+    ("B" * 65, 64),
+    # VC16d: very long string — truncated to 64
+    ("C" * 200, 64),
+])
+def test_vc16_voice_tone_truncation_behavior(tone_payload, expected_len):
+    """VC16: voice_tone exceeding 64 chars is truncated before HA attrs projection."""
+    data = {
+        "mood": {"mood": tone_payload, "confidence": 0.9},
+        "neural": {
+            "time": {"description_de": "Tag"},
+            "last_update": "2026-04-06T10:00:00Z",
+        },
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    assert len(attrs["voice_tone"]) == expected_len, f"voice_tone length {len(attrs['voice_tone'])} != {expected_len}"
+
+
+@pytest.mark.parametrize("greeting_payload, expected_len", [
+    # VC16e: short greeting — accepted as-is
+    ("Guten Morgen", 12),
+    # VC16f: exactly 64 chars — accepted
+    ("X" * 64, 64),
+    # VC16g: 65 chars — truncated to 64
+    ("Y" * 65, 64),
+])
+def test_vc16_voice_greeting_truncation_behavior(greeting_payload, expected_len):
+    """VC16: voice_greeting exceeding 64 chars is truncated before HA attrs projection."""
+    data = {
+        "mood": {"mood": "neutral", "confidence": 0.5},
+        "neural": {
+            "time": {"description_de": greeting_payload},
+            "last_update": "2026-04-06T10:00:00Z",
+        },
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    assert len(attrs["voice_greeting"]) == expected_len, f"voice_greeting length {len(attrs['voice_greeting'])} != {expected_len}"
+
+
 def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
     """GC15: voice_context.py truncates last_update to prevent HA 255-byte state-attr overflow."""
     source = (
@@ -683,9 +727,25 @@ def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
         / "voice_context.py"
     ).read_text()
 
-    assert "_MAX_LAST_UPDATE_LENGTH" in source
-    assert "_MAX_LAST_UPDATE_LENGTH = 64" in source
-    assert '[:_MAX_LAST_UPDATE_LENGTH]' in source
+    assert "_MAX_SCALAR_LENGTH" in source
+    assert "_MAX_SCALAR_LENGTH = 64" in source
+    assert '[:_MAX_SCALAR_LENGTH]' in source
+
+
+def test_gc16_source_truncates_all_voice_scalars_to_stay_within_ha_attrs_limit():
+    """GC16: voice_context.py truncates voice_tone/greeting/prompt to prevent HA 255-byte state-attr overflow."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    # Check all truncation sites
+    assert 'voice_tone' in source and '[:_MAX_SCALAR_LENGTH]' in source
+    assert 'voice_greeting' in source and '[:_MAX_SCALAR_LENGTH]' in source
+    assert 'voice_prompt' in source and '[:_MAX_SCALAR_LENGTH' in source
 
 
 # =============================================================================
@@ -835,7 +895,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'coordinator_data = _as_mapping(self.coordinator.data)' in source
     assert 'if not coordinator_data:' in source
     assert '"contributors": _as_string_list(mood_data.get("contributors"))' in source
-    assert '"last_update": _as_string(neural_data.get("last_update"), "")[:_MAX_LAST_UPDATE_LENGTH]' in source
+    assert 'last_update' in source and '[:_MAX_SCALAR_LENGTH]' in source
 
 
 def test_gc9_source_collapses_embedded_whitespace_in_projection_scalars_and_lists():
