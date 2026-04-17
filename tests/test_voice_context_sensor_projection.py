@@ -26,7 +26,7 @@ class VoiceContextSensorContract:
 
     Contract:
     - reads: coordinator.data["mood"], ["neural"]
-    - native_value: always "ok" (initialised in __init__)
+    - native_value: dominant mood (rotates with context changes), falls back to "unknown"
     - extra_state_attributes:
         dominant_mood       ← mood.get("mood", "unknown")
         mood_confidence     ← mood.get("confidence", 0.0)
@@ -48,8 +48,11 @@ class VoiceContextSensorContract:
     """
 
     @staticmethod
-    def native_value(_coordinator_data: dict) -> str:
-        return "ok"
+    def native_value(coordinator_data: dict) -> str:
+        """Return dominant mood from context data, or 'unknown' when no context is set."""
+        mapped = VoiceContextSensorContract._as_mapping(coordinator_data)
+        mood = VoiceContextSensorContract._as_mapping(mapped.get("mood", {}))
+        return VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")
 
     @staticmethod
     def _as_mapping(value) -> dict:
@@ -530,13 +533,35 @@ def test_vc2_voice_prompt_construction(greeting, presence, suggestions, expected
 
 
 # =============================================================================
-# VC3 — VoiceContextSensor native_value
+# VC3 — VoiceContextSensor native_value (rotation)
 # =============================================================================
 
-def test_vc3_native_value_always_ok():
-    """VC3: native_value is initialised to 'ok', never changes."""
-    assert VoiceContextSensorContract.native_value({}) == "ok"
-    assert VoiceContextSensorContract.native_value({"mood": {}}) == "ok"
+def test_vc3_native_value_empty_context_returns_unknown():
+    """VC3: native_value returns 'unknown' when no mood data is available."""
+    assert VoiceContextSensorContract.native_value({}) == "unknown"
+    assert VoiceContextSensorContract.native_value({"mood": {}}) == "unknown"
+    assert VoiceContextSensorContract.native_value({"mood": None}) == "unknown"
+    assert VoiceContextSensorContract.native_value({"mood": {"mood": None}}) == "unknown"
+
+
+def test_vc3_native_value_returns_dominant_mood():
+    """VC3: native_value returns the dominant mood from coordinator mood data."""
+    assert VoiceContextSensorContract.native_value({"mood": {"mood": "entspannt"}}) == "entspannt"
+    assert VoiceContextSensorContract.native_value({"mood": {"mood": "konzentriert"}}) == "konzentriert"
+    assert VoiceContextSensorContract.native_value({"mood": {"mood": "unknown"}}) == "unknown"
+
+
+def test_vc3_native_value_rotates_with_context_changes():
+    """VC3: native_value rotates when mood context changes — not locked to 'ok'."""
+    # Same structure, different mood values produce different native_value
+    ctx_entspannt = {"mood": {"mood": "entspannt"}}
+    ctx_konzentriert = {"mood": {"mood": "konzentriert"}}
+    ctx_energiert = {"mood": {"mood": "energiert"}}
+    assert VoiceContextSensorContract.native_value(ctx_entspannt) == "entspannt"
+    assert VoiceContextSensorContract.native_value(ctx_konzentriert) == "konzentriert"
+    assert VoiceContextSensorContract.native_value(ctx_energiert) == "energiert"
+    # Rotation: different moods produce different values (not all the same "ok")
+    assert VoiceContextSensorContract.native_value(ctx_entspannt) != VoiceContextSensorContract.native_value(ctx_konzentriert)
 
 
 # =============================================================================

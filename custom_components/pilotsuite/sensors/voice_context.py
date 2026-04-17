@@ -147,7 +147,6 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator: CopilotDataUpdateCoordinator) -> None:
         """Initialize the voice context sensor."""
         super().__init__(coordinator)
-        self._attr_native_value = "ok"
         self._context_data: Dict[str, Any] = {}
 
     @property
@@ -175,6 +174,13 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
             "voice_prompt": self._build_voice_prompt(context)[:_MAX_SCALAR_LENGTH * 4],
             "last_update": context.get("metadata", {}).get("last_update", ""),
         }
+
+    @property
+    def native_value(self) -> str:
+        """Return the dominant mood as primary state — rotates with context changes."""
+        if not self._context_data:
+            return "unknown"
+        return _as_string(self._context_data.get("mood", {}).get("dominant"), "unknown")
 
     def _build_voice_context(
         self,
