@@ -107,7 +107,7 @@ class VoiceContextSensorContract:
             or "Hallo"
         )
         core_zone = VoiceContextSensorContract._as_mapping(neural.get("zone", {}))
-        zone_name = VoiceContextSensorContract._as_string(core_zone.get("current"), "unknown")
+        zone_name = VoiceContextSensorContract._as_string(core_zone.get("current"), "unknown")[:64]
         zone_activities = VoiceContextSensorContract._as_string_list(
             core_zone.get("typical_activities", [])
         )
@@ -969,6 +969,54 @@ def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
     assert "_MAX_SCALAR_LENGTH" in source
     assert "_MAX_SCALAR_LENGTH = 64" in source
     assert '[:_MAX_SCALAR_LENGTH]' in source
+
+
+# =============================================================================
+# VC20 / GC20 — current_zone truncation guard
+# =============================================================================
+
+@pytest.mark.parametrize("zone_payload, expected_len", [
+    # VC20a: short zone name — accepted as-is
+    ("Wohnzimmer", 10),
+    # VC20b: exactly 64 chars — accepted
+    ("A" * 64, 64),
+    # VC20c: 65 chars — truncated to 64
+    ("B" * 65, 64),
+    # VC20d: 128-char string — truncated to 64
+    ("C" * 128, 64),
+    # VC20e: padded zone name — normalized first, then truncated
+    ("  Wohnzimmer  ", 10),
+    # VC20f: padded + exceeds 64 — normalized then truncated
+    ("  " + "D" * 65, 64),
+])
+def test_vc20_current_zone_truncation_behavior(zone_payload, expected_len):
+    """VC20: current_zone exceeding 64 chars is truncated before HA attrs projection."""
+    data = {
+        "mood": {"mood": "focus", "confidence": 0.9},
+        "neural": {
+            "time": {"description_de": "Tag"},
+            "zone": {"current": zone_payload},
+            "last_update": "2026-04-06T10:00:00Z",
+        },
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    result = attrs["current_zone"]
+    assert len(result) == expected_len, f"current_zone length {len(result)} != {expected_len}"
+
+
+def test_gc20_source_truncates_current_zone_to_stay_within_ha_attrs_limit():
+    """GC20: voice_context.py truncates current_zone to [:_MAX_SCALAR_LENGTH] ([:64])."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    # Verify current_zone in extra_state_attributes has the [:_MAX_SCALAR_LENGTH] guard applied to _as_string return
+    assert '"current_zone":' in source and '[:_MAX_SCALAR_LENGTH]' in source
+    assert '_as_string(core_zone.get("current"), "unknown")[:_MAX_SCALAR_LENGTH]' in source
 
 
 def test_gc16_source_truncates_all_voice_scalars_to_stay_within_ha_attrs_limit():
