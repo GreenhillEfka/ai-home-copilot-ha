@@ -99,6 +99,7 @@ def _project_voice_context(
     zone_presence = _as_string_list(core_zone.get("presence"))
     if not zone_presence:
         zone_presence = _as_string_list(neural_data.get("presence"))
+    zone_presence = [zone[:_MAX_SCALAR_LENGTH] for zone in zone_presence]
 
     return {
         "mood": {

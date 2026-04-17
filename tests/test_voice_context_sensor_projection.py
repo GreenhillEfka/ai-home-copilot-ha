@@ -132,6 +132,7 @@ class VoiceContextSensorContract:
         presence = VoiceContextSensorContract._as_string_list(core_zone.get("presence"))
         if not presence:
             presence = VoiceContextSensorContract._as_string_list(neural.get("presence", []))
+        presence = [item[:64] for item in presence]
 
         return {
             "dominant_mood": dominant_mood[:64],
@@ -1015,6 +1016,74 @@ def test_gc24_source_caps_voice_suggestions_attr_list_to_three_items():
     ).read_text()
 
     assert '"voice_suggestions": [s[:_MAX_SCALAR_LENGTH] for s in _as_string_list(context.get("voice", {}).get("suggestions"))[:3]],' in source
+
+
+@pytest.mark.parametrize("zone_presence_payload, fallback_presence_payload, expected_presence, expected_prompt", [
+    (
+        ["Wohnzimmer"],
+        [],
+        ["Wohnzimmer"],
+        "Der Nutzer ist gerade Tag. Anwesend in: Wohnzimmer.",
+    ),
+    (
+        ["A" * 64],
+        [],
+        ["A" * 64],
+        f"Der Nutzer ist gerade Tag. Anwesend in: {'A' * 64}.",
+    ),
+    (
+        ["B" * 65],
+        [],
+        ["B" * 64],
+        f"Der Nutzer ist gerade Tag. Anwesend in: {'B' * 64}.",
+    ),
+    (
+        ["  " + "C" * 70 + "  ", "Küche"],
+        [],
+        ["C" * 64, "Küche"],
+        f"Der Nutzer ist gerade Tag. Anwesend in: {'C' * 64}, Küche.",
+    ),
+    (
+        [],
+        ["D" * 80],
+        ["D" * 64],
+        f"Der Nutzer ist gerade Tag. Anwesend in: {'D' * 64}.",
+    ),
+])
+def test_vc24_zone_presence_item_truncation_behavior(
+    zone_presence_payload,
+    fallback_presence_payload,
+    expected_presence,
+    expected_prompt,
+):
+    """VC24: zone_presence labels are normalized, then capped to 64 chars per item before attrs/prompt projection."""
+    data = {
+        "mood": {"mood": "focus", "confidence": 0.9},
+        "neural": {
+            "time": {"description_de": "Tag"},
+            "zone": {"presence": zone_presence_payload},
+            "presence": fallback_presence_payload,
+            "last_update": "2026-04-06T10:00:00Z",
+        },
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    result = attrs["zone_presence"]
+    assert result == expected_presence
+    assert all(len(item) <= 64 for item in result)
+    assert attrs["voice_prompt"] == expected_prompt
+
+
+def test_gc25_source_caps_zone_presence_items_to_the_scalar_budget():
+    """GC25: voice_context.py must cap zone_presence labels to 64 chars before attrs/prompt projection."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'zone_presence = [zone[:_MAX_SCALAR_LENGTH] for zone in zone_presence]' in source
 
 
 def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
