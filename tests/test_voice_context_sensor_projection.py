@@ -119,7 +119,7 @@ class VoiceContextSensorContract:
         return {
             "dominant_mood": dominant_mood,
             "mood_confidence": confidence,
-            "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", []))[:64],
+            "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", []))[:3],
             "current_zone": zone_name,
             "zone_presence": presence[:3],
             "voice_tone": dominant_mood[:64] or "unknown",
@@ -823,6 +823,52 @@ def test_gc17_source_truncates_zone_presence_to_stay_within_ha_attrs_limit():
     assert "zone_presence" in source and "[:3]" in source
 
 
+# =============================================================================
+# VC18 / GC18 — mood_contributors truncation guard
+# =============================================================================
+
+@pytest.mark.parametrize("contributors_payload, expected", [
+    # VC18a: empty list — accepted as-is
+    ([], []),
+    # VC18b: single short string — accepted as-is
+    (["music"], ["music"]),
+    # VC18c: two short strings — accepted as-is
+    (["music", "comfort"], ["music", "comfort"]),
+    # VC18d: three strings at limit — accepted as-is
+    (["A" * 30, "B" * 20, "C" * 14], ["A" * 30, "B" * 20, "C" * 14]),
+    # VC18e: four strings — truncated to 3 (first three)
+    (["music", "comfort", "late night", "work"], ["music", "comfort", "late night"]),
+    # VC18f: six strings — truncated to 3
+    (["S1", "S2", "S3", "S4", "S5", "S6"], ["S1", "S2", "S3"]),
+    # VC18g: non-string items silently filtered (contract: _as_string_list pre-filter)
+    ("not_a_list", []),
+])
+def test_vc18_mood_contributors_truncation_behavior(contributors_payload, expected):
+    """VC18: mood_contributors list exceeding 3 items is truncated to prevent HA attrs overflow."""
+    data = {
+        "mood": {"mood": "neutral", "confidence": 0.5, "contributors": contributors_payload},
+        "neural": {"zone": {"presence": []}, "last_update": "2026-04-06T10:00:00Z"},
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    result = attrs["mood_contributors"]
+    assert len(result) <= 3, f"mood_contributors length {len(result)} exceeds 3-item HA budget"
+    assert result == expected, f"mood_contributors: {result!r} != {expected!r}"
+
+
+def test_gc18_source_truncates_mood_contributors_to_stay_within_ha_attrs_limit():
+    """GC18: voice_context.py truncates mood_contributors to prevent HA 255-byte state-attr overflow."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    # Check extra_state_attributes has mood_contributors with [:3] truncation
+    assert '"mood_contributors": context.get("mood", {}).get("contributors", [])[:3]' in source
+
+
 def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
     """GC15: voice_context.py truncates last_update to prevent HA 255-byte state-attr overflow."""
     source = (
@@ -1000,7 +1046,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'greeting = _as_string(voice.get("greeting"), "") or "Neutral"' in source
     assert 'coordinator_data = _as_mapping(self.coordinator.data)' in source
     assert 'if not coordinator_data:' in source
-    assert '"contributors": _as_string_list(mood_data.get("contributors"))[:_MAX_SCALAR_LENGTH]' in source
+    assert '"contributors": _as_string_list(mood_data.get("contributors"))[:3]' in source
     assert 'last_update' in source and '[:_MAX_SCALAR_LENGTH]' in source
 
 

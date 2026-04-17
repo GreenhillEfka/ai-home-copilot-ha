@@ -98,7 +98,7 @@ def _project_voice_context(
         "mood": {
             "dominant": dominant_mood,
             "confidence": confidence,
-            "contributors": _as_string_list(mood_data.get("contributors"))[:_MAX_SCALAR_LENGTH],
+            "contributors": _as_string_list(mood_data.get("contributors"))[:3],
         },
         "zone": {
             "current": zone_name,
@@ -165,7 +165,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
         return {
             "dominant_mood": context.get("mood", {}).get("dominant", "unknown"),
             "mood_confidence": context.get("mood", {}).get("confidence", 0.0),
-            "mood_contributors": context.get("mood", {}).get("contributors", []),
+            "mood_contributors": context.get("mood", {}).get("contributors", [])[:3],
             "current_zone": context.get("zone", {}).get("current", "unknown"),
             "zone_presence": context.get("zone", {}).get("presence", [])[:3],
             "voice_tone": _as_string(context.get("voice", {}).get("tone"), "")[:_MAX_SCALAR_LENGTH] or "unknown",
