@@ -114,6 +114,7 @@ class VoiceContextSensorContract:
             core_zone.get("typical_activities", [])
         )
         voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
+        voice_suggestions = [s[:64] for s in voice_suggestions]
         presence = VoiceContextSensorContract._as_string_list(core_zone.get("presence"))
         if not presence:
             presence = VoiceContextSensorContract._as_string_list(neural.get("presence", []))

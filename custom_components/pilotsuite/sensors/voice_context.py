@@ -89,7 +89,8 @@ def _project_voice_context(
     core_zone = _as_mapping(neural_data.get("zone"))
     zone_name = _as_string(core_zone.get("current"), "unknown")
     zone_activities = _as_string_list(core_zone.get("typical_activities"))
-    voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
+    raw_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
+    voice_suggestions = [s[:_MAX_SCALAR_LENGTH] for s in raw_suggestions]
     zone_presence = _as_string_list(core_zone.get("presence"))
     if not zone_presence:
         zone_presence = _as_string_list(neural_data.get("presence"))
