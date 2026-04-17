@@ -211,6 +211,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        self._context_data = {}
         self.async_write_ha_state()
 
 

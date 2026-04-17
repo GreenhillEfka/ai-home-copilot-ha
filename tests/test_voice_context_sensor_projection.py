@@ -1348,3 +1348,54 @@ def test_gc22_source_reconstructs_voice_context_native_value_from_coordinator_mo
     assert 'coordinator_data = _as_mapping(self.coordinator.data)' in source
     assert 'mood_data = _as_mapping(coordinator_data.get("mood", {}))' in source
     assert 'return _as_string(mood_data.get("mood"), "unknown")[:255]' in source
+
+
+class VoiceContextUpdateContract:
+    """Mirror the cache invalidation rule on coordinator updates."""
+
+    def __init__(self, cached_context: dict, coordinator_data: dict) -> None:
+        self._context_data = cached_context
+        self.coordinator_data = coordinator_data
+
+    def native_value(self) -> str:
+        if self._context_data:
+            return VoiceContextSensorContract._as_string(
+                self._context_data.get("mood", {}).get("dominant"),
+                "unknown",
+            )[:255]
+
+        mapped = VoiceContextSensorContract._as_mapping(self.coordinator_data)
+        mood = VoiceContextSensorContract._as_mapping(mapped.get("mood", {}))
+        return VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")[:255]
+
+    def handle_coordinator_update(self) -> None:
+        self._context_data = {}
+
+
+def test_vc22_behavior_clears_cached_context_before_update_driven_native_value_read():
+    """VC22: coordinator updates must invalidate stale cached context before HA reads native_value."""
+    mirror = VoiceContextUpdateContract(
+        cached_context={"mood": {"dominant": "relax"}},
+        coordinator_data={"mood": {"mood": "focus"}},
+    )
+
+    assert mirror.native_value() == "relax"
+
+    mirror.handle_coordinator_update()
+
+    assert mirror.native_value() == "focus"
+
+
+def test_gc23_source_clears_voice_context_cache_on_coordinator_update():
+    """GC23: _handle_coordinator_update must clear cached projected context before writing HA state."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'def _handle_coordinator_update(self) -> None:' in source
+    assert 'self._context_data = {}' in source
+    assert 'self.async_write_ha_state()' in source
