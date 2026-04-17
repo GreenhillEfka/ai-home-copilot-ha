@@ -9,7 +9,7 @@ LEGACY_MAIN_DEVICE_IDENTIFIERS = (
 
 # Entity naming (Q-004, 2026-04-09)
 # New entity IDs must use the branded pilotsuite_ object-id prefix.
-# Legacy copilot_ha references remain readable during migration only.
+# Legacy pilotsuite/pilotsuite identifiers remain readable during migration.
 ENTITY_ID_PREFIX = DOMAIN
 LEGACY_ENTITY_ID_PREFIXES = (
     "copilot_ha",
@@ -18,7 +18,7 @@ LEGACY_ENTITY_ID_PREFIXES = (
 
 # Dashboard file layout:
 # - primary branded path for new installs
-# - legacy copilot_ha path kept for backwards compatibility
+# - legacy pilotsuite path kept for backwards compatibility
 PRIMARY_DASHBOARD_DIR = "pilotsuite-styx"
 LEGACY_DASHBOARD_DIR = DOMAIN
 
