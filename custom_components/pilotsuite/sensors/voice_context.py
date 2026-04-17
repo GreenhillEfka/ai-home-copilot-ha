@@ -171,7 +171,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
             "voice_tone": _as_string(context.get("voice", {}).get("tone"), "")[:_MAX_SCALAR_LENGTH] or "unknown",
             "voice_greeting": _as_string(context.get("voice", {}).get("greeting"), "")[:_MAX_SCALAR_LENGTH],
             "voice_suggestions": _as_string_list(context.get("voice", {}).get("suggestions"))[:_MAX_SCALAR_LENGTH],
-            "voice_prompt": self._build_voice_prompt(context)[:_MAX_SCALAR_LENGTH * 4],
+            "voice_prompt": self._build_voice_prompt(context)[:255],
             "last_update": context.get("metadata", {}).get("last_update", ""),
         }
 
@@ -228,7 +228,7 @@ class VoicePromptSensor(CoordinatorEntity, SensorEntity):
         mood_data = coordinator_data.get("mood", {})
         neural_data = coordinator_data.get("neural", {})
         context = _project_voice_context(mood_data, neural_data)
-        return _build_voice_prompt(context)[:_MAX_SCALAR_LENGTH * 4]
+        return _build_voice_prompt(context)[:255]
 
     @callback
     def _handle_coordinator_update(self) -> None:
