@@ -122,6 +122,17 @@ def _project_voice_context(
     }
 
 
+def _prompt_suggestion_fragments(suggestions: Any) -> list[str]:
+    """Return prompt-safe suggestion fragments without duplicate terminal punctuation."""
+    fragments: list[str] = []
+    for suggestion in _as_string_list(suggestions)[:2]:
+        fragment = suggestion.rstrip(".!?")
+        if fragment:
+            fragments.append(fragment)
+    return fragments
+
+
+
 def _build_voice_prompt(context: Dict[str, Any]) -> str:
     """Build a natural-language prompt from already projected Core fields."""
     voice = _as_mapping(context.get("voice"))
@@ -135,9 +146,9 @@ def _build_voice_prompt(context: Dict[str, Any]) -> str:
         zones = ", ".join(presence[:3])
         parts.append(f"Anwesend in: {zones}.")
 
-    suggestions = _as_string_list(voice.get("suggestions"))
-    if suggestions:
-        parts.append(f"Vorschläge: {'; '.join(suggestions[:2])}.")
+    suggestion_fragments = _prompt_suggestion_fragments(voice.get("suggestions"))
+    if suggestion_fragments:
+        parts.append(f"Vorschläge: {'; '.join(suggestion_fragments)}.")
 
     return " ".join(parts)
 

@@ -150,6 +150,15 @@ class VoiceContextSensorContract:
         }
 
     @staticmethod
+    def _prompt_suggestion_fragments(suggestions) -> list[str]:
+        fragments = []
+        for suggestion in VoiceContextSensorContract._as_string_list(suggestions)[:2]:
+            fragment = suggestion.rstrip(".!?")
+            if fragment:
+                fragments.append(fragment)
+        return fragments
+
+    @staticmethod
     def _build_prompt(greeting: str, presence: list, suggestions: list) -> str:
         greeting = VoiceContextSensorContract._as_string(greeting, "") or "Neutral"
         parts = [f"Der Nutzer ist gerade {greeting}."]
@@ -157,9 +166,9 @@ class VoiceContextSensorContract:
         if presence:
             zones = ", ".join(presence[:3])
             parts.append(f"Anwesend in: {zones}.")
-        suggestions = VoiceContextSensorContract._as_string_list(suggestions)
-        if suggestions:
-            parts.append(f"Vorschläge: {'; '.join(suggestions[:2])}.")
+        suggestion_fragments = VoiceContextSensorContract._prompt_suggestion_fragments(suggestions)
+        if suggestion_fragments:
+            parts.append(f"Vorschläge: {'; '.join(suggestion_fragments)}.")
         return " ".join(parts)
 
 
@@ -401,7 +410,7 @@ def empty_data():
             "voice_tone": "relax",
             "voice_greeting": "Guten Morgen",
             "voice_suggestions": ["Lesen ist aktuell.", "Musik hören ist aktuell."],
-            "voice_prompt": "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
+            "voice_prompt": "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer, Küche. Vorschläge: Lesen ist aktuell; Musik hören ist aktuell.",
             "last_update": "2026-04-06T10:00:00Z",
         },
     ),
@@ -441,7 +450,7 @@ def empty_data():
             "voice_tone": "deep focus",
             "voice_greeting": "Guten Morgen",
             "voice_suggestions": ["Lesen ist aktuell.", "Musik hören ist aktuell."],
-            "voice_prompt": "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
+            "voice_prompt": "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord, Küche. Vorschläge: Lesen ist aktuell; Musik hören ist aktuell.",
             "last_update": "2026-04-06T10:00:00Z",
         },
     ),
@@ -534,20 +543,35 @@ def test_vc1_extra_state_attributes(coordinator_data, key, expected):
         "  Hallo  ",
         ["  Wohnzimmer  ", " Küche "],
         ["  Lesen ist aktuell.  ", " Musik hören ist aktuell. "],
-        "Der Nutzer ist gerade Hallo. Anwesend in: Wohnzimmer, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
+        "Der Nutzer ist gerade Hallo. Anwesend in: Wohnzimmer, Küche. Vorschläge: Lesen ist aktuell; Musik hören ist aktuell.",
     ),
     # VC2k: embedded newlines/tabs collapse to stable single-line prompt text
     (
         "  Guten\n\tMorgen  ",
         ["  Wohnzimmer\nNord  ", "\tKüche\t"],
         ["  Lesen\n ist aktuell.  ", " Musik\t hören ist aktuell. "],
-        "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord, Küche. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell..",
+        "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord, Küche. Vorschläge: Lesen ist aktuell; Musik hören ist aktuell.",
     ),
 ])
 def test_vc2_voice_prompt_construction(greeting, presence, suggestions, expected):
     """VC2: voice_prompt is built from greeting + presence[:3] + suggestions[:2]."""
     prompt = VoiceContextSensorContract._build_prompt(greeting, presence, suggestions)
     assert prompt == expected
+
+
+def test_vc25_voice_prompt_strips_duplicate_suggestion_punctuation_before_joining():
+    """VC25: projected suggestion suffix dots must not leak into prompt-level double punctuation."""
+    coordinator_data = {
+        "neural": {
+            "time": {"description_de": "Tag"},
+            "zone": {"typical_activities": ["Lesen", "Planen"]},
+        }
+    }
+
+    attrs = VoiceContextSensorContract.extra_state_attributes(coordinator_data)
+
+    assert attrs["voice_suggestions"] == ["Lesen ist aktuell.", "Planen ist aktuell."]
+    assert attrs["voice_prompt"] == "Der Nutzer ist gerade Tag. Vorschläge: Lesen ist aktuell; Planen ist aktuell."
 
 
 # =============================================================================
@@ -607,7 +631,7 @@ def test_vc21_native_value_truncation_guard(mood_payload, expected):
     # VP1c: presence is projected into the prompt
     ({"neural": {"time": {"description_de": "Abend"}, "zone": {"presence": ["Wohnzimmer", "Küche"]}}}, "Der Nutzer ist gerade Abend. Anwesend in: Wohnzimmer, Küche."),
     # VP1d: typical activities become projected suggestions in the prompt
-    ({"neural": {"time": {"description_de": "Tag"}, "zone": {"typical_activities": ["Lesen", "Musik hören", "Kaffee"]}}}, "Der Nutzer ist gerade Tag. Vorschläge: Lesen ist aktuell.; Musik hören ist aktuell.."),
+    ({"neural": {"time": {"description_de": "Tag"}, "zone": {"typical_activities": ["Lesen", "Musik hören", "Kaffee"]}}}, "Der Nutzer ist gerade Tag. Vorschläge: Lesen ist aktuell; Musik hören ist aktuell."),
     # VP1e: blank time descriptions fall back to Hallo via shared projection
     ({"neural": {"time": {"description_de": "", "description_en": ""}}}, "Der Nutzer ist gerade Hallo."),
     # VP1f: empty data → sensor guard default
@@ -615,9 +639,9 @@ def test_vc21_native_value_truncation_guard(mood_payload, expected):
     # VP1g: truthy non-dict coordinator payload also returns guard default
     (["bad-payload"], "Kein Kontext verfügbar."),
     # VP1h: padded scalar/list payloads are normalized before prompt projection
-    ({"neural": {"time": {"description_de": "  Abend  "}, "zone": {"presence": ["  Wohnzimmer  "], "typical_activities": ["  Lesen  "]}}}, "Der Nutzer ist gerade Abend. Anwesend in: Wohnzimmer. Vorschläge: Lesen ist aktuell.."),
+    ({"neural": {"time": {"description_de": "  Abend  "}, "zone": {"presence": ["  Wohnzimmer  "], "typical_activities": ["  Lesen  "]}}}, "Der Nutzer ist gerade Abend. Anwesend in: Wohnzimmer. Vorschläge: Lesen ist aktuell."),
     # VP1i: embedded newlines/tabs are collapsed before prompt projection
-    ({"neural": {"time": {"description_de": "  Guten\n\tMorgen  "}, "zone": {"presence": ["  Wohnzimmer\nNord  "], "typical_activities": ["  Musik\t hören  "]}}}, "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord. Vorschläge: Musik hören ist aktuell.."),
+    ({"neural": {"time": {"description_de": "  Guten\n\tMorgen  "}, "zone": {"presence": ["  Wohnzimmer\nNord  "], "typical_activities": ["  Musik\t hören  "]}}}, "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord. Vorschläge: Musik hören ist aktuell."),
 ])
 def test_vp1_native_value(coordinator_data, expected):
     """VP1: native_value is the projected HA Assist prompt, not a local tone mapping."""
@@ -1423,8 +1447,24 @@ def test_gc13_behavior_prefers_projected_zone_activities_over_raw_suggestions_pa
     assert "Temperatur anpassen" not in attrs["voice_prompt"]
     assert prompt == (
         "Der Nutzer ist gerade Tag. Anwesend in: Büro. "
-        "Vorschläge: Lesen ist aktuell.; Planen ist aktuell.."
+        "Vorschläge: Lesen ist aktuell; Planen ist aktuell."
     )
+
+
+def test_gc26_source_normalizes_prompt_suggestion_punctuation_before_sentence_join():
+    """GC26: prompt builder must strip terminal suggestion punctuation before appending the sentence period."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'def _prompt_suggestion_fragments(suggestions: Any) -> list[str]:' in source
+    assert 'fragment = suggestion.rstrip(".!?")' in source
+    assert 'suggestion_fragments = _prompt_suggestion_fragments(voice.get("suggestions"))' in source
+    assert "parts.append(f\"Vorschläge: {'; '.join(suggestion_fragments)}.\")" in source
 
 
 def test_gc21_source_eliminates_dead_projection_fields():
