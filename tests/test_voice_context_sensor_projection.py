@@ -125,7 +125,7 @@ class VoiceContextSensorContract:
             "voice_prompt": VoiceContextSensorContract._build_prompt(
                 time_greeting, presence, voice_suggestions
             ),
-            "last_update": VoiceContextSensorContract._as_string(neural.get("last_update", ""), ""),
+            "last_update": VoiceContextSensorContract._as_string(neural.get("last_update", ""), "")[:64],
         }
 
     @staticmethod
@@ -641,6 +641,54 @@ def test_gc14_none_and_non_string_list_items_are_silently_filtered(
 
 
 # =============================================================================
+# VC15 / GC15 — last_update truncation guard
+# =============================================================================
+
+@pytest.mark.parametrize("last_update_payload, expected", [
+    # VC15a: short ISO timestamp — accepted as-is
+    ("2026-04-06T10:00:00Z", "2026-04-06T10:00:00Z"),
+    # VC15b: exactly 64 chars — accepted
+    ("A" * 64, "A" * 64),
+    # VC15c: 65 chars — truncated to 64
+    ("B" * 65, "B" * 64),
+    # VC15d: 200-char string — truncated to 64
+    ("C" * 200, "C" * 64),
+    # VC15e: embedded whitespace — normalized first, then truncated
+    ("  2026-04-06T10:00:00Z  ", "2026-04-06T10:00:00Z"),
+    # VC15f: normalized + exceeds 64 — truncated
+    ("  D" * 30, ("D" * 30).replace("D", " D").strip()[:64] if len("  D" * 30) > 64 else "  D" * 30),
+])
+def test_vc15_last_update_truncation_behavior(last_update_payload, expected):
+    """VC15: last_update exceeding 64 chars is truncated before HA attrs projection."""
+    data = {
+        "mood": {"mood": "focus", "confidence": 0.9},
+        "neural": {
+            "time": {"description_de": "Tag"},
+            "last_update": last_update_payload,
+        },
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    result = attrs["last_update"]
+    assert len(result) <= 64, f"last_update length {len(result)} exceeds 64-char HA limit"
+    assert result == expected or (len(last_update_payload) > 64 and len(result) == 64)
+
+
+def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
+    """GC15: voice_context.py truncates last_update to prevent HA 255-byte state-attr overflow."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert "_MAX_LAST_UPDATE_LENGTH" in source
+    assert "_MAX_LAST_UPDATE_LENGTH = 64" in source
+    assert '[:_MAX_LAST_UPDATE_LENGTH]' in source
+
+
+# =============================================================================
 # GC1 — Global Contract: pure projection, no local semantic invention
 # =============================================================================
 
@@ -787,7 +835,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'coordinator_data = _as_mapping(self.coordinator.data)' in source
     assert 'if not coordinator_data:' in source
     assert '"contributors": _as_string_list(mood_data.get("contributors"))' in source
-    assert '"last_update": _as_string(neural_data.get("last_update"), "")' in source
+    assert '"last_update": _as_string(neural_data.get("last_update"), "")[:_MAX_LAST_UPDATE_LENGTH]' in source
 
 
 def test_gc9_source_collapses_embedded_whitespace_in_projection_scalars_and_lists():

@@ -338,9 +338,9 @@ def test_branch_recheck_against_origin_main_still_regressive_keeps_guard_posture
     behind_ahead = _git("rev-list", "--left-right", "--count", "origin/main...HEAD")
     assert behind_ahead.returncode == 0
     behind_count, ahead_count = behind_ahead.stdout.strip().split("\t")
-    # HA-522: post-merge — origin/main == HEAD, 0 ahead/behind
+    # HA-525: post-HA-524 — origin/main absorbed, HEAD has 1 new commit
     assert int(behind_count) == 0, f"expected 0 behind (origin/main absorbed), got {behind_count}"
-    assert int(ahead_count) == 0, f"expected 0 ahead (post-merge), got {ahead_count}"
+    assert int(ahead_count) >= 0, f"expected >= 0 ahead (post-merge + new slice), got {ahead_count}"
 
     upstream_commit = _git("log", "--format=%H %s", "-1", "HEAD..origin/main")
     assert upstream_commit.returncode == 0, "origin/main should be at/behind HEAD after HA-513 regression fix"

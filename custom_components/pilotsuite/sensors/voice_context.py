@@ -29,6 +29,9 @@ from ..coordinator import CopilotDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+# HA entity state_attributes have a 255-byte hard limit; truncate last_update to stay safe.
+_MAX_LAST_UPDATE_LENGTH = 64
+
 
 def _as_mapping(value: Any) -> Dict[str, Any]:
     """Return dict-like payloads, otherwise a safe empty mapping."""
@@ -107,7 +110,7 @@ def _project_voice_context(
             "suggestions": voice_suggestions,
         },
         "metadata": {
-            "last_update": _as_string(neural_data.get("last_update"), ""),
+            "last_update": _as_string(neural_data.get("last_update"), "")[:_MAX_LAST_UPDATE_LENGTH],
             "context_version": "1.1",
         },
     }
