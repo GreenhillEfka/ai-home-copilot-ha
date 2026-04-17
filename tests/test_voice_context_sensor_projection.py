@@ -124,7 +124,7 @@ class VoiceContextSensorContract:
             "zone_presence": presence[:3],
             "voice_tone": dominant_mood[:64] or "unknown",
             "voice_greeting": time_greeting[:64],
-            "voice_suggestions": voice_suggestions[:64],
+            "voice_suggestions": [s[:64] for s in voice_suggestions[:64]],
             "voice_prompt": VoiceContextSensorContract._build_prompt(
                 time_greeting, presence, voice_suggestions
             )[:255],
@@ -868,6 +868,93 @@ def test_gc18_source_truncates_mood_contributors_to_stay_within_ha_attrs_limit()
     # Check extra_state_attributes has mood_contributors with [:3] truncation
     assert '"mood_contributors": context.get("mood", {}).get("contributors", [])[:3]' in source
 
+
+# =============================================================================
+# VC19 / GC19 — voice_suggestions per-item truncation guard
+# =============================================================================
+# VC19 / GC19 — voice_suggestions per-item truncation guard
+# =============================================================================
+# voice_suggestions = [f"{act} ist aktuell." for act in zone_activities[:3]]
+# Then: [s[:_MAX_SCALAR_LENGTH] for s in <list>]
+# Raw base + " ist aktuell." (13 chars) must stay within 64 chars.
+# Max raw base = 64 - 13 = 51 chars. Raw >= 52 chars gets truncated to 64,
+# overwriting the suffix.
+# =============================================================================
+
+@pytest.mark.parametrize("raw_activity_bases, expected", [
+    # VC19a: 0 items — empty list
+    ([], []),
+    # VC19b: 1 short raw item — base 5 ("Lesen") + suffix = 18 chars, within 64
+    (["Lesen"], ["Lesen ist aktuell."]),
+    # VC19c: 2 short raw items — both within 64 after formatting
+    (["Lesen", "Musik hören"],
+     ["Lesen ist aktuell.", "Musik hören ist aktuell."]),
+    # VC19d: raw 51 X's + suffix 13 = 64 → exactly at 64, preserved
+    (["X" * 51], ["X" * 51 + " ist aktuell."]),  # 64 chars total
+    # VC19e: raw 52 Y's + suffix 13 = 65 → exceeds 64, [:64] cuts suffix mid-word
+    (["Y" * 52], [("Y" * 52 + " ist aktuell.")[:64]]),
+    # VC19f: 2 raw items both exceeding — both truncated to 64 at per-item level
+    (["A" * 70, "B" * 80], ["A" * 64, "B" * 64]),
+    # VC19g: 3 raw items at varying lengths (52/50/55) — formatting+suffix THEN per-item [:64]
+    #   C*52+suffix=65 → [:64] cuts suffix: 'CCCC...C ist aktuell' (64)
+    #   D*50+suffix=63 → [:64] preserves full: 'DDDD...D ist aktuell.' (63)
+    #   E*55+suffix=68 → [:64] cuts suffix: 'EEEE...E ist aktu' (64)
+    (["C" * 52, "D" * 50, "E" * 55],
+     [("C" * 52 + " ist aktuell.")[:64],
+      ("D" * 50 + " ist aktuell.")[:64],
+      ("E" * 55 + " ist aktuell.")[:64]]),
+    #   → ["CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC ist aktuell",
+    #      "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD ist aktuell.",
+    #      "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE ist aktu"]
+    # VC19h: 4 raw items (exceeds 3 cap) — take first 3, apply per-item truncation
+    #   F*60+suffix=73 → [:64]: 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF ist' (64)
+    #   G*70+suffix=83 → [:64]: 'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG' (64)
+    #   H*50+suffix=63 → [:64]: 'HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH ist aktuell.' (63)
+    (["F" * 60, "G" * 70, "H" * 50, "I" * 55],
+     [("F" * 60 + " ist aktuell.")[:64],
+      ("G" * 70 + " ist aktuell.")[:64],
+      ("H" * 50 + " ist aktuell.")[:64]]),
+    #   → ["FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF ist",
+    #      "GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+    #      "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH ist aktuell."]
+    # VC19i: non-string items in raw list — filtered by _as_string_list, then list capped at 3
+    (["Lesen", None, "Musik hören", 123],
+     ["Lesen ist aktuell.", "Musik hören ist aktuell."]),
+])
+def test_vc19_voice_suggestions_truncation_behavior(raw_activity_bases, expected):
+    """VC19: voice_suggestions — per-item [:64] truncation applied AFTER zone_activity formatting."""
+    data = {
+        "mood": {"mood": "neutral", "confidence": 0.5},
+        "neural": {
+            "zone": {
+                "presence": ["Wohnzimmer"],
+                "typical_activities": raw_activity_bases,
+            },
+            "last_update": "2026-04-06T10:00:00Z",
+        },
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    result = attrs["voice_suggestions"]
+    # Verify per-item truncation: no single suggestion exceeds 64 chars
+    for item in result:
+        assert len(item) <= 64, f"voice_suggestions item len {len(item)} exceeds 64-char HA budget"
+    # Verify list cap: at most 3 items
+    assert len(result) <= 3, f"voice_suggestions list len {len(result)} exceeds 3-item HA budget"
+    assert result == expected, f"voice_suggestions: {result!r} != {expected!r}"
+
+
+def test_gc19_source_truncates_voice_suggestions_per_item_to_stay_within_ha_attrs_limit():
+    """GC19: voice_context.py truncates each voice_suggestions item to [:_MAX_SCALAR_LENGTH] ([:64])."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    # Check extra_state_attributes has per-item [:_MAX_SCALAR_LENGTH] truncation on voice_suggestions
+    assert '[s[:_MAX_SCALAR_LENGTH] for s in _as_string_list(context.get("voice", {}).get("suggestions"))' in source
 
 def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
     """GC15: voice_context.py truncates last_update to prevent HA 255-byte state-attr overflow."""
