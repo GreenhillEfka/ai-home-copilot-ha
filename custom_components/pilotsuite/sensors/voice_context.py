@@ -183,9 +183,12 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self) -> str:
         """Return the dominant mood as primary state — rotates with context changes."""
-        if not self._context_data:
-            return "unknown"
-        return _as_string(self._context_data.get("mood", {}).get("dominant"), "unknown")[:255]
+        if self._context_data:
+            return _as_string(self._context_data.get("mood", {}).get("dominant"), "unknown")[:255]
+
+        coordinator_data = _as_mapping(self.coordinator.data)
+        mood_data = _as_mapping(coordinator_data.get("mood", {}))
+        return _as_string(mood_data.get("mood"), "unknown")[:255]
 
     def _build_voice_context(
         self,

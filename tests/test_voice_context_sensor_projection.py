@@ -26,7 +26,9 @@ class VoiceContextSensorContract:
 
     Contract:
     - reads: coordinator.data["mood"], ["neural"]
-    - native_value: dominant mood (rotates with context changes), falls back to "unknown"
+    - native_value: dominant mood (rotates with context changes), falls back to direct
+      coordinator.data["mood"] reconstruction when projected context is not yet set,
+      otherwise "unknown"
     - extra_state_attributes:
         dominant_mood       ← mood.get("mood", "unknown")
         mood_confidence     ← mood.get("confidence", 0.0)
@@ -1330,8 +1332,8 @@ def test_gc21_source_eliminates_dead_projection_fields():
     assert '"context_version"' not in source
 
 
-def test_gc22_source_truncates_voice_context_native_value_to_255_chars():
-    """GC22: voice_context.py caps VoiceContextSensor.native_value at 255 chars for HA state safety."""
+def test_gc22_source_reconstructs_voice_context_native_value_from_coordinator_mood_when_context_missing():
+    """GC22: voice_context.py reconstructs native_value directly from coordinator mood when _context_data is empty."""
     source = (
         Path(__file__).parent.parent
         / "custom_components"
@@ -1341,4 +1343,8 @@ def test_gc22_source_truncates_voice_context_native_value_to_255_chars():
     ).read_text()
 
     assert 'def native_value(self) -> str:' in source
+    assert 'if self._context_data:' in source
     assert 'return _as_string(self._context_data.get("mood", {}).get("dominant"), "unknown")[:255]' in source
+    assert 'coordinator_data = _as_mapping(self.coordinator.data)' in source
+    assert 'mood_data = _as_mapping(coordinator_data.get("mood", {}))' in source
+    assert 'return _as_string(mood_data.get("mood"), "unknown")[:255]' in source
