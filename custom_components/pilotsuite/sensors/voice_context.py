@@ -172,7 +172,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
             "voice_greeting": _as_string(context.get("voice", {}).get("greeting"), "")[:_MAX_SCALAR_LENGTH],
             "voice_suggestions": [s[:_MAX_SCALAR_LENGTH] for s in _as_string_list(context.get("voice", {}).get("suggestions"))[:_MAX_SCALAR_LENGTH]],
             "voice_prompt": self._build_voice_prompt(context)[:255],
-            "last_update": context.get("metadata", {}).get("last_update", ""),
+            "last_update": context.get("metadata", {}).get("last_update", "")[:_MAX_SCALAR_LENGTH],
         }
 
     @property
