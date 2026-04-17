@@ -166,7 +166,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
             "dominant_mood": context.get("mood", {}).get("dominant", "unknown"),
             "mood_confidence": context.get("mood", {}).get("confidence", 0.0),
             "mood_contributors": context.get("mood", {}).get("contributors", [])[:3],
-            "current_zone": _as_string(core_zone.get("current"), "unknown")[:_MAX_SCALAR_LENGTH],
+            "current_zone": _as_string(context.get("zone", {}).get("current"), "unknown")[:_MAX_SCALAR_LENGTH],
             "zone_presence": context.get("zone", {}).get("presence", [])[:3],
             "voice_tone": _as_string(context.get("voice", {}).get("tone"), "")[:_MAX_SCALAR_LENGTH] or "unknown",
             "voice_greeting": _as_string(context.get("voice", {}).get("greeting"), "")[:_MAX_SCALAR_LENGTH],

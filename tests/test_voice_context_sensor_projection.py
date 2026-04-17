@@ -1016,7 +1016,7 @@ def test_gc20_source_truncates_current_zone_to_stay_within_ha_attrs_limit():
 
     # Verify current_zone in extra_state_attributes has the [:_MAX_SCALAR_LENGTH] guard applied to _as_string return
     assert '"current_zone":' in source and '[:_MAX_SCALAR_LENGTH]' in source
-    assert '_as_string(core_zone.get("current"), "unknown")[:_MAX_SCALAR_LENGTH]' in source
+    assert '_as_string(context.get("zone", {}).get("current"), "unknown")[:_MAX_SCALAR_LENGTH]' in source
 
 
 def test_gc16_source_truncates_all_voice_scalars_to_stay_within_ha_attrs_limit():
