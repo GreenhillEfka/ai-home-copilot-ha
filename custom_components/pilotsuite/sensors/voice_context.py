@@ -163,7 +163,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
         self._context_data = context
 
         return {
-            "dominant_mood": context.get("mood", {}).get("dominant", "unknown"),
+            "dominant_mood": _as_string(context.get("mood", {}).get("dominant"), "unknown")[:_MAX_SCALAR_LENGTH],
             "mood_confidence": round(float(context.get("mood", {}).get("confidence", 0.0)), 4),
             "mood_contributors": context.get("mood", {}).get("contributors", [])[:3],
             "current_zone": _as_string(context.get("zone", {}).get("current"), "unknown")[:_MAX_SCALAR_LENGTH],

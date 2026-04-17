@@ -120,7 +120,7 @@ class VoiceContextSensorContract:
             presence = VoiceContextSensorContract._as_string_list(neural.get("presence", []))
 
         return {
-            "dominant_mood": dominant_mood,
+            "dominant_mood": dominant_mood[:64],
             "mood_confidence": confidence,
             "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", []))[:3],
             "current_zone": zone_name,
