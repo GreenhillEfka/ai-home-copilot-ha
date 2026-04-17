@@ -121,7 +121,7 @@ class VoiceContextSensorContract:
             "mood_confidence": confidence,
             "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", []))[:64],
             "current_zone": zone_name,
-            "zone_presence": presence,
+            "zone_presence": presence[:3],
             "voice_tone": dominant_mood[:64] or "unknown",
             "voice_greeting": time_greeting[:64],
             "voice_suggestions": voice_suggestions[:64],
@@ -777,6 +777,52 @@ def test_vc16_voice_greeting_truncation_behavior(greeting_payload, expected_len)
     }
     attrs = VoiceContextSensorContract.extra_state_attributes(data)
     assert len(attrs["voice_greeting"]) == expected_len, f"voice_greeting length {len(attrs['voice_greeting'])} != {expected_len}"
+
+
+# =============================================================================
+# VC17 / GC17 — zone_presence truncation guard
+# =============================================================================
+
+@pytest.mark.parametrize("presence_payload, expected", [
+    # VC17a: 0 items — empty list
+    ([], []),
+    # VC17b: 1 item — accepted as-is
+    (["Wohnzimmer"], ["Wohnzimmer"]),
+    # VC17c: 2 items — accepted as-is
+    (["Wohnzimmer", "Küche"], ["Wohnzimmer", "Küche"]),
+    # VC17d: 3 items — at the cap
+    (["Wohnzimmer", "Küche", "Schlafzimmer"], ["Wohnzimmer", "Küche", "Schlafzimmer"]),
+    # VC17e: 4 items — truncated to first 3
+    (["Wohnzimmer", "Küche", "Schlafzimmer", "Balkon"], ["Wohnzimmer", "Küche", "Schlafzimmer"]),
+    # VC17f: 5 items — truncated to first 3
+    (["Wohnzimmer", "Küche", "Balkon", "Bad", "Flur"], ["Wohnzimmer", "Küche", "Balkon"]),
+    # VC17g: non-string items — filtered by _as_string_list, then capped at 3
+    (["Wohnzimmer", None, "Küche", 123, "Schlafzimmer"], ["Wohnzimmer", "Küche", "Schlafzimmer"]),
+])
+def test_vc17_zone_presence_truncation_behavior(presence_payload, expected):
+    """VC17: zone_presence list exceeding 3 items is truncated to prevent HA attrs overflow."""
+    data = {
+        "mood": {"mood": "neutral", "confidence": 0.5},
+        "neural": {
+            "zone": {"presence": presence_payload},
+            "last_update": "2026-04-06T10:00:00Z",
+        },
+    }
+    attrs = VoiceContextSensorContract.extra_state_attributes(data)
+    assert attrs["zone_presence"] == expected
+
+
+def test_gc17_source_truncates_zone_presence_to_stay_within_ha_attrs_limit():
+    """GC17: voice_context.py truncates zone_presence to 3 items to prevent HA 255-byte state-attr overflow."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert "zone_presence" in source and "[:3]" in source
 
 
 def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
