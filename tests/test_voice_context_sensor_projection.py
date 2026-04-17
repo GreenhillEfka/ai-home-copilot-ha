@@ -87,7 +87,9 @@ class VoiceContextSensorContract:
         if not isinstance(value, (int, float)):
             return default
         numeric_value = float(value)
-        return numeric_value if math.isfinite(numeric_value) else default
+        if not math.isfinite(numeric_value):
+            return default
+        return round(numeric_value, 4)
 
     @staticmethod
     def extra_state_attributes(coordinator_data: dict) -> dict:
@@ -658,6 +660,14 @@ def test_vp3_native_value_truncation_guard(greeting_text, expected):
     ("high", 0.0),
     # VC4j: nested dict — rejected to default
     ({"value": 0.9}, 0.0),
+    # VC4k: float with excess precision — capped to 4 decimals
+    (0.1 + 0.2, 0.3),
+    # VC4l: float with >4 decimal places — capped to 4 decimals
+    (0.33333333333333, 0.3333),
+    # VC4m: float rounding at boundary — capped to 4 decimals
+    (1.12345, 1.1235),
+    # VC4n: int — accepted, returned as float
+    (1, 1.0),
 ])
 def test_vc4_float_edge_cases_rejected_to_default(confidence_payload, expected):
     """VC4: inf/nan/bool/non-numeric confidence must not leak into HA attributes."""
