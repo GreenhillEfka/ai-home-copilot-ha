@@ -94,6 +94,13 @@ class VoiceContextSensorContract:
         return round(numeric_value, 4)
 
     @staticmethod
+    def _voice_suggestions_attr_value(suggestions) -> list[str]:
+        return [
+            s[:64]
+            for s in VoiceContextSensorContract._as_string_list(suggestions)[:3]
+        ]
+
+    @staticmethod
     def extra_state_attributes(coordinator_data: dict) -> dict:
         coordinator_data = VoiceContextSensorContract._as_mapping(coordinator_data)
         if not coordinator_data:
@@ -134,7 +141,7 @@ class VoiceContextSensorContract:
             "zone_presence": presence[:3],
             "voice_tone": dominant_mood[:64] or "unknown",
             "voice_greeting": time_greeting[:64],
-            "voice_suggestions": [s[:64] for s in voice_suggestions[:64]],
+            "voice_suggestions": VoiceContextSensorContract._voice_suggestions_attr_value(voice_suggestions),
             "voice_prompt": VoiceContextSensorContract._build_prompt(
                 time_greeting, presence, voice_suggestions
             )[:255],
@@ -975,7 +982,40 @@ def test_gc19_source_truncates_voice_suggestions_per_item_to_stay_within_ha_attr
     assert '_VOICE_SUGGESTION_SUFFIX = " ist aktuell."' in source
     assert '_MAX_VOICE_SUGGESTION_BASE_LENGTH = _MAX_SCALAR_LENGTH - len(_VOICE_SUGGESTION_SUFFIX)' in source
     assert 'f"{act[:_MAX_VOICE_SUGGESTION_BASE_LENGTH]}{_VOICE_SUGGESTION_SUFFIX}"' in source
-    assert '[s[:_MAX_SCALAR_LENGTH] for s in _as_string_list(context.get("voice", {}).get("suggestions"))' in source
+    assert '"voice_suggestions": [s[:_MAX_SCALAR_LENGTH] for s in _as_string_list(context.get("voice", {}).get("suggestions"))[:3]],' in source
+
+
+@pytest.mark.parametrize("suggestions_payload, expected", [
+    (["Lesen ist aktuell."], ["Lesen ist aktuell."]),
+    (["A", "B", "C"], ["A", "B", "C"]),
+    (["A", "B", "C", "D", "E"], ["A", "B", "C"]),
+    (["X" * 70, "Y" * 65, "Z" * 64, "Q" * 10], ["X" * 64, "Y" * 64, "Z" * 64]),
+    (["  Lesen ist aktuell.  ", None, " Musik hören ist aktuell. ", 123, "Planen ist aktuell."], [
+        "Lesen ist aktuell.",
+        "Musik hören ist aktuell.",
+        "Planen ist aktuell.",
+    ]),
+])
+def test_vc23_voice_suggestions_attr_budget_caps_list_to_three_items(suggestions_payload, expected):
+    """VC23: extra_state_attributes caps voice_suggestions to three normalized 64-char items."""
+    result = VoiceContextSensorContract._voice_suggestions_attr_value(suggestions_payload)
+    assert result == expected
+    assert len(result) <= 3
+    assert all(len(item) <= 64 for item in result)
+
+
+def test_gc24_source_caps_voice_suggestions_attr_list_to_three_items():
+    """GC24: voice_context.py must cap extra_state_attributes voice_suggestions at the 3-item HA budget."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert '"voice_suggestions": [s[:_MAX_SCALAR_LENGTH] for s in _as_string_list(context.get("voice", {}).get("suggestions"))[:3]],' in source
+
 
 def test_gc15_source_truncates_last_update_to_stay_within_ha_attrs_limit():
     """GC15: voice_context.py truncates last_update to prevent HA 255-byte state-attr overflow."""
