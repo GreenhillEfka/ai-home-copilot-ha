@@ -112,7 +112,7 @@ class VoiceContextSensorContract:
 
         pending_confirmation = payload.get("pending_confirmation")
         return {
-            "last_status": VoiceContextSensorContract._as_string(payload.get("last_status"), "idle"),
+            "last_status": VoiceContextSensorContract._as_string(payload.get("last_status"), "idle")[:64],
             "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
             "pending_action_label": VoiceContextSensorContract._as_string(payload.get("pending_action_label"), "")[:64],
             "confirmation_expires_at": VoiceContextSensorContract._as_string(payload.get("confirmation_expires_at"), "")[:64],
@@ -1629,6 +1629,19 @@ def test_vc26_behavior_projects_thin_voice_command_state_without_dialog_internal
     assert malformed["voice_pending_action_label"] == ""
     assert malformed["voice_confirmation_expires_at"] == ""
 
+    overlong = VoiceContextSensorContract.extra_state_attributes({
+        "voice_command_state": {
+            "last_status": "x" * 120,
+            "pending_confirmation": True,
+            "pending_action_label": "Wohnzimmerlicht einschalten " * 8,
+            "confirmation_expires_at": "2026-04-18T00:30:00Z" * 5,
+        }
+    })
+    assert overlong["voice_command_status"] == "x" * 64
+    assert overlong["voice_pending_confirmation"] is True
+    assert overlong["voice_pending_action_label"] == ("Wohnzimmerlicht einschalten " * 8)[:64]
+    assert overlong["voice_confirmation_expires_at"] == ("2026-04-18T00:30:00Z" * 5)[:64]
+
 
 def test_gc27_source_projects_voice_command_state_from_explicit_core_router_surface():
     """GC27: voice_context.py must consume only the thin voice_command_state surface, not dialog internals."""
@@ -1643,6 +1656,7 @@ def test_gc27_source_projects_voice_command_state_from_explicit_core_router_surf
     assert 'def _project_voice_command_state(command_state_data: Any) -> Dict[str, Any]:' in source
     assert 'if "state" in payload:' in source
     assert 'voice_command_state = _project_voice_command_state(coordinator_data.get("voice_command_state", {}))' in source
+    assert '"last_status": _as_string(payload.get("last_status"), "idle")[:_MAX_SCALAR_LENGTH]' in source
     assert '"voice_command_status": voice_command_state.get("last_status", "idle")' in source
     assert '"voice_pending_confirmation": voice_command_state.get("pending_confirmation", False)' in source
     assert '"voice_pending_action_label": voice_command_state.get("pending_action_label", "")' in source

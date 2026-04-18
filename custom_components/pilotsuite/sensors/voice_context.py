@@ -78,7 +78,7 @@ def _project_voice_command_state(command_state_data: Any) -> Dict[str, Any]:
 
     pending_confirmation = payload.get("pending_confirmation")
     return {
-        "last_status": _as_string(payload.get("last_status"), "idle"),
+        "last_status": _as_string(payload.get("last_status"), "idle")[:_MAX_SCALAR_LENGTH],
         "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
         "pending_action_label": _as_string(payload.get("pending_action_label"), "")[:_MAX_SCALAR_LENGTH],
         "confirmation_expires_at": _as_string(payload.get("confirmation_expires_at"), "")[:_MAX_SCALAR_LENGTH],
