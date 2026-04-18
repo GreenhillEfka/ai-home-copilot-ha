@@ -84,6 +84,21 @@ def _should_failover(err: CopilotApiError) -> bool:
     return status in {404, 405, 408, 429} or status >= 500
 
 
+def _project_local_voice_command_state(local_voice_data: Any) -> dict[str, Any]:
+    """Project HA-local voice command state into the thin router-state shape."""
+    voice_data = local_voice_data if isinstance(local_voice_data, dict) else {}
+    command_state = voice_data.get("voice_command_state")
+    command_state = command_state if isinstance(command_state, dict) else {}
+
+    pending_confirmation = command_state.get("pending_confirmation")
+    return {
+        "last_status": command_state.get("last_status") if isinstance(command_state.get("last_status"), str) and command_state.get("last_status").strip() else "idle",
+        "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
+        "pending_action_label": command_state.get("pending_action_label") if isinstance(command_state.get("pending_action_label"), str) else "",
+        "confirmation_expires_at": command_state.get("confirmation_expires_at") if isinstance(command_state.get("confirmation_expires_at"), str) else None,
+    }
+
+
 class CopilotApiClient(SharedCopilotApiClient):
     """Coordinator-facing API client with endpoint failover + legacy helpers."""
 
@@ -1158,6 +1173,9 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 result["habit_summary"] = habit_data.get("habit_summary", {})
                 result["predictions"] = habit_data.get("predictions", [])
                 result["sequences"] = habit_data.get("sequences", [])
+                result["voice_command_state"] = _project_local_voice_command_state(
+                    self.hass.data.get(DOMAIN, {}).get("voice_context", {})
+                )
 
                 # MEDIUM: update only when fetched
                 if fetch_medium:

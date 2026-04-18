@@ -1647,3 +1647,94 @@ def test_gc27_source_projects_voice_command_state_from_explicit_core_router_surf
     assert '"voice_pending_confirmation": voice_command_state.get("pending_confirmation", False)' in source
     assert '"voice_pending_action_label": voice_command_state.get("pending_action_label", "")' in source
     assert '"voice_confirmation_expires_at": voice_command_state.get("confirmation_expires_at", "")' in source
+
+
+class LocalVoiceCommandStateContract:
+    """Mirror the HA-local voice_command_state projection path into coordinator data."""
+
+    @staticmethod
+    def project(local_voice_data) -> dict:
+        voice_data = local_voice_data if isinstance(local_voice_data, dict) else {}
+        command_state = voice_data.get("voice_command_state")
+        command_state = command_state if isinstance(command_state, dict) else {}
+
+        pending_confirmation = command_state.get("pending_confirmation")
+        last_status = command_state.get("last_status")
+        pending_action_label = command_state.get("pending_action_label")
+        confirmation_expires_at = command_state.get("confirmation_expires_at")
+        return {
+            "last_status": last_status if isinstance(last_status, str) and last_status.strip() else "idle",
+            "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
+            "pending_action_label": pending_action_label if isinstance(pending_action_label, str) else "",
+            "confirmation_expires_at": confirmation_expires_at if isinstance(confirmation_expires_at, str) else None,
+        }
+
+
+def test_vc27_behavior_projects_ha_local_voice_command_state_into_thin_router_shape():
+    """VC27: HA-local voice state is projected into the same bounded thin router-state shape."""
+    assert LocalVoiceCommandStateContract.project({}) == {
+        "last_status": "idle",
+        "pending_confirmation": False,
+        "pending_action_label": "",
+        "confirmation_expires_at": None,
+    }
+
+    assert LocalVoiceCommandStateContract.project({
+        "voice_command_state": {
+            "last_status": "executed",
+            "pending_confirmation": False,
+            "pending_action_label": "",
+            "confirmation_expires_at": None,
+        }
+    }) == {
+        "last_status": "executed",
+        "pending_confirmation": False,
+        "pending_action_label": "",
+        "confirmation_expires_at": None,
+    }
+
+    assert LocalVoiceCommandStateContract.project({
+        "voice_command_state": {
+            "last_status": ["bad"],
+            "pending_confirmation": "yes",
+            "pending_action_label": {"bad": True},
+            "confirmation_expires_at": 123,
+        }
+    }) == {
+        "last_status": "idle",
+        "pending_confirmation": False,
+        "pending_action_label": "",
+        "confirmation_expires_at": None,
+    }
+
+
+def test_gc28_source_wires_ha_local_voice_command_state_into_coordinator_result():
+    """GC28: coordinator.py must project HA-local voice_context state into coordinator.data.voice_command_state."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "coordinator.py"
+    ).read_text()
+
+    assert 'def _project_local_voice_command_state(local_voice_data: Any) -> dict[str, Any]:' in source
+    assert 'command_state = voice_data.get("voice_command_state")' in source
+    assert 'result["voice_command_state"] = _project_local_voice_command_state(' in source
+    assert 'self.hass.data.get(DOMAIN, {}).get("voice_context", {})' in source
+
+
+def test_gc29_source_updates_ha_local_voice_command_state_in_voice_module_services():
+    """GC29: voice module must initialize, update, and expose HA-local voice_command_state."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "core"
+        / "modules"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'hass_data["voice_command_state"] = {' in source
+    assert 'voice_data["voice_command_state"] = {' in source
+    assert '"last_status": "executed" if result.get("success") else "rejected"' in source
+    assert '"voice_command_state": voice_data.get("voice_command_state")' in source

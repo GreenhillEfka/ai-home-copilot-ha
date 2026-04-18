@@ -319,6 +319,12 @@ class VoiceContextModule(CopilotModule):
         hass_data["last_command"] = None
         hass_data["tts_history"] = []
         hass_data["voice_tone"] = self._voice_tone
+        hass_data["voice_command_state"] = {
+            "last_status": "idle",
+            "pending_confirmation": False,
+            "pending_action_label": "",
+            "confirmation_expires_at": None,
+        }
         
         # Find default TTS entity
         self._discover_tts_entities(ctx.hass)
@@ -409,6 +415,12 @@ class VoiceContextModule(CopilotModule):
                 "intent": command.intent,
                 "entities": command.entities,
             }
+            voice_data["voice_command_state"] = {
+                "last_status": "executed" if result.get("success") else "rejected",
+                "pending_confirmation": False,
+                "pending_action_label": "",
+                "confirmation_expires_at": None,
+            }
             
             return result
         
@@ -417,6 +429,7 @@ class VoiceContextModule(CopilotModule):
             voice_data = hass.data.get(DOMAIN, {}).get("voice_context", {})
             return {
                 "last_command": voice_data.get("last_command"),
+                "voice_command_state": voice_data.get("voice_command_state"),
                 "tts_available": self._tts_default_entity is not None,
                 "default_tts_entity": self._tts_default_entity,
                 "voice_tone": self._voice_tone,
