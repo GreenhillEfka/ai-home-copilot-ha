@@ -101,7 +101,7 @@ def _project_voice_context(
         _as_string(core_time.get("description_de"), "")
         or _as_string(core_time.get("description_en"), "")
         or "Hallo"
-    )
+    )[:_MAX_SCALAR_LENGTH]
 
     core_zone = _as_mapping(neural_data.get("zone"))
     zone_name = _as_string(core_zone.get("current"), "unknown")

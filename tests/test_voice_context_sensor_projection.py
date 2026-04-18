@@ -137,7 +137,7 @@ class VoiceContextSensorContract:
             VoiceContextSensorContract._as_string(core_time.get("description_de"), "")
             or VoiceContextSensorContract._as_string(core_time.get("description_en"), "")
             or "Hallo"
-        )
+        )[:64]
         core_zone = VoiceContextSensorContract._as_mapping(neural.get("zone", {}))
         zone_name = VoiceContextSensorContract._as_string(core_zone.get("current"), "unknown")[:64]
         zone_activities = VoiceContextSensorContract._as_string_list(
@@ -697,15 +697,15 @@ def test_vp2_empty_coordinator_returns_default():
 @pytest.mark.parametrize("greeting_text, expected", [
     # VP3a: short prompt → unchanged (far below 255 limit)
     ("Hi", "Der Nutzer ist gerade Hi."),
-    # VP3b: exactly 255 chars total (24 wrapper + 231 greeting = 255)
+    # VP3b: overlong greeting is capped at projection source before prompt assembly
     (
         "A" * 231,
-        "Der Nutzer ist gerade " + "A" * 231 + ".",
+        "Der Nutzer ist gerade " + "A" * 64 + ".",
     ),
-    # VP3c: >255 → truncated to 255
+    # VP3c: very long greeting is likewise capped at the shared projection source
     (
         "X" * 400,
-        ("Der Nutzer ist gerade " + "X" * 400 + ".")[:255],
+        "Der Nutzer ist gerade " + "X" * 64 + ".",
     ),
 ])
 def test_vp3_native_value_truncation_guard(greeting_text, expected):
@@ -871,6 +871,10 @@ def test_vc16_voice_greeting_truncation_behavior(greeting_payload, expected_len)
     }
     attrs = VoiceContextSensorContract.extra_state_attributes(data)
     assert len(attrs["voice_greeting"]) == expected_len, f"voice_greeting length {len(attrs['voice_greeting'])} != {expected_len}"
+
+    if len(greeting_payload) > 64:
+        expected_fragment = ("Y" * 64) if greeting_payload.startswith("Y") else greeting_payload[:64]
+        assert expected_fragment in attrs["voice_prompt"]
 
 
 # =============================================================================
@@ -1222,6 +1226,7 @@ def test_gc16_source_truncates_all_voice_scalars_to_stay_within_ha_attrs_limit()
     # Check all truncation sites
     assert 'voice_tone' in source and '[:_MAX_SCALAR_LENGTH]' in source
     assert 'voice_greeting' in source and '[:_MAX_SCALAR_LENGTH]' in source
+    assert ')[:_MAX_SCALAR_LENGTH]' in source
     assert 'voice_prompt' in source and '[:_MAX_SCALAR_LENGTH' in source
 
 
