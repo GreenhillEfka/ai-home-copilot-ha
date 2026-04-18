@@ -1372,7 +1372,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'if isinstance(value, bool):' in source
     assert 'math.isfinite' in source
     assert 'confidence = _as_float(mood_data.get("confidence"), 0.0)' in source
-    assert 'zone_name = _as_string(core_zone.get("current"), "unknown")' in source
+    assert 'zone_name = _as_string(core_zone.get("current"), "unknown")[:_MAX_SCALAR_LENGTH]' in source
     assert 'or _as_string(core_time.get("description_en"), "")' in source
     assert 'or "Hallo"' in source
     assert 'greeting = _as_string(voice.get("greeting"), "") or "Neutral"' in source

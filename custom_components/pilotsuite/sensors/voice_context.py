@@ -104,7 +104,7 @@ def _project_voice_context(
     )[:_MAX_SCALAR_LENGTH]
 
     core_zone = _as_mapping(neural_data.get("zone"))
-    zone_name = _as_string(core_zone.get("current"), "unknown")
+    zone_name = _as_string(core_zone.get("current"), "unknown")[:_MAX_SCALAR_LENGTH]
     zone_activities = _as_string_list(core_zone.get("typical_activities"))
     raw_suggestions = [
         f"{act[:_MAX_VOICE_SUGGESTION_BASE_LENGTH]}{_VOICE_SUGGESTION_SUFFIX}"
