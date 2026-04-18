@@ -158,7 +158,7 @@ class VoiceContextSensorContract:
         return {
             "dominant_mood": dominant_mood[:64],
             "mood_confidence": confidence,
-            "mood_contributors": VoiceContextSensorContract._as_string_list(mood.get("contributors", []))[:3],
+            "mood_contributors": [c[:64] for c in VoiceContextSensorContract._as_string_list(mood.get("contributors", []))[:3]],
             "current_zone": zone_name,
             "zone_presence": presence[:3],
             "voice_tone": dominant_mood[:64] or "unknown",
@@ -938,6 +938,8 @@ def test_gc17_source_truncates_zone_presence_to_stay_within_ha_attrs_limit():
     (["S1", "S2", "S3", "S4", "S5", "S6"], ["S1", "S2", "S3"]),
     # VC18g: non-string items silently filtered (contract: _as_string_list pre-filter)
     ("not_a_list", []),
+    # VC18h: overlong contributor labels are capped per item to the HA scalar budget
+    (["X" * 80, "music", "Y" * 70], ["X" * 64, "music", "Y" * 64]),
 ])
 def test_vc18_mood_contributors_truncation_behavior(contributors_payload, expected):
     """VC18: mood_contributors list exceeding 3 items is truncated to prevent HA attrs overflow."""
@@ -961,7 +963,8 @@ def test_gc18_source_truncates_mood_contributors_to_stay_within_ha_attrs_limit()
         / "voice_context.py"
     ).read_text()
 
-    # Check extra_state_attributes has mood_contributors with [:3] truncation
+    # Check per-item capping happens at projection source and attrs still keep the 3-item cap
+    assert '"contributors": [c[:_MAX_SCALAR_LENGTH] for c in _as_string_list(mood_data.get("contributors"))[:3]]' in source
     assert '"mood_contributors": context.get("mood", {}).get("contributors", [])[:3]' in source
 
 
@@ -1370,7 +1373,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
     assert 'greeting = _as_string(voice.get("greeting"), "") or "Neutral"' in source
     assert 'coordinator_data = _as_mapping(self.coordinator.data)' in source
     assert 'if not coordinator_data:' in source
-    assert '"contributors": _as_string_list(mood_data.get("contributors"))[:3]' in source
+    assert '"contributors": [c[:_MAX_SCALAR_LENGTH] for c in _as_string_list(mood_data.get("contributors"))[:3]]' in source
     assert 'last_update' in source and '[:_MAX_SCALAR_LENGTH]' in source
 
 
