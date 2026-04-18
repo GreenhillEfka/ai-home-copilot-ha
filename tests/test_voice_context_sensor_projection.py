@@ -25,24 +25,28 @@ class VoiceContextSensorContract:
     """Mirror of VoiceContextSensor extra_state_attributes + native_value logic.
 
     Contract:
-    - reads: coordinator.data["mood"], ["neural"]
+    - reads: coordinator.data["mood"], ["neural"], optional ["voice_command_state"]
     - native_value: dominant mood (rotates with context changes), falls back to direct
       coordinator.data["mood"] reconstruction when projected context is not yet set,
       otherwise "unknown"
     - extra_state_attributes:
-        dominant_mood       ← mood.get("mood", "unknown")
-        mood_confidence     ← mood.get("confidence", 0.0)
-        mood_contributors   ← mood.get("contributors", [])
-        current_zone        ← neural.get("zone", {}).get("current", "unknown")
-        zone_presence       ← neural.get("zone", {}).get("presence") or neural.get("presence", [])
-        voice_tone          ← mood.get("mood", "unknown")   (same as dominant_mood)
-        voice_greeting      ← neural.get("time", {}).get("description_de") or
-                               neural.get("time", {}).get("description_en", "Hallo")
-        voice_suggestions   ← [f"{act[:51]} ist aktuell." for act in
-                               neural.get("zone", {}).get("typical_activities", [])[:3]]
-                               (NOT from coordinator.data["suggestions"])
-        voice_prompt        ← built from greeting + presence + suggestions
-        last_update         ← neural.get("last_update", "")
+        dominant_mood                 ← mood.get("mood", "unknown")
+        mood_confidence               ← mood.get("confidence", 0.0)
+        mood_contributors             ← mood.get("contributors", [])
+        current_zone                  ← neural.get("zone", {}).get("current", "unknown")
+        zone_presence                 ← neural.get("zone", {}).get("presence") or neural.get("presence", [])
+        voice_tone                    ← mood.get("mood", "unknown")   (same as dominant_mood)
+        voice_greeting                ← neural.get("time", {}).get("description_de") or
+                                         neural.get("time", {}).get("description_en", "Hallo")
+        voice_suggestions             ← [f"{act[:51]} ist aktuell." for act in
+                                         neural.get("zone", {}).get("typical_activities", [])[:3]]
+                                         (NOT from coordinator.data["suggestions"])
+        voice_prompt                  ← built from greeting + presence + suggestions
+        voice_command_status          ← voice_command_state.state.last_status or voice_command_state.last_status or "idle"
+        voice_pending_confirmation    ← thin router-state bool only
+        voice_pending_action_label    ← thin router-state action label
+        voice_confirmation_expires_at ← thin router-state expiry timestamp
+        last_update                   ← neural.get("last_update", "")
 
     Note: coordinator.data["suggestions"] is intentionally not consumed.  Voice suggestions
     are derived solely from neural.zone.typical_activities to keep the HA Assist prompt
@@ -101,6 +105,20 @@ class VoiceContextSensorContract:
         ]
 
     @staticmethod
+    def _project_voice_command_state(command_state_data) -> dict:
+        payload = VoiceContextSensorContract._as_mapping(command_state_data)
+        if "state" in payload:
+            payload = VoiceContextSensorContract._as_mapping(payload.get("state"))
+
+        pending_confirmation = payload.get("pending_confirmation")
+        return {
+            "last_status": VoiceContextSensorContract._as_string(payload.get("last_status"), "idle"),
+            "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
+            "pending_action_label": VoiceContextSensorContract._as_string(payload.get("pending_action_label"), "")[:64],
+            "confirmation_expires_at": VoiceContextSensorContract._as_string(payload.get("confirmation_expires_at"), "")[:64],
+        }
+
+    @staticmethod
     def extra_state_attributes(coordinator_data: dict) -> dict:
         coordinator_data = VoiceContextSensorContract._as_mapping(coordinator_data)
         if not coordinator_data:
@@ -108,6 +126,9 @@ class VoiceContextSensorContract:
 
         mood = VoiceContextSensorContract._as_mapping(coordinator_data.get("mood", {}))
         neural = VoiceContextSensorContract._as_mapping(coordinator_data.get("neural", {}))
+        voice_command_state = VoiceContextSensorContract._project_voice_command_state(
+            coordinator_data.get("voice_command_state", {})
+        )
 
         dominant_mood = VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")
         confidence = VoiceContextSensorContract._as_float(mood.get("confidence"), 0.0)
@@ -146,6 +167,10 @@ class VoiceContextSensorContract:
             "voice_prompt": VoiceContextSensorContract._build_prompt(
                 time_greeting, presence, voice_suggestions
             )[:255],
+            "voice_command_status": voice_command_state["last_status"],
+            "voice_pending_confirmation": voice_command_state["pending_confirmation"],
+            "voice_pending_action_label": voice_command_state["pending_action_label"],
+            "voice_confirmation_expires_at": voice_command_state["confirmation_expires_at"],
             "last_update": VoiceContextSensorContract._as_string(neural.get("last_update", ""), "")[:64],
         }
 
@@ -411,6 +436,10 @@ def empty_data():
             "voice_greeting": "Guten Morgen",
             "voice_suggestions": ["Lesen ist aktuell.", "Musik hören ist aktuell."],
             "voice_prompt": "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer, Küche. Vorschläge: Lesen ist aktuell; Musik hören ist aktuell.",
+            "voice_command_status": "idle",
+            "voice_pending_confirmation": False,
+            "voice_pending_action_label": "",
+            "voice_confirmation_expires_at": "",
             "last_update": "2026-04-06T10:00:00Z",
         },
     ),
@@ -451,6 +480,10 @@ def empty_data():
             "voice_greeting": "Guten Morgen",
             "voice_suggestions": ["Lesen ist aktuell.", "Musik hören ist aktuell."],
             "voice_prompt": "Der Nutzer ist gerade Guten Morgen. Anwesend in: Wohnzimmer Nord, Küche. Vorschläge: Lesen ist aktuell; Musik hören ist aktuell.",
+            "voice_command_status": "idle",
+            "voice_pending_confirmation": False,
+            "voice_pending_action_label": "",
+            "voice_confirmation_expires_at": "",
             "last_update": "2026-04-06T10:00:00Z",
         },
     ),
@@ -1548,3 +1581,69 @@ def test_gc23_source_clears_voice_context_cache_on_coordinator_update():
     assert 'def _handle_coordinator_update(self) -> None:' in source
     assert 'self._context_data = {}' in source
     assert 'self.async_write_ha_state()' in source
+
+
+def test_vc26_behavior_projects_thin_voice_command_state_without_dialog_internals():
+    """VC26: HA consumes the thin Core voice-command state seam if present, otherwise safe defaults."""
+    nested = VoiceContextSensorContract.extra_state_attributes({
+        "voice_command_state": {
+            "status": "ok",
+            "session_id": "sess-1",
+            "state": {
+                "last_status": "confirmation_required",
+                "pending_confirmation": True,
+                "pending_action_label": "Wohnzimmerlicht einschalten",
+                "confirmation_expires_at": "2026-04-18T00:30:00Z",
+                "slot_values": {"_internal": "ignored"},
+            },
+        }
+    })
+    assert nested["voice_command_status"] == "confirmation_required"
+    assert nested["voice_pending_confirmation"] is True
+    assert nested["voice_pending_action_label"] == "Wohnzimmerlicht einschalten"
+    assert nested["voice_confirmation_expires_at"] == "2026-04-18T00:30:00Z"
+
+    direct = VoiceContextSensorContract.extra_state_attributes({
+        "voice_command_state": {
+            "last_status": "executed",
+            "pending_confirmation": False,
+            "pending_action_label": "",
+            "confirmation_expires_at": None,
+        }
+    })
+    assert direct["voice_command_status"] == "executed"
+    assert direct["voice_pending_confirmation"] is False
+    assert direct["voice_pending_action_label"] == ""
+    assert direct["voice_confirmation_expires_at"] == ""
+
+    malformed = VoiceContextSensorContract.extra_state_attributes({
+        "voice_command_state": {
+            "last_status": ["bad"],
+            "pending_confirmation": "yes",
+            "pending_action_label": {"bad": True},
+            "confirmation_expires_at": 123,
+        }
+    })
+    assert malformed["voice_command_status"] == "idle"
+    assert malformed["voice_pending_confirmation"] is False
+    assert malformed["voice_pending_action_label"] == ""
+    assert malformed["voice_confirmation_expires_at"] == ""
+
+
+def test_gc27_source_projects_voice_command_state_from_explicit_core_router_surface():
+    """GC27: voice_context.py must consume only the thin voice_command_state surface, not dialog internals."""
+    source = (
+        Path(__file__).parent.parent
+        / "custom_components"
+        / "pilotsuite"
+        / "sensors"
+        / "voice_context.py"
+    ).read_text()
+
+    assert 'def _project_voice_command_state(command_state_data: Any) -> Dict[str, Any]:' in source
+    assert 'if "state" in payload:' in source
+    assert 'voice_command_state = _project_voice_command_state(coordinator_data.get("voice_command_state", {}))' in source
+    assert '"voice_command_status": voice_command_state.get("last_status", "idle")' in source
+    assert '"voice_pending_confirmation": voice_command_state.get("pending_confirmation", False)' in source
+    assert '"voice_pending_action_label": voice_command_state.get("pending_action_label", "")' in source
+    assert '"voice_confirmation_expires_at": voice_command_state.get("confirmation_expires_at", "")' in source

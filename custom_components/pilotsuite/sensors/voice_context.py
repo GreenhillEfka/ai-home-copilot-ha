@@ -70,6 +70,21 @@ def _as_float(value: Any, default: float) -> float:
     return numeric_value if math.isfinite(numeric_value) else default
 
 
+def _project_voice_command_state(command_state_data: Any) -> Dict[str, Any]:
+    """Project the thin Core voice-command state seam without local dialog semantics."""
+    payload = _as_mapping(command_state_data)
+    if "state" in payload:
+        payload = _as_mapping(payload.get("state"))
+
+    pending_confirmation = payload.get("pending_confirmation")
+    return {
+        "last_status": _as_string(payload.get("last_status"), "idle"),
+        "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
+        "pending_action_label": _as_string(payload.get("pending_action_label"), "")[:_MAX_SCALAR_LENGTH],
+        "confirmation_expires_at": _as_string(payload.get("confirmation_expires_at"), "")[:_MAX_SCALAR_LENGTH],
+    }
+
+
 def _project_voice_context(
     mood_data: Dict[str, Any],
     neural_data: Dict[str, Any],
@@ -175,6 +190,7 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
 
         neural_data = coordinator_data.get("neural", {})
         mood_data = coordinator_data.get("mood", {})
+        voice_command_state = _project_voice_command_state(coordinator_data.get("voice_command_state", {}))
 
         context = self._build_voice_context(mood_data, neural_data)
         self._context_data = context
@@ -189,6 +205,10 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
             "voice_greeting": _as_string(context.get("voice", {}).get("greeting"), "")[:_MAX_SCALAR_LENGTH],
             "voice_suggestions": [s[:_MAX_SCALAR_LENGTH] for s in _as_string_list(context.get("voice", {}).get("suggestions"))[:3]],
             "voice_prompt": self._build_voice_prompt(context)[:255],
+            "voice_command_status": voice_command_state.get("last_status", "idle"),
+            "voice_pending_confirmation": voice_command_state.get("pending_confirmation", False),
+            "voice_pending_action_label": voice_command_state.get("pending_action_label", ""),
+            "voice_confirmation_expires_at": voice_command_state.get("confirmation_expires_at", ""),
             "last_update": context.get("metadata", {}).get("last_update", "")[:_MAX_SCALAR_LENGTH],
         }
 
