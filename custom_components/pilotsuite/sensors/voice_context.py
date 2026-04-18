@@ -93,7 +93,7 @@ def _project_voice_context(
     mood_data = _as_mapping(mood_data)
     neural_data = _as_mapping(neural_data)
 
-    dominant_mood = _as_string(mood_data.get("mood"), "unknown")
+    dominant_mood = _as_string(mood_data.get("mood"), "unknown")[:_MAX_SCALAR_LENGTH]
     confidence = _as_float(mood_data.get("confidence"), 0.0)
 
     core_time = _as_mapping(neural_data.get("time"))

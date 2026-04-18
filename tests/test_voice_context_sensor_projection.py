@@ -130,7 +130,7 @@ class VoiceContextSensorContract:
             coordinator_data.get("voice_command_state", {})
         )
 
-        dominant_mood = VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")
+        dominant_mood = VoiceContextSensorContract._as_string(mood.get("mood"), "unknown")[:64]
         confidence = VoiceContextSensorContract._as_float(mood.get("confidence"), 0.0)
         core_time = VoiceContextSensorContract._as_mapping(neural.get("time", {}))
         time_greeting = (
@@ -1365,7 +1365,7 @@ def test_gc8_source_hardens_projection_against_malformed_scalar_payloads():
 
     assert 'def _as_string(value: Any, default: str) -> str:' in source
     assert 'def _as_float(value: Any, default: float) -> float:' in source
-    assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")' in source
+    assert 'dominant_mood = _as_string(mood_data.get("mood"), "unknown")[:_MAX_SCALAR_LENGTH]' in source
     assert 'if not isinstance(value, str):' in source
     assert 'normalized = _normalize_whitespace(value)' in source
     assert 'return normalized if normalized else default' in source
