@@ -34,3 +34,17 @@ class TestMobileDashboardCardsProjection:
         source = self._source()
 
         assert 'self._hass.states.get("sensor.ai_copilot_mood")' not in source
+
+    def test_MDC4_exposes_mobile_layout_limits_and_breakpoints(self):
+        source = self._source()
+
+        assert '"layout": {' in source
+        assert '"breakpoints": MOBILE_BREAKPOINTS' in source
+        assert '"limits": MOBILE_LAYOUT_LIMITS' in source
+        assert '"touch_target_min_px": 48' in source
+
+    def test_MDC5_contains_no_stale_morning_action_label_spacing(self):
+        source = self._source()
+
+        assert '"label": "Morgenmodus"' in source
+        assert '"label": " Morgenmodus"' not in source

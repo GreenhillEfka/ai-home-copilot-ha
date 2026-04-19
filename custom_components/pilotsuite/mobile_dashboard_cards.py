@@ -37,6 +37,20 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+MOBILE_BREAKPOINTS: Dict[str, int] = {
+    "mobile_max_width": 480,
+    "tablet_max_width": 768,
+    "desktop_min_width": 1024,
+}
+MOBILE_LAYOUT_LIMITS: Dict[str, int] = {
+    "quick_actions": 8,
+    "favorites": 10,
+    "notifications": 5,
+    "calendar_events": 4,
+    "calendar_sources": 3,
+    "weather_forecast_items": 2,
+}
+
 
 # =============================================================================
 # Mobile Card Data Structures
@@ -126,6 +140,11 @@ class MobileDashboardSensor(SensorEntity):
         return {
             "version": "1.0",
             "last_update": dt_util.utcnow().isoformat(),
+            "layout": {
+                "breakpoints": MOBILE_BREAKPOINTS,
+                "limits": MOBILE_LAYOUT_LIMITS,
+                "touch_target_min_px": 48,
+            },
             "cards": {
                 "mood": mood_data,
                 "quick_actions": quick_actions,
@@ -209,7 +228,7 @@ class MobileDashboardSensor(SensorEntity):
             },
             {
                 "id": "scene_morning",
-                "label": " Morgenmodus",
+                "label": "Morgenmodus",
                 "icon": "mdi:weather-sunrise",
                 "service": "scene.turn_on",
                 "entity_id": "scene.morgenmodus",
@@ -228,7 +247,7 @@ class MobileDashboardSensor(SensorEntity):
         if custom_actions:
             actions = custom_actions + actions
         
-        return actions[:8]  # Limit to 8 actions
+        return actions[: MOBILE_LAYOUT_LIMITS["quick_actions"]]
     
     def _get_favorite_entities(self) -> List[Dict[str, Any]]:
         """Get favorite entities for quick access."""
@@ -267,7 +286,7 @@ class MobileDashboardSensor(SensorEntity):
                     "is_on": is_on,
                 })
         
-        return favorites[:10]  # Limit to 10 favorites
+        return favorites[: MOBILE_LAYOUT_LIMITS["favorites"]]
     
     def _get_notifications(self) -> List[Dict[str, Any]]:
         """Get recent notifications."""
@@ -280,7 +299,7 @@ class MobileDashboardSensor(SensorEntity):
             if "alert" in state.entity_id or state.attributes.get("device_class") == "problem"
         ]
         
-        for state in alert_entities[:5]:
+        for state in alert_entities[: MOBILE_LAYOUT_LIMITS["notifications"]]:
             if state.state not in ("ok", "clear", "normal"):
                 notifications.append({
                     "entity_id": state.entity_id,
@@ -308,7 +327,7 @@ class MobileDashboardSensor(SensorEntity):
         ]
         
         # Fetch events (simplified - in production would use calendar service)
-        for cal_entity in calendar_entities[:3]:
+        for cal_entity in calendar_entities[: MOBILE_LAYOUT_LIMITS["calendar_sources"]]:
             state = self._hass.states.get(cal_entity)
             if state and state.attributes.get("events"):
                 for event in state.attributes.get("events", [])[:2]:
@@ -320,7 +339,7 @@ class MobileDashboardSensor(SensorEntity):
                     })
         
         return {
-            "events": events[:4],
+            "events": events[: MOBILE_LAYOUT_LIMITS["calendar_events"]],
             "event_count": len(events),
             "is_weekend": now.weekday() >= 5,
         }
@@ -345,7 +364,9 @@ class MobileDashboardSensor(SensorEntity):
             "condition": weather.state,
             "temperature": weather.attributes.get("temperature"),
             "humidity": weather.attributes.get("humidity"),
-            "forecast": weather.attributes.get("forecast", [])[:2],
+            "forecast": weather.attributes.get("forecast", [])[
+                : MOBILE_LAYOUT_LIMITS["weather_forecast_items"]
+            ],
         }
     
     def _count_entities(self, domain: str, state: str) -> int:

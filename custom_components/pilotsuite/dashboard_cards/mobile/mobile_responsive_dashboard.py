@@ -19,6 +19,18 @@ from typing import Any, Callable
 
 _LOGGER = logging.getLogger(__name__)
 
+MOBILE_VIEW_BREAKPOINTS: dict[str, str] = {
+    "desktop": "if_desktop",
+    "tablet": "if_tablet",
+    "mobile": "if_mobile",
+}
+PILOTSUITE_MOBILE_SOURCES: dict[str, str] = {
+    "dashboard": "sensor.mobile_dashboard",
+    "quick_actions": "sensor.mobile_quick_actions",
+    "entity_grid": "sensor.mobile_entity_grid",
+    "mood": "sensor.pilotsuite_mood",
+}
+
 
 # ============================================================================
 # RESPONSIVE GRID LAYOUT
@@ -69,13 +81,17 @@ def create_responsive_grid(
     
     return {
         "type": "custom:stack-in-card",
+        "metadata": {
+            "breakpoints": MOBILE_VIEW_BREAKPOINTS,
+            "card_count": len(cards),
+        },
         "mode": "vertical",
         "cards": [
             # Desktop view
             {
                 "type": "custom:grid-layout",
                 "view_layout": {
-                    "show": True,
+                    "show": MOBILE_VIEW_BREAKPOINTS["desktop"],
                     "column": "1 / -1",
                 },
                 "cards": desktop_cards,
@@ -84,7 +100,7 @@ def create_responsive_grid(
             {
                 "type": "custom:grid-layout",
                 "view_layout": {
-                    "show": "if_mobile",
+                    "show": MOBILE_VIEW_BREAKPOINTS["tablet"],
                 },
                 "cards": tablet_cards,
             },
@@ -92,7 +108,7 @@ def create_responsive_grid(
             {
                 "type": "vertical-stack",
                 "view_layout": {
-                    "show": "if_mobile",
+                    "show": MOBILE_VIEW_BREAKPOINTS["mobile"],
                 },
                 "cards": mobile_cards,
             },
@@ -436,6 +452,10 @@ def create_mobile_dashboard_layout(
     return {
         "type": "custom:swipe-card",
         "cards": category_cards,
+        "metadata": {
+            "source": PILOTSUITE_MOBILE_SOURCES["dashboard"],
+            "category_count": len(category_cards),
+        },
         "config": {
             "titles": [cat.get("title", "") for cat in categories],
             "indicators": True,
@@ -497,6 +517,10 @@ def create_responsive_sensor_card(
     
     return {
         "type": "custom:responsive-card",
+        "metadata": {
+            "source": entity_id,
+            "breakpoints": MOBILE_VIEW_BREAKPOINTS,
+        },
         "breakpoints": {
             "mobile": mobile,
             "tablet": tablet,
