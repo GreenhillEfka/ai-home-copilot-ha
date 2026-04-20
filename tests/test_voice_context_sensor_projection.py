@@ -1671,14 +1671,12 @@ def test_gc27_source_projects_voice_command_state_from_explicit_core_router_surf
     assert '"voice_confirmation_expires_at": voice_command_state.get("confirmation_expires_at", "")' in source
 
 
-class LocalVoiceCommandStateContract:
-    """Mirror the HA-local voice_command_state projection path into coordinator data."""
+class CoreVoiceCommandStateContract:
+    """Mirror the Core /voice/command/state projection path into coordinator data."""
 
     @staticmethod
-    def project(local_voice_data) -> dict:
-        voice_data = local_voice_data if isinstance(local_voice_data, dict) else {}
-        command_state = voice_data.get("voice_command_state")
-        command_state = command_state if isinstance(command_state, dict) else {}
+    def project(command_state_data) -> dict:
+        command_state = command_state_data if isinstance(command_state_data, dict) else {}
 
         pending_confirmation = command_state.get("pending_confirmation")
         last_status = command_state.get("last_status")
@@ -1692,22 +1690,20 @@ class LocalVoiceCommandStateContract:
         }
 
 
-def test_vc27_behavior_projects_ha_local_voice_command_state_into_thin_router_shape():
-    """VC27: HA-local voice state is projected into the same bounded thin router-state shape."""
-    assert LocalVoiceCommandStateContract.project({}) == {
+def test_vc27_behavior_projects_core_voice_command_state_into_thin_router_shape():
+    """VC27: Core voice state is projected into the same bounded thin router-state shape."""
+    assert CoreVoiceCommandStateContract.project({}) == {
         "last_status": "idle",
         "pending_confirmation": False,
         "pending_action_label": "",
         "confirmation_expires_at": None,
     }
 
-    assert LocalVoiceCommandStateContract.project({
-        "voice_command_state": {
-            "last_status": "executed",
-            "pending_confirmation": False,
-            "pending_action_label": "",
-            "confirmation_expires_at": None,
-        }
+    assert CoreVoiceCommandStateContract.project({
+        "last_status": "executed",
+        "pending_confirmation": False,
+        "pending_action_label": "",
+        "confirmation_expires_at": None,
     }) == {
         "last_status": "executed",
         "pending_confirmation": False,
@@ -1715,13 +1711,11 @@ def test_vc27_behavior_projects_ha_local_voice_command_state_into_thin_router_sh
         "confirmation_expires_at": None,
     }
 
-    assert LocalVoiceCommandStateContract.project({
-        "voice_command_state": {
-            "last_status": ["bad"],
-            "pending_confirmation": "yes",
-            "pending_action_label": {"bad": True},
-            "confirmation_expires_at": 123,
-        }
+    assert CoreVoiceCommandStateContract.project({
+        "last_status": ["bad"],
+        "pending_confirmation": "yes",
+        "pending_action_label": {"bad": True},
+        "confirmation_expires_at": 123,
     }) == {
         "last_status": "idle",
         "pending_confirmation": False,
@@ -1730,8 +1724,8 @@ def test_vc27_behavior_projects_ha_local_voice_command_state_into_thin_router_sh
     }
 
 
-def test_gc28_source_wires_ha_local_voice_command_state_into_coordinator_result():
-    """GC28: coordinator.py must project HA-local voice_context state into coordinator.data.voice_command_state."""
+def test_gc28_source_wires_core_voice_command_state_endpoint_into_coordinator_result():
+    """GC28: coordinator.py must read GET /api/v1/voice/command/state into coordinator.data.voice_command_state."""
     source = (
         Path(__file__).parent.parent
         / "custom_components"
@@ -1739,14 +1733,16 @@ def test_gc28_source_wires_ha_local_voice_command_state_into_coordinator_result(
         / "coordinator.py"
     ).read_text()
 
-    assert 'def _project_local_voice_command_state(local_voice_data: Any) -> dict[str, Any]:' in source
-    assert 'command_state = voice_data.get("voice_command_state")' in source
-    assert 'result["voice_command_state"] = _project_local_voice_command_state(' in source
-    assert 'self.hass.data.get(DOMAIN, {}).get("voice_context", {})' in source
+    assert 'def _voice_command_session_id(hass: HomeAssistant) -> str:' in source
+    assert 'async def async_get_voice_command_state(self, session_id: str) -> dict[str, Any]:' in source
+    assert '"/api/v1/voice/command/state"' in source
+    assert 'params={"session_id": session_id}' in source
+    assert 'result["voice_command_state"] = await self.api.async_get_voice_command_state(' in source
+    assert '_voice_command_session_id(self.hass)' in source
 
 
-def test_gc29_source_updates_ha_local_voice_command_state_in_voice_module_services():
-    """GC29: voice module must initialize, update, and expose HA-local voice_command_state."""
+def test_gc29_source_updates_ha_voice_session_id_and_local_state_service_surface():
+    """GC29: voice module must keep the bounded HA session id and local service surface truthful."""
     source = (
         Path(__file__).parent.parent
         / "custom_components"
@@ -1756,7 +1752,9 @@ def test_gc29_source_updates_ha_local_voice_command_state_in_voice_module_servic
         / "voice_context.py"
     ).read_text()
 
+    assert 'hass_data["session_id"] = "home_assistant"' in source
     assert 'hass_data["voice_command_state"] = {' in source
     assert 'voice_data["voice_command_state"] = {' in source
     assert '"last_status": "executed" if result.get("success") else "rejected"' in source
+    assert '"session_id": voice_data.get("session_id", "home_assistant")' in source
     assert '"voice_command_state": voice_data.get("voice_command_state")' in source

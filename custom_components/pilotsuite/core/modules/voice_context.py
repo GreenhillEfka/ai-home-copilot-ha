@@ -319,6 +319,7 @@ class VoiceContextModule(CopilotModule):
         hass_data["last_command"] = None
         hass_data["tts_history"] = []
         hass_data["voice_tone"] = self._voice_tone
+        hass_data["session_id"] = "home_assistant"
         hass_data["voice_command_state"] = {
             "last_status": "idle",
             "pending_confirmation": False,
@@ -429,6 +430,7 @@ class VoiceContextModule(CopilotModule):
             voice_data = hass.data.get(DOMAIN, {}).get("voice_context", {})
             return {
                 "last_command": voice_data.get("last_command"),
+                "session_id": voice_data.get("session_id", "home_assistant"),
                 "voice_command_state": voice_data.get("voice_command_state"),
                 "tts_available": self._tts_default_entity is not None,
                 "default_tts_entity": self._tts_default_entity,

@@ -99,6 +99,23 @@ def _project_local_voice_command_state(local_voice_data: Any) -> dict[str, Any]:
     }
 
 
+def _voice_command_state_default() -> dict[str, Any]:
+    """Return the bounded default thin router-state shape."""
+    return {
+        "last_status": "idle",
+        "pending_confirmation": False,
+        "pending_action_label": "",
+        "confirmation_expires_at": None,
+    }
+
+
+def _voice_command_session_id(hass: HomeAssistant) -> str:
+    """Resolve the canonical HA voice session id for Core state reads."""
+    voice_context = hass.data.get(DOMAIN, {}).get("voice_context", {})
+    session_id = voice_context.get("session_id") if isinstance(voice_context, dict) else None
+    return session_id if isinstance(session_id, str) and session_id.strip() else "home_assistant"
+
+
 class CopilotApiClient(SharedCopilotApiClient):
     """Coordinator-facing API client with endpoint failover + legacy helpers."""
 
@@ -331,6 +348,18 @@ class CopilotApiClient(SharedCopilotApiClient):
         return await self._safe_post(
             "/api/v1/tags/sync", {"source": "ha", "tags": tags}, label="Tag sync",
         )
+
+    async def async_get_voice_command_state(self, session_id: str) -> dict[str, Any]:
+        """Fetch the thin Core voice-command state for one HA session."""
+        try:
+            data = await self.async_get(
+                "/api/v1/voice/command/state",
+                params={"session_id": session_id},
+            )
+            return data if isinstance(data, dict) else _voice_command_state_default()
+        except CopilotApiError as e:
+            _LOGGER.debug("Voice command state API not available: %s", e)
+            return _voice_command_state_default()
 
     async def async_get_core_tags(self) -> list[dict[str, Any]]:
         """Fetch tag definitions from Core (canonical tags.yaml registry)."""
@@ -1173,8 +1202,8 @@ class CopilotDataUpdateCoordinator(DataUpdateCoordinator):
                 result["habit_summary"] = habit_data.get("habit_summary", {})
                 result["predictions"] = habit_data.get("predictions", [])
                 result["sequences"] = habit_data.get("sequences", [])
-                result["voice_command_state"] = _project_local_voice_command_state(
-                    self.hass.data.get(DOMAIN, {}).get("voice_context", {})
+                result["voice_command_state"] = await self.api.async_get_voice_command_state(
+                    _voice_command_session_id(self.hass)
                 )
 
                 # MEDIUM: update only when fetched
