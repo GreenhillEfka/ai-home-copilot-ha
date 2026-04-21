@@ -294,10 +294,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow, ConfigSnapshotOptionsFlow):
                               if k not in (CONF_HOST, CONF_PORT, CONF_TOKEN)}
                 return self._create_merged_entry(non_shared)
             else:
-                # ConfigFlow path — accumulate into class-level dict
+                # ConfigFlow path — accumulate into the ConfigFlow staging buffer
+                # so the later back/apply step writes the shared params exactly once.
+                from .config_flow import ConfigFlow
+
                 for key in (CONF_HOST, CONF_PORT, CONF_TOKEN, CONF_TEST_LIGHT):
                     if key in user_input:
-                        OptionsFlowHandler._pending_shared_params[key] = user_input[key]
+                        ConfigFlow._reconfigure_data[key] = user_input[key]
                 return self.async_show_menu(
                     step_id="reconfigure_menu",
                     menu_options=["reconfigure_connection", "reconfigure_zones", "back"],

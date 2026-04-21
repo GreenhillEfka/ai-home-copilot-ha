@@ -269,8 +269,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=CONFIG_FLOW_DOMAIN):
         return await self._async_step_reconfigure_connection(user_input, from_options_flow=False)
 
     async def async_step_reconfigure_zones(self, user_input: dict | None = None) -> FlowResult:
-        """Reconfigure zones — delegates to OptionsFlowHandler."""
+        """Reconfigure zones via the options-flow zone editor with live entry context."""
         options_flow = OptionsFlowHandler(self._entry)
+        options_flow.hass = self.hass
+        options_flow._entry = self._entry
+        options_flow.context = {**getattr(self, "context", {}), "reconfigure": True}
         return await options_flow.async_step_habitus_zones(user_input)
 
     async def async_step_back(self, user_input: dict | None = None) -> FlowResult:
