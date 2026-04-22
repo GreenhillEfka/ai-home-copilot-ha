@@ -21,10 +21,12 @@
 - CORE-HARDEN-207 ✅ (autonomy API 19 tests) — `d77683d1`
 - CORE-HARDEN-209 ✅ (habitus API 26 tests) — `f9a46eb2`
 - CORE-HARDEN-210 ✅ (zone automation API 30 tests) — `7ebf0e47`
+- CORE-HARDEN-211 ✅ (mood API 29 tests) — `950319fc`
+- CORE-HARDEN-212 ✅ (presence API 35 tests) — `21f8a2de`
 
 ## CORE — CURRENT
-- HEAD: `7ebf0e47` (zone automation API contract, 30 tests)
-- Suite: 147 tests green (98 total including HARDEN-208)
+- HEAD: `21f8a2de` (presence API contract, 35 tests)
+- Suite: 211 tests green (98 total including HARDEN-208)
 - Mode: systematic fast dev, idle gaps = zero
 
 ## HA — CURRENT
@@ -75,6 +77,8 @@ Total:                                         147 passed
 | HARDEN-208  | 23:18  | 22    | ✅     |
 | HARDEN-209  | 23:45  | 26    | ✅     |
 | HARDEN-210  | 23:50  | 30    | ✅     |
+| HARDEN-211  | 00:05  | 29    | ✅     |
+| HARDEN-212  | 00:15  | 35    | ✅     |
 
 ## HA gate check result
 - `HA-559` appears multiple times in fresh file truth as a closed historical seam, including retired/historical handoffs and Core closeout analysis, while the new ledger line claiming it was still `in progress` had no matching active HomeClaw tasklog head or fresh HA packet truth.
