@@ -42,6 +42,10 @@ _SIGNING_NONCE_CACHE: dict[tuple[str, str], int] = {}
 _SIGNING_NONCE_CACHE_LOCK = asyncio.Lock()
 _SIGNING_NONCE_CACHE_MAX_ENTRIES = 10_000
 
+_WEBHOOK_RATELIMIT_WINDOW_SEC = 60
+_WEBHOOK_RATELIMIT_MAX_REQS = 120
+_WEBHOOK_RATELIMIT_CACHE: dict[str, list[int]] = {}
+
 # Canonical webhook event types (Core ↔ HA contract)
 EVENT_TYPE_STATUS = "status"
 EVENT_TYPE_MOOD = "mood"
@@ -557,6 +561,63 @@ def _merge_coordinator_data(coordinator, updates: dict) -> dict:
     return merged
 
 
+def _deep_merge_mapping(existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge mapping payloads without dropping untouched nested fields."""
+    merged = dict(existing)
+    for key, value in incoming.items():
+        current = merged.get(key)
+        if isinstance(current, dict) and isinstance(value, dict):
+            merged[key] = _deep_merge_mapping(current, value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _merge_zone_update_into_zone_automation(data: dict[str, Any], zone_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Project a webhook zone_update into the live zone_automation dashboard shape.
+
+    The dashboard entities read coordinator.data["zone_automation"]["zones"].
+    Core webhook pushes previously only populated ``zone_updates``, which left the
+    visible dashboard path stale until the next polling cycle. Merge the pushed
+    zone payload directly into the existing zone dashboard entry so HA gets an
+    immediate truthful return on the same zone automation seam.
+    """
+    zone_auto = data.get("zone_automation")
+    zones = zone_auto.get("zones") if isinstance(zone_auto, dict) else None
+    if not isinstance(zones, list):
+        return data
+
+    clean_zone_id = zone_id.removeprefix("zone:")
+    merged_any = False
+    merged_zones: list[Any] = []
+
+    for zone in zones:
+        if not isinstance(zone, dict):
+            merged_zones.append(zone)
+            continue
+
+        current_zone_id = zone.get("zone_id")
+        if current_zone_id not in {zone_id, clean_zone_id}:
+            merged_zones.append(zone)
+            continue
+
+        merged_any = True
+        merged_zones.append(
+            _deep_merge_mapping(zone, {k: v for k, v in payload.items() if k != "zone_id"})
+        )
+
+    if not merged_any:
+        return data
+
+    return {
+        **data,
+        "zone_automation": {
+            **zone_auto,
+            "zones": merged_zones,
+        },
+    }
+
+
 async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str:
     webhook_id = await async_ensure_webhook(hass, entry)
 
@@ -706,6 +767,10 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 details={"field": "data", "expected": "object"},
             )
 
+        raw_event_type = payload.get("type")
+        allow_legacy_aliases = _legacy_aliases_enabled()
+        event_type = _normalize_event_type(raw_event_type, allow_legacy_aliases=allow_legacy_aliases)
+
         # Contract drift guard: validate required fields for suggestion events
         if raw_event_type in (EVENT_TYPE_SUGGESTION, "suggestion_new"):
             required_fields = ("module_id", "action_type", "title")
@@ -718,10 +783,6 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
                 )
 
         # Typed envelope: {"type": "mood|neuron|suggestion|status", "data": {...}}
-        allow_legacy_aliases = _legacy_aliases_enabled()
-        raw_event_type = payload.get("type")
-        event_type = _normalize_event_type(raw_event_type, allow_legacy_aliases=allow_legacy_aliases)
-
         if event_type in _EVENT_TYPE_LEGACY_ALIASES:
             return _error_response(
                 code="legacy_type_unsupported",
@@ -856,8 +917,12 @@ async def async_register_webhook(hass: HomeAssistant, entry, coordinator) -> str
             # Core pushes per-zone data update (from zone automation evaluation)
             zone_id = data.get("zone_id", "")
             if zone_id:
-                updates = {"zone_updates": {zone_id: data}}
+                current = coordinator.data if isinstance(coordinator.data, dict) else {}
+                zone_updates = dict(current.get("zone_updates", {}))
+                zone_updates[zone_id] = data
+                updates = {"zone_updates": zone_updates}
                 merged = _merge_coordinator_data(coordinator, updates)
+                merged = _merge_zone_update_into_zone_automation(merged, zone_id, data)
                 coordinator.async_set_updated_data(merged)
             _LOGGER.debug("Webhook: zone_update push received (zone=%s)", zone_id)
 

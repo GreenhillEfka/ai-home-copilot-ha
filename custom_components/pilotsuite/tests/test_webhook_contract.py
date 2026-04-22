@@ -49,6 +49,7 @@ class _FakeRequest:
     def __init__(self, payload, headers: dict[str, str] | None = None):
         self._payload = payload
         self.headers = headers or {}
+        self.content_length = None
 
     async def json(self):
         return self._payload
@@ -57,6 +58,7 @@ class _FakeRequest:
 class _BadJsonRequest:
     def __init__(self, headers: dict[str, str] | None = None):
         self.headers = headers or {}
+        self.content_length = None
 
     async def json(self):
         raise ValueError("boom")
@@ -66,6 +68,7 @@ class _BodyRequest:
     def __init__(self, body_bytes: bytes, headers: dict[str, str] | None = None):
         self._body_bytes = body_bytes
         self.headers = headers or {}
+        self.content_length = len(body_bytes)
 
     async def read(self):
         return self._body_bytes
@@ -597,6 +600,81 @@ async def test_module_zone_state_updates_coordinator(hass, coordinator):
     response = await handler(hass, "webhook-test-id", request)
     assert response.status == 200
     coordinator.async_set_updated_data.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_zone_update_merges_into_visible_zone_automation_dashboard(hass, coordinator):
+    coordinator.data = {
+        "zone_automation": {
+            "zones": [
+                {
+                    "zone_id": "wohnbereich",
+                    "name": "Wohnbereich",
+                    "config": {
+                        "automation_mode": "learning",
+                        "light": {"enabled": False, "brightness": 35},
+                    },
+                    "metrics": {"presence_score": 0.4},
+                }
+            ]
+        }
+    }
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+    request = _FakeRequest(
+        payload={"type": "zone_update", "data": {
+            "zone_id": "wohnbereich",
+            "config": {
+                "automation_mode": "autonomy",
+                "light": {"enabled": True},
+            },
+            "metrics": {"presence_score": 0.9},
+            "active": True,
+        }},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+
+    response = await handler(hass, "webhook-test-id", request)
+
+    assert response.status == 200
+    coordinator.async_set_updated_data.assert_called_once()
+    merged = coordinator.async_set_updated_data.call_args[0][0]
+    zone = merged["zone_automation"]["zones"][0]
+    assert merged["zone_updates"]["wohnbereich"]["active"] is True
+    assert zone["config"]["automation_mode"] == "autonomy"
+    assert zone["config"]["light"]["enabled"] is True
+    assert zone["config"]["light"]["brightness"] == 35
+    assert zone["metrics"]["presence_score"] == 0.9
+    assert zone["active"] is True
+
+
+@pytest.mark.asyncio
+async def test_zone_update_matches_prefixed_ha_zone_ids_for_visible_return(hass, coordinator):
+    coordinator.data = {
+        "zone_automation": {
+            "zones": [
+                {
+                    "zone_id": "wohnbereich",
+                    "config": {"automation_mode": "learning"},
+                }
+            ]
+        }
+    }
+    handler = await _capture_registered_handler(hass, _make_entry(), coordinator)
+    request = _FakeRequest(
+        payload={"type": "zone_update", "data": {
+            "zone_id": "zone:wohnbereich",
+            "config": {"automation_mode": "off"},
+        }},
+        headers={HEADER_AUTH: "secret-token"},
+    )
+
+    response = await handler(hass, "webhook-test-id", request)
+
+    assert response.status == 200
+    merged = coordinator.async_set_updated_data.call_args[0][0]
+    zone = merged["zone_automation"]["zones"][0]
+    assert merged["zone_updates"]["zone:wohnbereich"]["config"]["automation_mode"] == "off"
+    assert zone["config"]["automation_mode"] == "off"
 
 
 @pytest.mark.asyncio
