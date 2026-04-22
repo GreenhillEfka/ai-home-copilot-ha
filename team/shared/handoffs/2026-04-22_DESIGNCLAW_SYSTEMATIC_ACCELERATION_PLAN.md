@@ -89,7 +89,20 @@ While Core is active, HomeClaw should do only one of two things:
 
 **Impact:** real parallelism without building random side surfaces.
 
-### 5. 6h visible output gate
+### 5. Visualization and configuration must ship with the function spine
+For every meaningful vertical slice, explicitly ask:
+- how is the function made visible to the user
+- where is the configuration/admin seam for this function
+- which HA/UI/dashboard/consumer surface proves it exists outside the API
+
+This does **not** mean building large side UIs first. It means every real function gets:
+- one truthful visualization/consumer path
+- one truthful configuration/control path
+- both tied to the same canonical module truth
+
+**Impact:** functions do not remain invisible or unconfigurable after backend work lands.
+
+### 6. 6h visible output gate
 Every 6h there must be at least one of:
 - landed commit
 - green focused proof ring
@@ -166,6 +179,7 @@ This is the broad order, then each slice gets detailed by current research befor
 - queue text without exact current seam
 - research without a direct coding consumer
 - HA parallel work without a real Core consumer handoff
+- backend-only landings that leave no truthful visualization/config path behind
 - planning documents that do not change the next actual slice
 
 ## Success signal
