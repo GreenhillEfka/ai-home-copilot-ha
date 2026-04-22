@@ -15,6 +15,7 @@
 - CORE-NEURON-201 ✅
 - CORE-HABITUS-202 ✅
 - CORE-AUTO-203 ✅ (A: Zone/Habitus → notification)
+- CORE-AUTO-203-B ✅ (proactive notification delivery)
 - CORE-HARDEN-204 ✅ (RuleMatcher save/load) — `2de60597`
 - CORE-HARDEN-205 ✅ (ha_module API 22 tests) — `df7b1122`
 - CORE-HARDEN-206 ✅ (notifications API 28 tests) — `89118bc4`
@@ -35,7 +36,7 @@
 - next HA move is the prepared packet `HA-FOLLOW-DELIVERY` after `CORE-AUTO-203-B`
 
 ## Queue truth (2026-04-22 23:45)
-**Recommended path (Option A):** HARDEN-208 ✅ → HARDEN-209 ✅ → AUTO-203-B (notification delivery)
+**Recommended path (Option A):** HARDEN-208 ✅ → HARDEN-209 ✅ → AUTO-203-B ✅ (notification delivery)
 HomeClaw: `HA-GATE-CHECK` outcome is stale `HA-559`, so do not reopen it; exact next HA move is the prepared packet `HA-FOLLOW-DELIVERY` behind Core delivery landing (`team/shared/handoffs/2026-04-22_HA_FOLLOW_DELIVERY_PACKET.md`).
 DesignClaw: support-only, exact unblock packets only.
 
@@ -43,7 +44,7 @@ DesignClaw: support-only, exact unblock packets only.
 - Andreas approved the acceleration route (`Sehr gut`)
 - HomeClaw's clean acceleration framing is consumed as the same execution trigger, not a separate queue
 - exact next-slice chain is file-backed in `/config/clawd/team/shared/handoffs/2026-04-22_ACCELERATION_NEXT_SLICE_SEQUENCE.md`
-- fresh active forward order: `HA-GATE-CHECK ✅ stale -> CORE-HARDEN-209 ✅ -> CORE-AUTO-203-B -> HA-FOLLOW-DELIVERY -> E2E-CONSOLIDATION-01`
+- fresh active forward order: `HA-GATE-CHECK ✅ stale -> CORE-HARDEN-209 ✅ -> CORE-AUTO-203-B ✅ -> HA-FOLLOW-DELIVERY -> E2E-CONSOLIDATION-01`
 
 ## Hand-in-hand feature system
 - new system file landed: `/config/clawd/team/shared/handoffs/2026-04-22_HAND_IN_HAND_FEATURE_SYSTEM.md`
@@ -84,3 +85,8 @@ Total:                                         147 passed
 - `HA-559` appears multiple times in fresh file truth as a closed historical seam, including retired/historical handoffs and Core closeout analysis, while the new ledger line claiming it was still `in progress` had no matching active HomeClaw tasklog head or fresh HA packet truth.
 - Therefore `HA-GATE-CHECK` resolves to valid outcome (2): **`HA-559` is stale**.
 - Operative effect: do not reopen `HA-559`; HomeClaw prepares and later pulls only the exact HA consumer seam behind `CORE-AUTO-203-B`, now packetized in `/config/clawd/team/shared/handoffs/2026-04-22_HA_FOLLOW_DELIVERY_PACKET.md`.
+
+## Latest Core landing
+- `CORE-AUTO-203-B` closed cleanly on the exact proactive notification-delivery seam.
+- Focused proof: `python3 -m py_compile addons/pilotsuite/app/copilot_core/proactive_engine.py` ✅ and `/config/clawd/.venv_smoke_gate/bin/python -m pytest -q tests/test_core_auto_203_b_notification_delivery_contract.py` → `4 passed in 0.08s` ✅
+- Operative effect: the bounded Core delivery seam is proven without MQTT/dashboard widening, and the next exact pull advances to `HA-FOLLOW-DELIVERY`.
