@@ -19,11 +19,11 @@
 - CORE-HARDEN-205 ✅ (ha_module API 22 tests) — `df7b1122`
 - CORE-HARDEN-206 ✅ (notifications API 28 tests) — `89118bc4`
 - CORE-HARDEN-207 ✅ (autonomy API 19 tests) — `d77683d1`
-- CORE-HARDEN-208 ✅ (sensors API 22 tests) — `ba4af24e`
+- CORE-HARDEN-209 ✅ (habitus API 26 tests) — `f9a46eb2`
 
 ## CORE — CURRENT
-- HEAD: `ba4af24e` (sensors API contract, 22 tests)
-- Suite: 98 tests green (98 total including HARDEN-208)
+- HEAD: `f9a46eb2` (habitus API contract, 26 tests)
+- Suite: 124 tests green (98 total including HARDEN-208)
 - Mode: systematic fast dev, idle gaps = zero
 
 ## HA — CURRENT
@@ -43,7 +43,8 @@ DesignClaw: support-only, exact unblock packets only.
 
 ## Test suite snapshot
 ```
-tests/test_sensors_api_contract.py               22 passed
+tests/test_habitus_api_contract.py            26 passed
+tests/test_sensors_api_contract.py              22 passed
 tests/test_autonomy_api_contract.py               19 passed
 tests/test_notifications_api_contract.py         28 passed
 tests/test_ha_module_api_contract.py              22 passed
@@ -60,3 +61,4 @@ Total:                                          107 passed
 | HARDEN-206  | 21:00  | 28    | ✅     |
 | HARDEN-207  | 21:45  | 19    | ✅     |
 | HARDEN-208  | 23:18  | 22    | ✅     |
+| HARDEN-209  | 23:45  | 26    | ✅     |
