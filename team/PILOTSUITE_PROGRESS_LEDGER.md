@@ -35,6 +35,11 @@
 HomeClaw: finish HA-559 if active, otherwise prepare next HA consumer seam behind Core delivery landing.
 DesignClaw: support-only, exact unblock packets only.
 
+## Bound approved sequence
+- Andreas approved the acceleration route (`Sehr gut`)
+- exact next-slice chain is file-backed in `/config/clawd/team/shared/handoffs/2026-04-22_ACCELERATION_NEXT_SLICE_SEQUENCE.md`
+- fresh active forward order: `HA-GATE-CHECK -> CORE-HARDEN-209 -> CORE-AUTO-203-B -> HA-FOLLOW-DELIVERY -> E2E-CONSOLIDATION-01`
+
 ## Test suite snapshot
 ```
 tests/test_sensors_api_contract.py               22 passed
