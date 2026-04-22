@@ -31,8 +31,8 @@
 - `HA-GATE-CHECK` consumed: `HA-559` is stale historical truth, not the active HA seam
 - next HA move is the prepared packet `HA-FOLLOW-DELIVERY` after `CORE-AUTO-203-B`
 
-## Queue truth (2026-04-22 23:20)
-**Recommended path (Option A):** HARDEN-208 ✅ → HARDEN-209 (state API) → AUTO-203-B (notification delivery)
+## Queue truth (2026-04-22 23:45)
+**Recommended path (Option A):** HARDEN-208 ✅ → HARDEN-209 ✅ → AUTO-203-B (notification delivery)
 HomeClaw: `HA-GATE-CHECK` outcome is stale `HA-559`, so do not reopen it; exact next HA move is the prepared packet `HA-FOLLOW-DELIVERY` behind Core delivery landing (`team/shared/handoffs/2026-04-22_HA_FOLLOW_DELIVERY_PACKET.md`).
 DesignClaw: support-only, exact unblock packets only.
 
@@ -40,7 +40,7 @@ DesignClaw: support-only, exact unblock packets only.
 - Andreas approved the acceleration route (`Sehr gut`)
 - HomeClaw's clean acceleration framing is consumed as the same execution trigger, not a separate queue
 - exact next-slice chain is file-backed in `/config/clawd/team/shared/handoffs/2026-04-22_ACCELERATION_NEXT_SLICE_SEQUENCE.md`
-- fresh active forward order: `HA-GATE-CHECK ✅ stale -> CORE-HARDEN-209 -> CORE-AUTO-203-B -> HA-FOLLOW-DELIVERY -> E2E-CONSOLIDATION-01`
+- fresh active forward order: `HA-GATE-CHECK ✅ stale -> CORE-HARDEN-209 ✅ -> CORE-AUTO-203-B -> HA-FOLLOW-DELIVERY -> E2E-CONSOLIDATION-01`
 
 ## Hand-in-hand feature system
 - new system file landed: `/config/clawd/team/shared/handoffs/2026-04-22_HAND_IN_HAND_FEATURE_SYSTEM.md`
@@ -65,7 +65,7 @@ tests/test_core_auto_203_a_contract.py            9 passed (inherited)
 Total:                                          107 passed
 ```
 
-## Systematic fast dev — 5 landungen
+## Systematic fast dev — 6 landungen
 | Item         | Time   | Tests | Status |
 |-------------|--------|-------|--------|
 | HARDEN-204  | 20:22  | 7     | ✅     |
