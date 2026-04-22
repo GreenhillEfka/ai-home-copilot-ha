@@ -30,9 +30,15 @@
 - HA-559: in progress (HomeClaw lane)
 - HA-E2E-303 → CORE-HARDEN-204-NAMING → CORE-HARDEN-204 (queue gate resolved)
 
-## Queue truth (2026-04-22 21:45)
-1. Next: unnamed seam, Core backlog — HARDEN-208 (sensors API) oder HARDEN-209 (state API) oder AUTO-203-B (notification delivery)
-2. HomeClaw autonomous option: Andreas bestätigt ("C ist ok"), HomeClaw self-select pending
+## Queue truth (2026-04-22 23:10)
+1. **Recommended next Core path (Option A):** `HARDEN-208` (sensors API) -> `HARDEN-209` (state API) -> `AUTO-203-B` (notification delivery)
+2. HomeClaw runs in parallel only on the active truthful HA seam: finish `HA-559` if still active, otherwise prepare the exact HA consumer seam behind the next Core delivery landing
+3. DesignClaw remains support-only and may only shape exact unblock packets behind the active builder pull
+
+## New lead plan
+- File-backed acceleration plan landed: `/config/clawd/team/shared/handoffs/2026-04-22_ORAKEL_CORE_ACCELERATION_EXECUTION_PLAN.md`
+- Goal: faster systematic Core development with bounded research, prepared next-pull packets, zero idle gaps, and HA pulled along only on real consumer seams
+- Broad route: Core spine hardening -> automation delivery extension -> HA consumer follow-through -> visible E2E consolidation -> release gate
 
 ## Operating mode
 - Systematic fast dev: hard builder loop, idle gaps at zero
