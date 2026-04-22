@@ -37,6 +37,7 @@ DesignClaw: support-only, exact unblock packets only.
 
 ## Bound approved sequence
 - Andreas approved the acceleration route (`Sehr gut`)
+- HomeClaw's clean acceleration framing is consumed as the same execution trigger, not a separate queue
 - exact next-slice chain is file-backed in `/config/clawd/team/shared/handoffs/2026-04-22_ACCELERATION_NEXT_SLICE_SEQUENCE.md`
 - fresh active forward order: `HA-GATE-CHECK -> CORE-HARDEN-209 -> CORE-AUTO-203-B -> HA-FOLLOW-DELIVERY -> E2E-CONSOLIDATION-01`
 
