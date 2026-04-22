@@ -41,6 +41,11 @@ DesignClaw: support-only, exact unblock packets only.
 - exact next-slice chain is file-backed in `/config/clawd/team/shared/handoffs/2026-04-22_ACCELERATION_NEXT_SLICE_SEQUENCE.md`
 - fresh active forward order: `HA-GATE-CHECK -> CORE-HARDEN-209 -> CORE-AUTO-203-B -> HA-FOLLOW-DELIVERY -> E2E-CONSOLIDATION-01`
 
+## Hand-in-hand feature system
+- new system file landed: `/config/clawd/team/shared/handoffs/2026-04-22_HAND_IN_HAND_FEATURE_SYSTEM.md`
+- from now on, meaningful features are packetized as a bundle with explicit backend / consumer-visualization / configuration implications before execution starts
+- a feature is only treated as complete when the required bundle parts are done and proven, not when only the backend slice landed
+
 ## Test suite snapshot
 ```
 tests/test_habitus_api_contract.py            26 passed
