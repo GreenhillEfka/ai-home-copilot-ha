@@ -47,6 +47,12 @@ DesignClaw: support-only, exact unblock packets only.
 - from now on, meaningful features are packetized as a bundle with explicit backend / consumer-visualization / configuration implications before execution starts
 - a feature is only treated as complete when the required bundle parts are done and proven, not when only the backend slice landed
 
+## Status / release / support-agent system
+- new system file landed: `/config/clawd/team/shared/handoffs/2026-04-22_STATUS_RELEASE_AND_SUPPORT_AGENT_SYSTEM.md`
+- `topic:1` is now explicitly for clean current status cards, intermediate release/checkpoint cards, real blockers, and next exact pulls only
+- new support agents activated: `Hermes` (status/release steward), `Athene` (visual/config reviewer), `Aegis` (proof/research gate)
+- PilotClaw autonomous cron was refreshed to current queue truth so code effort follows the live chain instead of stale history
+
 ## Test suite snapshot
 ```
 tests/test_habitus_api_contract.py            26 passed
