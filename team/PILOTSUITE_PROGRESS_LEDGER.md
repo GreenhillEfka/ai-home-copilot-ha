@@ -23,7 +23,12 @@
 - CORE-HARDEN-209 ✅ (habitus API 26 tests) — `f9a46eb2`
 - CORE-HARDEN-210 ✅ (zone automation API 30 tests) — `7ebf0e47`
 - CORE-HARDEN-211 ✅ (mood API 29 tests) — `950319fc`
+- CORE-HARDEN-209 ✅ (anomaly API 29 tests) — `4ae7a206`
+- CORE-HARDEN-210 ✅ (zone automation API 30 tests) — `7ebf0e47`
+- CORE-HARDEN-211 ✅ (mood API 29 tests) — `950319fc`
 - CORE-HARDEN-212 ✅ (presence API 35 tests) — `21f8a2de`
+- CORE-HARDEN-213 ✅ (cache control API 15 tests) — `5fd2b190`
+- CORE-AUTO-203-B ✅ (presence trigger automation contract) — `5fd2b190`
 
 ## CORE — CURRENT
 - HEAD: `21f8a2de` (presence API contract, 35 tests)
@@ -60,14 +65,18 @@ DesignClaw: support-only, exact unblock packets only.
 
 ## Test suite snapshot
 ```
-tests/test_habitus_api_contract.py            26 passed
-tests/test_sensors_api_contract.py              22 passed
-tests/test_autonomy_api_contract.py               19 passed
-tests/test_notifications_api_contract.py         28 passed
-tests/test_ha_module_api_contract.py              22 passed
-tests/test_zone_automation_api_contract.py       30 passed
+tests/test_habitus_api_contract.py                26 passed
+tests/test_sensors_api_contract.py                  22 passed
+tests/test_autonomy_api_contract.py                 19 passed
+tests/test_notifications_api_contract.py           28 passed
+tests/test_ha_module_api_contract.py                22 passed
+tests/test_zone_automation_api_contract.py          32 passed
+tests/test_mood_api_contract.py                    29 passed
+tests/test_presence_api_contract.py                35 passed
+tests/test_anomaly_api_contract.py                 29 passed
+tests/test_cache_control_api_contract.py           15 passed
 ```
-Total:                                         147 passed
+Total:                                         257 passed
 
 ## Systematic fast dev — 6 landungen
 | Item         | Time   | Tests | Status |
@@ -80,7 +89,11 @@ Total:                                         147 passed
 | HARDEN-209  | 23:45  | 26    | ✅     |
 | HARDEN-210  | 23:50  | 30    | ✅     |
 | HARDEN-211  | 00:05  | 29    | ✅     |
+| HARDEN-209  | 23:45  | 29    | ✅     |
+| HARDEN-210  | 23:50  | 30    | ✅     |
+| HARDEN-211  | 00:05  | 29    | ✅     |
 | HARDEN-212  | 00:15  | 35    | ✅     |
+| HARDEN-213  | 11:30  | 15    | ✅     |
 
 ## HA gate check result
 - `HA-559` appears multiple times in fresh file truth as a closed historical seam, including retired/historical handoffs and Core closeout analysis, while the new ledger line claiming it was still `in progress` had no matching active HomeClaw tasklog head or fresh HA packet truth.
