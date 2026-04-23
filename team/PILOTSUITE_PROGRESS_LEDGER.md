@@ -40,7 +40,7 @@
 - HA-E2E-303 ✅ file-backed closed (`7e6eb892`)
 - `HA-GATE-CHECK` consumed: `HA-559` is stale historical truth, not the active HA seam
 - `HA-FOLLOW-DELIVERY` ✅ file-backed closed (native persistent-notification confirmation + `notification_sensor` projection proof)
-- next HA move is `E2E-CONSOLIDATION-01`
+- next HA move is `E2E-CONSOLIDATION-01` (✅ proof ring green: 89+52 passed)
 
 ## Queue truth (2026-04-22 23:45)
 **Recommended path (Option A):** HARDEN-208 ✅ → HARDEN-209 ✅ → AUTO-203-B ✅ (notification delivery)
@@ -51,7 +51,7 @@ DesignClaw: support-only, exact unblock packets only.
 - Andreas approved the acceleration route (`Sehr gut`)
 - HomeClaw's clean acceleration framing is consumed as the same execution trigger, not a separate queue
 - exact next-slice chain is file-backed in `/config/clawd/team/shared/handoffs/2026-04-22_ACCELERATION_NEXT_SLICE_SEQUENCE.md`
-- fresh active forward order: `HA-GATE-CHECK ✅ stale -> CORE-HARDEN-209 ✅ -> CORE-AUTO-203-B ✅ -> HA-FOLLOW-DELIVERY ✅ -> E2E-CONSOLIDATION-01`
+- fresh active forward order: ALL HARDEN SLICES COMPLETE - E2E-CONSOLIDATION-01 ✅
 
 ## Hand-in-hand feature system
 - new system file landed: `/config/clawd/team/shared/handoffs/2026-04-22_HAND_IN_HAND_FEATURE_SYSTEM.md`
