@@ -33,7 +33,8 @@
 ## HA — CURRENT
 - HA-E2E-303 ✅ file-backed closed (`7e6eb892`)
 - `HA-GATE-CHECK` consumed: `HA-559` is stale historical truth, not the active HA seam
-- next HA move is the prepared packet `HA-FOLLOW-DELIVERY` after `CORE-AUTO-203-B`
+- `HA-FOLLOW-DELIVERY` ✅ file-backed closed (native persistent-notification confirmation + `notification_sensor` projection proof)
+- next HA move is `E2E-CONSOLIDATION-01`
 
 ## Queue truth (2026-04-22 23:45)
 **Recommended path (Option A):** HARDEN-208 ✅ → HARDEN-209 ✅ → AUTO-203-B ✅ (notification delivery)
@@ -44,7 +45,7 @@ DesignClaw: support-only, exact unblock packets only.
 - Andreas approved the acceleration route (`Sehr gut`)
 - HomeClaw's clean acceleration framing is consumed as the same execution trigger, not a separate queue
 - exact next-slice chain is file-backed in `/config/clawd/team/shared/handoffs/2026-04-22_ACCELERATION_NEXT_SLICE_SEQUENCE.md`
-- fresh active forward order: `HA-GATE-CHECK ✅ stale -> CORE-HARDEN-209 ✅ -> CORE-AUTO-203-B ✅ -> HA-FOLLOW-DELIVERY -> E2E-CONSOLIDATION-01`
+- fresh active forward order: `HA-GATE-CHECK ✅ stale -> CORE-HARDEN-209 ✅ -> CORE-AUTO-203-B ✅ -> HA-FOLLOW-DELIVERY ✅ -> E2E-CONSOLIDATION-01`
 
 ## Hand-in-hand feature system
 - new system file landed: `/config/clawd/team/shared/handoffs/2026-04-22_HAND_IN_HAND_FEATURE_SYSTEM.md`
@@ -86,7 +87,7 @@ Total:                                         147 passed
 - Therefore `HA-GATE-CHECK` resolves to valid outcome (2): **`HA-559` is stale**.
 - Operative effect: do not reopen `HA-559`; HomeClaw prepares and later pulls only the exact HA consumer seam behind `CORE-AUTO-203-B`, now packetized in `/config/clawd/team/shared/handoffs/2026-04-22_HA_FOLLOW_DELIVERY_PACKET.md`.
 
-## Latest Core landing
-- `CORE-AUTO-203-B` closed cleanly on the exact proactive notification-delivery seam.
-- Focused proof: `python3 -m py_compile addons/pilotsuite/app/copilot_core/proactive_engine.py` ✅ and `/config/clawd/.venv_smoke_gate/bin/python -m pytest -q tests/test_core_auto_203_b_notification_delivery_contract.py` → `4 passed in 0.08s` ✅
-- Operative effect: the bounded Core delivery seam is proven without MQTT/dashboard widening, and the next exact pull advances to `HA-FOLLOW-DELIVERY`.
+## Latest HA landing
+- `HA-FOLLOW-DELIVERY` closed on the exact bounded consumer seam behind `CORE-AUTO-203-B`.
+- Focused proof: `python3 -m py_compile custom_components/pilotsuite/sensors/notification_sensor.py` ✅ and `.venv/bin/python -m pytest -q tests/test_notification_sensor_projection.py tests/test_config_options_flow_projection.py tests/test_dashboard_wiring_projection.py tests/test_zone_automation_entities_projection.py` → `52 passed in 0.16s` ✅
+- Operative effect: native HA `persistent_notification` is the first honest visible delivery confirmation, `sensor.pilotsuite_notifications` remains the truthful HA-owned projection shell, and the next exact pull advances to `E2E-CONSOLIDATION-01`.
