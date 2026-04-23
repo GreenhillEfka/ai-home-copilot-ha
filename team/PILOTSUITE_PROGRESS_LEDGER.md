@@ -30,6 +30,7 @@
 - CORE-HARDEN-213 ✅ (cache control API 15 tests) — `5fd2b190`
 - CORE-HARDEN-214 ✅ (shopping & reminders API 33 tests) — `edc01f1b`
 - CORE-HARDEN-215 ✅ (graph API 32 tests) — `1c58b98f`
+- CORE-HARDEN-216 ✅ (weather API 11 tests) — `53ed3509`
 - CORE-AUTO-203-B ✅ (presence trigger automation contract) — `5fd2b190`
 
 ## CORE — CURRENT
@@ -79,8 +80,9 @@ tests/test_anomaly_api_contract.py                 29 passed
 tests/test_cache_control_api_contract.py           15 passed
 tests/test_shopping_api_contract.py                  33 passed
 tests/test_graph_api_contract.py                     32 passed
+tests/test_weather_api_contract.py                    11 passed
 ```
-Total:                                         321 passed
+Total:                                         332 passed
 
 ## Systematic fast dev — 6 landungen
 | Item         | Time   | Tests | Status |
@@ -100,6 +102,7 @@ Total:                                         321 passed
 | HARDEN-213  | 11:30  | 15    | ✅     |
 | HARDEN-214  | 11:48  | 33    | ✅     |
 | HARDEN-215  | 14:33  | 32    | ✅     |
+| HARDEN-216  | 14:45  | 11    | ✅     |
 
 ## HA gate check result
 - `HA-559` appears multiple times in fresh file truth as a closed historical seam, including retired/historical handoffs and Core closeout analysis, while the new ledger line claiming it was still `in progress` had no matching active HomeClaw tasklog head or fresh HA packet truth.
