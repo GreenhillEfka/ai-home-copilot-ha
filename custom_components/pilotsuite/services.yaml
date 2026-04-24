@@ -13,6 +13,33 @@ show_installation_guide:
       selector:
         text:
 
+# ─── Delivery Interactive ───────────────────────────────────────────────────
+
+delivery_interactive:
+  name: PilotSuite – Delivery bestätigen oder abbrechen
+  description: Ruft den kanonischen Delivery-Interactive-Seam auf und zeigt den kanonischen Status als HA-Bestätigung an.
+  fields:
+    delivery_token:
+      name: Delivery Token
+      description: Kanonischer delivery_token der Delivery-Seam.
+      required: true
+      selector:
+        text:
+    action:
+      name: Aktion
+      description: Erlaubt nur acknowledge oder cancel.
+      required: true
+      selector:
+        select:
+          options:
+            - acknowledge
+            - cancel
+    metadata:
+      name: Metadata
+      description: Optionale zusätzliche Metadaten, die unverändert an Core durchgereicht werden.
+      selector:
+        object:
+
 # ─── Tag Registry ────────────────────────────────────────────────────────────
 
 tag_registry_upsert_tag:

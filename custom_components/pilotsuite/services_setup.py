@@ -11,6 +11,7 @@ import voluptuous as vol
 _LOGGER = logging.getLogger(__name__)
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
 
 from .connection_config import resolve_core_connection
 from .const import DOMAIN
@@ -1255,6 +1256,77 @@ def _get_coordinator(hass: HomeAssistant):
     return None
 
 
+def _register_delivery_interactive_service(hass: HomeAssistant) -> None:
+    """Register the bounded HA-native delivery acknowledgment service."""
+
+    if hass.services.has_service(DOMAIN, "delivery_interactive"):
+        return
+
+    async def _handle_delivery_interactive(call: ServiceCall) -> None:
+        from homeassistant.components import persistent_notification
+
+        coordinator = _get_coordinator(hass)
+        if coordinator is None:
+            raise HomeAssistantError("No active PilotSuite coordinator available")
+
+        delivery_token = str(call.data.get("delivery_token") or "").strip()
+        if not delivery_token:
+            raise HomeAssistantError("delivery_token is required")
+
+        action = str(call.data.get("action") or "").strip()
+        if action not in ("acknowledge", "cancel"):
+            raise HomeAssistantError("action must be 'acknowledge' or 'cancel'")
+
+        metadata_raw = call.data.get("metadata")
+        metadata = metadata_raw if isinstance(metadata_raw, dict) else {}
+
+        result = await coordinator.api.async_delivery_interactive(
+            delivery_token,
+            action,
+            metadata=metadata,
+        )
+
+        if not result.get("ok", False):
+            raise HomeAssistantError(result.get("error", "Delivery interaction failed"))
+
+        status = await coordinator.api.async_delivery_status(delivery_token)
+        canonical_state = str(status.get("state") or "pending")
+
+        persistent_notification.async_create(
+            hass,
+            (
+                f"delivery_token: {delivery_token}\n"
+                f"action: {action}\n"
+                f"state: {canonical_state}"
+            ),
+            title="PilotSuite Delivery Status",
+            notification_id=f"pilotsuite_delivery_interactive_{delivery_token}",
+        )
+
+        hass.bus.async_fire(
+            f"{DOMAIN}_delivery_interactive",
+            {
+                "ok": True,
+                "delivery_token": delivery_token,
+                "action": action,
+                "state": canonical_state,
+            },
+        )
+
+    hass.services.async_register(
+        DOMAIN,
+        "delivery_interactive",
+        _handle_delivery_interactive,
+        schema=vol.Schema(
+            {
+                vol.Required("delivery_token"): str,
+                vol.Required("action"): vol.In(("acknowledge", "cancel")),
+                vol.Optional("metadata"): dict,
+            }
+        ),
+    )
+
+
 def _register_musikwolke_services(hass: HomeAssistant) -> None:
     """Register Musikwolke / zone media control services."""
 
@@ -1771,6 +1843,7 @@ def _register_entity_centric_services(hass: HomeAssistant) -> None:
 def async_register_all_services(hass: HomeAssistant) -> None:
     """Register all domain-level services (called from async_setup)."""
     _register_installation_guide_service(hass)
+    _register_delivery_interactive_service(hass)
     _register_tag_registry_services(hass)
     _register_media_context_v2_services(hass)
     _register_forwarder_n3_services(hass)

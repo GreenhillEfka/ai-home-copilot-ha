@@ -830,6 +830,26 @@ class CopilotApiClient(SharedCopilotApiClient):
     async def put_with_auth(self, path: str, data: dict | None = None) -> dict:
         return await self.async_put(self._normalize_v1_path(path), payload=data or {})
 
+    async def async_delivery_interactive(
+        self,
+        delivery_token: str,
+        action: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Call the canonical delivery acknowledgment seam."""
+        return await self.async_post(
+            "/api/v1/delivery/acknowledge",
+            {
+                "delivery_token": delivery_token,
+                "action": action,
+                "metadata": metadata or {},
+            },
+        )
+
+    async def async_delivery_status(self, delivery_token: str) -> dict[str, Any]:
+        """Fetch canonical delivery status for a token."""
+        return await self.async_get(f"/api/v1/delivery/{delivery_token}/status")
+
 
 # ── Circuit Breaker ──────────────────────────────────────────────────
 _CB_FAILURE_THRESHOLD = 3   # consecutive failures before opening
