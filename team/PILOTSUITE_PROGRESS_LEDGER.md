@@ -80,8 +80,8 @@
 
 ## Queue truth
 **Current exact order:**
-1. `DELIVERY-CONTEXT-306-B`
-2. `MEMORY-SEARCH-RESILIENCE-307`
+1. `DELIVERY-CONTEXT-306-A`
+2. `DELIVERY-CONTEXT-306-B`
 3. `RAG-RESILIENCE-307`
 4. `FAST-LANE-CONTINUITY-308`
 
@@ -112,11 +112,8 @@
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-B_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-DURABILITY-304_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
-- `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY_CONTEXT_306-A_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_DELIVERY_CONTEXT_306-A.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_DELIVERY_CONTEXT_306-B.md`
-- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_MEMORY_SEARCH_RESILIENCE_307.md`
-- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_POST_305.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_RAG_RESILIENCE_307.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_FAST_LANE_CONTINUITY_308.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_306_TO_308.md`
