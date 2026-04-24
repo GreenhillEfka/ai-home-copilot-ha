@@ -31,11 +31,12 @@
 - CORE-HARDEN-216 ✅ (weather API, 11 tests) — `53ed3509`
 - CORE-HARDEN-217 ✅ (delivery interactive API, 17 tests, 303-A) — `3a1ad294`
 - CORE-HARDEN-218 / DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 8 tests) — `1a40f8c1`
+- CORE-E2E-OBS-305 ✅ (observability proof chain, 13 tests) — `2585fc26`
 - DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 25 focused tests) — `1a40f8c1`
 
 ## CORE — CURRENT
-- HEAD: `1a40f8c1` (`feat(core): DELIVERY-DURABILITY-304 durable delivery intent store`)
-- Test snapshot: `25 focused delivery durability tests passed`
+- HEAD: `2585fc26` (`feat(core): CORE-E2E-OBS-305 observability proof chain (13 tests)`)
+- Test snapshot: `51 delivery+observability tests passed`
 - Mode: systematic fast dev, idle gaps = zero
 
 ## HA — CLOSED / CURRENT
