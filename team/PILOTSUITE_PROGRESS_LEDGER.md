@@ -1,5 +1,5 @@
 # PILOTSUITE_PROGRESS_LEDGER.md
-## Stand: 2026-04-24 15:51 MESZ
+## Stand: 2026-04-24 18:24 MESZ
 
 ### Shared truth locations
 - Core worktree: `/config/clawd/team/worktrees/pilotsuite-styx-core-current/`
@@ -36,7 +36,7 @@
 
 ## CORE — CURRENT
 - HEAD: `37fe0deb` (`feat(core): DELIVERY-CONTEXT-306-A context envelope (10 tests)`)
-- Test snapshot: `51 delivery+observability tests passed`
+- Test snapshot: `42 delivery context + delivery + observability tests passed`
 - Mode: systematic fast dev, idle gaps = zero
 
 ## HA — CLOSED / CURRENT
@@ -52,19 +52,21 @@
 - `E2E-OBSERVABILITY-305` ✅ file-backed closed across the bounded Core + HA proof chain
 
 ## Latest Core landing
-- `E2E-OBSERVABILITY-305` closed on the exact bounded Core proof seam.
-- Commit: `3ef98066` (`feat(core): CORE-E2E-OBS-305 observability proof chain (13 tests)`)
+- `DELIVERY-CONTEXT-306-A` closed on the exact bounded Core context seam.
+- Commit/artifact anchor: `37fe0deb` + `team/shared/handoffs/2026-04-24_DELIVERY_CONTEXT_306-A_CLOSED.md`
 - Landed truth:
-  - proof chain endpoints landed:
-    - `GET /api/v1/delivery/{token}/proof`
-    - `GET /api/v1/observability/delivery-proof`
-  - checkpoint enum is explicit and machine-checkable:
-    - `trigger | decision | delivery_attempted | delivery_confirmed | acknowledged | cancelled | expired`
+  - canonical delivery read paths now expose one read-only `context` object
+  - `context` remains explicit and small:
+    - `zone`
+    - `surface`
+    - `prompt_label`
+  - context is derived from the existing stored metadata path only
+  - missing context remains explicit and non-crashing with no endpoint-family widening
 - Focused proof:
-  - Core observability proof ring: `13 passed` ✅
-  - combined delivery+observability proof snapshot: `51 passed` ✅
+  - delivery context contract: `10 passed` ✅
+  - combined context + delivery + observability proof ring: `42 passed` ✅
 - Operative effect:
-  - the trigger -> decision -> delivery proof path is now queryable on the canonical Core seam
+  - delivery status and proof now name the household-visible object on the canonical Core seam
 
 ## Latest HA landing
 - `E2E-OBSERVABILITY-305` closed on the exact bounded HA proof seam.
@@ -78,8 +80,13 @@
 
 ## Queue truth
 **Current exact order:**
-1. `DELIVERY-CONTEXT-306-A`
-2. `DELIVERY-CONTEXT-306-B`
+1. `DELIVERY-CONTEXT-306-B`
+2. `MEMORY-SEARCH-RESILIENCE-307`
+3. `RAG-RESILIENCE-307`
+4. `FAST-LANE-CONTINUITY-308`
+
+**Forward plan anchor:**
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_306_TO_308.md`
 
 ## Bound approved sequence rule
 - only one active product packet at a time
@@ -105,5 +112,11 @@
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-B_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-DURABILITY-304_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY_CONTEXT_306-A_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_DELIVERY_CONTEXT_306-A.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_DELIVERY_CONTEXT_306-B.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_MEMORY_SEARCH_RESILIENCE_307.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_POST_305.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_RAG_RESILIENCE_307.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_FAST_LANE_CONTINUITY_308.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_306_TO_308.md`
