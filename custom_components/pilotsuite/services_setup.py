@@ -1291,6 +1291,17 @@ def _register_delivery_interactive_service(hass: HomeAssistant) -> None:
 
         status = await coordinator.api.async_delivery_status(delivery_token)
         canonical_state = str(status.get("state") or "pending")
+        context_raw = status.get("context") if isinstance(status, dict) else {}
+        context_raw = context_raw if isinstance(context_raw, dict) else {}
+        canonical_context = {
+            "zone": context_raw.get("zone") if isinstance(context_raw.get("zone"), str) else None,
+            "surface": context_raw.get("surface") if isinstance(context_raw.get("surface"), str) else None,
+            "prompt_label": (
+                context_raw.get("prompt_label")
+                if isinstance(context_raw.get("prompt_label"), str)
+                else None
+            ),
+        }
 
         persistent_notification.async_create(
             hass,
@@ -1298,6 +1309,10 @@ def _register_delivery_interactive_service(hass: HomeAssistant) -> None:
                 f"delivery_token: {delivery_token}\n"
                 f"action: {action}\n"
                 f"state: {canonical_state}"
+                "\n"
+                f"context.zone: {canonical_context['zone']}\n"
+                f"context.surface: {canonical_context['surface']}\n"
+                f"context.prompt_label: {canonical_context['prompt_label']}"
             ),
             title="PilotSuite Delivery Status",
             notification_id=f"pilotsuite_delivery_interactive_{delivery_token}",
@@ -1310,6 +1325,7 @@ def _register_delivery_interactive_service(hass: HomeAssistant) -> None:
                 "delivery_token": delivery_token,
                 "action": action,
                 "state": canonical_state,
+                "context": canonical_context,
             },
         )
 
