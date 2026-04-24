@@ -1,5 +1,5 @@
 # PILOTSUITE_PROGRESS_LEDGER.md
-## Stand: 2026-04-24 20:35 MESZ
+## Stand: 2026-04-24 21:43 MESZ
 
 ### Shared truth locations
 - Core worktree: `/config/clawd/team/worktrees/pilotsuite-styx-core-current/`
@@ -37,8 +37,8 @@
 
 ## CORE — CURRENT
 - FAST-LANE-CONTINUITY-308 ✅ (routing reconciled, next wave cut) — `bdede23f`
-- RAG-NEXT-309 ✅ (enrichment resilience, 6 tests) — `b8a53950`
-- HEAD: `e981b826` (`feat(core): RAG-RESILIENCE-307 degraded fallback truth (20 tests)`)
+- RAG-OPERATIONS-309 ✅ (health/stats/index/cache-clear, 12 tests) — `4101dff0`
+- HEAD: `4101dff0` (`feat(core): RAG-OPERATIONS-309 health/stats/index/cache-clear (12 tests)`)
 - Test snapshot: `20 RAG resilience + search contract tests passed`
 - Mode: systematic fast dev, idle gaps = zero
 
@@ -82,12 +82,24 @@
   - HA-visible confirmation is now part of the same bounded machine-checkable proof chain
   - confirmation remains derived from canonical Core state with no semantic widening
 
+## Latest orchestration landing
+- `FAST-LANE-CONTINUITY-308` closed on the routing/checkpoint seam.
+- Commit/artifact anchor: `team/shared/handoffs/2026-04-24_FAST-LANE-CONTINUITY-308_CLOSED.md`
+- Landed truth:
+  - fresh repo truth was reconciled against the landed `306-A -> 306-B -> 307` wave
+  - the next coding wave is now file-backed again instead of implicit
+  - fresh truth anchors for the next wave are the existing RAG docs plus the current Core RAG blueprint/runtime mismatch on `/health` and `/search/multi`
+- Operative effect:
+  - PilotSuite is back on a concrete coding chain instead of a routing tail
+
 ## Queue truth
 **Current exact order:**
-1. `FAST-LANE-CONTINUITY-308`
+1. `RAG-OPERATIONS-309`
+2. `RAG-MULTI-QUERY-310`
+3. `FAST-LANE-CONTINUITY-311`
 
 **Forward plan anchor:**
-- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_306_TO_308.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_309_TO_311.md`
 
 ## Bound approved sequence rule
 - only one active product packet at a time
@@ -116,5 +128,8 @@
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY_CONTEXT_306-B_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_RAG-RESILIENCE-307_CLOSED.md`
-- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_FAST_LANE_CONTINUITY_308.md`
-- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_306_TO_308.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST-LANE-CONTINUITY-308_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_RAG_OPERATIONS_309.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_RAG_MULTI_QUERY_310.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_FAST_LANE_CONTINUITY_311.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_309_TO_311.md`
