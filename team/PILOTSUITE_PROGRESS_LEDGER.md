@@ -37,7 +37,7 @@
 
 ## CORE — CURRENT
 - FAST-LANE-CONTINUITY-308 ✅ (routing reconciled, next wave cut) — `bdede23f`
-- RAG-NEXT-309 ▶ ACTIVE NEXT PULL (enrichment resilience)
+- RAG-NEXT-309 ✅ (enrichment resilience, 6 tests) — `b8a53950`
 - HEAD: `e981b826` (`feat(core): RAG-RESILIENCE-307 degraded fallback truth (20 tests)`)
 - Test snapshot: `20 RAG resilience + search contract tests passed`
 - Mode: systematic fast dev, idle gaps = zero
