@@ -33,9 +33,10 @@
 - CORE-HARDEN-218 / DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 8 tests) — `f7de8df6`
 - CORE-E2E-OBS-305 ✅ (observability proof chain, 13 tests) — `5dfc60b1`
 - DELIVERY-CONTEXT-306-A ✅ (context envelope, 10 tests) — `37fe0deb`
+- RAG-RESILIENCE-307 ✅ (degraded fallback truth, 11 tests) — `73277065`
 
 ## CORE — CURRENT
-- HEAD: `37fe0deb` (`feat(core): DELIVERY-CONTEXT-306-A context envelope (10 tests)`)
+- HEAD: `73277065` (`feat(core): RAG-RESILIENCE-307 degraded fallback truth (11 tests)`)
 - Test snapshot: `42 delivery context + delivery + observability tests passed`
 - Mode: systematic fast dev, idle gaps = zero
 
