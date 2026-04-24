@@ -78,7 +78,9 @@
 
 ## Queue truth
 **Current exact order:**
-- none file-backed yet
+1. `DELIVERY-CONTEXT-306-A`
+2. `DELIVERY-CONTEXT-306-B`
+3. `MEMORY-SEARCH-RESILIENCE-307`
 
 ## Bound approved sequence rule
 - only one active product packet at a time
@@ -104,3 +106,4 @@
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-B_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-DURABILITY-304_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_DELIVERY_CONTEXT_306-A.md`
