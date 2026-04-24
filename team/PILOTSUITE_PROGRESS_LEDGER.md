@@ -1,5 +1,5 @@
 # PILOTSUITE_PROGRESS_LEDGER.md
-## Stand: 2026-04-24 15:24 MESZ
+## Stand: 2026-04-24 15:51 MESZ
 
 ### Shared truth locations
 - Core worktree: `/config/clawd/team/worktrees/pilotsuite-styx-core-current/`
@@ -44,42 +44,41 @@
 - HA-FOLLOW-DELIVERY ✅ file-backed closed (`team/shared/handoffs/2026-04-22_HA-FOLLOW-DELIVERY_CLOSED.md`)
 - HA-HABITUS-PROJECTION-301 ✅ file-backed closed (`e12c3abf`)
 - DELIVERY-INTERACTIVE-303-B ✅ file-backed closed (`0434e34e`)
+- E2E-OBSERVABILITY-305 ✅ file-backed closed (`team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`)
 
 ## E2E — CURRENT TRUTH
 - `HA-GATE-CHECK` consumed: `HA-559` is stale historical truth, not the active HA seam
 - `E2E-CONSOLIDATION-01` ✅ file-backed closed (`team/shared/handoffs/2026-04-24_E2E-CONSOLIDATION-01_CLOSED.md`)
+- `E2E-OBSERVABILITY-305` ✅ file-backed closed across the bounded Core + HA proof chain
 
 ## Latest Core landing
-- `DELIVERY-DURABILITY-304` closed on the exact bounded Core durability seam.
-- Commit: `1a40f8c1` (`feat(core): DELIVERY-DURABILITY-304 durable delivery intent store`)
+- `E2E-OBSERVABILITY-305` closed on the exact bounded Core proof seam.
+- Commit: `2585fc26` (`feat(core): CORE-E2E-OBS-305 observability proof chain (13 tests)`)
 - Landed truth:
-  - delivery intent state is restart-durable on the existing interactive token flow
-  - API remains bounded to:
-    - `POST /api/v1/delivery/acknowledge`
-    - `GET /api/v1/delivery/<delivery_token>/status`
-  - same-token re-acknowledge remains idempotent after adapter-backed reload
-  - cancel remains terminal and expired tokens are not silently revived
-  - persistence faults return explicit non-success responses
+  - proof chain endpoints landed:
+    - `GET /api/v1/delivery/{token}/proof`
+    - `GET /api/v1/observability/delivery-proof`
+  - checkpoint enum is explicit and machine-checkable:
+    - `trigger | decision | delivery_attempted | delivery_confirmed | acknowledged | cancelled | expired`
 - Focused proof:
-  - `python3 -m py_compile addons/pilotsuite/app/copilot_core/api/v1/delivery_interactive.py addons/pilotsuite/app/copilot_core/api/v1/delivery_intent_store.py` ✅
-  - `/config/clawd/.venv_smoke_gate/bin/python -m pytest -q tests/test_delivery_interactive_api_contract.py tests/test_delivery_durability_304_contract.py` → `25 passed` ✅
+  - Core observability proof ring: `13 passed` ✅
+  - combined delivery+observability proof snapshot: `51 passed` ✅
 - Operative effect:
-  - Core delivery intent now survives restart without widening the seam
-  - next exact pull advances to `E2E-OBSERVABILITY-305`
+  - the trigger -> decision -> delivery proof path is now queryable on the canonical Core seam
 
 ## Latest HA landing
-- `DELIVERY-INTERACTIVE-303-B` closed on the exact bounded HA consumer seam.
-- Commit: `0434e34e` (`feat(ha): add delivery interactive service projection`)
+- `E2E-OBSERVABILITY-305` closed on the exact bounded HA proof seam.
+- Commit/artifact anchor: `team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
 - Focused proof:
-  - `python3 -m py_compile custom_components/pilotsuite/coordinator.py custom_components/pilotsuite/services_setup.py` ✅
-  - `.venv/bin/python -m pytest -q tests/test_delivery_interactive_service_projection.py tests/test_services_setup_projection.py tests/test_services_yaml_projection.py` → `13 passed` ✅
+  - `python3 -m py_compile custom_components/pilotsuite/services_setup.py tests/test_e2e_observability_305_ha_projection.py` ✅
+  - `.venv/bin/python -m pytest -q tests/test_e2e_observability_305_ha_projection.py tests/test_delivery_interactive_service_projection.py tests/test_services_setup_projection.py tests/test_services_yaml_projection.py` → `18 passed` ✅
 - Operative effect:
-  - HA now exposes one bounded `delivery_interactive` service on the canonical Core delivery seam
-  - visible confirmation remains derived from canonical Core state with no local semantic invention
+  - HA-visible confirmation is now part of the same bounded machine-checkable proof chain
+  - confirmation remains derived from canonical Core state with no semantic widening
 
 ## Queue truth
 **Current exact order:**
-1. `E2E-OBSERVABILITY-305`
+- none file-backed yet
 
 ## Bound approved sequence rule
 - only one active product packet at a time
@@ -104,3 +103,4 @@
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-A_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-B_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-DURABILITY-304_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
