@@ -1,5 +1,5 @@
 # PILOTSUITE_PROGRESS_LEDGER.md
-## Stand: 2026-04-24 10:05 MESZ
+## Stand: 2026-04-24 15:24 MESZ
 
 ### Shared truth locations
 - Core worktree: `/config/clawd/team/worktrees/pilotsuite-styx-core-current/`
@@ -30,54 +30,55 @@
 - CORE-HARDEN-215 ✅ (graph API, 32 tests) — `1c58b98f`
 - CORE-HARDEN-216 ✅ (weather API, 11 tests) — `53ed3509`
 - CORE-HARDEN-217 ✅ (delivery interactive API, 17 tests, 303-A) — `3a1ad294`
+- CORE-HARDEN-218 / DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 8 tests) — `1a40f8c1`
+- DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 25 focused tests) — `1a40f8c1`
 
 ## CORE — CURRENT
-- HEAD: `3a1ad294` (`feat(core): CORE-HARDEN-217 — delivery interactive API (17 tests, 303-A)`)
-- Test snapshot: `318 passed`
+- HEAD: `1a40f8c1` (`feat(core): DELIVERY-DURABILITY-304 durable delivery intent store`)
+- Test snapshot: `25 focused delivery durability tests passed`
 - Mode: systematic fast dev, idle gaps = zero
 
 ## HA — CLOSED / CURRENT
 - HA-E2E-303 ✅ file-backed closed (`7e6eb892`)
 - HA-FOLLOW-DELIVERY ✅ file-backed closed (`team/shared/handoffs/2026-04-22_HA-FOLLOW-DELIVERY_CLOSED.md`)
 - HA-HABITUS-PROJECTION-301 ✅ file-backed closed (`e12c3abf`)
+- DELIVERY-INTERACTIVE-303-B ✅ file-backed closed (`0434e34e`)
 
 ## E2E — CURRENT TRUTH
 - `HA-GATE-CHECK` consumed: `HA-559` is stale historical truth, not the active HA seam
 - `E2E-CONSOLIDATION-01` ✅ file-backed closed (`team/shared/handoffs/2026-04-24_E2E-CONSOLIDATION-01_CLOSED.md`)
 
 ## Latest Core landing
-- `DELIVERY-INTERACTIVE-303-A` closed on the exact bounded Core acknowledgment seam.
-- Commit: `3a1ad294`
+- `DELIVERY-DURABILITY-304` closed on the exact bounded Core durability seam.
+- Commit: `1a40f8c1` (`feat(core): DELIVERY-DURABILITY-304 durable delivery intent store`)
 - Landed truth:
-  - response token / correlation shape: `delivery_token`
-  - states: `pending | acknowledged | cancelled | expired`
-  - API:
+  - delivery intent state is restart-durable on the existing interactive token flow
+  - API remains bounded to:
     - `POST /api/v1/delivery/acknowledge`
     - `GET /api/v1/delivery/<delivery_token>/status`
-  - timeout semantics: 5 minute TTL
-  - acknowledge semantics: idempotent re-acknowledge
-  - cancel semantics: cancel overrides existing state
+  - same-token re-acknowledge remains idempotent after adapter-backed reload
+  - cancel remains terminal and expired tokens are not silently revived
+  - persistence faults return explicit non-success responses
 - Focused proof:
-  - `tests/test_delivery_interactive_api_contract.py` → `17 passed` ✅
+  - `python3 -m py_compile addons/pilotsuite/app/copilot_core/api/v1/delivery_interactive.py addons/pilotsuite/app/copilot_core/api/v1/delivery_intent_store.py` ✅
+  - `/config/clawd/.venv_smoke_gate/bin/python -m pytest -q tests/test_delivery_interactive_api_contract.py tests/test_delivery_durability_304_contract.py` → `25 passed` ✅
 - Operative effect:
-  - Core side of the interactive delivery loop is file-backed closed
-  - next exact pull advances to `DELIVERY-INTERACTIVE-303-B`
+  - Core delivery intent now survives restart without widening the seam
+  - next exact pull advances to `E2E-OBSERVABILITY-305`
 
 ## Latest HA landing
-- `HA-HABITUS-PROJECTION-301` closed on the exact bounded HA projection seam.
-- Commit: `e12c3abf` (`feat(ha): project habitus zones from canonical core seam`)
+- `DELIVERY-INTERACTIVE-303-B` closed on the exact bounded HA consumer seam.
+- Commit: `0434e34e` (`feat(ha): add delivery interactive service projection`)
 - Focused proof:
-  - `python3 -m py_compile custom_components/pilotsuite/sensors/habitus_zone_sensor.py` ✅
-  - `.venv/bin/python -m pytest -q tests/test_habitus_zone_sensor_projection.py` → `21 passed` ✅
+  - `python3 -m py_compile custom_components/pilotsuite/coordinator.py custom_components/pilotsuite/services_setup.py` ✅
+  - `.venv/bin/python -m pytest -q tests/test_delivery_interactive_service_projection.py tests/test_services_setup_projection.py tests/test_services_yaml_projection.py` → `13 passed` ✅
 - Operative effect:
-  - `habitus_zone_sensor` now projects the canonical Core seam `GET /api/v1/habitus/zones?include_metrics=true`
-  - HA now has a truthful zone/habitus overview projection
+  - HA now exposes one bounded `delivery_interactive` service on the canonical Core delivery seam
+  - visible confirmation remains derived from canonical Core state with no local semantic invention
 
 ## Queue truth
 **Current exact order:**
-1. `DELIVERY-INTERACTIVE-303-B`
-2. `DELIVERY-DURABILITY-304`
-3. `E2E-OBSERVABILITY-305`
+1. `E2E-OBSERVABILITY-305`
 
 ## Bound approved sequence rule
 - only one active product packet at a time
@@ -100,3 +101,5 @@
 - `/config/clawd/team/shared/handoffs/2026-04-24_HA-HABITUS-PROJECTION-301_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_E2E-CONSOLIDATION-01_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-A_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-B_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-DURABILITY-304_CLOSED.md`
