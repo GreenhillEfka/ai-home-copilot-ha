@@ -1,5 +1,5 @@
 # PILOTSUITE_PROGRESS_LEDGER.md
-## Stand: 2026-04-24 09:30 MESZ
+## Stand: 2026-04-24 10:05 MESZ
 
 ### Shared truth locations
 - Core worktree: `/config/clawd/team/worktrees/pilotsuite-styx-core-current/`
@@ -33,7 +33,7 @@
 
 ## CORE — CURRENT
 - HEAD: `3a1ad294` (`feat(core): CORE-HARDEN-217 — delivery interactive API (17 tests, 303-A)`)
-- Test snapshot: `301 passed`
+- Test snapshot: `318 passed`
 - Mode: systematic fast dev, idle gaps = zero
 
 ## HA — CLOSED / CURRENT
@@ -45,6 +45,24 @@
 - `HA-GATE-CHECK` consumed: `HA-559` is stale historical truth, not the active HA seam
 - `E2E-CONSOLIDATION-01` ✅ file-backed closed (`team/shared/handoffs/2026-04-24_E2E-CONSOLIDATION-01_CLOSED.md`)
 
+## Latest Core landing
+- `DELIVERY-INTERACTIVE-303-A` closed on the exact bounded Core acknowledgment seam.
+- Commit: `3a1ad294`
+- Landed truth:
+  - response token / correlation shape: `delivery_token`
+  - states: `pending | acknowledged | cancelled | expired`
+  - API:
+    - `POST /api/v1/delivery/acknowledge`
+    - `GET /api/v1/delivery/<delivery_token>/status`
+  - timeout semantics: 5 minute TTL
+  - acknowledge semantics: idempotent re-acknowledge
+  - cancel semantics: cancel overrides existing state
+- Focused proof:
+  - `tests/test_delivery_interactive_api_contract.py` → `17 passed` ✅
+- Operative effect:
+  - Core side of the interactive delivery loop is file-backed closed
+  - next exact pull advances to `DELIVERY-INTERACTIVE-303-B`
+
 ## Latest HA landing
 - `HA-HABITUS-PROJECTION-301` closed on the exact bounded HA projection seam.
 - Commit: `e12c3abf` (`feat(ha): project habitus zones from canonical core seam`)
@@ -54,15 +72,12 @@
 - Operative effect:
   - `habitus_zone_sensor` now projects the canonical Core seam `GET /api/v1/habitus/zones?include_metrics=true`
   - HA now has a truthful zone/habitus overview projection
-  - next exact pull advances to `TRUTH-RECONCILE-302`
 
 ## Queue truth
 **Current exact order:**
-1. `TRUTH-RECONCILE-302`
-2. `DELIVERY-INTERACTIVE-303-A`
-3. `DELIVERY-INTERACTIVE-303-B`
-4. `DELIVERY-DURABILITY-304`
-5. `E2E-OBSERVABILITY-305`
+1. `DELIVERY-INTERACTIVE-303-B`
+2. `DELIVERY-DURABILITY-304`
+3. `E2E-OBSERVABILITY-305`
 
 ## Bound approved sequence rule
 - only one active product packet at a time
@@ -81,26 +96,7 @@
 - `Aegis` = proof/research gate
 - support agents remain support-only and do not open writer lanes
 
-## Test suite snapshot
-```
-tests/test_habitus_api_contract.py                26 passed
-tests/test_sensors_api_contract.py                22 passed
-tests/test_autonomy_api_contract.py               19 passed
-tests/test_notifications_api_contract.py          28 passed
-tests/test_ha_module_api_contract.py              22 passed
-tests/test_zone_automation_api_contract.py        32 passed
-tests/test_mood_api_contract.py                   29 passed
-tests/test_presence_api_contract.py               35 passed
-tests/test_anomaly_api_contract.py                29 passed
-tests/test_cache_control_api_contract.py          15 passed
-tests/test_shopping_api_contract.py               33 passed
-tests/test_graph_api_contract.py                  32 passed
-tests/test_weather_api_contract.py                11 passed
-tests/test_notification_sensor_projection.py      21 passed
-tests/test_zone_automation_entities_projection.py 31 passed
-```
-
 ## Current authoritative artifacts for routing
-- `/config/clawd/team/shared/handoffs/2026-04-23_FORWARD_EXECUTION_PLAN_AND_TASK_DERIVATION.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_HA-HABITUS-PROJECTION-301_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_E2E-CONSOLIDATION-01_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-A_CLOSED.md`
