@@ -29,10 +29,11 @@
 - CORE-HARDEN-214 ✅ (shopping & reminders API, 33 tests) — `edc01f1b`
 - CORE-HARDEN-215 ✅ (graph API, 32 tests) — `1c58b98f`
 - CORE-HARDEN-216 ✅ (weather API, 11 tests) — `53ed3509`
+- CORE-HARDEN-217 ✅ (delivery interactive API, 17 tests, 303-A) — `3a1ad294`
 
 ## CORE — CURRENT
-- HEAD: `53ed3509` (`feat(core): CORE-HARDEN-216 — weather API (11 tests)`)
-- Test snapshot: `332 passed`
+- HEAD: `3a1ad294` (`feat(core): CORE-HARDEN-217 — delivery interactive API (17 tests, 303-A)`)
+- Test snapshot: `301 passed`
 - Mode: systematic fast dev, idle gaps = zero
 
 ## HA — CLOSED / CURRENT
