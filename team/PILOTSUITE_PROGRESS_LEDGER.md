@@ -29,13 +29,13 @@
 - CORE-HARDEN-214 ✅ (shopping & reminders API, 33 tests) — `edc01f1b`
 - CORE-HARDEN-215 ✅ (graph API, 32 tests) — `1c58b98f`
 - CORE-HARDEN-216 ✅ (weather API, 11 tests) — `53ed3509`
-- CORE-HARDEN-217 ✅ (delivery interactive API, 17 tests, 303-A) — `3a1ad294`
-- CORE-HARDEN-218 / DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 8 tests) — `1a40f8c1`
-- CORE-E2E-OBS-305 ✅ (observability proof chain, 13 tests) — `2585fc26`
-- DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 25 focused tests) — `1a40f8c1`
+- CORE-HARDEN-217 ✅ (delivery interactive API, 17 tests, 303-A) — `3ef98066`
+- CORE-HARDEN-218 / DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 8 tests) — `f7de8df6`
+- CORE-E2E-OBS-305 ✅ (observability proof chain, 13 tests) — `5dfc60b1`
+- DELIVERY-CONTEXT-306-A ✅ (context envelope, 10 tests) — `37fe0deb`
 
 ## CORE — CURRENT
-- HEAD: `2585fc26` (`feat(core): CORE-E2E-OBS-305 observability proof chain (13 tests)`)
+- HEAD: `37fe0deb` (`feat(core): DELIVERY-CONTEXT-306-A context envelope (10 tests)`)
 - Test snapshot: `51 delivery+observability tests passed`
 - Mode: systematic fast dev, idle gaps = zero
 
@@ -53,7 +53,7 @@
 
 ## Latest Core landing
 - `E2E-OBSERVABILITY-305` closed on the exact bounded Core proof seam.
-- Commit: `2585fc26` (`feat(core): CORE-E2E-OBS-305 observability proof chain (13 tests)`)
+- Commit: `3ef98066` (`feat(core): CORE-E2E-OBS-305 observability proof chain (13 tests)`)
 - Landed truth:
   - proof chain endpoints landed:
     - `GET /api/v1/delivery/{token}/proof`
@@ -80,7 +80,6 @@
 **Current exact order:**
 1. `DELIVERY-CONTEXT-306-A`
 2. `DELIVERY-CONTEXT-306-B`
-3. `MEMORY-SEARCH-RESILIENCE-307`
 
 ## Bound approved sequence rule
 - only one active product packet at a time
@@ -107,3 +106,4 @@
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-DURABILITY-304_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_DELIVERY_CONTEXT_306-A.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_DELIVERY_CONTEXT_306-B.md`
