@@ -27,6 +27,45 @@ SERVICE_GET_AGENT_STATUS = "get_agent_status"
 SERVICE_REPAIR_AGENT = "repair_agent"
 
 
+def _as_string(value: Any, default: str = "") -> str:
+    if isinstance(value, str):
+        normalized = value.strip()
+        if normalized:
+            return normalized
+    return default
+
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    return bool(value) if isinstance(value, bool) else default
+
+
+def project_assist_config_readiness(
+    entry_id: str,
+    status: dict[str, Any] | None,
+    pipeline: Any | None,
+) -> dict[str, Any]:
+    """Project a bounded Assist setup/readiness surface from existing truth only."""
+    status_data = status if isinstance(status, dict) else {}
+    pipeline_id = _as_string(getattr(pipeline, "id", ""), "")
+    pipeline_name = _as_string(getattr(pipeline, "name", ""), "")
+    conversation_engine = _as_string(getattr(pipeline, "conversation_engine", ""), "")
+    conversation_engine_matches = conversation_engine == entry_id and bool(conversation_engine)
+    agent_status = _as_string(status_data.get("status"), "unknown")
+    return {
+        "agent_id": entry_id,
+        "pipeline_id": pipeline_id,
+        "pipeline_name": pipeline_name,
+        "conversation_engine": conversation_engine,
+        "conversation_engine_matches": conversation_engine_matches,
+        "assist_configured": conversation_engine_matches,
+        "core_ok": _as_bool(status_data.get("ok"), False),
+        "core_agent_ready": agent_status == "ready",
+        "core_status": agent_status,
+        "llm_model": _as_string(status_data.get("llm_model"), ""),
+        "llm_backend": _as_string(status_data.get("llm_backend"), ""),
+    }
+
+
 async def async_verify_agent_connectivity(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, Any]:
@@ -117,29 +156,42 @@ async def async_get_agent_status(
     try:
         async with session.get(url, headers=headers, timeout=10) as resp:
             if resp.status == 200:
-                return await resp.json()
-            if resp.status not in (404, 405):
+                result = await resp.json()
+            elif resp.status not in (404, 405):
                 return {"ok": False, "error": f"Core returned status {resp.status}"}
+            else:
+                result = None
 
-        # Backward-compatible fallback for cores without /api/v1/agent/status.
-        async with session.get(fallback_url, headers=headers, timeout=10) as resp:
-            if resp.status != 200:
-                return {"ok": False, "error": f"Core returned status {resp.status}"}
-            data = await resp.json()
-            available = bool(data.get("available", False))
-            llm_backend = str(data.get("active_provider", "none"))
-            llm_model = data.get("model") or data.get("cloud_model") or ""
-            return {
-                "ok": True,
-                "agent_name": data.get("assistant_name", "Styx"),
-                "agent_version": data.get("version", "unknown"),
-                "status": "ready" if available else "degraded",
-                "llm_model": llm_model,
-                "llm_backend": llm_backend,
-                "character": data.get("character", "copilot"),
-                "features": data.get("characters", []),
-                "uptime_seconds": 0,
-            }
+        if result is None:
+            # Backward-compatible fallback for cores without /api/v1/agent/status.
+            async with session.get(fallback_url, headers=headers, timeout=10) as resp:
+                if resp.status != 200:
+                    return {"ok": False, "error": f"Core returned status {resp.status}"}
+                data = await resp.json()
+                available = bool(data.get("available", False))
+                llm_backend = str(data.get("active_provider", "none"))
+                llm_model = data.get("model") or data.get("cloud_model") or ""
+                result = {
+                    "ok": True,
+                    "agent_name": data.get("assistant_name", "Styx"),
+                    "agent_version": data.get("version", "unknown"),
+                    "status": "ready" if available else "degraded",
+                    "llm_model": llm_model,
+                    "llm_backend": llm_backend,
+                    "character": data.get("character", "copilot"),
+                    "features": data.get("characters", []),
+                    "uptime_seconds": 0,
+                }
+
+        try:
+            from homeassistant.components import assist_pipeline
+
+            pipeline = assist_pipeline.async_get_pipeline(hass)
+        except Exception:
+            pipeline = None
+
+        result["assist_readiness"] = project_assist_config_readiness(entry.entry_id, result, pipeline)
+        return result
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 
@@ -382,7 +434,10 @@ async def async_setup_agent_auto_config(
                     f"**LLM:** {result.get('llm_model', 'n/a')} ({result.get('llm_backend', 'n/a')})\n"
                     f"**Character:** {result.get('character', 'n/a')}\n"
                     f"**Uptime:** {int(result.get('uptime_seconds', 0))}s\n"
-                    f"**Features:** {', '.join(result.get('features', []))}"
+                    f"**Features:** {', '.join(result.get('features', []))}\n"
+                    f"**Assist konfiguriert:** {'ja' if result.get('assist_readiness', {}).get('assist_configured') else 'nein'}\n"
+                    f"**Pipeline:** {result.get('assist_readiness', {}).get('pipeline_name') or result.get('assist_readiness', {}).get('pipeline_id') or 'n/a'}\n"
+                    f"**Conversation Engine:** {result.get('assist_readiness', {}).get('conversation_engine') or 'n/a'}"
                 ),
                 notification_id="pilotsuite_agent_status",
             )
