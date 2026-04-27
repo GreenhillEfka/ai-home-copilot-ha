@@ -77,6 +77,7 @@ from .sensors.voice_context import (
     VoiceContextSensor,
     VoicePromptSensor,
 )
+from .sensors.voice_status_sensor import VoiceStatusSensor
 from .sensors.energy_insights import (
     EnergyInsightSensor,
     EnergyRecommendationSensor,
@@ -293,6 +294,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         # Voice Context Sensors (HA Assist)
         VoiceContextSensor(coordinator),
         VoicePromptSensor(coordinator),
+        VoiceStatusSensor(coordinator),
         # 14 Neuron Sensors (Original Plan)
         PresenceRoomSensor(coordinator, hass),
         PresencePersonSensor(coordinator, hass),
