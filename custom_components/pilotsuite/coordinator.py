@@ -84,11 +84,9 @@ def _should_failover(err: CopilotApiError) -> bool:
     return status in {404, 405, 408, 429} or status >= 500
 
 
-def _project_local_voice_command_state(local_voice_data: Any) -> dict[str, Any]:
-    """Project HA-local voice command state into the thin router-state shape."""
-    voice_data = local_voice_data if isinstance(local_voice_data, dict) else {}
-    command_state = voice_data.get("voice_command_state")
-    command_state = command_state if isinstance(command_state, dict) else {}
+def _project_voice_command_state_shape(command_state_data: Any) -> dict[str, Any]:
+    """Project one thin voice-command state payload into the bounded HA shape."""
+    command_state = command_state_data if isinstance(command_state_data, dict) else {}
 
     pending_confirmation = command_state.get("pending_confirmation")
     return {
@@ -99,14 +97,28 @@ def _project_local_voice_command_state(local_voice_data: Any) -> dict[str, Any]:
     }
 
 
+def _project_local_voice_command_state(local_voice_data: Any) -> dict[str, Any]:
+    """Project HA-local voice command state into the thin router-state shape."""
+    voice_data = local_voice_data if isinstance(local_voice_data, dict) else {}
+    return _project_voice_command_state_shape(voice_data.get("voice_command_state"))
+
+
 def _voice_command_state_default() -> dict[str, Any]:
     """Return the bounded default thin router-state shape."""
-    return {
-        "last_status": "idle",
-        "pending_confirmation": False,
-        "pending_action_label": "",
-        "confirmation_expires_at": None,
-    }
+    return _project_voice_command_state_shape({})
+
+
+def _project_core_voice_command_state(core_voice_data: Any, *, session_id: str) -> dict[str, Any]:
+    """Project only fresh Core command-state reads into one idle-safe HA shape."""
+    payload = core_voice_data if isinstance(core_voice_data, dict) else {}
+    response_session_id = payload.get("session_id")
+
+    if payload.get("status") != "ok":
+        return _voice_command_state_default()
+    if not isinstance(response_session_id, str) or response_session_id != session_id:
+        return _voice_command_state_default()
+
+    return _project_voice_command_state_shape(payload.get("state"))
 
 
 def _voice_command_session_id(hass: HomeAssistant) -> str:
@@ -356,7 +368,7 @@ class CopilotApiClient(SharedCopilotApiClient):
                 "/api/v1/voice/command/state",
                 params={"session_id": session_id},
             )
-            return data if isinstance(data, dict) else _voice_command_state_default()
+            return _project_core_voice_command_state(data, session_id=session_id)
         except CopilotApiError as e:
             _LOGGER.debug("Voice command state API not available: %s", e)
             return _voice_command_state_default()

@@ -63,3 +63,155 @@ class TestCoordinatorProjection:
             ast.parse(source, filename=str(TARGET_FILE))
         except SyntaxError as e:
             pytest.fail(f"coordinator.py has a SyntaxError: {e}")
+
+
+class CoreVoiceCommandStateFallbackContract:
+    """Mirror the HA idle-safe fallback contract for Core command-state reads."""
+
+    @staticmethod
+    def _project_state_shape(command_state_data) -> dict:
+        command_state = command_state_data if isinstance(command_state_data, dict) else {}
+        pending_confirmation = command_state.get("pending_confirmation")
+        last_status = command_state.get("last_status")
+        pending_action_label = command_state.get("pending_action_label")
+        confirmation_expires_at = command_state.get("confirmation_expires_at")
+        return {
+            "last_status": last_status if isinstance(last_status, str) and last_status.strip() else "idle",
+            "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
+            "pending_action_label": pending_action_label if isinstance(pending_action_label, str) else "",
+            "confirmation_expires_at": confirmation_expires_at if isinstance(confirmation_expires_at, str) else None,
+        }
+
+    @staticmethod
+    def fallback(core_voice_data, *, session_id: str) -> dict:
+        payload = core_voice_data if isinstance(core_voice_data, dict) else {}
+        response_session_id = payload.get("session_id")
+
+        if payload.get("status") != "ok":
+            return CoreVoiceCommandStateFallbackContract._project_state_shape({})
+        if not isinstance(response_session_id, str) or response_session_id != session_id:
+            return CoreVoiceCommandStateFallbackContract._project_state_shape({})
+
+        return CoreVoiceCommandStateFallbackContract._project_state_shape(payload.get("state"))
+
+
+@pytest.mark.parametrize(
+    ("core_voice_data", "session_id", "expected"),
+    [
+        (
+            {
+                "status": "ok",
+                "session_id": "home_assistant",
+                "state": {
+                    "last_status": "confirmation_required",
+                    "pending_confirmation": True,
+                    "pending_action_label": "Wohnzimmerlicht einschalten",
+                    "confirmation_expires_at": "2026-04-27T22:40:00Z",
+                    "slot_values": {"_internal": "ignored"},
+                },
+            },
+            "home_assistant",
+            {
+                "last_status": "confirmation_required",
+                "pending_confirmation": True,
+                "pending_action_label": "Wohnzimmerlicht einschalten",
+                "confirmation_expires_at": "2026-04-27T22:40:00Z",
+            },
+        ),
+        (
+            {
+                "status": "error",
+                "message": "stale state",
+                "session_id": "home_assistant",
+                "state": {
+                    "last_status": "confirmation_required",
+                    "pending_confirmation": True,
+                    "pending_action_label": "Should not leak",
+                    "confirmation_expires_at": "2026-04-27T22:40:00Z",
+                },
+            },
+            "home_assistant",
+            {
+                "last_status": "idle",
+                "pending_confirmation": False,
+                "pending_action_label": "",
+                "confirmation_expires_at": None,
+            },
+        ),
+        (
+            {
+                "status": "ok",
+                "session_id": "other-session",
+                "state": {
+                    "last_status": "confirmation_required",
+                    "pending_confirmation": True,
+                    "pending_action_label": "Wrong session",
+                    "confirmation_expires_at": "2026-04-27T22:40:00Z",
+                },
+            },
+            "home_assistant",
+            {
+                "last_status": "idle",
+                "pending_confirmation": False,
+                "pending_action_label": "",
+                "confirmation_expires_at": None,
+            },
+        ),
+        (
+            {
+                "status": "ok",
+                "session_id": "home_assistant",
+                "state": {
+                    "last_status": ["bad"],
+                    "pending_confirmation": "yes",
+                    "pending_action_label": {"bad": True},
+                    "confirmation_expires_at": 123,
+                },
+            },
+            "home_assistant",
+            {
+                "last_status": "idle",
+                "pending_confirmation": False,
+                "pending_action_label": "",
+                "confirmation_expires_at": None,
+            },
+        ),
+        (
+            {"status": "ok", "session_id": "home_assistant", "state": "bad"},
+            "home_assistant",
+            {
+                "last_status": "idle",
+                "pending_confirmation": False,
+                "pending_action_label": "",
+                "confirmation_expires_at": None,
+            },
+        ),
+        (
+            ["bad-payload"],
+            "home_assistant",
+            {
+                "last_status": "idle",
+                "pending_confirmation": False,
+                "pending_action_label": "",
+                "confirmation_expires_at": None,
+            },
+        ),
+    ],
+)
+def test_cd4_core_voice_command_state_fallback_contract(core_voice_data, session_id, expected) -> None:
+    """CD4: stale, malformed, or wrong-session command-state reads collapse to one idle-safe shape."""
+    assert CoreVoiceCommandStateFallbackContract.fallback(
+        core_voice_data,
+        session_id=session_id,
+    ) == expected
+
+
+def test_cd5_source_locks_core_voice_command_state_fallback_to_one_idle_safe_shape() -> None:
+    """CD5: coordinator.py normalizes Core command-state reads before exposing HA attrs."""
+    source = _read_source()
+
+    assert 'def _project_core_voice_command_state(core_voice_data: Any, *, session_id: str) -> dict[str, Any]:' in source
+    assert 'if payload.get("status") != "ok":' in source
+    assert 'if not isinstance(response_session_id, str) or response_session_id != session_id:' in source
+    assert 'return _project_voice_command_state_shape(payload.get("state"))' in source
+    assert 'return _project_core_voice_command_state(data, session_id=session_id)' in source
