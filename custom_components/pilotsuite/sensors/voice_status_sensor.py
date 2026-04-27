@@ -7,7 +7,6 @@ readiness/status sensor without adding local voice semantics.
 from __future__ import annotations
 
 import logging
-import math
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
@@ -85,8 +84,10 @@ class VoiceStatusSensor(CopilotBaseEntity, SensorEntity):
             "ok": _as_bool(data.get("ok"), False),
             "stt_available": _as_bool(stt.get("available"), False),
             "tts_available": _as_bool(tts.get("available"), False),
-            "stt_backend": _as_string(stt.get("backend"), _as_string(stt.get("provider"), "")),
-            "tts_backend": _as_string(tts.get("backend"), _as_string(tts.get("provider"), "")),
+            "stt_engine": _as_string(stt.get("engine"), _as_string(stt.get("backend"), _as_string(stt.get("provider"), ""))),
+            "stt_model": _as_string(stt.get("model"), ""),
+            "tts_engine": _as_string(tts.get("engine"), _as_string(tts.get("backend"), _as_string(tts.get("provider"), ""))),
+            "tts_voice": _as_string(tts.get("voice"), ""),
             "supported_languages": supported_languages,
         }
 
