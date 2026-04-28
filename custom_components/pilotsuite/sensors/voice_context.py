@@ -207,8 +207,12 @@ class VoiceContextSensor(CoordinatorEntity, SensorEntity):
             "voice_prompt": self._build_voice_prompt(context)[:255],
             "voice_command_status": voice_command_state.get("last_status", "idle"),
             "voice_pending_confirmation": voice_command_state.get("pending_confirmation", False),
-            "voice_pending_action_label": voice_command_state.get("pending_action_label", ""),
-            "voice_confirmation_expires_at": voice_command_state.get("confirmation_expires_at", ""),
+            "voice_pending_action_label": _as_string(
+                voice_command_state.get("pending_action_label"), ""
+            )[:_MAX_SCALAR_LENGTH],
+            "voice_confirmation_expires_at": _as_string(
+                voice_command_state.get("confirmation_expires_at"), ""
+            )[:_MAX_SCALAR_LENGTH],
             "last_update": context.get("metadata", {}).get("last_update", "")[:_MAX_SCALAR_LENGTH],
         }
 

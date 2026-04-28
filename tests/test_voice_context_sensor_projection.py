@@ -44,8 +44,8 @@ class VoiceContextSensorContract:
         voice_prompt                  ← built from greeting + presence + suggestions
         voice_command_status          ← voice_command_state.state.last_status or voice_command_state.last_status or "idle"
         voice_pending_confirmation    ← thin router-state bool only
-        voice_pending_action_label    ← thin router-state action label
-        voice_confirmation_expires_at ← thin router-state expiry timestamp
+        voice_pending_action_label    ← thin router-state action label (explicitly capped to 64 chars at attr surface)
+        voice_confirmation_expires_at ← thin router-state expiry timestamp (explicitly capped to 64 chars at attr surface)
         last_update                   ← neural.get("last_update", "")
 
     Note: coordinator.data["suggestions"] is intentionally not consumed.  Voice suggestions
@@ -169,8 +169,12 @@ class VoiceContextSensorContract:
             )[:255],
             "voice_command_status": voice_command_state["last_status"],
             "voice_pending_confirmation": voice_command_state["pending_confirmation"],
-            "voice_pending_action_label": voice_command_state["pending_action_label"],
-            "voice_confirmation_expires_at": voice_command_state["confirmation_expires_at"],
+            "voice_pending_action_label": VoiceContextSensorContract._as_string(
+                voice_command_state["pending_action_label"], ""
+            )[:64],
+            "voice_confirmation_expires_at": VoiceContextSensorContract._as_string(
+                voice_command_state["confirmation_expires_at"], ""
+            )[:64],
             "last_update": VoiceContextSensorContract._as_string(neural.get("last_update", ""), "")[:64],
         }
 
@@ -1667,8 +1671,8 @@ def test_gc27_source_projects_voice_command_state_from_explicit_core_router_surf
     assert '"last_status": _as_string(payload.get("last_status"), "idle")[:_MAX_SCALAR_LENGTH]' in source
     assert '"voice_command_status": voice_command_state.get("last_status", "idle")' in source
     assert '"voice_pending_confirmation": voice_command_state.get("pending_confirmation", False)' in source
-    assert '"voice_pending_action_label": voice_command_state.get("pending_action_label", "")' in source
-    assert '"voice_confirmation_expires_at": voice_command_state.get("confirmation_expires_at", "")' in source
+    assert '"voice_pending_action_label": _as_string(\n                voice_command_state.get("pending_action_label"), ""\n            )[:_MAX_SCALAR_LENGTH],' in source
+    assert '"voice_confirmation_expires_at": _as_string(\n                voice_command_state.get("confirmation_expires_at"), ""\n            )[:_MAX_SCALAR_LENGTH],' in source
 
 
 class CoreVoiceCommandStateContract:
