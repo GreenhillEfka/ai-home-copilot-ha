@@ -68,6 +68,8 @@ class TestCoordinatorProjection:
 class CoreVoiceCommandStateFallbackContract:
     """Mirror the HA idle-safe fallback contract for Core command-state reads."""
 
+    _MAX_SCALAR_LENGTH = 64
+
     @staticmethod
     def _project_state_shape(command_state_data) -> dict:
         command_state = command_state_data if isinstance(command_state_data, dict) else {}
@@ -76,10 +78,16 @@ class CoreVoiceCommandStateFallbackContract:
         pending_action_label = command_state.get("pending_action_label")
         confirmation_expires_at = command_state.get("confirmation_expires_at")
         return {
-            "last_status": last_status if isinstance(last_status, str) and last_status.strip() else "idle",
+            "last_status": last_status[:CoreVoiceCommandStateFallbackContract._MAX_SCALAR_LENGTH]
+            if isinstance(last_status, str) and last_status.strip()
+            else "idle",
             "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
-            "pending_action_label": pending_action_label if isinstance(pending_action_label, str) else "",
-            "confirmation_expires_at": confirmation_expires_at if isinstance(confirmation_expires_at, str) else None,
+            "pending_action_label": pending_action_label[:CoreVoiceCommandStateFallbackContract._MAX_SCALAR_LENGTH]
+            if isinstance(pending_action_label, str)
+            else "",
+            "confirmation_expires_at": confirmation_expires_at[:CoreVoiceCommandStateFallbackContract._MAX_SCALAR_LENGTH]
+            if isinstance(confirmation_expires_at, str)
+            else None,
         }
 
     @staticmethod
@@ -187,6 +195,25 @@ class CoreVoiceCommandStateFallbackContract:
             },
         ),
         (
+            {
+                "status": "ok",
+                "session_id": "home_assistant",
+                "state": {
+                    "last_status": "confirmation_required" * 5,
+                    "pending_confirmation": True,
+                    "pending_action_label": "Wohnzimmerlicht einschalten " * 4,
+                    "confirmation_expires_at": "2026-04-27T22:40:00Z" * 4,
+                },
+            },
+            "home_assistant",
+            {
+                "last_status": ("confirmation_required" * 5)[:64],
+                "pending_confirmation": True,
+                "pending_action_label": ("Wohnzimmerlicht einschalten " * 4)[:64],
+                "confirmation_expires_at": ("2026-04-27T22:40:00Z" * 4)[:64],
+            },
+        ),
+        (
             ["bad-payload"],
             "home_assistant",
             {
@@ -210,8 +237,12 @@ def test_cd5_source_locks_core_voice_command_state_fallback_to_one_idle_safe_sha
     """CD5: coordinator.py normalizes Core command-state reads before exposing HA attrs."""
     source = _read_source()
 
+    assert '_VOICE_COMMAND_STATE_MAX_SCALAR_LENGTH = 64' in source
     assert 'def _project_core_voice_command_state(core_voice_data: Any, *, session_id: str) -> dict[str, Any]:' in source
     assert 'if payload.get("status") != "ok":' in source
     assert 'if not isinstance(response_session_id, str) or response_session_id != session_id:' in source
+    assert 'last_status[:_VOICE_COMMAND_STATE_MAX_SCALAR_LENGTH]' in source
+    assert 'pending_action_label[:_VOICE_COMMAND_STATE_MAX_SCALAR_LENGTH]' in source
+    assert 'confirmation_expires_at[:_VOICE_COMMAND_STATE_MAX_SCALAR_LENGTH]' in source
     assert 'return _project_voice_command_state_shape(payload.get("state"))' in source
     assert 'return _project_core_voice_command_state(data, session_id=session_id)' in source

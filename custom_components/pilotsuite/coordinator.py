@@ -84,16 +84,28 @@ def _should_failover(err: CopilotApiError) -> bool:
     return status in {404, 405, 408, 429} or status >= 500
 
 
+_VOICE_COMMAND_STATE_MAX_SCALAR_LENGTH = 64
+
+
 def _project_voice_command_state_shape(command_state_data: Any) -> dict[str, Any]:
     """Project one thin voice-command state payload into the bounded HA shape."""
     command_state = command_state_data if isinstance(command_state_data, dict) else {}
 
     pending_confirmation = command_state.get("pending_confirmation")
+    last_status = command_state.get("last_status")
+    pending_action_label = command_state.get("pending_action_label")
+    confirmation_expires_at = command_state.get("confirmation_expires_at")
     return {
-        "last_status": command_state.get("last_status") if isinstance(command_state.get("last_status"), str) and command_state.get("last_status").strip() else "idle",
+        "last_status": last_status[:_VOICE_COMMAND_STATE_MAX_SCALAR_LENGTH]
+        if isinstance(last_status, str) and last_status.strip()
+        else "idle",
         "pending_confirmation": pending_confirmation if isinstance(pending_confirmation, bool) else False,
-        "pending_action_label": command_state.get("pending_action_label") if isinstance(command_state.get("pending_action_label"), str) else "",
-        "confirmation_expires_at": command_state.get("confirmation_expires_at") if isinstance(command_state.get("confirmation_expires_at"), str) else None,
+        "pending_action_label": pending_action_label[:_VOICE_COMMAND_STATE_MAX_SCALAR_LENGTH]
+        if isinstance(pending_action_label, str)
+        else "",
+        "confirmation_expires_at": confirmation_expires_at[:_VOICE_COMMAND_STATE_MAX_SCALAR_LENGTH]
+        if isinstance(confirmation_expires_at, str)
+        else None,
     }
 
 
