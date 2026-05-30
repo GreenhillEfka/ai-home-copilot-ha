@@ -1,9 +1,11 @@
 {
   "domain": "pilotsuite",
   "name": "PilotSuite HA",
-  "version": "20.0.8",
+  "version": "20.0.10",
   "documentation": "https://github.com/GreenhillEfka/pilotsuite-styx-ha",
-  "codeowners": ["@GreenhillEfka"],
+  "codeowners": [
+    "@GreenhillEfka"
+  ],
   "dependencies": [
     "conversation",
     "history",
@@ -14,7 +16,9 @@
     "tts",
     "webhook"
   ],
-  "after_dependencies": ["assist_pipeline"],
+  "after_dependencies": [
+    "assist_pipeline"
+  ],
   "homeassistant": "2024.4.0",
   "icon": "mdi:brain",
   "integration_type": "hub",
