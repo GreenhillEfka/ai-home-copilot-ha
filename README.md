@@ -4,68 +4,56 @@
 **License:** MIT  
 **Author:** GreenhillEfka
 
-## Overview
+PilotSuite HA is the canonical Home Assistant integration for the PilotSuite product.
 
-PilotSuite is an AI-powered home automation copilot that brings brain architecture, neural sensors, and local LLM conversation to Home Assistant.
+## Install order
 
-## Features
+1. Install **PilotSuite Core** from `https://github.com/GreenhillEfka/pilotsuite-styx-core`.
+2. Install **PilotSuite HA** from this repository.
 
-- 🧠 **Brain Architecture** — Neural network-based home state understanding
-- 🎯 **Presence Detection** — Multi-sensor fusion (Wi-Fi, BLE, mmWave)
-- ⚡ **Energy Forecasting** — LSTM-based energy prediction & optimization
-- 🗣️ **Voice Assistant** — Local STT/TTS with Whisper & Piper
-- 📊 **Analytics Dashboard** — Real-time insights & recommendations
-- 🔔 **Smart Notifications** — Context-aware alerts via Pushover & Telegram
+## Canonical repo layout
+
+- `README.md` , public entrypoint for this repository
+- `custom_components/pilotsuite/` , canonical integration source
+- `manifest.json` and `custom_components/pilotsuite/manifest.json` , canonical release metadata
+- `docs/` , public install, user, testing, troubleshooting, and API notes
+- legacy `copilot_ha` references, migration-only surfaces, not current release truth
 
 ## Installation
 
-### Via HACS (Recommended)
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) for the full path.
 
-1. Open HACS → Integrations
-2. Search for "PilotSuite"
-3. Click "Download"
-4. Restart Home Assistant
-5. Go to Settings → Devices & Services → Add Integration → PilotSuite
+Quick path:
+1. Open HACS → Integrations → **Custom repositories**.
+2. Add `https://github.com/GreenhillEfka/pilotsuite-styx-ha` as category **Integration**.
+3. Install **PilotSuite HA**.
+4. Restart Home Assistant.
+5. Add integration **PilotSuite** in **Settings → Devices & Services**.
 
-### Manual Installation
+## First verification path
 
-1. Copy `custom_components/pilotsuite/` to `/config/custom_components/`
-2. Restart Home Assistant
-3. Go to Settings → Devices & Services → Add Integration → PilotSuite
+1. Confirm PilotSuite Core is already reachable.
+2. Restart Home Assistant.
+3. Add **PilotSuite** in **Devices & Services**.
+4. Complete the config flow.
+5. Confirm the integration loads from `custom_components/pilotsuite/` without legacy path guessing.
 
-## Requirements
+## Smoke test path
 
-- Home Assistant ≥ 2024.4.0
-- [PilotSuite Core Add-on](https://github.com/GreenhillEfka/pilotsuite-styx-core) (for full functionality)
+- install smoke: HACS or manual copy succeeds
+- config smoke: config flow completes
+- maintainer smoke: see [docs/TESTING.md](docs/TESTING.md)
 
 ## Documentation
 
-- [Installation Guide](docs/INSTALLATION.md)
+- [Installation](docs/INSTALLATION.md)
 - [User Guide](docs/USER_GUIDE.md)
-- [API Reference](docs/API_REFERENCE.md)
+- [Testing](docs/TESTING.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
-
-## Entity Naming Standard
-
-For all new integration-owned Home Assistant entities, the canonical object-id prefix is `pilotsuite_`.
-
-Examples:
-- `sensor.pilotsuite_mood`
-- `button.pilotsuite_backup`
-- `binary_sensor.pilotsuite_online`
-
-Legacy `copilot_ha_` IDs remain migration-only compatibility references and should not be introduced in new code.
+- [API Reference](docs/API_REFERENCE.md)
 
 ## Support
 
 - Issues: https://github.com/GreenhillEfka/pilotsuite-styx-ha/issues
-- Discord: PilotSuite Community
-- Documentation: https://docs.pilotsuite.ai
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for version history.
-
----
-
-**Built with ❤️ by the PilotSuite Team**
+- Core add-on repo: https://github.com/GreenhillEfka/pilotsuite-styx-core
+- Changelog: [CHANGELOG.md](CHANGELOG.md)

@@ -11,27 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify single HACS integration
+      - name: Verify canonical integration path
         run: |
-          # Allow up to 2 integrations: copilot_ha (legacy) + pilotsuite_styx (new)
-          for dir in copilot_ha pilotsuite_styx; do
-            if [ -d "custom_components/$dir" ]; then
-              echo "OK: $dir integration present"
-            fi
-          done
-          count=$(find custom_components -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-          if [ "$count" -gt "2" ]; then
-            echo "ERROR: Too many integrations ($count), max 2"
-            find custom_components -mindepth 1 -maxdepth 1 -type d
-            exit 1
-          fi
+          test -d custom_components/pilotsuite
+          test -f custom_components/pilotsuite/manifest.json
       - name: Verify version consistency
         run: |
           root_v=$(cat VERSION)
-          comp_v=$(cat custom_components/copilot_ha/VERSION)
-          manifest_v=$(python3 -c "import json; print(json.loads(open('custom_components/copilot_ha/manifest.json').read())['version'])")
-          test "$root_v" = "$comp_v"
-          test "$root_v" = "$manifest_v"
+          manifest_root_v=$(python3 -c "import json; print(json.loads(open('manifest.json').read())['version'])")
+          manifest_component_v=$(python3 -c "import json; print(json.loads(open('custom_components/pilotsuite/manifest.json').read())['version'])")
+          test "$root_v" = "$manifest_root_v"
+          test "$root_v" = "$manifest_component_v"
           echo "Versions aligned: $root_v"
 
   test:
@@ -39,13 +29,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install Python deps
+      - name: Install Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install deps
         run: pip install -r requirements_test.txt
-      - name: Run tests
+      - name: Run canonical integration smoke tests
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |

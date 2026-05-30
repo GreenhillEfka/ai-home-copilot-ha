@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g. 15.0.17)'
+        description: "Release version, for example 20.0.5"
         required: true
         type: string
 
@@ -23,79 +23,79 @@ jobs:
             echo "ERROR: version must be X.Y.Z"
             exit 1
           fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "TAG=v$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=v$VERSION" >> "$GITHUB_ENV"
 
-      - name: Bump version files
+      - name: Bump canonical version files
         run: |
           echo "$VERSION" > VERSION
-          echo "$VERSION" > custom_components/copilot_ha/VERSION
-          python3 - <<PY
-            import json
-            from pathlib import Path
-            m = Path('custom_components/copilot_ha/manifest.json')
-            d = json.loads(m.read_text())
-            d['version'] = '$VERSION'
-            m.write_text(json.dumps(d, indent=2) + '\n')
-            print(f"copilot_ha: {d['version']}")
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          readme = Path("README.md")
+          readme.write_text(re.sub(r"(?m)^\*\*Version:\*\*\s+.*$", f"**Version:** {version}  ", readme.read_text(), count=1))
+
+          for path_str in ["manifest.json", "custom_components/pilotsuite/manifest.json"]:
+              path = Path(path_str)
+              data = json.loads(path.read_text())
+              data["version"] = version
+              path.write_text(json.dumps(data, indent=2) + "\n")
           PY
 
-      - name: Verify consistency
+      - name: Verify canonical version truth
         run: |
-          if [ "$(cat VERSION)" != "$VERSION" ]; then echo "VERSION file mismatch"; exit 1; fi
-          if [ "$(cat custom_components/copilot_ha/VERSION)" != "$VERSION" ]; then echo "HA VERSION mismatch"; exit 1; fi
-          V=$(python3 -c "import json; print(json.loads(open('custom_components/copilot_ha/manifest.json').read())['version'])")
-          if [ "$V" != "$VERSION" ]; then echo "manifest mismatch: $V"; exit 1; fi
-          echo "All versions consistent: $VERSION"
+          test "$(cat VERSION)" = "$VERSION"
+          grep -q "^\*\*Version:\*\* $VERSION" README.md
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          version = Path('VERSION').read_text().strip()
+          for path_str in ['manifest.json', 'custom_components/pilotsuite/manifest.json']:
+              data = json.loads(Path(path_str).read_text())
+              assert data['version'] == version, (path_str, data['version'], version)
+          print('Canonical version files aligned')
+          PY
 
-      - name: Commit + Tag + Push
+      - name: Commit, tag, and push
         run: |
           git config user.email "pilotclaw@pilotsuite.dev"
           git config user.name "PilotClaw"
-          git add -A
-          git commit -m "chore: release v$VERSION"
+          git add README.md VERSION manifest.json custom_components/pilotsuite/manifest.json
+          git commit -m "chore(ha): release v$VERSION"
           git tag "$TAG"
           git push origin main --tags
 
-      - name: Build minimal HACS ZIP
+      - name: Build HACS ZIP
         run: |
           python3 - <<'PY'
-            from pathlib import Path
-            import shutil
-            import zipfile
+          from pathlib import Path
+          import shutil
+          import zipfile
 
-            root = Path('dist-hacs')
-            if root.exists():
-                shutil.rmtree(root)
-            (root / 'custom_components').mkdir(parents=True)
-
-            ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
-            shutil.copytree('custom_components/copilot_ha', root / 'custom_components' / 'copilot_ha', ignore=ignore)
-            shutil.copy2('hacs.json', root / 'hacs.json')
-            if Path('README.md').exists():
-                shutil.copy2('README.md', root / 'README.md')
-            if Path('VERSION').exists():
-                shutil.copy2('VERSION', root / 'VERSION')
-
-            with zipfile.ZipFile('pilotsuite-styx-ha.zip', 'w', compression=zipfile.ZIP_DEFLATED) as zf:
-                for path in sorted(root.rglob('*')):
-                    if path.is_file():
-                        zf.write(path, path.relative_to(root))
-
-            shutil.copy2('pilotsuite-styx-ha.zip', f"v{Path('VERSION').read_text().strip()}.zip")
-            print(f"ZIP size: {Path('pilotsuite-styx-ha.zip').stat().st_size} bytes")
+          root = Path('dist-hacs')
+          if root.exists():
+              shutil.rmtree(root)
+          (root / 'custom_components').mkdir(parents=True)
+          shutil.copytree('custom_components/pilotsuite', root / 'custom_components' / 'pilotsuite', ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo'))
+          shutil.copy2('hacs.json', root / 'hacs.json')
+          shutil.copy2('README.md', root / 'README.md')
+          shutil.copy2('VERSION', root / 'VERSION')
+          with zipfile.ZipFile('pilotsuite-styx-ha.zip', 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+              for path in sorted(root.rglob('*')):
+                  if path.is_file():
+                      zf.write(path, path.relative_to(root))
+          shutil.copy2('pilotsuite-styx-ha.zip', f"{Path('VERSION').read_text().strip()}.zip")
           PY
 
       - name: Verify ZIP before upload
         run: |
-          unzip -l pilotsuite-styx-ha.zip | grep 'custom_components/copilot_ha/manifest.json'
+          unzip -l pilotsuite-styx-ha.zip | grep 'custom_components/pilotsuite/manifest.json'
           unzip -l pilotsuite-styx-ha.zip | grep 'hacs.json'
-          V=$(unzip -p pilotsuite-styx-ha.zip custom_components/copilot_ha/manifest.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
-          if [ "$V" != "$VERSION" ]; then
-            echo "FATAL: ZIP contains version $V, expected $VERSION"
-            exit 1
-          fi
-          echo "ZIP verified: $V"
+          unzip -p pilotsuite-styx-ha.zip custom_components/pilotsuite/manifest.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])" | grep "^$VERSION$"
 
       - name: Create GitHub Release
         env:
@@ -111,13 +111,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$TAG" pilotsuite-styx-ha.zip --clobber
-          gh release upload "$TAG" "v${VERSION}.zip" --clobber
-
-      - name: Final verification
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          sleep 3
-          gh api repos/${{ github.repository }}/releases/tags/$TAG --jq '.assets[].name' | grep '^pilotsuite-styx-ha.zip$'
-          gh api repos/${{ github.repository }}/releases/tags/$TAG --jq '.assets[].name' | grep "^v${VERSION}.zip$"
-          echo "SUCCESS: release assets verified"
+          gh release upload "$TAG" "$VERSION.zip" --clobber

@@ -42,5 +42,11 @@ docs/*
 !docs/HA_CONCEPT_DIRECTIVE.md
 !docs/RECOVERY_RESTORE_STATUS.md
 !docs/HA_RESTORE_HANDOFF.md
+!docs/HACS_RELEASE_REVIEW_GATE.md
+!docs/INSTALLATION.md
+!docs/USER_GUIDE.md
+!docs/API_REFERENCE.md
+!docs/TROUBLESHOOTING.md
 *.zip
 archive_disabled_tests/
+custom_components/copilot_ha/
