@@ -5,7 +5,7 @@
 ### Changed
 - **BREAKING:** Domain renamed from `copilot_ha` to `pilotsuite` for consistency
 - All internal imports updated to use `pilotsuite` namespace
-- Version synchronized with Core Add-on (v20.0.0)
+- Version synchronized with PilotSuite Core (v20.0.8)
 
 ### Added
 - Complete HACS integration structure

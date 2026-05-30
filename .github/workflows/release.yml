@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g. 15.0.17)'
+        description: 'Version to release (e.g. 20.0.10)'
         required: true
         type: string
 
@@ -29,23 +29,36 @@ jobs:
       - name: Bump version files
         run: |
           echo "$VERSION" > VERSION
-          echo "$VERSION" > custom_components/copilot_ha/VERSION
           python3 - <<PY
             import json
             from pathlib import Path
-            m = Path('custom_components/copilot_ha/manifest.json')
-            d = json.loads(m.read_text())
-            d['version'] = '$VERSION'
-            m.write_text(json.dumps(d, indent=2) + '\n')
-            print(f"copilot_ha: {d['version']}")
+            manifest_paths = [
+                Path('manifest.json'),
+                Path('custom_components/pilotsuite/manifest.json'),
+            ]
+            for m in manifest_paths:
+                d = json.loads(m.read_text())
+                d['version'] = '$VERSION'
+                m.write_text(json.dumps(d, indent=2) + '\n')
+                print(f"{m}: {d['version']}")
+
+            readme = Path('README.md')
+            text = readme.read_text()
+            import re
+            text = re.sub(r'\*\*Version:\*\*\s+[0-9]+\.[0-9]+\.[0-9]+', f'**Version:** $VERSION', text, count=1)
+            readme.write_text(text)
           PY
 
       - name: Verify consistency
         run: |
           if [ "$(cat VERSION)" != "$VERSION" ]; then echo "VERSION file mismatch"; exit 1; fi
-          if [ "$(cat custom_components/copilot_ha/VERSION)" != "$VERSION" ]; then echo "HA VERSION mismatch"; exit 1; fi
-          V=$(python3 -c "import json; print(json.loads(open('custom_components/copilot_ha/manifest.json').read())['version'])")
-          if [ "$V" != "$VERSION" ]; then echo "manifest mismatch: $V"; exit 1; fi
+          RV=$(python3 -c "import json; print(json.loads(open('manifest.json').read())['version'])")
+          if [ "$RV" != "$VERSION" ]; then echo "root manifest mismatch: $RV"; exit 1; fi
+          V=$(python3 -c "import json; print(json.loads(open('custom_components/pilotsuite/manifest.json').read())['version'])")
+          if [ "$V" != "$VERSION" ]; then echo "component manifest mismatch: $V"; exit 1; fi
+          H=$(python3 -c "import json; print(json.loads(open('hacs.json').read())['zip_release'])")
+          if [ "$H" != "False" ]; then echo "hacs zip_release mismatch: $H"; exit 1; fi
+          grep -q "**Version:** $VERSION" README.md || { echo "README version mismatch"; exit 1; }
           echo "All versions consistent: $VERSION"
 
       - name: Commit + Tag + Push
@@ -57,7 +70,7 @@ jobs:
           git tag "$TAG"
           git push origin main --tags
 
-      - name: Build minimal HACS ZIP
+      - name: Build manual-install ZIP asset
         run: |
           python3 - <<'PY'
             from pathlib import Path
@@ -70,7 +83,7 @@ jobs:
             (root / 'custom_components').mkdir(parents=True)
 
             ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
-            shutil.copytree('custom_components/copilot_ha', root / 'custom_components' / 'copilot_ha', ignore=ignore)
+            shutil.copytree('custom_components/pilotsuite', root / 'custom_components' / 'pilotsuite', ignore=ignore)
             shutil.copy2('hacs.json', root / 'hacs.json')
             if Path('README.md').exists():
                 shutil.copy2('README.md', root / 'README.md')
@@ -88,9 +101,9 @@ jobs:
 
       - name: Verify ZIP before upload
         run: |
-          unzip -l pilotsuite-styx-ha.zip | grep 'custom_components/copilot_ha/manifest.json'
+          unzip -l pilotsuite-styx-ha.zip | grep 'custom_components/pilotsuite/manifest.json'
           unzip -l pilotsuite-styx-ha.zip | grep 'hacs.json'
-          V=$(unzip -p pilotsuite-styx-ha.zip custom_components/copilot_ha/manifest.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
+          V=$(unzip -p pilotsuite-styx-ha.zip custom_components/pilotsuite/manifest.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])")
           if [ "$V" != "$VERSION" ]; then
             echo "FATAL: ZIP contains version $V, expected $VERSION"
             exit 1
