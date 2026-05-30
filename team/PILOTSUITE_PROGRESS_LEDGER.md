@@ -1,5 +1,5 @@
 # PILOTSUITE_PROGRESS_LEDGER.md
-## Stand: 2026-04-24 15:24 MESZ
+## Stand: 2026-04-24 21:43 MESZ
 
 ### Shared truth locations
 - Core worktree: `/config/clawd/team/worktrees/pilotsuite-styx-core-current/`
@@ -29,13 +29,17 @@
 - CORE-HARDEN-214 ✅ (shopping & reminders API, 33 tests) — `edc01f1b`
 - CORE-HARDEN-215 ✅ (graph API, 32 tests) — `1c58b98f`
 - CORE-HARDEN-216 ✅ (weather API, 11 tests) — `53ed3509`
-- CORE-HARDEN-217 ✅ (delivery interactive API, 17 tests, 303-A) — `3a1ad294`
-- CORE-HARDEN-218 / DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 8 tests) — `1a40f8c1`
-- DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 25 focused tests) — `1a40f8c1`
+- CORE-HARDEN-217 ✅ (delivery interactive API, 17 tests, 303-A) — `3ef98066`
+- CORE-HARDEN-218 / DELIVERY-DURABILITY-304 ✅ (durable delivery intent store, 8 tests) — `f7de8df6`
+- CORE-E2E-OBS-305 ✅ (observability proof chain, 13 tests) — `5dfc60b1`
+- DELIVERY-CONTEXT-306-A ✅ (context envelope, 10 tests) — `37fe0deb`
+- RAG-RESILIENCE-307 ✅ (degraded fallback truth, 20 tests) — `e981b826`
 
 ## CORE — CURRENT
-- HEAD: `1a40f8c1` (`feat(core): DELIVERY-DURABILITY-304 durable delivery intent store`)
-- Test snapshot: `25 focused delivery durability tests passed`
+- FAST-LANE-CONTINUITY-308 ✅ (routing reconciled, next wave cut) — `bdede23f`
+- RAG-OPERATIONS-309 ✅ (health/stats/index/cache-clear, 12 tests) — `4101dff0`
+- HEAD: `4101dff0` (`feat(core): RAG-OPERATIONS-309 health/stats/index/cache-clear (12 tests)`)
+- Test snapshot: `20 RAG resilience + search contract tests passed`
 - Mode: systematic fast dev, idle gaps = zero
 
 ## HA — CLOSED / CURRENT
@@ -43,42 +47,59 @@
 - HA-FOLLOW-DELIVERY ✅ file-backed closed (`team/shared/handoffs/2026-04-22_HA-FOLLOW-DELIVERY_CLOSED.md`)
 - HA-HABITUS-PROJECTION-301 ✅ file-backed closed (`e12c3abf`)
 - DELIVERY-INTERACTIVE-303-B ✅ file-backed closed (`0434e34e`)
+- DELIVERY-CONTEXT-306-B ✅ file-backed closed (`team/shared/handoffs/2026-04-24_DELIVERY_CONTEXT_306-B_CLOSED.md`)
+- E2E-OBSERVABILITY-305 ✅ file-backed closed (`team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`)
 
 ## E2E — CURRENT TRUTH
 - `HA-GATE-CHECK` consumed: `HA-559` is stale historical truth, not the active HA seam
 - `E2E-CONSOLIDATION-01` ✅ file-backed closed (`team/shared/handoffs/2026-04-24_E2E-CONSOLIDATION-01_CLOSED.md`)
+- `E2E-OBSERVABILITY-305` ✅ file-backed closed across the bounded Core + HA proof chain
 
 ## Latest Core landing
-- `DELIVERY-DURABILITY-304` closed on the exact bounded Core durability seam.
-- Commit: `1a40f8c1` (`feat(core): DELIVERY-DURABILITY-304 durable delivery intent store`)
+- `RAG-RESILIENCE-307` closed on the exact bounded Core RAG seam.
+- Commit/artifact anchor: `e981b826` + `team/shared/handoffs/2026-04-24_RAG-RESILIENCE-307_CLOSED.md`
 - Landed truth:
-  - delivery intent state is restart-durable on the existing interactive token flow
-  - API remains bounded to:
-    - `POST /api/v1/delivery/acknowledge`
-    - `GET /api/v1/delivery/<delivery_token>/status`
-  - same-token re-acknowledge remains idempotent after adapter-backed reload
-  - cancel remains terminal and expired tokens are not silently revived
-  - persistence faults return explicit non-success responses
+  - canonical Core RAG responses now expose machine-checkable degraded retrieval truth
+  - hybrid and enhanced search responses now carry:
+    - `effective_mode`
+    - `degraded`
+    - `degraded_reason`
+  - if semantic retrieval is unavailable or fails and lexical retrieval is allowed, BM25-backed results still return on the same endpoint family
+  - semantic-only requests stay bounded and honest with no silent contract widening
 - Focused proof:
-  - `python3 -m py_compile addons/pilotsuite/app/copilot_core/api/v1/delivery_interactive.py addons/pilotsuite/app/copilot_core/api/v1/delivery_intent_store.py` ✅
-  - `/config/clawd/.venv_smoke_gate/bin/python -m pytest -q tests/test_delivery_interactive_api_contract.py tests/test_delivery_durability_304_contract.py` → `25 passed` ✅
+  - `python3 -m py_compile addons/pilotsuite/app/copilot_core/api/v1/rag.py` ✅
+  - `/config/clawd/.venv_smoke_gate/bin/python -m pytest -q tests/test_rag_search_contract.py tests/test_rag_resilience_307_contract.py` → `20 passed` ✅
 - Operative effect:
-  - Core delivery intent now survives restart without widening the seam
-  - next exact pull advances to `E2E-OBSERVABILITY-305`
+  - memory and research callers can now detect degraded semantic retrieval explicitly without parsing warnings prose
 
 ## Latest HA landing
-- `DELIVERY-INTERACTIVE-303-B` closed on the exact bounded HA consumer seam.
-- Commit: `0434e34e` (`feat(ha): add delivery interactive service projection`)
+- `E2E-OBSERVABILITY-305` closed on the exact bounded HA proof seam.
+- Commit/artifact anchor: `team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
 - Focused proof:
-  - `python3 -m py_compile custom_components/pilotsuite/coordinator.py custom_components/pilotsuite/services_setup.py` ✅
-  - `.venv/bin/python -m pytest -q tests/test_delivery_interactive_service_projection.py tests/test_services_setup_projection.py tests/test_services_yaml_projection.py` → `13 passed` ✅
+  - `python3 -m py_compile custom_components/pilotsuite/services_setup.py tests/test_e2e_observability_305_ha_projection.py` ✅
+  - `.venv/bin/python -m pytest -q tests/test_e2e_observability_305_ha_projection.py tests/test_delivery_interactive_service_projection.py tests/test_services_setup_projection.py tests/test_services_yaml_projection.py` → `18 passed` ✅
 - Operative effect:
-  - HA now exposes one bounded `delivery_interactive` service on the canonical Core delivery seam
-  - visible confirmation remains derived from canonical Core state with no local semantic invention
+  - HA-visible confirmation is now part of the same bounded machine-checkable proof chain
+  - confirmation remains derived from canonical Core state with no semantic widening
+
+## Latest orchestration landing
+- `FAST-LANE-CONTINUITY-308` closed on the routing/checkpoint seam.
+- Commit/artifact anchor: `team/shared/handoffs/2026-04-24_FAST-LANE-CONTINUITY-308_CLOSED.md`
+- Landed truth:
+  - fresh repo truth was reconciled against the landed `306-A -> 306-B -> 307` wave
+  - the next coding wave is now file-backed again instead of implicit
+  - fresh truth anchors for the next wave are the existing RAG docs plus the current Core RAG blueprint/runtime mismatch on `/health` and `/search/multi`
+- Operative effect:
+  - PilotSuite is back on a concrete coding chain instead of a routing tail
 
 ## Queue truth
 **Current exact order:**
-1. `E2E-OBSERVABILITY-305`
+1. `RAG-OPERATIONS-309`
+2. `RAG-MULTI-QUERY-310`
+3. `FAST-LANE-CONTINUITY-311`
+
+**Forward plan anchor:**
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_309_TO_311.md`
 
 ## Bound approved sequence rule
 - only one active product packet at a time
@@ -103,3 +124,12 @@
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-A_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-INTERACTIVE-303-B_CLOSED.md`
 - `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY-DURABILITY-304_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY_CONTEXT_306-A_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_DELIVERY_CONTEXT_306-B_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_E2E-OBSERVABILITY-305_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_RAG-RESILIENCE-307_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST-LANE-CONTINUITY-308_CLOSED.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_RAG_OPERATIONS_309.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_RAG_MULTI_QUERY_310.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_NEXT_EXACT_PULL_FAST_LANE_CONTINUITY_311.md`
+- `/config/clawd/team/shared/handoffs/2026-04-24_FAST_LANE_FORWARD_PLAN_309_TO_311.md`
