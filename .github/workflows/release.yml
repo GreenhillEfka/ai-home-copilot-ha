@@ -88,7 +88,6 @@ jobs:
               for path in sorted(root.rglob('*')):
                   if path.is_file():
                       zf.write(path, path.relative_to(root))
-          shutil.copy2('pilotsuite-styx-ha.zip', f"{Path('VERSION').read_text().strip()}.zip")
           PY
 
       - name: Verify ZIP before upload
@@ -106,9 +105,8 @@ jobs:
             --notes "Release $TAG" \
             --clobber
 
-      - name: Upload ZIP assets
+      - name: Upload ZIP asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "$TAG" pilotsuite-styx-ha.zip --clobber
-          gh release upload "$TAG" "$VERSION.zip" --clobber

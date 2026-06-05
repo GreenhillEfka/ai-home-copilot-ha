@@ -1,6 +1,6 @@
 # PilotSuite — Home Assistant Integration
 
-**Version:** 20.0.10  
+**Version:** 20.0.11  
 **License:** MIT  
 **Author:** GreenhillEfka
 
